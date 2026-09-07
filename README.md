@@ -4,13 +4,13 @@
 
 <br/>
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&duration=2500&pause=900&color=1E3A5F&center=true&vCenter=true&width=560&lines=Tr%C3%A1mite+de+incorporaci%C3%B3n+100%25+digital;Wizard+del+solicitante+%2B+panel+SEDEQ;Motor+de+validaci%C3%B3n+de+capacidad+instalada;Laravel+13+%2B+Livewire+4+%2B+Filament+4" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&duration=2500&pause=900&color=1E3A5F&center=true&vCenter=true&width=560&lines=Tr%C3%A1mite+de+incorporaci%C3%B3n+100%25+digital;Wizard+del+solicitante+%2B+panel+SEDEQ;Motor+de+validaci%C3%B3n+de+capacidad+instalada;Laravel+13+%2B+Livewire+3+%2B+Filament+4" alt="Typing SVG" />
 
 <br/><br/>
 
-[![PHP](https://img.shields.io/badge/PHP-8.4-1E3A5F?style=for-the-badge&logo=php&logoColor=F5F0E1)](app-laravel/composer.json)
+[![PHP](https://img.shields.io/badge/PHP-8.3-1E3A5F?style=for-the-badge&logo=php&logoColor=F5F0E1)](app-laravel/composer.json)
 [![Laravel](https://img.shields.io/badge/Laravel-13-C9A227?style=for-the-badge&logo=laravel&logoColor=1E3A5F)](app-laravel/composer.json)
-[![Livewire](https://img.shields.io/badge/Livewire-4-1E3A5F?style=for-the-badge&logo=livewire&logoColor=F5F0E1)](app-laravel/composer.json)
+[![Livewire](https://img.shields.io/badge/Livewire-3-1E3A5F?style=for-the-badge&logo=livewire&logoColor=F5F0E1)](app-laravel/composer.json)
 [![Filament](https://img.shields.io/badge/Filament-4-C9A227?style=for-the-badge&logo=php&logoColor=1E3A5F)](app-laravel/composer.json)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-1E3A5F?style=for-the-badge&logo=postgresql&logoColor=F5F0E1)](docs/ddl_sistema_incorporacion_v3.sql)
 
@@ -57,8 +57,8 @@ consistente en cada expediente.
 
 | Capa | Tecnología |
 |:--|:--|
-| **Backend** | `Laravel 13` (PHP 8.4) |
-| **UI reactiva** | `Livewire 4` |
+| **Backend** | `Laravel 13` (PHP 8.3) |
+| **UI reactiva** | `Livewire 3` |
 | **Panel admin** | `Filament 4` (`/admin`) |
 | **Base de datos** | `PostgreSQL 18` |
 | **Roles / permisos** | `spatie/laravel-permission` |
