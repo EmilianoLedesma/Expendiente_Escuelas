@@ -3,6 +3,7 @@
 namespace Tests\Unit\Domain\Validaciones\Regla;
 
 use App\Domain\Validaciones\Regla\CalculadoraRequerimiento;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -163,5 +164,46 @@ class CalculadoraRequerimientoTest extends TestCase
         );
 
         $this->assertSame(25.0, $requerido);
+    }
+
+    /**
+     * Guard: `$magnitud >= $condicionMin` with a null $condicionMin coerces
+     * null to 0 in PHP, so an umbral rule with a missing threshold would
+     * fire unconditionally instead of failing loudly. personal_umbral is
+     * meaningless without a threshold, so this must throw, not silently
+     * evaluate to "always required".
+     */
+    public function test_personal_umbral_throws_when_condicion_min_is_null(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->calculadora->calcular(
+            tipoCalculo: 'personal_umbral',
+            valorNumerico: 1,
+            condicionMin: null,
+            redondeo: 'na',
+            magnitud: 61,
+        );
+    }
+
+    /**
+     * Guard: personal_por_espacio multiplies magnitud (an existing-space
+     * count) by valor_numerico (headcount per space) — both are meant to be
+     * whole numbers, so any non-integer product signals malformed input
+     * upstream (e.g. magnitud accidentally holding a ratio instead of a
+     * count). Silently truncating with (int) would mask that bug instead
+     * of surfacing it.
+     */
+    public function test_personal_por_espacio_throws_on_non_integer_product(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->calculadora->calcular(
+            tipoCalculo: 'personal_por_espacio',
+            valorNumerico: 1.5,
+            condicionMin: null,
+            redondeo: 'na',
+            magnitud: 3,
+        );
     }
 }

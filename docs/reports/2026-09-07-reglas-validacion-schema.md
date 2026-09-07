@@ -151,10 +151,11 @@ $ php artisan test tests/Feature/Database/ReglasValidacionSeederTest.php
 {"tool":"phpunit","result":"passed","tests":39,"passed":39,"assertions":57,"duration_ms":5024}
 
 $ php artisan test tests/Unit/Domain/Validaciones/Regla/CalculadoraRequerimientoTest.php
-{"tool":"phpunit","result":"passed","tests":21,"passed":21,"assertions":21,"duration_ms":24}
+{"tool":"phpunit","result":"passed","tests":23,"passed":23,"assertions":23,"duration_ms":21}
 
-$ php artisan test
-{"tool":"phpunit","result":"passed","tests":104,"passed":104,"assertions":191,"duration_ms":16785}
+$ composer test
+ INFO Configuration cache cleared successfully.
+{"tool":"phpunit","result":"passed","tests":106,"passed":106,"assertions":193,"duration_ms":14147}
 ```
 
 **RED check for the Primaria fix**: before restoring the fix, the 9 new boundary
@@ -174,12 +175,14 @@ Tinker dump (28 rows, matches §1's table exactly — confirmed by direct `json_
 - `docs/ddl_sistema_incorporacion_v3.sql` — mirrored the same changes (gitignored, local-only file).
 - `app-laravel/database/seeders/ReglasValidacionSeeder.php` — rewritten across three passes: `clave`/`tipo_calculo`/`ambito` (pass 1), Primaria gate-plus-division fix (pass 2), `redondeo` populated + 3 rows reclassified to `infraestructura` + docblock's contradictory "settled" note deleted, leaving only the provisional note (this amendment, pass 3).
 - `app-laravel/tests/Feature/Database/ReglasValidacionSeederTest.php` — rewritten: 39 tests. Boundary tests now call `CalculadoraRequerimiento` instead of inline `intdiv`/manual arithmetic (§10); added redondeo/tipo_regla/infraestructura-classification assertions; added Inicial lactantes/maternales boundary tests (4/5/6/10/11 and 9/10/11).
-- `app-laravel/app/Domain/Validaciones/Regla/CalculadoraRequerimiento.php` — **new**, pure calculation class (§10).
-- `app-laravel/tests/Unit/Domain/Validaciones/Regla/CalculadoraRequerimientoTest.php` — **new**, pure unit test, 21 tests, no DB.
+- `app-laravel/app/Domain/Validaciones/Regla/CalculadoraRequerimiento.php` — pure calculation class (§10); this pass (follow-up 3) adds the two guards (§11): `personal_umbral` throws on null `condicionMin`, `personal_por_espacio` throws on a non-integer product instead of truncating.
+- `app-laravel/tests/Unit/Domain/Validaciones/Regla/CalculadoraRequerimientoTest.php` — pure unit test, no DB; 21 tests (pass 3) → 23 tests (this pass, follow-up 3: the two guard tests, watched RED before the guards were added).
 - `docs/superpowers/plans/2026-09-04-catalogos-motor-validacion.md` — Task 4 marked superseded, pointing here.
-- `docs/progress.md` — Decisions Log entry appended (pass 1); not further amended in this pass — see follow-up note below.
-- `docs/reports/2026-09-07-reglas-validacion-schema.md` — this report (amended across three passes: §2.1 reopened, §2.4/§7 added in pass 2; §8, §9, §10 added in pass 3).
+- `docs/progress.md` — Decisions Log entry appended in pass 1; the pass-1 entry's stale `ceil` guidance marked SUPERSEDED in this pass (follow-up 3, item 7).
+- `docs/reports/2026-09-07-reglas-validacion-schema.md` — this report (amended across four passes: §2.1 reopened, §2.4/§7 added in pass 2; §8/§9/§10 added in pass 3; §11/§12 added in this pass).
 - `docs/decisions/PENDIENTE-umbral-educacion-fisica.md` — decision memo (pass 2), unchanged in this pass.
+- `docs/decisions/PENDIENTE-origen-de-magnitud.md` — **new** (this pass, follow-up 3): design memo for magnitude sourcing and rule composition, not implemented (§12).
+- `README.md`, `CLAUDE.md` — corrected stack claims (Livewire 4 → 3, PHP 8.4 → 8.3) to match `composer.json` (this pass, follow-up 3, item 6). `composer.json` itself unchanged — the installed versions were already correct, only the docs were wrong.
 
 ## 6. Follow-ups created
 
@@ -398,3 +401,52 @@ New boundary cases added per this follow-up:
 `test_inicial_asistente_maternales_boundary` (9→1, 10→1, 11→2), both round-trip
 through `CalculadoraRequerimiento` against the seeded row exactly like the Primaria
 test above.
+
+## 11. `CalculadoraRequerimiento` guards (follow-up 3)
+
+Two silent-failure modes were found in the calculator itself, both in branches that
+had no dedicated test until now.
+
+**1. `personal_umbral` with a null `condicionMin`.** PHP coerces `null` to `0` in a
+numeric comparison, so `$magnitud >= $condicionMin` with `$condicionMin = null`
+evaluates to `$magnitud >= 0` — always true for any non-negative enrollment. A caller
+that failed to load `condicion_min` (a bug elsewhere, or a malformed row) would not
+get an error; the rule would silently fire as "always required" instead. `personal_umbral`
+is meaningless without a threshold, so this is now a hard failure: added an `umbral()`
+helper that throws `InvalidArgumentException` when `condicionMin === null`, before
+doing the comparison. Test: `test_personal_umbral_throws_when_condicion_min_is_null`.
+
+**2. `personal_por_espacio`'s implicit `(int)` cast.** The original code was
+`(int) ($magnitud * $valorNumerico)`, which truncates any fractional product without
+comment — e.g. `2.5 * 3 = 7.5` would silently become `7`. Both `magnitud` (a count of
+existing spaces) and `valorNumerico` (headcount per space) are conceptually always
+whole numbers for this `tipo_calculo`; a fractional product means something upstream
+passed the wrong kind of value (a ratio instead of a count, for instance), not a
+number this rule should try to round away. **Decision: throw, don't round.** Rounding
+a value that should never be fractional in the first place would hide the actual bug
+(bad input) behind a plausible-looking integer output. Implemented a `porEspacio()`
+helper that computes the product, checks it with `fmod($producto, 1.0) !== 0.0`, and
+throws `InvalidArgumentException` naming the non-integer result if the check fails.
+Test: `test_personal_por_espacio_throws_on_non_integer_product`.
+
+Both guards keep the class pure (no new dependencies) and were added test-first: RED
+confirmed against the pre-guard implementation (`Failed asserting that exception of
+type "InvalidArgumentException" is thrown`, both tests) before the guards were
+written.
+
+## 12. Magnitude origin and rule composition — design memo, not implemented
+
+`CalculadoraRequerimiento` takes `magnitud` as an opaque scalar; it does not say where
+that scalar comes from for any of the 28 rows, and at least one pair of rows
+(`preescolar.superficie.aula` + `preescolar.superficie.espacio_maestro`) must combine
+into a single requirement rather than being evaluated independently. This is a real
+gap the architect needs to close before the Motor de Validación can be built, but it
+is a design decision, not something to resolve inside this branch's scope.
+
+Full row-by-row magnitude sourcing, the confirmed composition case (plus one
+magnitude-origin case that looks like composition but isn't — `aula_usos_multiples`
+depending on another space's registered area), an open question about `ambito =
+predio` when a plantel hosts more than one nivel, three candidate schema/architecture
+designs, and a non-binding recommendation all live in
+**`docs/decisions/PENDIENTE-origen-de-magnitud.md`**. Not implemented here, per
+instruction.
