@@ -6,6 +6,7 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\ReglasValidacionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ReglasValidacionSeederTest extends TestCase
@@ -218,8 +219,73 @@ class ReglasValidacionSeederTest extends TestCase
         $this->assertDatabaseHas('reglas_validacion', [
             'clave' => 'primaria.personal.educacion_fisica',
             'tipo_calculo' => 'personal_proporcional',
-            'condicion_min' => 61.00,
+            'condicion_min' => null,
             'valor_numerico' => 60.00,
         ]);
+    }
+
+    /**
+     * Regression: the Primaria PE rule previously combined
+     * tipo_calculo = personal_proporcional with a condicion_min = 61 gate.
+     * That produced a discontinuity: 60 alumnos -> gate blocked -> 0
+     * docentes; 61 alumnos -> gate passes -> ceil(61/60) = 1 with the old
+     * gate-then-multiply reading, but if computed as a hard "must have at
+     * least 1 additional group" it jumped to 2. Either way, adding a single
+     * student flips the requirement discontinuously. The fix removes the
+     * gate entirely: required = floor(enrollment / valor_numerico), which
+     * carries the threshold implicitly (any enrollment under 60 floors to
+     * 0) with no separate condicion_min. See the class docblock and
+     * docs/reports/2026-09-07-reglas-validacion-schema.md for the
+     * floor-vs-ceil rationale.
+     *
+     */
+    #[DataProvider('primariaEducacionFisicaBoundaryProvider')]
+    public function test_primaria_educacion_fisica_boundary(int $enrollment, int $expectedDocentes): void
+    {
+        $this->seedReglas();
+
+        $rule = DB::table('reglas_validacion')->where('clave', 'primaria.personal.educacion_fisica')->first();
+
+        $this->assertSame('personal_proporcional', $rule->tipo_calculo);
+        $this->assertNull($rule->condicion_min);
+
+        $required = intdiv($enrollment, (int) $rule->valor_numerico);
+
+        $this->assertSame($expectedDocentes, $required, "enrollment={$enrollment}");
+    }
+
+    public static function primariaEducacionFisicaBoundaryProvider(): array
+    {
+        return [
+            '59 alumnos -> 0 docentes' => [59, 0],
+            '60 alumnos -> 1 docente' => [60, 1],
+            '61 alumnos -> 1 docente' => [61, 1],
+            '119 alumnos -> 1 docente' => [119, 1],
+            '120 alumnos -> 2 docentes' => [120, 2],
+            '121 alumnos -> 2 docentes' => [121, 2],
+        ];
+    }
+
+    #[DataProvider('preescolarEducacionFisicaBoundaryProvider')]
+    public function test_preescolar_educacion_fisica_boundary(int $enrollment, int $expectedDocentes): void
+    {
+        $this->seedReglas();
+
+        $rule = DB::table('reglas_validacion')->where('clave', 'preescolar.personal.educacion_fisica')->first();
+
+        $this->assertSame('personal_umbral', $rule->tipo_calculo);
+
+        $required = $enrollment >= (int) $rule->condicion_min ? (int) $rule->valor_numerico : 0;
+
+        $this->assertSame($expectedDocentes, $required, "enrollment={$enrollment}");
+    }
+
+    public static function preescolarEducacionFisicaBoundaryProvider(): array
+    {
+        return [
+            '59 alumnos -> 0 docentes' => [59, 0],
+            '60 alumnos -> 0 docentes (umbral provisional = 61, ver decision memo)' => [60, 0],
+            '61 alumnos -> 1 docente' => [61, 1],
+        ];
     }
 }

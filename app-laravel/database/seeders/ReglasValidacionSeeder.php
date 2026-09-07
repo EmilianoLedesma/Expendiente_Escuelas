@@ -30,9 +30,23 @@ class ReglasValidacionSeeder extends Seeder
      * la instalación tiene capacidad de 60 alumnos o más" — umbral, un
      * docente) de Primaria ("por cada 60 alumnos o más en la escuela...
      * se puede requerir más de uno" — proporcional). Preescolar usa
-     * personal_umbral; Primaria usa personal_proporcional con
-     * condicion_min = 61 como puerta de entrada y valor_numerico = 60
-     * como la razón alumnos/docente.
+     * personal_umbral. Primaria usa personal_proporcional SIN
+     * condicion_min: el umbral queda implícito en la división entera
+     * (floor(alumnos / 60)), no como una puerta separada — ver
+     * docs/reports/2026-09-07-reglas-validacion-schema.md §"Corrección
+     * Primaria" para la tabla de frontera y la justificación de floor
+     * sobre ceil (el defecto que se corrige aquí: una puerta
+     * condicion_min = 61 junto con la fórmula proporcional producía un
+     * salto de 0 a 2 docentes entre 60 y 61 alumnos).
+     *
+     * NOTA (umbral 60 vs. 61, PROVISIONAL): el valor de condicion_min = 61
+     * en las reglas *_umbral de abajo (Preescolar Educación Física,
+     * Secundaria Educación Física/Trabajador Social/Prefecto) es
+     * provisional — la redacción normativa no es unánime entre fuentes
+     * (Profesiogramas dicen "60 o más", Acuerdos Secretariales dicen
+     * "más de 60"). Ver docs/decisions/PENDIENTE-umbral-educacion-fisica.md
+     * — pendiente de que SEDEQ confirme. No cambiar sin resolver ese
+     * documento.
      */
     public function run(): void
     {
@@ -70,7 +84,7 @@ class ReglasValidacionSeeder extends Seeder
                 ['clave' => 'primaria.superficie.aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'concepto' => 'Superficie de aulas', 'valor_numerico' => 0.90, 'unidad' => 'm²/alumno'],
                 ['clave' => 'primaria.superficie.altura_aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'aula', 'concepto' => 'Altura de aulas', 'valor_numerico' => 2.70, 'unidad' => 'm fijo'],
                 ['clave' => 'primaria.superficie.acervo_bibliografico', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_grado', 'ambito' => 'escuela', 'concepto' => 'Acervo bibliográfico mínimo', 'valor_numerico' => 50, 'unidad' => 'títulos/grado'],
-                ['clave' => 'primaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'escuela', 'concepto' => 'Docente de Educación Física obligatorio', 'condicion_min' => 61, 'valor_numerico' => 60, 'unidad' => 'alumnos/docente'],
+                ['clave' => 'primaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'escuela', 'concepto' => 'Docente de Educación Física obligatorio', 'valor_numerico' => 60, 'unidad' => 'alumnos/docente'],
             ],
             'secundaria' => [
                 ['clave' => 'secundaria.superficie.predio_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'predio', 'concepto' => 'Superficie total del predio', 'valor_numerico' => 2.50, 'unidad' => 'm²/alumno'],
