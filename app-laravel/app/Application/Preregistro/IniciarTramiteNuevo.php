@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Application\Preregistro;
+
+use App\Application\Preregistro\DTO\DatosPreregistro;
+use App\Application\Preregistro\DTO\ResultadoPreregistro;
+use App\Models\Escuela;
+use App\Models\Plantel;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+
+/**
+ * Caso de uso de PRD §5 Paso 1: crea el `plantel` (si es nuevo) y siempre
+ * crea la `escuela`. Livewire y un futuro controlador de API llaman
+ * exactamente a este método — ninguno de los dos debe tocar Eloquent
+ * directamente (ADR-001).
+ */
+class IniciarTramiteNuevo
+{
+    public function ejecutar(DatosPreregistro $datos): ResultadoPreregistro
+    {
+        $this->validar($datos);
+
+        return DB::transaction(function () use ($datos) {
+            $plantelId = $datos->bifurcacion === 'nuevo'
+                ? Plantel::create([
+                    'calle' => $datos->calle,
+                    'numero_ext' => $datos->numeroExt,
+                    'numero_int' => $datos->numeroInt,
+                    'colonia' => $datos->colonia,
+                    'localidad' => $datos->localidad,
+                    'municipio' => $datos->municipio,
+                    'codigo_postal' => $datos->codigoPostal,
+                    'telefono' => $datos->telefono,
+                    'correo_electronico' => $datos->correoElectronico,
+                ])->id
+                : $datos->plantelId;
+
+            $escuela = Escuela::create(['plantel_id' => $plantelId]);
+
+            return new ResultadoPreregistro(
+                escuelaId: $escuela->id,
+                plantelId: $plantelId,
+            );
+        });
+    }
+
+    private function validar(DatosPreregistro $datos): void
+    {
+        if ($datos->bifurcacion === 'existente') {
+            if ($datos->plantelId === null) {
+                throw new InvalidArgumentException('bifurcacion "existente" requiere plantelId.');
+            }
+
+            return;
+        }
+
+        if ($datos->bifurcacion !== 'nuevo') {
+            throw new InvalidArgumentException("bifurcacion desconocida: {$datos->bifurcacion}");
+        }
+
+        foreach (['calle' => $datos->calle, 'colonia' => $datos->colonia, 'municipio' => $datos->municipio, 'codigoPostal' => $datos->codigoPostal] as $campo => $valor) {
+            if ($valor === null || $valor === '') {
+                throw new InvalidArgumentException("bifurcacion \"nuevo\" requiere {$campo}.");
+            }
+        }
+    }
+}
