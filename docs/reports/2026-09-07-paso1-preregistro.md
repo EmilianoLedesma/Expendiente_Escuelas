@@ -199,14 +199,44 @@ not a special case.
    `.blur` would leave the wrong section on screen until an unrelated field
    loses focus. All text/select inputs use `.blur` as instructed.
 
+## Follow-up: closed the Blade-layer leak in the progress widget
+
+`<x-tramite.progreso>` originally ran two `DB::table()` queries inside the
+`.blade.php`'s `@php` block — a template fetching its own data, untestable
+without a database mount, and the project's only Blade-layer boundary
+violation (flagged by the user as Deptrac's future first hit). Converted to
+a class-based component via `php artisan make:component Tramite/Progreso`:
+`app/View/Components/Tramite/Progreso.php` now does both queries in its
+constructor and exposes one `public readonly Collection $pasos` (each item
+already carrying its resolved `estado`, no per-item lookup left for the
+template). `resources/views/components/tramite/progreso.blade.php` is now
+pure markup — a `@foreach` and Blade's `@class` directive for conditional
+classes, zero `@php` blocks, zero data access. `<x-tramite.progreso
+:escuela-nivel-id="...">` usage in `layouts/tramite.blade.php` is unchanged
+— class-based and anonymous components share the same `<x-tramite.progreso>`
+tag syntax, so no call site needed editing.
+
+Added `tests/Feature/View/Components/Tramite/ProgresoTest.php` (2 tests, via
+Laravel's `$this->blade(...)` test helper): the six catalog steps render in
+`orden`, and a step marked `completado` renders with a distinct
+`data-estado` attribute and `bg-success` dot vs. the other five `pendiente`
+steps. `data-estado="{estado}"` was added to each `<li>` specifically to
+make this assertable without parsing Tailwind classes as the source of
+truth.
+
 ## Verification
 
 ```
 php artisan test
-{"tool":"phpunit","result":"passed","tests":124,"passed":124,"assertions":235,"duration_ms":18471}
+{"tool":"phpunit","result":"passed","tests":126,"passed":126,"assertions":239,"duration_ms":23030}
 ```
-124 = 116 pre-existing (from the wizard-progreso task) + 5
-(`IniciarTramiteNuevoTest`) + 3 (`Paso1PreregistroTest`).
+126 = 116 pre-existing (from the wizard-progreso task) + 5
+(`IniciarTramiteNuevoTest`) + 3 (`Paso1PreregistroTest`) + 2 (`ProgresoTest`,
+added in the Blade-layer-leak follow-up above). Both HTTP routes re-checked
+after the refactor — `GET /tramite/preregistro` and `GET /tramite/paso2/{id}`
+both still 200, and Paso 1's progress indicator still renders all six steps
+as `pendiente` (verified via `data-estado="pendiente"` count = 6 in the
+response body).
 
 Manual HTTP verification (`php artisan serve`, no schema/data changes so no
 CLAUDE.md data-safety gate applied): `GET /tramite/preregistro` → 200, form
