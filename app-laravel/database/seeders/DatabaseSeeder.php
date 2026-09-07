@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(CatalogoMinimoSeeder::class);
+        $this->call(PasosCapturaSeeder::class);
         $this->call(AsignaturasSeeder::class);
         $this->call(CargosPuestosSeeder::class);
         $this->call(PerfilesProfesionalesSeeder::class);
