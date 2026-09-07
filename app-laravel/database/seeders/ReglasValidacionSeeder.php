@@ -8,23 +8,13 @@ use Illuminate\Support\Facades\DB;
 class ReglasValidacionSeeder extends Seeder
 {
     /**
-     * Reglas de superficie y personal — COMPENDIO_MAESTRO §5 (Inicial) y
-     * §5.2 (Preescolar/Primaria/Secundaria, Acuerdos 357/254/255).
+     * Reglas de superficie, personal e infraestructura — COMPENDIO_MAESTRO §5
+     * (Inicial) y §5.2 (Preescolar/Primaria/Secundaria, Acuerdos 357/254/255).
      * Mobiliario y el detalle granular de puertas/escaleras/pasillos/
      * sanitarios-por-rango quedan fuera de este seeder — ver plan.
      *
      * `clave` es UNIQUE en el DDL, por lo que insertOrIgnore basta para
-     * idempotencia — ya no se necesita el delete-then-insert-por-nivel
-     * de la versión anterior de este seeder.
-     *
-     * NOTA (umbral 61, no 60): COMPENDIO §5.2 (texto de los Acuerdos
-     * Secretariales 357/254/255) y la tabla resumen dicen consistentemente
-     * "más de 60 alumnos" (>60) para los tres niveles — condicion_min = 61.
-     * La redacción más temprana de §5.1 ("60 alumnos o más" para Preescolar)
-     * es la que está en conflicto, y queda superada por §5.2 al ser la
-     * fuente normativa más específica (los Acuerdos Secretariales en sí).
-     * Decisión confirmada 2026-09-04 (docs/progress.md Decisions Log) — no
-     * cambiar a 60 sin nueva instrucción.
+     * idempotencia.
      *
      * NOTA (umbral vs. proporcional): §5.1 distingue Preescolar ("solo si
      * la instalación tiene capacidad de 60 alumnos o más" — umbral, un
@@ -32,21 +22,26 @@ class ReglasValidacionSeeder extends Seeder
      * se puede requerir más de uno" — proporcional). Preescolar usa
      * personal_umbral. Primaria usa personal_proporcional SIN
      * condicion_min: el umbral queda implícito en la división entera
-     * (floor(alumnos / 60)), no como una puerta separada — ver
-     * docs/reports/2026-09-07-reglas-validacion-schema.md §"Corrección
-     * Primaria" para la tabla de frontera y la justificación de floor
-     * sobre ceil (el defecto que se corrige aquí: una puerta
-     * condicion_min = 61 junto con la fórmula proporcional producía un
-     * salto de 0 a 2 docentes entre 60 y 61 alumnos).
+     * (floor(alumnos / 60), redondeo = 'abajo'), no como una puerta
+     * separada — ver docs/reports/2026-09-07-reglas-validacion-schema.md
+     * (el defecto que se corrige ahí: una puerta condicion_min = 61 junto
+     * con la fórmula proporcional producía un salto de 0 a 2 docentes
+     * entre 60 y 61 alumnos).
+     *
+     * NOTA (redondeo): COMPENDIO línea 422 especifica explícitamente
+     * "redondeo hacia arriba" para los dos asistentes de Inicial (1 por
+     * cada 5 lactantes, 1 por cada 10 maternales) — son personal_proporcional
+     * igual que la regla de Educación Física de Primaria, pero con
+     * semántica de redondeo OPUESTA (arriba, no abajo). Nada distinguía
+     * esto antes de la columna `redondeo` — ver el reporte, sección de
+     * auditoría de redondeo, para el detalle fila por fila.
      *
      * NOTA (umbral 60 vs. 61, PROVISIONAL): el valor de condicion_min = 61
      * en las reglas *_umbral de abajo (Preescolar Educación Física,
      * Secundaria Educación Física/Trabajador Social/Prefecto) es
-     * provisional — la redacción normativa no es unánime entre fuentes
-     * (Profesiogramas dicen "60 o más", Acuerdos Secretariales dicen
-     * "más de 60"). Ver docs/decisions/PENDIENTE-umbral-educacion-fisica.md
-     * — pendiente de que SEDEQ confirme. No cambiar sin resolver ese
-     * documento.
+     * provisional y sigue abierto — ver
+     * docs/decisions/PENDIENTE-umbral-educacion-fisica.md. No cambiar sin
+     * resolver ese documento.
      */
     public function run(): void
     {
@@ -61,40 +56,40 @@ class ReglasValidacionSeeder extends Seeder
 
         $porNivel = [
             'inicial' => [
-                ['clave' => 'inicial.superficie.aula_lactantes', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'sala', 'concepto' => 'Superficie mínima de aula (Lactantes)', 'condicion_max' => 10, 'valor_numerico' => 25, 'unidad' => 'm²/sala'],
-                ['clave' => 'inicial.superficie.aula_maternales', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'sala', 'concepto' => 'Superficie mínima de aula (Maternales)', 'condicion_max' => 15, 'valor_numerico' => 25, 'unidad' => 'm²/sala'],
-                ['clave' => 'inicial.superficie.area_recreativa', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'concepto' => 'Área recreativa mínima', 'valor_numerico' => 1, 'unidad' => 'm²/alumno'],
-                ['clave' => 'inicial.superficie.sala_usos_multiples', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'concepto' => 'Sala de usos múltiples', 'valor_numerico' => 1.2, 'unidad' => 'm²/niño'],
-                ['clave' => 'inicial.superficie.sanitarios', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'concepto' => 'Sanitarios / control de esfínter', 'valor_numerico' => 0.80, 'unidad' => 'm²/infante'],
-                ['clave' => 'inicial.personal.responsable_sala', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_por_espacio', 'ambito' => 'sala', 'concepto' => 'Responsable de sala (fijo por sala existente)', 'valor_numerico' => 1, 'unidad' => 'responsable/sala'],
-                ['clave' => 'inicial.personal.asistente_lactantes', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'sala', 'concepto' => 'Asistente educativo en salas de lactantes', 'valor_numerico' => 5, 'unidad' => 'alumnos/asistente'],
-                ['clave' => 'inicial.personal.asistente_maternales', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'sala', 'concepto' => 'Asistente educativo en salas de maternales', 'valor_numerico' => 10, 'unidad' => 'alumnos/asistente'],
-                ['clave' => 'inicial.personal.director_tecnico', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_obligatorio', 'ambito' => 'plantel', 'concepto' => 'Director Técnico obligatorio por plantel', 'valor_numerico' => 1, 'unidad' => 'director/plantel'],
+                ['clave' => 'inicial.superficie.aula_lactantes', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'sala', 'redondeo' => 'na', 'concepto' => 'Superficie mínima de aula (Lactantes)', 'condicion_max' => 10, 'valor_numerico' => 25, 'unidad' => 'm²/sala'],
+                ['clave' => 'inicial.superficie.aula_maternales', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'sala', 'redondeo' => 'na', 'concepto' => 'Superficie mínima de aula (Maternales)', 'condicion_max' => 15, 'valor_numerico' => 25, 'unidad' => 'm²/sala'],
+                ['clave' => 'inicial.superficie.area_recreativa', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Área recreativa mínima', 'valor_numerico' => 1, 'unidad' => 'm²/alumno'],
+                ['clave' => 'inicial.superficie.sala_usos_multiples', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Sala de usos múltiples', 'valor_numerico' => 1.2, 'unidad' => 'm²/niño'],
+                ['clave' => 'inicial.superficie.sanitarios', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Sanitarios / control de esfínter', 'valor_numerico' => 0.80, 'unidad' => 'm²/infante'],
+                ['clave' => 'inicial.personal.responsable_sala', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_por_espacio', 'ambito' => 'sala', 'redondeo' => 'na', 'concepto' => 'Responsable de sala (fijo por sala existente)', 'valor_numerico' => 1, 'unidad' => 'responsable/sala'],
+                ['clave' => 'inicial.personal.asistente_lactantes', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'sala', 'redondeo' => 'arriba', 'concepto' => 'Asistente educativo en salas de lactantes', 'valor_numerico' => 5, 'unidad' => 'alumnos/asistente'],
+                ['clave' => 'inicial.personal.asistente_maternales', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'sala', 'redondeo' => 'arriba', 'concepto' => 'Asistente educativo en salas de maternales', 'valor_numerico' => 10, 'unidad' => 'alumnos/asistente'],
+                ['clave' => 'inicial.personal.director_tecnico', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_obligatorio', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Director Técnico obligatorio por plantel', 'valor_numerico' => 1, 'unidad' => 'director/plantel'],
             ],
             'preescolar' => [
-                ['clave' => 'preescolar.superficie.construida_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'concepto' => 'Superficie construida total', 'valor_numerico' => 1.00, 'unidad' => 'm²/educando'],
-                ['clave' => 'preescolar.superficie.aula', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'concepto' => 'Superficie de aula (por educando)', 'valor_numerico' => 1.00, 'unidad' => 'm²/educando'],
-                ['clave' => 'preescolar.superficie.espacio_maestro', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'adicional_fijo', 'ambito' => 'aula', 'concepto' => 'Espacio adicional del maestro en aula', 'valor_numerico' => 2, 'unidad' => 'm² fijo'],
-                ['clave' => 'preescolar.superficie.area_recreacion', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'concepto' => 'Área de recreación', 'valor_numerico' => 1.25, 'unidad' => 'm²/educando'],
-                ['clave' => 'preescolar.superficie.aula_usos_multiples', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'factor', 'ambito' => 'aula', 'concepto' => 'Aula de usos múltiples (factor sobre aula mayor)', 'valor_numerico' => 1.5, 'unidad' => 'factor'],
-                ['clave' => 'preescolar.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'concepto' => 'Docente de Educación Física obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'docente'],
+                ['clave' => 'preescolar.superficie.construida_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Superficie construida total', 'valor_numerico' => 1.00, 'unidad' => 'm²/educando'],
+                ['clave' => 'preescolar.superficie.aula', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'redondeo' => 'na', 'concepto' => 'Superficie de aula (por educando)', 'valor_numerico' => 1.00, 'unidad' => 'm²/educando'],
+                ['clave' => 'preescolar.superficie.espacio_maestro', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'adicional_fijo', 'ambito' => 'aula', 'redondeo' => 'na', 'concepto' => 'Espacio adicional del maestro en aula', 'valor_numerico' => 2, 'unidad' => 'm² fijo'],
+                ['clave' => 'preescolar.superficie.area_recreacion', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Área de recreación', 'valor_numerico' => 1.25, 'unidad' => 'm²/educando'],
+                ['clave' => 'preescolar.superficie.aula_usos_multiples', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'factor', 'ambito' => 'aula', 'redondeo' => 'na', 'concepto' => 'Aula de usos múltiples (factor sobre aula mayor)', 'valor_numerico' => 1.5, 'unidad' => 'factor'],
+                ['clave' => 'preescolar.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Docente de Educación Física obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'docente'],
             ],
             'primaria' => [
-                ['clave' => 'primaria.superficie.predio_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'predio', 'concepto' => 'Superficie total del predio', 'valor_numerico' => 2.50, 'unidad' => 'm²/alumno'],
-                ['clave' => 'primaria.superficie.aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'concepto' => 'Superficie de aulas', 'valor_numerico' => 0.90, 'unidad' => 'm²/alumno'],
-                ['clave' => 'primaria.superficie.altura_aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'aula', 'concepto' => 'Altura de aulas', 'valor_numerico' => 2.70, 'unidad' => 'm fijo'],
-                ['clave' => 'primaria.superficie.acervo_bibliografico', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_grado', 'ambito' => 'escuela', 'concepto' => 'Acervo bibliográfico mínimo', 'valor_numerico' => 50, 'unidad' => 'títulos/grado'],
-                ['clave' => 'primaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'escuela', 'concepto' => 'Docente de Educación Física obligatorio', 'valor_numerico' => 60, 'unidad' => 'alumnos/docente'],
+                ['clave' => 'primaria.superficie.predio_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'predio', 'redondeo' => 'na', 'concepto' => 'Superficie total del predio', 'valor_numerico' => 2.50, 'unidad' => 'm²/alumno'],
+                ['clave' => 'primaria.superficie.aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'redondeo' => 'na', 'concepto' => 'Superficie de aulas', 'valor_numerico' => 0.90, 'unidad' => 'm²/alumno'],
+                ['clave' => 'primaria.infraestructura.altura_aulas', 'tipo_regla' => 'infraestructura', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'aula', 'redondeo' => 'na', 'concepto' => 'Altura de aulas', 'valor_numerico' => 2.70, 'unidad' => 'm fijo'],
+                ['clave' => 'primaria.infraestructura.acervo_bibliografico', 'tipo_regla' => 'infraestructura', 'tipo_calculo' => 'ratio_por_grado', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Acervo bibliográfico mínimo', 'valor_numerico' => 50, 'unidad' => 'títulos/grado'],
+                ['clave' => 'primaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_proporcional', 'ambito' => 'escuela', 'redondeo' => 'abajo', 'concepto' => 'Docente de Educación Física obligatorio', 'valor_numerico' => 60, 'unidad' => 'alumnos/docente'],
             ],
             'secundaria' => [
-                ['clave' => 'secundaria.superficie.predio_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'predio', 'concepto' => 'Superficie total del predio', 'valor_numerico' => 2.50, 'unidad' => 'm²/alumno'],
-                ['clave' => 'secundaria.superficie.aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'concepto' => 'Superficie de aulas', 'valor_numerico' => 0.90, 'unidad' => 'm²/alumno'],
-                ['clave' => 'secundaria.superficie.area_recreacion', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'concepto' => 'Área de recreación', 'valor_numerico' => 1.25, 'unidad' => 'm²/alumno'],
-                ['clave' => 'secundaria.superficie.areas_recreativas_minimas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'plantel', 'concepto' => 'Áreas recreativas/deportivas mínimas', 'valor_numerico' => 200, 'unidad' => 'm² fijo'],
-                ['clave' => 'secundaria.superficie.acervo_bibliografico', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'escuela', 'concepto' => 'Acervo bibliográfico mínimo total', 'valor_numerico' => 300, 'unidad' => 'títulos totales'],
-                ['clave' => 'secundaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'concepto' => 'Docente de Educación Física obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'docente'],
-                ['clave' => 'secundaria.personal.trabajador_social', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'concepto' => 'Trabajador social obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'trabajador social'],
-                ['clave' => 'secundaria.personal.prefecto', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'concepto' => 'Prefecto obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'prefecto'],
+                ['clave' => 'secundaria.superficie.predio_total', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'predio', 'redondeo' => 'na', 'concepto' => 'Superficie total del predio', 'valor_numerico' => 2.50, 'unidad' => 'm²/alumno'],
+                ['clave' => 'secundaria.superficie.aulas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'aula', 'redondeo' => 'na', 'concepto' => 'Superficie de aulas', 'valor_numerico' => 0.90, 'unidad' => 'm²/alumno'],
+                ['clave' => 'secundaria.superficie.area_recreacion', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'ratio_por_alumno', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Área de recreación', 'valor_numerico' => 1.25, 'unidad' => 'm²/alumno'],
+                ['clave' => 'secundaria.superficie.areas_recreativas_minimas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Áreas recreativas/deportivas mínimas', 'valor_numerico' => 200, 'unidad' => 'm² fijo'],
+                ['clave' => 'secundaria.infraestructura.acervo_bibliografico', 'tipo_regla' => 'infraestructura', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Acervo bibliográfico mínimo total', 'valor_numerico' => 300, 'unidad' => 'títulos totales'],
+                ['clave' => 'secundaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Docente de Educación Física obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'docente'],
+                ['clave' => 'secundaria.personal.trabajador_social', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Trabajador social obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'trabajador social'],
+                ['clave' => 'secundaria.personal.prefecto', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Prefecto obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'prefecto'],
             ],
         ];
 

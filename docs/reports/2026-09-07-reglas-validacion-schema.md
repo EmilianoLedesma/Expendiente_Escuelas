@@ -4,36 +4,43 @@ Branch: `arch/reglas-validacion-schema` (not merged, left for review)
 
 ## 1. Row table (28 rows)
 
-| clave | nivel | tipo_regla | tipo_calculo | ambito | condicion_min | condicion_max | valor_numerico | unidad |
-|---|---|---|---|---|---|---|---|---|
-| inicial.superficie.aula_lactantes | inicial | superficie | minimo_fijo | sala | — | 10 | 25.00 | m²/sala |
-| inicial.superficie.aula_maternales | inicial | superficie | minimo_fijo | sala | — | 15 | 25.00 | m²/sala |
-| inicial.superficie.area_recreativa | inicial | superficie | ratio_por_alumno | plantel | — | — | 1.00 | m²/alumno |
-| inicial.superficie.sala_usos_multiples | inicial | superficie | ratio_por_alumno | plantel | — | — | 1.20 | m²/niño |
-| inicial.superficie.sanitarios | inicial | superficie | ratio_por_alumno | plantel | — | — | 0.80 | m²/infante |
-| inicial.personal.responsable_sala | inicial | personal | personal_por_espacio | sala | — | — | 1.00 | responsable/sala |
-| inicial.personal.asistente_lactantes | inicial | personal | personal_proporcional | sala | — | — | 5.00 | alumnos/asistente |
-| inicial.personal.asistente_maternales | inicial | personal | personal_proporcional | sala | — | — | 10.00 | alumnos/asistente |
-| inicial.personal.director_tecnico | inicial | personal | personal_obligatorio | plantel | — | — | 1.00 | director/plantel |
-| preescolar.superficie.construida_total | preescolar | superficie | ratio_por_alumno | plantel | — | — | 1.00 | m²/educando |
-| preescolar.superficie.aula | preescolar | superficie | ratio_por_alumno | aula | — | — | 1.00 | m²/educando |
-| preescolar.superficie.espacio_maestro | preescolar | superficie | adicional_fijo | aula | — | — | 2.00 | m² fijo |
-| preescolar.superficie.area_recreacion | preescolar | superficie | ratio_por_alumno | plantel | — | — | 1.25 | m²/educando |
-| preescolar.superficie.aula_usos_multiples | preescolar | superficie | factor | aula | — | — | 1.50 | factor |
-| preescolar.personal.educacion_fisica | preescolar | personal | personal_umbral | escuela | 61 | — | 1.00 | docente |
-| primaria.superficie.predio_total | primaria | superficie | ratio_por_alumno | predio | — | — | 2.50 | m²/alumno |
-| primaria.superficie.aulas | primaria | superficie | ratio_por_alumno | aula | — | — | 0.90 | m²/alumno |
-| primaria.superficie.altura_aulas | primaria | superficie | minimo_fijo | aula | — | — | 2.70 | m fijo |
-| primaria.superficie.acervo_bibliografico | primaria | superficie | ratio_por_grado | escuela | — | — | 50.00 | títulos/grado |
-| primaria.personal.educacion_fisica | primaria | personal | personal_proporcional | escuela | — | — | 60.00 | alumnos/docente |
-| secundaria.superficie.predio_total | secundaria | superficie | ratio_por_alumno | predio | — | — | 2.50 | m²/alumno |
-| secundaria.superficie.aulas | secundaria | superficie | ratio_por_alumno | aula | — | — | 0.90 | m²/alumno |
-| secundaria.superficie.area_recreacion | secundaria | superficie | ratio_por_alumno | plantel | — | — | 1.25 | m²/alumno |
-| secundaria.superficie.areas_recreativas_minimas | secundaria | superficie | minimo_fijo | plantel | — | — | 200.00 | m² fijo |
-| secundaria.superficie.acervo_bibliografico | secundaria | superficie | minimo_fijo | escuela | — | — | 300.00 | títulos totales |
-| secundaria.personal.educacion_fisica | secundaria | personal | personal_umbral | escuela | 61 | — | 1.00 | docente |
-| secundaria.personal.trabajador_social | secundaria | personal | personal_umbral | escuela | 61 | — | 1.00 | trabajador social |
-| secundaria.personal.prefecto | secundaria | personal | personal_umbral | escuela | 61 | — | 1.00 | prefecto |
+**Note (this amendment):** `clave` for the three rows reclassified to `tipo_regla =
+infraestructura` (§8) changed to match the `{nivel}.{tipo_regla}.{slug}` convention:
+`primaria.superficie.altura_aulas` → `primaria.infraestructura.altura_aulas`,
+`primaria.superficie.acervo_bibliografico` → `primaria.infraestructura.acervo_bibliografico`,
+`secundaria.superficie.acervo_bibliografico` → `secundaria.infraestructura.acervo_bibliografico`.
+A `redondeo` column was also added (§9) — populated below.
+
+| clave | nivel | tipo_regla | tipo_calculo | ambito | redondeo | condicion_min | condicion_max | valor_numerico | unidad |
+|---|---|---|---|---|---|---|---|---|---|
+| inicial.superficie.aula_lactantes | inicial | superficie | minimo_fijo | sala | na | — | 10 | 25.00 | m²/sala |
+| inicial.superficie.aula_maternales | inicial | superficie | minimo_fijo | sala | na | — | 15 | 25.00 | m²/sala |
+| inicial.superficie.area_recreativa | inicial | superficie | ratio_por_alumno | plantel | na | — | — | 1.00 | m²/alumno |
+| inicial.superficie.sala_usos_multiples | inicial | superficie | ratio_por_alumno | plantel | na | — | — | 1.20 | m²/niño |
+| inicial.superficie.sanitarios | inicial | superficie | ratio_por_alumno | plantel | na | — | — | 0.80 | m²/infante |
+| inicial.personal.responsable_sala | inicial | personal | personal_por_espacio | sala | na | — | — | 1.00 | responsable/sala |
+| inicial.personal.asistente_lactantes | inicial | personal | personal_proporcional | sala | **arriba** | — | — | 5.00 | alumnos/asistente |
+| inicial.personal.asistente_maternales | inicial | personal | personal_proporcional | sala | **arriba** | — | — | 10.00 | alumnos/asistente |
+| inicial.personal.director_tecnico | inicial | personal | personal_obligatorio | plantel | na | — | — | 1.00 | director/plantel |
+| preescolar.superficie.construida_total | preescolar | superficie | ratio_por_alumno | plantel | na | — | — | 1.00 | m²/educando |
+| preescolar.superficie.aula | preescolar | superficie | ratio_por_alumno | aula | na | — | — | 1.00 | m²/educando |
+| preescolar.superficie.espacio_maestro | preescolar | superficie | adicional_fijo | aula | na | — | — | 2.00 | m² fijo |
+| preescolar.superficie.area_recreacion | preescolar | superficie | ratio_por_alumno | plantel | na | — | — | 1.25 | m²/educando |
+| preescolar.superficie.aula_usos_multiples | preescolar | superficie | factor | aula | na | — | — | 1.50 | factor |
+| preescolar.personal.educacion_fisica | preescolar | personal | personal_umbral | escuela | na | 61 | — | 1.00 | docente |
+| primaria.superficie.predio_total | primaria | superficie | ratio_por_alumno | predio | na | — | — | 2.50 | m²/alumno |
+| primaria.superficie.aulas | primaria | superficie | ratio_por_alumno | aula | na | — | — | 0.90 | m²/alumno |
+| **primaria.infraestructura.altura_aulas** | primaria | **infraestructura** | minimo_fijo | aula | na | — | — | 2.70 | m fijo |
+| **primaria.infraestructura.acervo_bibliografico** | primaria | **infraestructura** | ratio_por_grado | escuela | na | — | — | 50.00 | títulos/grado |
+| primaria.personal.educacion_fisica | primaria | personal | personal_proporcional | escuela | **abajo** | — | — | 60.00 | alumnos/docente |
+| secundaria.superficie.predio_total | secundaria | superficie | ratio_por_alumno | predio | na | — | — | 2.50 | m²/alumno |
+| secundaria.superficie.aulas | secundaria | superficie | ratio_por_alumno | aula | na | — | — | 0.90 | m²/alumno |
+| secundaria.superficie.area_recreacion | secundaria | superficie | ratio_por_alumno | plantel | na | — | — | 1.25 | m²/alumno |
+| secundaria.superficie.areas_recreativas_minimas | secundaria | superficie | minimo_fijo | plantel | na | — | — | 200.00 | m² fijo |
+| **secundaria.infraestructura.acervo_bibliografico** | secundaria | **infraestructura** | minimo_fijo | escuela | na | — | — | 300.00 | títulos totales |
+| secundaria.personal.educacion_fisica | secundaria | personal | personal_umbral | escuela | na | 61 | — | 1.00 | docente |
+| secundaria.personal.trabajador_social | secundaria | personal | personal_umbral | escuela | na | 61 | — | 1.00 | trabajador social |
+| secundaria.personal.prefecto | secundaria | personal | personal_umbral | escuela | na | 61 | — | 1.00 | prefecto |
 
 All 28 rows carry `cargo_puesto_id = NULL` (see §6, Follow-ups) and `fuente` per nivel: Inicial → `REQUISITOS_DE_EDUCACIÓN_INICIAL.docx`; Preescolar → `Acuerdo Secretarial 357`; Primaria → `Acuerdo Secretarial 254`; Secundaria → `Acuerdo Secretarial 255`.
 
@@ -93,6 +100,16 @@ step, so it cannot exhibit this particular discontinuity by construction. The ot
 never affected. **Primaria's PE rule was the only row with the gate-plus-division
 combination; no other rows required changes.**
 
+**Scope correction (this amendment):** that "no other rows affected" conclusion was
+scoped narrowly to the gate-plus-division defect specifically — it did not check for
+rounding-direction correctness, and it should have. A second, independent defect
+existed in the same three `personal_proporcional` rows this whole time: two of them
+(`inicial.personal.asistente_lactantes`, `inicial.personal.asistente_maternales`)
+require rounding **up**, while Primaria's rule requires rounding **down**, and prior
+to this amendment nothing in the schema distinguished them — see §9 for the full
+finding and fix. Future readers: a check phrased as "re-audited all rows for X" does
+not mean "verified correct in every dimension" — always check what X actually was.
+
 ### 2.5 Additional discrepancy noticed (not previously flagged)
 
 - COMPENDIO §5 (Inicial section, not quoted above) gives Inicial's rules no explicit alumno-capacity threshold for any of its `personal` rules other than the fixed ratios (director 1/plantel, responsable 1/sala, asistentes 1/5 or 1/10) — no §5.1/§5.2-style ">60" language applies to Inicial at all. No conflict found here; noted only because the task's framing might suggest checking for one. No seed change needed.
@@ -131,10 +148,13 @@ Database\Seeders\PerfilesProfesionalesSeeder .. DONE
 Database\Seeders\ReglasValidacionSeeder .. DONE
 
 $ php artisan test tests/Feature/Database/ReglasValidacionSeederTest.php
-{"tool":"phpunit","result":"passed","tests":25,"passed":25,"assertions":51,"duration_ms":2859}
+{"tool":"phpunit","result":"passed","tests":39,"passed":39,"assertions":57,"duration_ms":5024}
+
+$ php artisan test tests/Unit/Domain/Validaciones/Regla/CalculadoraRequerimientoTest.php
+{"tool":"phpunit","result":"passed","tests":21,"passed":21,"assertions":21,"duration_ms":24}
 
 $ php artisan test
-{"tool":"phpunit","result":"passed","tests":69,"passed":69,"assertions":164,"duration_ms":16905}
+{"tool":"phpunit","result":"passed","tests":104,"passed":104,"assertions":191,"duration_ms":16785}
 ```
 
 **RED check for the Primaria fix**: before restoring the fix, the 9 new boundary
@@ -150,14 +170,16 @@ Tinker dump (28 rows, matches §1's table exactly — confirmed by direct `json_
 
 ## 5. Files changed
 
-- `app-laravel/database/migrations/2026_01_01_000010_create_reglas_validacion_table.php` — added `clave` (UNIQUE), `tipo_calculo` (9-value CHECK), `ambito` (5-value CHECK), `cargo_puesto_id` (nullable FK); `concepto`/`fuente` widened to `TEXT`; `condicion_min`/`condicion_max` changed `INTEGER` → `NUMERIC(10,2)`; `valor_numerico`/`unidad` made `NOT NULL`.
-- `docs/ddl_sistema_incorporacion_v3.sql` — mirrored the same change (gitignored, local-only file).
-- `app-laravel/database/seeders/ReglasValidacionSeeder.php` — rewritten: 28 rows with `clave`/`tipo_calculo`/`ambito`; switched from delete-then-insert-per-nivel to `insertOrIgnore` (safe now that `clave` is UNIQUE); umbral/proporcional split applied (§2.2); Primaria's gate-plus-division defect fixed by dropping `condicion_min` (§2.4/§7); `condicion_min = 61` on the four `*_umbral` rows marked provisional in the docblock, pending `docs/decisions/PENDIENTE-umbral-educacion-fisica.md`.
-- `app-laravel/tests/Feature/Database/ReglasValidacionSeederTest.php` — rewritten: 25 tests total — the original 16 (row count, `clave` uniqueness/non-null, `tipo_calculo`/`ambito` non-null, all-9-values-allowed, idempotency, one assertion per `tipo_calculo`) plus 9 new boundary tests (`#[DataProvider]`, PHPUnit 12 attribute syntax) for Primaria (59/60/61/119/120/121) and Preescolar (59/60/61), watched RED against the pre-fix seeder before the fix made them GREEN.
+- `app-laravel/database/migrations/2026_01_01_000010_create_reglas_validacion_table.php` — added `clave` (UNIQUE), `tipo_calculo` (9-value CHECK), `ambito` (5-value CHECK), `redondeo` (3-value CHECK — this amendment), `cargo_puesto_id` (nullable FK); `tipo_regla` CHECK extended with `'infraestructura'` (this amendment); `concepto`/`fuente` widened to `TEXT`; `condicion_min`/`condicion_max` changed `INTEGER` → `NUMERIC(10,2)`; `valor_numerico`/`unidad` made `NOT NULL`.
+- `docs/ddl_sistema_incorporacion_v3.sql` — mirrored the same changes (gitignored, local-only file).
+- `app-laravel/database/seeders/ReglasValidacionSeeder.php` — rewritten across three passes: `clave`/`tipo_calculo`/`ambito` (pass 1), Primaria gate-plus-division fix (pass 2), `redondeo` populated + 3 rows reclassified to `infraestructura` + docblock's contradictory "settled" note deleted, leaving only the provisional note (this amendment, pass 3).
+- `app-laravel/tests/Feature/Database/ReglasValidacionSeederTest.php` — rewritten: 39 tests. Boundary tests now call `CalculadoraRequerimiento` instead of inline `intdiv`/manual arithmetic (§10); added redondeo/tipo_regla/infraestructura-classification assertions; added Inicial lactantes/maternales boundary tests (4/5/6/10/11 and 9/10/11).
+- `app-laravel/app/Domain/Validaciones/Regla/CalculadoraRequerimiento.php` — **new**, pure calculation class (§10).
+- `app-laravel/tests/Unit/Domain/Validaciones/Regla/CalculadoraRequerimientoTest.php` — **new**, pure unit test, 21 tests, no DB.
 - `docs/superpowers/plans/2026-09-04-catalogos-motor-validacion.md` — Task 4 marked superseded, pointing here.
-- `docs/progress.md` — Decisions Log entry appended.
-- `docs/reports/2026-09-07-reglas-validacion-schema.md` — this report (amended: §2.1 reopened, §2.4 and §7 added).
-- `docs/decisions/PENDIENTE-umbral-educacion-fisica.md` — new decision memo, the 60-vs-61 threshold question, open pending SEDEQ.
+- `docs/progress.md` — Decisions Log entry appended (pass 1); not further amended in this pass — see follow-up note below.
+- `docs/reports/2026-09-07-reglas-validacion-schema.md` — this report (amended across three passes: §2.1 reopened, §2.4/§7 added in pass 2; §8, §9, §10 added in pass 3).
+- `docs/decisions/PENDIENTE-umbral-educacion-fisica.md` — decision memo (pass 2), unchanged in this pass.
 
 ## 6. Follow-ups created
 
@@ -215,3 +237,164 @@ Preescolar threshold rule (59/60/61) were added to
 `ReglasValidacionSeederTest.php` and watched RED against the pre-fix seeder (7 failing
 assertions, including the exact 60→0/61→discontinuity) before being made GREEN by the
 fix — see §4 for the run output.
+
+## 8. `tipo_regla` re-audit — taxonomy leak fix
+
+The report previously stated all 28 rows classified cleanly under `tipo_regla`. That
+was checked against `tipo_calculo` fit, not against what each row's **unit** actually
+measures — a narrower check than the claim implied. Three rows leaked:
+
+| clave | old tipo_regla | unidad | what it actually measures | new tipo_regla |
+|---|---|---|---|---|
+| `primaria.infraestructura.altura_aulas` | superficie | `m fijo` | a linear height, not an area | **infraestructura** |
+| `primaria.infraestructura.acervo_bibliografico` | superficie | `títulos/grado` | a book count, not an area | **infraestructura** |
+| `secundaria.infraestructura.acervo_bibliografico` | superficie | `títulos totales` | a book count, not an area | **infraestructura** |
+
+`'infraestructura'` added to the `tipo_regla` CHECK constraint (migration + local DDL)
+for exactly this: physical/facility requirements that are neither an area (`superficie`)
+nor a headcount (`personal`) nor furniture/equipment (`mobiliario`).
+
+**Full re-audit of the remaining 25 rows, unit by unit:**
+
+- **16 `superficie` rows** — every one carries an `m²`-denominated unit (`m²/sala`,
+  `m²/alumno`, `m²/educando`, `m²/niño`, `m²/infante`, `m² fijo`) **except**
+  `preescolar.superficie.aula_usos_multiples`, whose `unidad = 'factor'` (dimensionless).
+  Checked and kept as `superficie`: the rule's semantics ("superficie mínima
+  equivalente a 1.5 veces el aula mayor") resolve to an area once multiplied — the
+  dimensionless unit is a multiplier *of* an area, not a different physical quantity
+  the way "títulos" or "metros lineales" are. Not a leak.
+- **9 `personal` rows** — every one is a headcount or a headcount ratio (`director/plantel`,
+  `responsable/sala`, `alumnos/asistente`, `docente`, `alumnos/docente`, `trabajador
+  social`, `prefecto`). No leak.
+
+**Confirmed distribution after the fix: 16 superficie / 9 personal / 3 infraestructura
+= 28.** This is now checked mechanically by
+`test_tipo_regla_distribution_after_infraestructura_reclassification` in the test
+file, not just asserted in this report.
+
+## 9. Rounding audit — the `personal_proporcional` incompatibility (BLOCKER, fixed)
+
+**The defect:** `tipo_calculo = personal_proporcional` was used identically for two
+rules with opposite rounding requirements. COMPENDIO línea 422 (Educación Inicial):
+
+> "1 asistente por cada 5 menores en salas de lactantes; 1 asistente por cada 10
+> menores en salas de maternales (**redondeo hacia arriba**)"
+
+Primaria's PE rule (§7) uses the same `tipo_calculo` but requires rounding **down**
+(floor) — established in the earlier fix and unchanged here. Nothing in the schema
+distinguished the two before this amendment: an engine built against `tipo_calculo`
+alone could not know which direction to round. Concrete harm as reported: a Lactantes
+room with 8 infants, rounded down (`floor(8/5) = 1`), would be staffed with 1
+asistente when the norm requires 2 (`ceil(8/5) = 2`).
+
+**Fix:** added `redondeo VARCHAR(10) NOT NULL CHECK (redondeo IN ('arriba', 'abajo',
+'na'))` to the migration and local DDL (in place — schema still undeployed).
+
+**Full rounding audit — every row, `tipo_calculo`, whether the source specifies
+rounding, and what was set:**
+
+| clave | tipo_calculo | source specifies rounding? | verbatim phrase | redondeo set |
+|---|---|---|---|---|
+| inicial.superficie.aula_lactantes | minimo_fijo | No — continuous area, not divided | — | na |
+| inicial.superficie.aula_maternales | minimo_fijo | No | — | na |
+| inicial.superficie.area_recreativa | ratio_por_alumno | No — continuous area | — | na |
+| inicial.superficie.sala_usos_multiples | ratio_por_alumno | No | — | na |
+| inicial.superficie.sanitarios | ratio_por_alumno | No | — | na |
+| inicial.personal.responsable_sala | personal_por_espacio | No — multiplies by an existing discrete count, no division | — | na |
+| **inicial.personal.asistente_lactantes** | personal_proporcional | **Yes** | "redondeo hacia arriba" (COMPENDIO L422) | **arriba** |
+| **inicial.personal.asistente_maternales** | personal_proporcional | **Yes** | "redondeo hacia arriba" (COMPENDIO L422) | **arriba** |
+| inicial.personal.director_tecnico | personal_obligatorio | No — fixed constant | — | na |
+| preescolar.superficie.construida_total | ratio_por_alumno | No | — | na |
+| preescolar.superficie.aula | ratio_por_alumno | No | — | na |
+| preescolar.superficie.espacio_maestro | adicional_fijo | No — fixed addend | — | na |
+| preescolar.superficie.area_recreacion | ratio_por_alumno | No | — | na |
+| preescolar.superficie.aula_usos_multiples | factor | No — continuous multiplier | — | na |
+| preescolar.personal.educacion_fisica | personal_umbral | No — flat gate, no division | — | na |
+| primaria.superficie.aulas | ratio_por_alumno | No | — | na |
+| primaria.superficie.predio_total | ratio_por_alumno | No | — | na |
+| primaria.infraestructura.altura_aulas | minimo_fijo | No — fixed constant | — | na |
+| primaria.infraestructura.acervo_bibliografico | ratio_por_grado | No — grados are always whole numbers, no fractional case exists | — | na |
+| **primaria.personal.educacion_fisica** | personal_proporcional | **Silent** — COMPENDIO says "por cada 60... se puede requerir más de uno" but never says which way to round a partial group | (none — assumption, see §7) | **abajo (assumption, flagged for SEDEQ)** |
+| secundaria.superficie.predio_total | ratio_por_alumno | No | — | na |
+| secundaria.superficie.aulas | ratio_por_alumno | No | — | na |
+| secundaria.superficie.area_recreacion | ratio_por_alumno | No | — | na |
+| secundaria.superficie.areas_recreativas_minimas | minimo_fijo | No | — | na |
+| secundaria.infraestructura.acervo_bibliografico | minimo_fijo | No — fixed constant | — | na |
+| secundaria.personal.educacion_fisica | personal_umbral | No — flat gate | — | na |
+| secundaria.personal.trabajador_social | personal_umbral | No | — | na |
+| secundaria.personal.prefecto | personal_umbral | No | — | na |
+
+**Rows where the source is silent and a rule was still needed (flagged, not
+invented-and-hidden):** only `primaria.personal.educacion_fisica`. This is the same
+floor-vs-ceil assumption already disclosed in §7 and in
+`docs/decisions/PENDIENTE-umbral-educacion-fisica.md` — restated here because this
+audit's job is to surface every silent case, and this is the only one that both (a)
+involves a real division and (b) has no explicit source instruction either way.
+Every other row is either explicitly specified (the two Inicial asistente rows) or
+`na` for a structural reason (continuous magnitude, fixed constant, or a flat gate
+with no division) — none of those `na` rows required inventing a rounding rule,
+because none of them divide anything.
+
+## 10. `CalculadoraRequerimiento` — pure calculation class
+
+Created `app/Domain/Validaciones/Regla/CalculadoraRequerimiento.php` — the first real
+piece of the Motor de Validación. Pure PHP: no Eloquent, no framework, no DB access.
+One public method:
+
+```php
+public function calcular(
+    string $tipoCalculo,
+    float $valorNumerico,
+    ?float $condicionMin,
+    string $redondeo,
+    float $magnitud,
+): int|float
+```
+
+Covers all nine `tipo_calculo` values via `match`; `personal_proporcional` delegates
+to a private `proporcional()` helper that applies `ceil`/`floor` per `redondeo`.
+Scope was kept to exactly this — no repositories, no Application layer, no changes to
+`ValidacionCapacidadService` (still an empty stub) — the calculator only needs its
+five scalar inputs, so no stop-and-report was triggered.
+
+**Pure unit test** (no DB, no Laravel `TestCase`, plain PHPUnit):
+`tests/Unit/Domain/Validaciones/Regla/CalculadoraRequerimientoTest.php` — 21 tests
+covering every `tipo_calculo`, both rounding directions, and the exact boundary cases
+named in this follow-up (Primaria 59-121, Inicial lactantes 4-11, Inicial maternales
+9-11).
+
+**Before/after: the boundary test body.**
+
+Before (tested PHP's own `intdiv`, not this system):
+
+```php
+$rule = DB::table('reglas_validacion')->where('clave', 'primaria.personal.educacion_fisica')->first();
+$this->assertSame('personal_proporcional', $rule->tipo_calculo);
+$this->assertNull($rule->condicion_min);
+$required = intdiv($enrollment, (int) $rule->valor_numerico);
+$this->assertSame($expectedDocentes, $required, "enrollment={$enrollment}");
+```
+
+After (loads the real row, runs it through the same class the engine will use):
+
+```php
+$rule = DB::table('reglas_validacion')->where('clave', 'primaria.personal.educacion_fisica')->first();
+$required = (new CalculadoraRequerimiento())->calcular(
+    tipoCalculo: $rule->tipo_calculo,
+    valorNumerico: (float) $rule->valor_numerico,
+    condicionMin: $rule->condicion_min !== null ? (float) $rule->condicion_min : null,
+    redondeo: $rule->redondeo,
+    magnitud: (float) $enrollment,
+);
+$this->assertSame($expectedDocentes, $required, "enrollment={$enrollment}");
+```
+
+If the engine's rounding rule for this row ever changes without a matching test
+update, this now fails — the earlier version could not have caught that, since it
+carried its own copy of the arithmetic instead of calling the system under test.
+
+New boundary cases added per this follow-up:
+`test_inicial_asistente_lactantes_boundary` (4→1, 5→1, 6→2, 10→2, 11→3) and
+`test_inicial_asistente_maternales_boundary` (9→1, 10→1, 11→2), both round-trip
+through `CalculadoraRequerimiento` against the seeded row exactly like the Primaria
+test above.

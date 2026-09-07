@@ -12,7 +12,7 @@ return new class extends Migration
     clave               VARCHAR(100) NOT NULL UNIQUE,
     nivel_educativo_id  SMALLINT NOT NULL REFERENCES niveles_educativos(id),
     tipo_regla          VARCHAR(30) NOT NULL
-                            CHECK (tipo_regla IN (\'superficie\', \'personal\', \'mobiliario\')),
+                            CHECK (tipo_regla IN (\'superficie\', \'personal\', \'mobiliario\', \'infraestructura\')),
     tipo_calculo        VARCHAR(30) NOT NULL
                             CHECK (tipo_calculo IN (
                                 \'ratio_por_alumno\', \'ratio_por_grado\', \'minimo_fijo\',
@@ -21,6 +21,8 @@ return new class extends Migration
                             )),
     ambito              VARCHAR(20) NOT NULL
                             CHECK (ambito IN (\'aula\', \'sala\', \'plantel\', \'escuela\', \'predio\')),
+    redondeo            VARCHAR(10) NOT NULL
+                            CHECK (redondeo IN (\'arriba\', \'abajo\', \'na\')),
     concepto            TEXT NOT NULL,
     cargo_puesto_id     INTEGER REFERENCES cargos_puestos(id),
     condicion_min       NUMERIC(10,2),
