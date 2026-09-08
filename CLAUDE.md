@@ -118,9 +118,7 @@ Architectural work becomes a written plan with literal code per task, then gets 
 Any change with real shape gets its own git worktree before implementation starts, merged (or discarded) once done. Reserve direct-on-main work for genuinely trivial, single-file changes.
 
 ### Verify before claiming done
-Run the actual test/build/lint command and read its real output before saying something works, passes, or is fixed. "I manually tested it" and "it should work" are not verification. If a fix can't be proven non-vacuous in the available test environment, say so explicitly and flag it as deferred to manual verification.
-
-GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push/PR and independently re-verifies the test suite, PHPStan (level 5, plus one PHPat rule enforcing ADR-001: `app/Domain` must not depend on `Illuminate\*`), and Pint style — it does not replace running these locally before claiming done, but a red CI check on a pushed branch is real signal, not noise.
+GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push/PR and independently re-verifies the test suite, PHPStan (level 5, plus one PHPat rule enforcing ADR-001: `app/Domain` must not depend on `Illuminate\*`), and Pint style — it does not replace running these locally before claiming done, but a red CI check on a pushed branch is real signal, not noise. It also runs in a clean environment, so it can surface drift your local machine can't see (e.g. it caught composer.lock requiring PHP 8.4 while CLAUDE.md and composer.json still said 8.3) — treat a CI-only failure as a real finding, not a fluke to retry past.
 
 ### Data safety is a hard line, not a judgment call
 Never insert/mutate/upload data against a live database — dev included — without asking first, even for a known, pre-existing test fixture, even for an idempotent operation. Reading data (SELECTs, navigating pages) is free; anything that writes is not. Same bar for DDL/schema changes.
@@ -140,3 +138,9 @@ Never let implementer subagents touch `.gitignore` or run `git push` — that's 
 
 ### Register/tone
 Default to concise, direct answers — lead with the result, skip the preamble, keep exploratory questions to 2-3 sentences with a clear recommendation rather than an exhaustive options survey. Match whatever tone mode is active without letting it override the substance underneath — code, security notices, and irreversible-action confirmations always stay in full, clear language regardless of active tone mode.
+
+### Read the decision record before writing code in an area it covers
+
+`docs/decisions/` is not read automatically at session start — nothing enforces this today. Before starting work that touches a domain area with an ADR or PENDIENTE file (identity/ownership, layer boundaries, Livewire namespace, validation rule versioning), read the relevant file in full, not just its mention in `docs/progress.md`'s summary. Filenames are not reliable status indicators on their own — check the `Estado:` line inside the file, since a resolved decision may still carry a stale `PENDIENTE-` prefix if nobody renamed it. When in doubt, list `docs/decisions/` and skim each header before proceeding.
+
+Closing a `PENDIENTE-<topic>.md` is not just adding an `Estado: resuelto` line — rename the file in the same commit (`ADR-00N-<topic>.md` if it's an architectural decision worth numbering alongside ADR-001, or keep the topic name if it's narrower) so the filename and the content never disagree. This is not optional cleanup: a stale `PENDIENTE-` prefix on a resolved file is what caused this exact confusion once already. `docs/reports/` files don't get this treatment — they're dated, immutable records of what happened in a session, not tracked open/closed state, so there's nothing to rename.
