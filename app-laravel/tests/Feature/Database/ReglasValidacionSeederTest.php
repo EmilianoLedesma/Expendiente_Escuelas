@@ -16,8 +16,8 @@ class ReglasValidacionSeederTest extends TestCase
 
     private function seedReglas(): void
     {
-        (new CatalogoMinimoSeeder())->run();
-        (new ReglasValidacionSeeder())->run();
+        (new CatalogoMinimoSeeder)->run();
+        (new ReglasValidacionSeeder)->run();
     }
 
     public function test_it_seeds_28_reglas_across_4_niveles(): void
@@ -135,7 +135,7 @@ class ReglasValidacionSeederTest extends TestCase
     public function test_it_is_idempotent_when_run_twice(): void
     {
         $this->seedReglas();
-        (new ReglasValidacionSeeder())->run();
+        (new ReglasValidacionSeeder)->run();
 
         $this->assertDatabaseCount('reglas_validacion', 28);
     }
@@ -353,7 +353,7 @@ class ReglasValidacionSeederTest extends TestCase
 
         $rule = DB::table('reglas_validacion')->where('clave', 'primaria.personal.educacion_fisica')->first();
 
-        $required = (new CalculadoraRequerimiento())->calcular(
+        $required = (new CalculadoraRequerimiento)->calcular(
             tipoCalculo: $rule->tipo_calculo,
             valorNumerico: (float) $rule->valor_numerico,
             condicionMin: $rule->condicion_min !== null ? (float) $rule->condicion_min : null,
@@ -383,7 +383,7 @@ class ReglasValidacionSeederTest extends TestCase
 
         $rule = DB::table('reglas_validacion')->where('clave', 'preescolar.personal.educacion_fisica')->first();
 
-        $required = (new CalculadoraRequerimiento())->calcular(
+        $required = (new CalculadoraRequerimiento)->calcular(
             tipoCalculo: $rule->tipo_calculo,
             valorNumerico: (float) $rule->valor_numerico,
             condicionMin: (float) $rule->condicion_min,
@@ -415,7 +415,7 @@ class ReglasValidacionSeederTest extends TestCase
 
         $rule = DB::table('reglas_validacion')->where('clave', 'inicial.personal.asistente_lactantes')->first();
 
-        $required = (new CalculadoraRequerimiento())->calcular(
+        $required = (new CalculadoraRequerimiento)->calcular(
             tipoCalculo: $rule->tipo_calculo,
             valorNumerico: (float) $rule->valor_numerico,
             condicionMin: null,
@@ -444,7 +444,7 @@ class ReglasValidacionSeederTest extends TestCase
 
         $rule = DB::table('reglas_validacion')->where('clave', 'inicial.personal.asistente_maternales')->first();
 
-        $required = (new CalculadoraRequerimiento())->calcular(
+        $required = (new CalculadoraRequerimiento)->calcular(
             tipoCalculo: $rule->tipo_calculo,
             valorNumerico: (float) $rule->valor_numerico,
             condicionMin: null,

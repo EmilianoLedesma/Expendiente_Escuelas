@@ -26,6 +26,5 @@ final readonly class DatosPreregistro
         public ?string $codigoPostal = null,
         public ?string $telefono = null,
         public ?string $correoElectronico = null,
-    ) {
-    }
+    ) {}
 }

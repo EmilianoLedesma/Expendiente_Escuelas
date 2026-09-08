@@ -12,7 +12,7 @@ class PasosCapturaSeederTest extends TestCase
 
     public function test_it_seeds_the_six_paso3_substeps_in_order(): void
     {
-        (new PasosCapturaSeeder())->run();
+        (new PasosCapturaSeeder)->run();
 
         $this->assertDatabaseCount('pasos_captura', 6);
 
@@ -26,8 +26,8 @@ class PasosCapturaSeederTest extends TestCase
 
     public function test_it_is_idempotent_when_run_twice(): void
     {
-        (new PasosCapturaSeeder())->run();
-        (new PasosCapturaSeeder())->run();
+        (new PasosCapturaSeeder)->run();
+        (new PasosCapturaSeeder)->run();
 
         $this->assertDatabaseCount('pasos_captura', 6);
     }

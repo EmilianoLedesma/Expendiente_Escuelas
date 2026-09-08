@@ -18,16 +18,25 @@ use Livewire\Component;
 class Paso1Preregistro extends Component
 {
     public string $bifurcacion = 'nuevo';
+
     public ?int $plantelId = null;
 
     public string $calle = '';
+
     public string $numeroExt = '';
+
     public string $numeroInt = '';
+
     public string $colonia = '';
+
     public string $localidad = '';
+
     public string $municipio = '';
+
     public string $codigoPostal = '';
+
     public string $telefono = '';
+
     public string $correoElectronico = '';
 
     protected function rules(): array

@@ -12,7 +12,7 @@ class AsignaturasSeederTest extends TestCase
 
     public function test_it_seeds_the_16_secundaria_asignaturas(): void
     {
-        (new AsignaturasSeeder())->run();
+        (new AsignaturasSeeder)->run();
 
         $this->assertDatabaseCount('asignaturas', 16);
         $this->assertDatabaseHas('asignaturas', ['nombre' => 'Biología']);
@@ -22,8 +22,8 @@ class AsignaturasSeederTest extends TestCase
 
     public function test_it_is_idempotent_when_run_twice(): void
     {
-        (new AsignaturasSeeder())->run();
-        (new AsignaturasSeeder())->run();
+        (new AsignaturasSeeder)->run();
+        (new AsignaturasSeeder)->run();
 
         $this->assertDatabaseCount('asignaturas', 16);
     }

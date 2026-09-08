@@ -29,7 +29,7 @@ class IniciarTramiteNuevoTest extends TestCase
 
     public function test_crea_plantel_y_escuela_para_bifurcacion_nuevo(): void
     {
-        $resultado = (new IniciarTramiteNuevo())->ejecutar($this->datosNuevoValidos());
+        $resultado = (new IniciarTramiteNuevo)->ejecutar($this->datosNuevoValidos());
 
         $this->assertDatabaseHas('planteles', [
             'id' => $resultado->plantelId,
@@ -53,7 +53,7 @@ class IniciarTramiteNuevoTest extends TestCase
             'codigo_postal' => '76000',
         ]);
 
-        $resultado = (new IniciarTramiteNuevo())->ejecutar(new DatosPreregistro(
+        $resultado = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
             bifurcacion: 'existente',
             plantelId: $plantel->id,
         ));
@@ -69,7 +69,7 @@ class IniciarTramiteNuevoTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        (new IniciarTramiteNuevo())->ejecutar(new DatosPreregistro(
+        (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
             bifurcacion: 'nuevo',
             calle: 'Av. Reforma 100',
             // falta colonia, municipio, codigoPostal
@@ -80,7 +80,7 @@ class IniciarTramiteNuevoTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        (new IniciarTramiteNuevo())->ejecutar(new DatosPreregistro(bifurcacion: 'existente'));
+        (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(bifurcacion: 'existente'));
     }
 
     /**
@@ -98,7 +98,7 @@ class IniciarTramiteNuevoTest extends TestCase
         });
 
         try {
-            (new IniciarTramiteNuevo())->ejecutar($this->datosNuevoValidos());
+            (new IniciarTramiteNuevo)->ejecutar($this->datosNuevoValidos());
             $this->fail('Se esperaba una excepción.');
         } catch (Throwable $e) {
             $this->assertInstanceOf(RuntimeException::class, $e);
