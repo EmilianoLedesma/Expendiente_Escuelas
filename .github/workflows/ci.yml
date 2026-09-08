@@ -117,7 +117,7 @@ jobs:
       - name: Composer install
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: PHPStan (level 5, plus one PHPat rule: app/Domain must not depend on Illuminate)
+      - name: "PHPStan (level 5, plus one PHPat rule: app/Domain must not depend on Illuminate)"
         run: vendor/bin/phpstan analyse -c phpstan.neon --no-progress --error-format=github
 
   style:
