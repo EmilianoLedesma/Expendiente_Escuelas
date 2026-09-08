@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\Feature\Http\Livewire\Tramite;
+namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\DTO\ResultadoPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
-use App\Http\Livewire\Tramite\Paso1Preregistro;
+use App\Livewire\Tramite\Paso1Preregistro;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Mockery;

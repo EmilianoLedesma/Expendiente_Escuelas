@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\Tramite;
+namespace App\Livewire\Tramite;
 
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;

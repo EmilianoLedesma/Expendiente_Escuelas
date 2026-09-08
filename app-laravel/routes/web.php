@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Livewire\Tramite\Paso1Preregistro;
+use App\Livewire\Tramite\Paso1Preregistro;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
