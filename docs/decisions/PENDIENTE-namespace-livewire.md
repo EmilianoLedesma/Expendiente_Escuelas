@@ -1,6 +1,12 @@
 # PENDIENTE — Namespace de componentes Livewire (`App\Http\Livewire` vs. `App\Livewire`)
 
-**Estado: abierto.** No adjudicado por el agente. Requiere decisión del arquitecto.
+**Estado: resuelto (2026-09-08).** Decisión: opción 2, migrar a `app/Livewire/`.
+Ver "## Resolución" al final de este documento. Ninguno de los otros dos
+`PENDIENTE-*` de este directorio tenía todavía un estado "cerrado" del que
+copiar convención — se propone aquí: encabezado `Estado: resuelto (fecha)`
+con un resumen de una línea, el análisis original se conserva sin editar
+como registro histórico, y el veredicto completo va en una sección final
+`## Resolución`.
 
 ## Por qué existe este documento
 
@@ -61,3 +67,26 @@ Sin fix aplicado. No se ha tocado código de Livewire, Application ni Domain
 como parte de este documento. Se marca como pendiente de decisión del
 arquitecto entre las dos opciones anteriores — este documento no adjudica
 cuál tomar.
+
+## Resolución (2026-09-08)
+
+**Decisión: opción 2 — migrar `app/Http/Livewire/` a `app/Livewire/`.**
+
+**Razón:** la opción 1 (registro manual) exige una línea de
+`Livewire::component(...)` por cada componente, incluidos los 11 pasos del
+wizard que todavía faltan por construir — una sola omisión reproduce el
+mismo 419, visto por el usuario final como un "page expired" engañoso, el
+mismo modo de falla que ya costó horas de diagnóstico en este proyecto
+(`docs/reports/2026-09-07-fix-sesion-419.md`). La migración elimina la clase
+de bug en vez de exigir vigilancia permanente contra ella.
+
+Ejecutado en la rama `worktree-fix+namespace-livewire`: los 8 componentes
+movidos de `app/Http/Livewire/` a `app/Livewire/`, namespaces y todas las
+referencias (rutas, tests, vistas Blade) actualizados, `composer dump-autoload`
+corrido. Detalle completo, evidencia TDD (test que reproduce el 419 por HTTP
+real antes de migrar, y pasa después) y verificación:
+`docs/reports/2026-09-08-namespace-livewire.md`.
+
+CLAUDE.md actualizado en el mismo cambio para reflejar `app/Livewire/` como
+la convención vigente, con nota de por qué cambió, para que nadie la revierta
+sin leer este documento primero.

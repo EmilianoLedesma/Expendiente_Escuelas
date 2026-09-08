@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\Tramite\Paso3;
+namespace App\Livewire\Tramite\Paso3;
 
 use Livewire\Component;
 

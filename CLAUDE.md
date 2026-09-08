@@ -76,11 +76,11 @@ app/
 │   ├── Pdf/            # Formato de Solicitud PDF generation (dompdf)
 │   └── Documentos/     # document/checklist handling
 ├── Http/
-│   ├── Controllers/
-│   └── Livewire/       # Livewire components — presentation only, thin: a
-│       ├── Actions/     # component method should call into Domain/Infrastructure,
-│       ├── Forms/        # not contain the business logic itself
-│       └── Tramite/      # the incorporation wizard (Paso1Preregistro,
+│   └── Controllers/
+├── Livewire/           # Livewire components — presentation only, thin: a
+│   ├── Actions/         # component method should call into Domain/Infrastructure,
+│   ├── Forms/            # not contain the business logic itself
+│   └── Tramite/          # the incorporation wizard (Paso1Preregistro,
 │                          # Paso2Responsable, Paso3/{Inmueble,Infraestructura,
 │                          # Mobiliario,PlanEstudios,PlantillaDocente,Matricula})
 ├── Filament/
@@ -95,9 +95,10 @@ Rules for this layout (from the architecture doc, already applied — keep follo
 - `app/Infrastructure/` holds concrete implementations the domain depends on (storage, PDF, notifications, external integrations) — the domain should not know infrastructure details.
 - Eloquent models are persistence, not business logic — don't let them grow into God objects with validation/calculation/transactional flow baked in.
 - Single Laravel app / single repo is the deliberate choice (confirmed via architecture review, see `docs/progress.md` Decisions Log) — no independent deploy needs, one DB as shared contract. Don't introduce microservices or split repos preemptively; only if real scaling/team-isolation needs appear later.
-- As of this writing, `app/Livewire/*`, `app/Services/*` (Domain root was `app/Domain/Validacion/`) is the **old** location — code has since moved to `app/Http/Livewire/*`, `app/Infrastructure/*`, `app/Domain/Validaciones/Engine/`. If you see references to the old paths anywhere (docs, comments), they're stale.
+- As of this writing, `app/Services/*` (Domain root was `app/Domain/Validacion/`) is the **old** location — code has since moved to `app/Infrastructure/*`, `app/Domain/Validaciones/Engine/`. If you see references to the old paths anywhere (docs, comments), they're stale.
+- Livewire components live under `app/Livewire/`, Livewire 3's own auto-discovered convention — **not** `app/Http/Livewire/`. They briefly lived under `app/Http/Livewire/` (2026-09-03 to 2026-09-08); that path broke every Livewire AJAX round-trip with a misleading "page expired" 419, because Livewire's `ComponentRegistry` looks a component up by a name it auto-derives from the class's namespace, and that lookup only resolves under Livewire's own convention. Do not move Livewire components back under `app/Http/` — see `docs/decisions/PENDIENTE-namespace-livewire.md` and `docs/reports/2026-09-08-namespace-livewire.md` before reconsidering this.
 
-Everything under `app/Domain`, `app/Infrastructure`, `app/Http/Livewire/{Actions,Forms,Tramite}` is currently empty stubs — structure exists ahead of the logic that will fill it in.
+Everything under `app/Domain`, `app/Infrastructure` is currently empty stubs — structure exists ahead of the logic that will fill it in.
 
 ## Ways of working
 
