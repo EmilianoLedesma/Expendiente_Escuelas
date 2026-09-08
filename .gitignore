@@ -20,6 +20,7 @@ app-laravel/public/hot
 app-laravel/public/storage
 app-laravel/storage/*.key
 app-laravel/storage/pail
+app-laravel/storage/phpstan
 app-laravel/vendor
 app-laravel/_ide_helper.php
 app-laravel/Homestead.json

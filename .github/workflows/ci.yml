@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+defaults:
+  run:
+    working-directory: app-laravel
+
+# Credentials below match app-laravel/phpunit.xml and app-laravel/.env.testing
+# (both already committed, test-only, not real credentials) so the Postgres
+# service container lines up with what `php artisan test` already expects —
+# no separate .env.ci needed. Do not point this at a real database.
+env:
+  APP_ENV: testing
+  APP_KEY: base64:wB4ShyJXUG+bufb2LE5nV2potz09ysxxwN9Z33fLrKI=
+  DB_CONNECTION: pgsql
+  DB_HOST: 127.0.0.1
+  DB_PORT: 5432
+  DB_DATABASE: sedeq_incorporacion_testing
+  DB_USERNAME: sedeq_app
+  DB_PASSWORD: sedeq_app_pw
+
+jobs:
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # CLAUDE.md / docs/progress.md document PostgreSQL 18 as this
+        # project's stack version. Image availability for postgres:18
+        # could not be verified from this sandbox (no network access) —
+        # if this tag doesn't exist on Docker Hub, fall back to
+        # `postgres:16` (the PRD's original pinned version) instead of
+        # guessing at an untested tag.
+        image: postgres:18
+        env:
+          POSTGRES_USER: sedeq_app
+          POSTGRES_PASSWORD: sedeq_app_pw
+          POSTGRES_DB: sedeq_incorporacion_testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, intl, gd, zip, pdo_pgsql, pgsql, dom, curl, fileinfo, xml
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: app-laravel/package-lock.json
+
+      - name: Composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U sedeq_app; do sleep 1; done
+
+      # This is a CI-only, ephemeral database created fresh by the Postgres
+      # service container above — it never contains real or persistent
+      # data. CLAUDE.md's data-safety confirmation rule for
+      # `migrate:fresh` exists to protect developer-facing dev/prod
+      # databases; it does not apply here. Do not add an interactive
+      # confirmation step to this job.
+      - name: Migrate and seed (CI database only)
+        run: php artisan migrate:fresh --seed --force
+
+      - name: Run test suite
+        run: |
+          php artisan test --log-junit storage/logs/junit.xml
+          echo "### Test suite" >> "$GITHUB_STEP_SUMMARY"
+          php -r '
+            $xml = simplexml_load_file("storage/logs/junit.xml");
+            $root = $xml->testsuite;
+            $t = (string) $root["tests"];
+            $f = (string) $root["failures"];
+            $e = (string) $root["errors"];
+            $a = (string) $root["assertions"];
+            echo "- Tests: {$t}, Assertions: {$a}, Failures: {$f}, Errors: {$e}\n";
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+  static-analysis:
+    name: Static analysis (PHPStan + architecture rule)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, intl, gd, zip, pdo_pgsql, pgsql, dom, curl, fileinfo, xml
+          coverage: none
+
+      - name: Composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHPStan (level 5, plus one PHPat rule: app/Domain must not depend on Illuminate)
+        run: vendor/bin/phpstan analyse -c phpstan.neon --no-progress --error-format=github
+
+  style:
+    name: Code style (Pint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, intl, gd, zip, pdo_pgsql, pgsql, dom, curl, fileinfo, xml
+          coverage: none
+
+      - name: Composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # Check mode only — never auto-fixes files in CI.
+      - name: Pint (check mode)
+        run: vendor/bin/pint --test
