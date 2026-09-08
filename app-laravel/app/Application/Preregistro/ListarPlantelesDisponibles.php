@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
  */
 final class ListarPlantelesDisponibles
 {
-    /** @return Collection<int, array{id: int, etiqueta: string}> */
+    /** @return Collection<int, array{id: int, etiqueta: non-falsy-string}> */
     public function ejecutar(): Collection
     {
         return Plantel::query()

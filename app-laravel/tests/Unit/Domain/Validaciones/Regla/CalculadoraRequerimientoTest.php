@@ -14,7 +14,7 @@ class CalculadoraRequerimientoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->calculadora = new CalculadoraRequerimiento();
+        $this->calculadora = new CalculadoraRequerimiento;
     }
 
     #[DataProvider('proporcionalAbajoProvider')]

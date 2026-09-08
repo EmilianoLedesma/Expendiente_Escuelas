@@ -15,14 +15,14 @@ class PerfilesProfesionalesSeederTest extends TestCase
 
     private function seedDependencies(): void
     {
-        (new CatalogoMinimoSeeder())->run();
-        (new CargosPuestosSeeder())->run();
+        (new CatalogoMinimoSeeder)->run();
+        (new CargosPuestosSeeder)->run();
     }
 
     public function test_it_seeds_87_perfiles_across_inicial_preescolar_primaria_secundaria(): void
     {
         $this->seedDependencies();
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         $this->assertDatabaseCount('perfiles_profesionales', 87);
     }
@@ -30,7 +30,7 @@ class PerfilesProfesionalesSeederTest extends TestCase
     public function test_it_seeds_inicial_director_tecnico_perfiles(): void
     {
         $this->seedDependencies();
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         $inicialId = DB::table('niveles_educativos')->where('clave', 'inicial')->value('id');
         $cargoId = DB::table('cargos_puestos')
@@ -48,7 +48,7 @@ class PerfilesProfesionalesSeederTest extends TestCase
     public function test_it_seeds_preescolar_docente_ingles_certifications(): void
     {
         $this->seedDependencies();
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         $preescolarId = DB::table('niveles_educativos')->where('clave', 'preescolar')->value('id');
         $cargoId = DB::table('cargos_puestos')
@@ -67,7 +67,7 @@ class PerfilesProfesionalesSeederTest extends TestCase
     public function test_it_seeds_primaria_docente_computacion_perfiles(): void
     {
         $this->seedDependencies();
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         $primariaId = DB::table('niveles_educativos')->where('clave', 'primaria')->value('id');
         $cargoId = DB::table('cargos_puestos')
@@ -85,7 +85,7 @@ class PerfilesProfesionalesSeederTest extends TestCase
     public function test_it_seeds_secundaria_director_tecnico_perfiles(): void
     {
         $this->seedDependencies();
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         $secundariaId = DB::table('niveles_educativos')->where('clave', 'secundaria')->value('id');
         $cargoId = DB::table('cargos_puestos')
@@ -104,8 +104,8 @@ class PerfilesProfesionalesSeederTest extends TestCase
     public function test_it_is_idempotent_when_run_twice(): void
     {
         $this->seedDependencies();
-        (new PerfilesProfesionalesSeeder())->run();
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         $this->assertDatabaseCount('perfiles_profesionales', 87);
     }
@@ -128,7 +128,7 @@ class PerfilesProfesionalesSeederTest extends TestCase
         ]);
 
         // Run the seeder (covers only Inicial/Preescolar/Primaria)
-        (new PerfilesProfesionalesSeeder())->run();
+        (new PerfilesProfesionalesSeeder)->run();
 
         // Assert the Secundaria row still exists — seeder's delete should not touch it
         $this->assertDatabaseHas('perfiles_profesionales', [

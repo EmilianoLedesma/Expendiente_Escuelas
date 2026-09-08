@@ -16,7 +16,7 @@ class ProgresoTest extends TestCase
 
     public function test_renderiza_los_seis_pasos_en_orden(): void
     {
-        (new PasosCapturaSeeder())->run();
+        (new PasosCapturaSeeder)->run();
 
         $html = (string) $this->blade('<x-tramite.progreso />');
 
@@ -29,8 +29,8 @@ class ProgresoTest extends TestCase
 
     public function test_un_paso_completado_se_renderiza_distinto_de_uno_pendiente(): void
     {
-        (new CatalogoMinimoSeeder())->run();
-        (new PasosCapturaSeeder())->run();
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
 
         $plantel = Plantel::create([
             'calle' => 'Calle 1',

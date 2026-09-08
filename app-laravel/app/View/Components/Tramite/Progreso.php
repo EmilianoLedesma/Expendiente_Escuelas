@@ -16,7 +16,7 @@ use Illuminate\View\Component;
  */
 class Progreso extends Component
 {
-    /** @var Collection<int, object{id: int, nombre: string, orden: int, estado: string}> */
+    /** @var Collection<int, object{id: int, nombre: string, orden: int, estado: string}&\stdClass> */
     public readonly Collection $pasos;
 
     public function __construct(public readonly ?int $escuelaNivelId = null)
@@ -30,10 +30,10 @@ class Progreso extends Component
             : collect();
 
         $this->pasos = $catalogo->map(fn ($paso) => (object) [
-            'id' => $paso->id,
-            'nombre' => $paso->nombre,
-            'orden' => $paso->orden,
-            'estado' => $estadosPorPaso->get($paso->id, 'pendiente'),
+            'id' => (int) $paso->id,
+            'nombre' => (string) $paso->nombre,
+            'orden' => (int) $paso->orden,
+            'estado' => (string) $estadosPorPaso->get($paso->id, 'pendiente'),
         ]);
     }
 

@@ -22,7 +22,7 @@ class RegistroPersonalCompletoTest extends TestCase
 
     public function test_es_completo_cuando_los_seis_campos_estan_presentes(): void
     {
-        $regla = new RegistroPersonalCompleto();
+        $regla = new RegistroPersonalCompleto;
 
         $this->assertTrue($regla->esCompleto(...$this->camposCompletos()));
     }
@@ -30,7 +30,7 @@ class RegistroPersonalCompletoTest extends TestCase
     #[DataProvider('camposFaltantesProvider')]
     public function test_no_es_completo_cuando_falta_un_campo(string $campo): void
     {
-        $regla = new RegistroPersonalCompleto();
+        $regla = new RegistroPersonalCompleto;
         $campos = $this->camposCompletos();
         $campos[$campo] = null;
 
@@ -56,7 +56,7 @@ class RegistroPersonalCompletoTest extends TestCase
      */
     public function test_cadena_vacia_no_cuenta_como_presente(): void
     {
-        $regla = new RegistroPersonalCompleto();
+        $regla = new RegistroPersonalCompleto;
         $campos = $this->camposCompletos();
         $campos['nombre'] = '';
 
