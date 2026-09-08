@@ -1,0 +1,12 @@
+includes:
+	- vendor/larastan/larastan/extension.neon
+	- vendor/phpat/phpat/extension.neon
+
+parameters:
+	# Level 5 to start — this is an existing codebase, not greenfield.
+	# Ratcheting the level up is a separate future task, not this one.
+	level: 5
+	paths:
+		- app
+		- tests/Architecture
+	tmpDir: storage/phpstan

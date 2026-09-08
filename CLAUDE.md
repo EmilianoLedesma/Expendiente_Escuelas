@@ -120,6 +120,8 @@ Any change with real shape gets its own git worktree before implementation start
 ### Verify before claiming done
 Run the actual test/build/lint command and read its real output before saying something works, passes, or is fixed. "I manually tested it" and "it should work" are not verification. If a fix can't be proven non-vacuous in the available test environment, say so explicitly and flag it as deferred to manual verification.
 
+GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push/PR and independently re-verifies the test suite, PHPStan (level 5, plus one PHPat rule enforcing ADR-001: `app/Domain` must not depend on `Illuminate\*`), and Pint style — it does not replace running these locally before claiming done, but a red CI check on a pushed branch is real signal, not noise.
+
 ### Data safety is a hard line, not a judgment call
 Never insert/mutate/upload data against a live database — dev included — without asking first, even for a known, pre-existing test fixture, even for an idempotent operation. Reading data (SELECTs, navigating pages) is free; anything that writes is not. Same bar for DDL/schema changes.
 
