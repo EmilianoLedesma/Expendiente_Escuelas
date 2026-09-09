@@ -14,14 +14,18 @@ use InvalidArgumentException;
  * crea la `escuela`. Livewire y un futuro controlador de API llaman
  * exactamente a este método — ninguno de los dos debe tocar Eloquent
  * directamente (ADR-001).
+ *
+ * `$solicitanteId` es resuelto por el llamador desde la sesión autenticada
+ * (nunca desde input del cliente) — ver
+ * docs/superpowers/specs/2026-09-08-modelo-identidad-solicitante-design.md.
  */
 class IniciarTramiteNuevo
 {
-    public function ejecutar(DatosPreregistro $datos): ResultadoPreregistro
+    public function ejecutar(DatosPreregistro $datos, int $solicitanteId): ResultadoPreregistro
     {
         $this->validar($datos);
 
-        return DB::transaction(function () use ($datos) {
+        return DB::transaction(function () use ($datos, $solicitanteId) {
             $plantelId = $datos->bifurcacion === 'nuevo'
                 ? Plantel::create([
                     'calle' => $datos->calle,
@@ -36,7 +40,10 @@ class IniciarTramiteNuevo
                 ])->id
                 : $datos->plantelId;
 
-            $escuela = Escuela::create(['plantel_id' => $plantelId]);
+            $escuela = Escuela::create([
+                'plantel_id' => $plantelId,
+                'solicitante_id' => $solicitanteId,
+            ]);
 
             return new ResultadoPreregistro(
                 escuelaId: $escuela->id,
