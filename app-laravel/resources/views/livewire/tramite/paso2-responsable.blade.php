@@ -32,4 +32,25 @@
             <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
         </form>
     @endif
+
+    @if ($fase === 'niveles')
+        <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Selección de niveles</h1>
+
+        @error('nivelesSeleccionados')
+            <div class="mb-lg"><x-ui.alert variant="error">{{ $message }}</x-ui.alert></div>
+        @enderror
+
+        <form wire:submit="guardarNiveles" class="space-y-md">
+            <fieldset class="space-y-xs">
+                @foreach ($nivelesDisponibles as $nivel)
+                    <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
+                        <input type="checkbox" wire:model="nivelesSeleccionados" value="{{ $nivel->id }}">
+                        {{ $nivel->nombre }}
+                    </label>
+                @endforeach
+            </fieldset>
+
+            <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
+        </form>
+    @endif
 </div>

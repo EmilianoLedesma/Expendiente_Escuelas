@@ -2,12 +2,16 @@
 
 namespace App\Livewire\Tramite;
 
+use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
 use App\Livewire\Forms\PersonaMoralForm;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -31,6 +35,8 @@ class Paso2Responsable extends Component
     public PersonaMoralForm $personaMoralForm;
 
     public GestorForm $gestorForm;
+
+    public array $nivelesSeleccionados = [];
 
     public function mount(Escuela $escuela): void
     {
@@ -84,8 +90,29 @@ class Paso2Responsable extends Component
         $this->fase = 'niveles';
     }
 
+    public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados): void
+    {
+        $this->validate([
+            'nivelesSeleccionados' => ['required', 'array', 'min:1'],
+        ]);
+
+        try {
+            $registrarNivelesSeleccionados->ejecutar($this->escuela->id, $this->nivelesSeleccionados);
+        } catch (InvalidArgumentException $e) {
+            $this->addError('nivelesSeleccionados', $e->getMessage());
+
+            return;
+        }
+
+        $primerEscuelaNivel = EscuelaNivel::where('escuela_id', $this->escuela->id)->firstOrFail();
+
+        $this->redirectRoute('tramite.paso3-placeholder', ['escuelaNivel' => $primerEscuelaNivel]);
+    }
+
     public function render()
     {
-        return view('livewire.tramite.paso2-responsable');
+        return view('livewire.tramite.paso2-responsable', [
+            'nivelesDisponibles' => $this->fase === 'niveles' ? NivelEducativo::educacionBasica()->get() : collect(),
+        ]);
     }
 }
