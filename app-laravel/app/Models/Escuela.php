@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Escuela extends Model
 {
@@ -27,5 +28,10 @@ class Escuela extends Model
     public function escuelaNiveles(): HasMany
     {
         return $this->hasMany(EscuelaNivel::class);
+    }
+
+    public function responsableLegal(): HasOne
+    {
+        return $this->hasOne(ResponsableLegal::class);
     }
 }
