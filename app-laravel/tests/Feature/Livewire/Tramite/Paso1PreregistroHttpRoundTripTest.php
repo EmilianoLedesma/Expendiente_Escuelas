@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Models\Solicitante;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,9 @@ class Paso1PreregistroHttpRoundTripTest extends TestCase
 
     public function test_un_wire_model_blur_en_paso1_no_produce_un_419(): void
     {
+        $solicitante = Solicitante::factory()->create();
+        $this->actingAs($solicitante->user);
+
         $page = $this->get('/tramite/preregistro');
         $page->assertOk();
 
