@@ -1,4 +1,4 @@
-# PENDIENTE — Namespace de componentes Livewire (`App\Http\Livewire` vs. `App\Livewire`)
+# ADR-003 — Namespace de componentes Livewire (`App\Http\Livewire` vs. `App\Livewire`)
 
 **Estado: resuelto (2026-09-08).** Decisión: opción 2, migrar a `app/Livewire/`.
 Ver "## Resolución" al final de este documento. Ninguno de los otros dos
