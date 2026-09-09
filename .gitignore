@@ -33,3 +33,5 @@ Thumbs.db
 docs/superpowers
 *.sql
 docs/INSTRUCCIONES_SETUP_ENTORNO.md
+
+node_modules/
