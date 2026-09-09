@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Database;
 
-use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -25,7 +25,7 @@ class HistorialEstadosExpedienteUsuarioSedeqTest extends TestCase
 
     public function test_usuario_sedeq_id_rechaza_un_id_de_usuario_inexistente(): void
     {
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         DB::table('historial_estados_expediente')->insert([
             'escuela_nivel_id' => 999999,

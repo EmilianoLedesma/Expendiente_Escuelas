@@ -5,6 +5,7 @@ namespace Tests\Feature\Database;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -38,7 +39,7 @@ class EscuelaSolicitanteTest extends TestCase
     {
         $plantel = $this->plantelDePrueba();
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         Escuela::create(['plantel_id' => $plantel->id]);
     }
@@ -49,7 +50,7 @@ class EscuelaSolicitanteTest extends TestCase
         $plantel = $this->plantelDePrueba();
         Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         $solicitante->delete();
     }

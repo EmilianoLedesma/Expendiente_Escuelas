@@ -4,6 +4,7 @@ namespace Tests\Feature\Database;
 
 use App\Models\Solicitante;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -28,7 +29,7 @@ class SolicitantesTableTest extends TestCase
         $user = User::factory()->create();
         Solicitante::create(['user_id' => $user->id]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         Solicitante::create(['user_id' => $user->id]);
     }

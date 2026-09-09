@@ -9,6 +9,6 @@ class CrearSolicitanteAlRegistrarUsuario
 {
     public function handle(Registered $event): void
     {
-        Solicitante::firstOrCreate(['user_id' => $event->user->id]);
+        Solicitante::firstOrCreate(['user_id' => $event->user->getAuthIdentifier()]);
     }
 }

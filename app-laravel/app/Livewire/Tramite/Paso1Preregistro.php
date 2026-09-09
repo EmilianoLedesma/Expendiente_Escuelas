@@ -75,7 +75,7 @@ class Paso1Preregistro extends Component
         );
 
         try {
-            $resultado = $iniciarTramiteNuevo->ejecutar($dto, auth()->user()->solicitante->id);
+            $resultado = $iniciarTramiteNuevo->ejecutar($dto, auth()->user()->solicitante->getKey());
         } catch (InvalidArgumentException $e) {
             $this->addError('bifurcacion', $e->getMessage());
 

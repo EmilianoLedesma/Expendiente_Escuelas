@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Volt\Volt;
 use Tests\TestCase;
 
 class CrearSolicitanteAlRegistrarUsuarioTest extends TestCase
@@ -23,7 +23,7 @@ class CrearSolicitanteAlRegistrarUsuarioTest extends TestCase
 
     public function test_el_flujo_real_de_registro_crea_el_solicitante(): void
     {
-        $component = \Livewire\Volt\Volt::test('pages.auth.register')
+        $component = Volt::test('pages.auth.register')
             ->set('name', 'Ana Solicitante')
             ->set('email', 'ana@example.com')
             ->set('password', 'password-valido')
