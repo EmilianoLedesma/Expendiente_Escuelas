@@ -44,7 +44,7 @@ class Paso1PreregistroTest extends TestCase
             ->set('municipio', 'Querétaro')
             ->set('codigoPostal', '76000')
             ->call('guardar')
-            ->assertRedirect(route('tramite.paso2-placeholder', ['escuela' => 42]));
+            ->assertRedirect(route('tramite.paso2', ['escuela' => 42]));
     }
 
     public function test_bifurcacion_nuevo_sin_campos_requeridos_no_llama_al_caso_de_uso(): void

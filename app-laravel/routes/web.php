@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Tramite\Paso1Preregistro;
+use App\Models\Escuela;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
@@ -8,8 +9,10 @@ Route::view('/', 'welcome');
 Route::middleware('auth')->group(function () {
     Route::get('/tramite/preregistro', Paso1Preregistro::class)->name('tramite.preregistro');
 
-    // Placeholder — Paso 2 itself is out of scope of this task.
-    Route::view('/tramite/paso2/{escuela}', 'tramite.paso2-placeholder')->name('tramite.paso2-placeholder');
+    // Placeholder body — replaced with Paso2Responsable::class in Task 9.
+    Route::get('/tramite/paso2/{escuela}', function (Escuela $escuela) {
+        return view('tramite.paso2-placeholder', ['escuela' => $escuela->id]);
+    })->middleware('can:view,escuela')->name('tramite.paso2');
 });
 
 Route::view('dashboard', 'dashboard')
