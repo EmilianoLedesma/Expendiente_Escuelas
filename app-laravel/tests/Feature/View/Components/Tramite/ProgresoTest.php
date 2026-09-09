@@ -4,6 +4,7 @@ namespace Tests\Feature\View\Components\Tramite;
 
 use App\Models\Escuela;
 use App\Models\Plantel;
+use App\Models\Solicitante;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,7 +39,8 @@ class ProgresoTest extends TestCase
             'municipio' => 'Querétaro',
             'codigo_postal' => '76000',
         ]);
-        $escuela = Escuela::create(['plantel_id' => $plantel->id]);
+        $solicitante = Solicitante::factory()->create();
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
 
         $nivelId = DB::table('niveles_educativos')->orderBy('orden')->value('id');
         $estadoId = DB::table('estados_expediente')->orderBy('orden')->value('id');
