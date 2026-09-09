@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Escuela extends Model
 {
@@ -21,5 +22,10 @@ class Escuela extends Model
     public function solicitante(): BelongsTo
     {
         return $this->belongsTo(Solicitante::class);
+    }
+
+    public function escuelaNiveles(): HasMany
+    {
+        return $this->hasMany(EscuelaNivel::class);
     }
 }
