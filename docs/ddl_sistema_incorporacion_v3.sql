@@ -285,6 +285,17 @@ CREATE TABLE sanitarios_bacinicas (
     cantidad_bacinicas  SMALLINT NOT NULL
 );
 
+-- Añadida 2026-09-08 (docs/decisions/ADR-002, pendiente de escribirse tras
+-- esta implementación): identidad de negocio del solicitante, separada de
+-- `users` (autenticación) y de `responsables_legales` (papeleo legal por
+-- trámite). Ver docs/superpowers/specs/2026-09-08-modelo-identidad-solicitante-design.md.
+CREATE TABLE solicitantes (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL UNIQUE REFERENCES users(id),
+    created_at  TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT now()
+);
+
 -- ============================================================================
 -- SECCIÓN 3: ESCUELA
 -- ============================================================================
@@ -657,13 +668,3 @@ INSERT INTO tipos_material_biblioteca (clave, nombre) VALUES
     ('software', 'Software'),
     ('otro', 'Otro');
 
--- Añadida 2026-09-08 (docs/decisions/ADR-002, pendiente de escribirse tras
--- esta implementación): identidad de negocio del solicitante, separada de
--- `users` (autenticación) y de `responsables_legales` (papeleo legal por
--- trámite). Ver docs/superpowers/specs/2026-09-08-modelo-identidad-solicitante-design.md.
-CREATE TABLE solicitantes (
-    id          BIGSERIAL PRIMARY KEY,
-    user_id     BIGINT NOT NULL UNIQUE REFERENCES users(id),
-    created_at  TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMP NOT NULL DEFAULT now()
-);
