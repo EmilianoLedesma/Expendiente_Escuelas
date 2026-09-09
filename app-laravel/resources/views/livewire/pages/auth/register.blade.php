@@ -37,52 +37,26 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <form wire:submit="register">
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input wire:model="name" id="name" class="block mt-1 w-full" type="text" name="name" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
+    <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Crear cuenta</h1>
+    <p class="font-sans text-body-sm text-body mb-lg">
+        Regístrate para iniciar y dar seguimiento a tus trámites de incorporación.
+    </p>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+    <form wire:submit="register" class="space-y-md">
+        <x-ui.text-input name="name" label="Nombre completo" wire:model="name" required autofocus autocomplete="name" />
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <x-ui.text-input name="email" label="Correo electrónico" type="email" wire:model="email" required autocomplete="username" />
 
-            <x-text-input wire:model="password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+        <x-ui.text-input name="password" label="Contraseña" type="password" wire:model="password" required autocomplete="new-password" />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+        <x-ui.text-input name="password_confirmation" label="Confirmar contraseña" type="password" wire:model="password_confirmation" required autocomplete="new-password" />
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input wire:model="password_confirmation" id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}" wire:navigate>
-                {{ __('Already registered?') }}
+        <div class="flex items-center justify-between gap-sm pt-md border-t-[0.5px] border-hairline">
+            <a class="font-sans text-body-sm text-primary hover:underline" href="{{ route('login') }}" wire:navigate>
+                ¿Ya tienes cuenta?
             </a>
 
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
+            <x-ui.button-primary type="submit">Crear cuenta</x-ui.button-primary>
         </div>
     </form>
 </div>

@@ -285,10 +285,9 @@ CREATE TABLE sanitarios_bacinicas (
     cantidad_bacinicas  SMALLINT NOT NULL
 );
 
--- Añadida 2026-09-08 (docs/decisions/ADR-002, pendiente de escribirse tras
--- esta implementación): identidad de negocio del solicitante, separada de
--- `users` (autenticación) y de `responsables_legales` (papeleo legal por
--- trámite). Ver docs/superpowers/specs/2026-09-08-modelo-identidad-solicitante-design.md.
+-- Añadida 2026-09-08 (docs/decisions/ADR-002-modelo-identidad-solicitante.md):
+-- identidad de negocio del solicitante, separada de `users` (autenticación)
+-- y de `responsables_legales` (papeleo legal por trámite).
 CREATE TABLE solicitantes (
     id          BIGSERIAL PRIMARY KEY,
     user_id     BIGINT NOT NULL UNIQUE REFERENCES users(id),
@@ -300,8 +299,7 @@ CREATE TABLE solicitantes (
 -- SECCIÓN 3: ESCUELA
 -- ============================================================================
 
--- solicitante_id añadido 2026-09-08 (ver ADR pendiente, spec
--- docs/superpowers/specs/2026-09-08-modelo-identidad-solicitante-design.md).
+-- solicitante_id añadido 2026-09-08 (docs/decisions/ADR-002-modelo-identidad-solicitante.md).
 -- ON DELETE RESTRICT explícito: una escuela es un expediente real, un
 -- solicitante con escuelas no debe poder eliminarse en cascada.
 -- ALTER TABLE escuelas ADD COLUMN solicitante_id BIGINT NOT NULL REFERENCES solicitantes(id) ON DELETE RESTRICT;
