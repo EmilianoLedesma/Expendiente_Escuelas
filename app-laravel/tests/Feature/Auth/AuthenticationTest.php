@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -32,7 +33,26 @@ class AuthenticationTest extends TestCase
 
         $component
             ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(route('tramite.preregistro', absolute: false));
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_sedeq_users_are_redirected_to_the_admin_panel_after_login(): void
+    {
+        Role::create(['name' => 'sedeq', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole('sedeq');
+
+        $component = Volt::test('pages.auth.login')
+            ->set('form.email', $user->email)
+            ->set('form.password', 'password');
+
+        $component->call('login');
+
+        $component
+            ->assertHasNoErrors()
+            ->assertRedirect('/admin');
 
         $this->assertAuthenticated();
     }
