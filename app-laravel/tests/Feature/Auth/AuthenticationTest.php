@@ -103,4 +103,26 @@ class AuthenticationTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_post_logout_route_logs_out_and_redirects_to_login(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->post('/logout');
+
+        $response->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_tramite_top_nav_shows_a_logout_button(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('tramite.preregistro'));
+
+        $response->assertOk();
+        $response->assertSee('action="'.route('logout').'"', false);
+    }
 }
