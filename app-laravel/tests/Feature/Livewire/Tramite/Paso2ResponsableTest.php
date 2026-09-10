@@ -71,12 +71,115 @@ class Paso2ResponsableTest extends TestCase
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
             ->assertSet('fase', 'niveles')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+    }
+
+    public function test_captura_domicilio_notificaciones_y_persona_autorizada_recoger(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro, Querétaro')
+            ->set('personaAutorizadaRecoger', 'María López')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('responsables_legales', [
+            'escuela_id' => $escuela->id,
+            'domicilio_notificaciones' => 'Calle Falsa 123, Centro, Querétaro',
+            'persona_autorizada_recoger' => 'María López',
+        ]);
+    }
+
+    public function test_domicilio_notificaciones_es_requerido(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertHasErrors('domicilioNotificaciones');
+
+        $this->assertDatabaseCount('responsables_legales', 0);
+    }
+
+    public function test_tipo_moral_captura_todos_los_campos_notariales(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'moral')
+            ->set('domicilioNotificaciones', 'Av. Reforma 456')
+            ->set('personaMoralForm.razonSocial', 'Colegio Ejemplo A.C.')
+            ->set('personaMoralForm.nombreRepresentanteLegal', 'Carlos Ruiz')
+            ->set('personaMoralForm.numeroEscrituraConstitutiva', 'E-100')
+            ->set('personaMoralForm.fechaEscrituraConstitutiva', '2020-01-15')
+            ->set('personaMoralForm.notarioNombre', 'Lic. Pedro Notario')
+            ->set('personaMoralForm.notarioNumero', '45')
+            ->set('personaMoralForm.notarioCiudad', 'Querétaro')
+            ->set('personaMoralForm.folioRegistroPublico', 'F-999')
+            ->set('personaMoralForm.fechaInscripcionRpp', '2020-02-01')
+            ->call('guardarResponsable')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('personas_morales', [
+            'razon_social' => 'Colegio Ejemplo A.C.',
+            'nombre_representante_legal' => 'Carlos Ruiz',
+            'numero_escritura_constitutiva' => 'E-100',
+            'fecha_escritura_constitutiva' => '2020-01-15',
+            'notario_nombre' => 'Lic. Pedro Notario',
+            'notario_numero' => '45',
+            'notario_ciudad' => 'Querétaro',
+            'folio_registro_publico' => 'F-999',
+            'fecha_inscripcion_rpp' => '2020-02-01',
+        ]);
+    }
+
+    public function test_tipo_fisica_con_gestor_captura_fecha_nacimiento_y_datos_notariales_del_gestor(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica_con_gestor')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->set('personaFisicaForm.fechaNacimiento', '1985-06-20')
+            ->set('gestorForm.nombre', 'Roberto Gómez')
+            ->set('gestorForm.numeroPoder', 'P-500')
+            ->set('gestorForm.notarioNombre', 'Lic. Ana Notaria')
+            ->set('gestorForm.notarioNumero', '10')
+            ->set('gestorForm.fechaPoder', '2021-03-10')
+            ->call('guardarResponsable')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('personas_fisicas', [
+            'nombre' => 'Juana Pérez',
+            'fecha_nacimiento' => '1985-06-20',
+        ]);
+        $this->assertDatabaseHas('gestores', [
+            'nombre' => 'Roberto Gómez',
+            'numero_poder' => 'P-500',
+            'notario_nombre' => 'Lic. Ana Notaria',
+            'notario_numero' => '10',
+            'fecha_poder' => '2021-03-10',
+        ]);
     }
 
     public function test_rechaza_envio_sin_ningun_nivel_seleccionado(): void

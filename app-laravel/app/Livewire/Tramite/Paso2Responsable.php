@@ -30,6 +30,10 @@ class Paso2Responsable extends Component
 
     public string $tipoPersona = 'fisica';
 
+    public string $domicilioNotificaciones = '';
+
+    public string $personaAutorizadaRecoger = '';
+
     public PersonaFisicaForm $personaFisicaForm;
 
     public PersonaMoralForm $personaMoralForm;
@@ -55,6 +59,11 @@ class Paso2Responsable extends Component
 
     public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal): void
     {
+        $this->validate([
+            'domicilioNotificaciones' => ['required', 'string', 'max:250'],
+            'personaAutorizadaRecoger' => ['nullable', 'string', 'max:200'],
+        ]);
+
         if ($this->tipoPersona === 'moral') {
             $this->personaMoralForm->validate();
         } else {
@@ -67,6 +76,8 @@ class Paso2Responsable extends Component
 
         $registrarResponsableLegal->ejecutar($this->escuela->id, new DatosResponsableLegal(
             tipoPersona: $this->tipoPersona,
+            domicilioNotificaciones: $this->domicilioNotificaciones !== '' ? $this->domicilioNotificaciones : null,
+            personaAutorizadaRecoger: $this->personaAutorizadaRecoger !== '' ? $this->personaAutorizadaRecoger : null,
             nombre: $this->personaFisicaForm->nombre !== '' ? $this->personaFisicaForm->nombre : null,
             fechaNacimiento: $this->personaFisicaForm->fechaNacimiento !== '' ? $this->personaFisicaForm->fechaNacimiento : null,
             rfc: $this->personaFisicaForm->rfc !== '' ? $this->personaFisicaForm->rfc : null,
