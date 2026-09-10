@@ -4,6 +4,8 @@ namespace Tests\Feature\Application\Preregistro;
 
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
+use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
+use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
@@ -93,6 +95,35 @@ class IniciarTramiteNuevoTest extends TestCase
 
         $this->assertSame($primero->escuelaId, $segundo->escuelaId);
         $this->assertDatabaseCount('escuelas', 1);
+    }
+
+    public function test_crea_una_segunda_escuela_distinta_si_la_primera_ya_tiene_responsable_legal(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create([
+            'calle' => 'Calle Ya Registrada 5',
+            'colonia' => 'Centro',
+            'municipio' => 'Querétaro',
+            'codigo_postal' => '76000',
+        ]);
+
+        $primero = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'existente',
+            plantelId: $plantel->id,
+        ), $solicitante->id);
+
+        (new RegistrarResponsableLegal)->ejecutar($primero->escuelaId, new DatosResponsableLegal(
+            tipoPersona: 'fisica',
+            nombre: 'Juana Pérez',
+        ));
+
+        $segundo = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'existente',
+            plantelId: $plantel->id,
+        ), $solicitante->id);
+
+        $this->assertNotSame($primero->escuelaId, $segundo->escuelaId);
+        $this->assertDatabaseCount('escuelas', 2);
     }
 
     public function test_dos_solicitantes_distintos_obtienen_escuelas_distintas_en_el_mismo_plantel(): void
