@@ -71,6 +71,55 @@ class IniciarTramiteNuevoTest extends TestCase
         $this->assertDatabaseCount('planteles', 1);
     }
 
+    public function test_reutiliza_escuela_existente_del_mismo_solicitante_y_plantel(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create([
+            'calle' => 'Calle Ya Registrada 5',
+            'colonia' => 'Centro',
+            'municipio' => 'Querétaro',
+            'codigo_postal' => '76000',
+        ]);
+
+        $primero = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'existente',
+            plantelId: $plantel->id,
+        ), $solicitante->id);
+
+        $segundo = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'existente',
+            plantelId: $plantel->id,
+        ), $solicitante->id);
+
+        $this->assertSame($primero->escuelaId, $segundo->escuelaId);
+        $this->assertDatabaseCount('escuelas', 1);
+    }
+
+    public function test_dos_solicitantes_distintos_obtienen_escuelas_distintas_en_el_mismo_plantel(): void
+    {
+        $plantel = Plantel::create([
+            'calle' => 'Calle Compartida 1',
+            'colonia' => 'Centro',
+            'municipio' => 'Querétaro',
+            'codigo_postal' => '76000',
+        ]);
+        $solicitanteA = Solicitante::factory()->create();
+        $solicitanteB = Solicitante::factory()->create();
+
+        $resultadoA = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'existente',
+            plantelId: $plantel->id,
+        ), $solicitanteA->id);
+
+        $resultadoB = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'existente',
+            plantelId: $plantel->id,
+        ), $solicitanteB->id);
+
+        $this->assertNotSame($resultadoA->escuelaId, $resultadoB->escuelaId);
+        $this->assertDatabaseCount('escuelas', 2);
+    }
+
     public function test_rechaza_dto_de_bifurcacion_nuevo_sin_campos_requeridos(): void
     {
         $solicitante = Solicitante::factory()->create();

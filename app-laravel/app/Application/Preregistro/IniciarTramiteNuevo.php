@@ -40,7 +40,9 @@ class IniciarTramiteNuevo
                 ])->id
                 : $datos->plantelId;
 
-            $escuela = Escuela::create([
+            // ponytail: firstOrCreate makes picking the same plantel twice reuse the
+            // existing tramite instead of spawning a duplicate escuela per visit.
+            $escuela = Escuela::firstOrCreate([
                 'plantel_id' => $plantelId,
                 'solicitante_id' => $solicitanteId,
             ]);
