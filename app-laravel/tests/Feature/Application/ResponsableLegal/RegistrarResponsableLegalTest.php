@@ -69,6 +69,41 @@ class RegistrarResponsableLegalTest extends TestCase
         $this->assertDatabaseCount('personas_fisicas', 0);
     }
 
+    public function test_guarda_la_terna_de_nombres_propuestos(): void
+    {
+        $escuela = $this->crearEscuela();
+
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(
+            tipoPersona: 'fisica',
+            nombre: 'Juana Pérez',
+            nombrePropuesto1: 'Colegio Reforma',
+            nombrePropuesto2: 'Instituto Reforma',
+            nombrePropuesto3: 'Escuela Reforma',
+        ));
+
+        $this->assertDatabaseHas('ternas_nombres', ['escuela_id' => $escuela->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Reforma']);
+        $this->assertDatabaseHas('ternas_nombres', ['escuela_id' => $escuela->id, 'numero_propuesta' => 2, 'nombre_propuesto' => 'Instituto Reforma']);
+        $this->assertDatabaseHas('ternas_nombres', ['escuela_id' => $escuela->id, 'numero_propuesta' => 3, 'nombre_propuesto' => 'Escuela Reforma']);
+        $this->assertDatabaseCount('ternas_nombres', 3);
+    }
+
+    public function test_un_segundo_envio_no_duplica_la_terna_de_nombres(): void
+    {
+        $escuela = $this->crearEscuela();
+        $datos = new DatosResponsableLegal(
+            tipoPersona: 'fisica',
+            nombre: 'Juana Pérez',
+            nombrePropuesto1: 'Colegio Reforma',
+            nombrePropuesto2: 'Instituto Reforma',
+            nombrePropuesto3: 'Escuela Reforma',
+        );
+
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, $datos);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, $datos);
+
+        $this->assertDatabaseCount('ternas_nombres', 3);
+    }
+
     public function test_tipo_desconocido_lanza_excepcion_sin_escribir_nada(): void
     {
         $escuela = $this->crearEscuela();

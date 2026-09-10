@@ -34,4 +34,9 @@ class Escuela extends Model
     {
         return $this->hasOne(ResponsableLegal::class);
     }
+
+    public function ternasNombres(): HasMany
+    {
+        return $this->hasMany(TernaNombre::class);
+    }
 }

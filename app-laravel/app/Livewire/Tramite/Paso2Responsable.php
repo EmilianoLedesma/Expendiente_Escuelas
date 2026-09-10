@@ -34,6 +34,12 @@ class Paso2Responsable extends Component
 
     public string $personaAutorizadaRecoger = '';
 
+    public string $nombrePropuesto1 = '';
+
+    public string $nombrePropuesto2 = '';
+
+    public string $nombrePropuesto3 = '';
+
     public PersonaFisicaForm $personaFisicaForm;
 
     public PersonaMoralForm $personaMoralForm;
@@ -63,6 +69,9 @@ class Paso2Responsable extends Component
             'tipoPersona' => ['required', 'in:fisica,fisica_con_gestor,moral'],
             'domicilioNotificaciones' => ['required', 'string', 'max:250'],
             'personaAutorizadaRecoger' => ['nullable', 'string', 'max:200'],
+            'nombrePropuesto1' => ['required', 'string', 'max:200'],
+            'nombrePropuesto2' => ['required', 'string', 'max:200'],
+            'nombrePropuesto3' => ['required', 'string', 'max:200'],
         ]);
 
         if ($this->tipoPersona === 'moral') {
@@ -81,6 +90,9 @@ class Paso2Responsable extends Component
             tipoPersona: $this->tipoPersona,
             domicilioNotificaciones: $this->domicilioNotificaciones !== '' ? $this->domicilioNotificaciones : null,
             personaAutorizadaRecoger: $this->personaAutorizadaRecoger !== '' ? $this->personaAutorizadaRecoger : null,
+            nombrePropuesto1: $this->nombrePropuesto1 !== '' ? $this->nombrePropuesto1 : null,
+            nombrePropuesto2: $this->nombrePropuesto2 !== '' ? $this->nombrePropuesto2 : null,
+            nombrePropuesto3: $this->nombrePropuesto3 !== '' ? $this->nombrePropuesto3 : null,
             nombre: $this->personaFisicaForm->nombre !== '' ? $this->personaFisicaForm->nombre : null,
             fechaNacimiento: $this->personaFisicaForm->fechaNacimiento !== '' ? $this->personaFisicaForm->fechaNacimiento : null,
             rfc: $this->personaFisicaForm->rfc !== '' ? $this->personaFisicaForm->rfc : null,

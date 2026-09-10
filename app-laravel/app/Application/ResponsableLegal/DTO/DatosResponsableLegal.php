@@ -15,6 +15,10 @@ final readonly class DatosResponsableLegal
         public string $tipoPersona,
         public ?string $domicilioNotificaciones = null,
         public ?string $personaAutorizadaRecoger = null,
+        // terna de nombres propuestos (COMPENDIO: mismo dato referenciado en Paso 3/Anexo 2)
+        public ?string $nombrePropuesto1 = null,
+        public ?string $nombrePropuesto2 = null,
+        public ?string $nombrePropuesto3 = null,
         // persona física
         public ?string $nombre = null,
         public ?string $fechaNacimiento = null,

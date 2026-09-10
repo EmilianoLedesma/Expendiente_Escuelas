@@ -18,6 +18,10 @@
             <x-ui.text-input name="domicilioNotificaciones" label="Domicilio para notificaciones" wire:model="domicilioNotificaciones" required />
             <x-ui.text-input name="personaAutorizadaRecoger" label="Persona autorizada para recoger notificaciones" wire:model="personaAutorizadaRecoger" />
 
+            <x-ui.text-input name="nombrePropuesto1" label="Propuesta de nombre 1" wire:model="nombrePropuesto1" required />
+            <x-ui.text-input name="nombrePropuesto2" label="Propuesta de nombre 2" wire:model="nombrePropuesto2" required />
+            <x-ui.text-input name="nombrePropuesto3" label="Propuesta de nombre 3" wire:model="nombrePropuesto3" required />
+
             @if ($tipoPersona !== 'moral')
                 <x-ui.text-input name="personaFisicaForm.nombre" label="Nombre completo" wire:model="personaFisicaForm.nombre" required />
                 <x-ui.text-input name="personaFisicaForm.fechaNacimiento" label="Fecha de nacimiento" type="date" wire:model="personaFisicaForm.fechaNacimiento" />

@@ -7,6 +7,7 @@ use App\Models\Gestor;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
 use App\Models\ResponsableLegal as ResponsableLegalModel;
+use App\Models\TernaNombre;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -38,6 +39,18 @@ class RegistrarResponsableLegal
                 'domicilio_notificaciones' => $datos->domicilioNotificaciones,
                 'persona_autorizada_recoger' => $datos->personaAutorizadaRecoger,
             ]);
+
+            foreach ([1 => $datos->nombrePropuesto1, 2 => $datos->nombrePropuesto2, 3 => $datos->nombrePropuesto3] as $numeroPropuesta => $nombrePropuesto) {
+                if ($nombrePropuesto === null) {
+                    continue;
+                }
+
+                TernaNombre::create([
+                    'escuela_id' => $escuelaId,
+                    'numero_propuesta' => $numeroPropuesta,
+                    'nombre_propuesto' => $nombrePropuesto,
+                ]);
+            }
 
             if (in_array($datos->tipoPersona, ['fisica', 'fisica_con_gestor'], true)) {
                 PersonaFisica::create([

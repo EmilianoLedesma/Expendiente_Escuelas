@@ -72,6 +72,9 @@ class Paso2ResponsableTest extends TestCase
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('tipoPersona', 'fisica')
             ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
             ->assertSet('fase', 'niveles')
@@ -90,6 +93,9 @@ class Paso2ResponsableTest extends TestCase
             ->set('tipoPersona', 'fisica')
             ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro, Querétaro')
             ->set('personaAutorizadaRecoger', 'María López')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
             ->assertHasNoErrors();
@@ -140,6 +146,9 @@ class Paso2ResponsableTest extends TestCase
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('tipoPersona', 'moral')
             ->set('domicilioNotificaciones', 'Av. Reforma 456')
+            ->set('nombrePropuesto1', 'Colegio Ejemplo')
+            ->set('nombrePropuesto2', 'Instituto Ejemplo')
+            ->set('nombrePropuesto3', 'Escuela Ejemplo')
             ->set('personaMoralForm.razonSocial', 'Colegio Ejemplo A.C.')
             ->set('personaMoralForm.nombreRepresentanteLegal', 'Carlos Ruiz')
             ->set('personaMoralForm.numeroEscrituraConstitutiva', 'E-100')
@@ -174,6 +183,9 @@ class Paso2ResponsableTest extends TestCase
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('tipoPersona', 'fisica_con_gestor')
             ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->set('personaFisicaForm.fechaNacimiento', '1985-06-20')
             ->set('gestorForm.nombre', 'Roberto Gómez')
@@ -206,6 +218,9 @@ class Paso2ResponsableTest extends TestCase
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('tipoPersona', 'fisica')
             ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->set('personaFisicaForm.rfc', 'perj850620ab1')
             ->set('personaFisicaForm.curp', 'perj850620mqrrn01')
@@ -216,6 +231,44 @@ class Paso2ResponsableTest extends TestCase
             'rfc' => 'PERJ850620AB1',
             'curp' => 'PERJ850620MQRRN01',
         ]);
+    }
+
+    public function test_captura_la_terna_de_nombres_propuestos(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('ternas_nombres', ['escuela_id' => $escuela->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Reforma']);
+        $this->assertDatabaseHas('ternas_nombres', ['escuela_id' => $escuela->id, 'numero_propuesta' => 2, 'nombre_propuesto' => 'Instituto Reforma']);
+        $this->assertDatabaseHas('ternas_nombres', ['escuela_id' => $escuela->id, 'numero_propuesta' => 3, 'nombre_propuesto' => 'Escuela Reforma']);
+    }
+
+    public function test_la_terna_de_nombres_es_requerida(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertHasErrors(['nombrePropuesto1', 'nombrePropuesto2', 'nombrePropuesto3']);
+
+        $this->assertDatabaseCount('responsables_legales', 0);
+        $this->assertDatabaseCount('ternas_nombres', 0);
     }
 
     public function test_rechaza_envio_sin_ningun_nivel_seleccionado(): void
