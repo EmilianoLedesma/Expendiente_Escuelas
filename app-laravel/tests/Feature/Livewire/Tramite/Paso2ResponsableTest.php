@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso2Responsable;
@@ -45,6 +46,21 @@ class Paso2ResponsableTest extends TestCase
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertSet('fase', 'niveles');
+    }
+
+    public function test_redirige_a_paso3_cuando_la_escuela_ya_tiene_niveles(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $preescolar = NivelEducativo::where('clave', 'preescolar')->first();
+        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, [$preescolar->id]);
+        $this->actingAs($solicitante->user);
+        $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->assertRedirect(route('tramite.paso3-placeholder', ['escuelaNivel' => $escuelaNivel->id]));
     }
 
     public function test_tipo_fisica_guarda_y_avanza_a_fase_niveles(): void
