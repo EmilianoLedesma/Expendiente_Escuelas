@@ -3,6 +3,7 @@
 namespace App\Application\EscuelaNiveles;
 
 use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -20,16 +21,21 @@ class RegistrarNivelesSeleccionados
             throw new InvalidArgumentException('Debe seleccionarse al menos un nivel educativo.');
         }
 
+        $permitidos = NivelEducativo::educacionBasica()->pluck('id')->all();
+        if (array_diff($nivelesEducativosIds, $permitidos) !== []) {
+            throw new InvalidArgumentException('Nivel educativo fuera de Educación Básica.');
+        }
+
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
         DB::transaction(function () use ($escuelaId, $nivelesEducativosIds, $estadoId) {
             foreach ($nivelesEducativosIds as $nivelEducativoId) {
-                EscuelaNivel::create([
-                    'escuela_id' => $escuelaId,
-                    'nivel_educativo_id' => $nivelEducativoId,
-                    'estado_id' => $estadoId,
-                    'tipo_tramite' => 'alta_nueva',
-                ]);
+                // ponytail: firstOrCreate makes a repeated submit of the same nivel a no-op
+                // instead of tripping the UNIQUE(escuela_id, nivel_educativo_id) constraint.
+                EscuelaNivel::firstOrCreate(
+                    ['escuela_id' => $escuelaId, 'nivel_educativo_id' => $nivelEducativoId],
+                    ['estado_id' => $estadoId, 'tipo_tramite' => 'alta_nueva'],
+                );
             }
         });
     }
