@@ -82,7 +82,7 @@ class Paso1Preregistro extends Component
             return;
         }
 
-        $this->redirectRoute('tramite.paso2-placeholder', ['escuela' => $resultado->escuelaId]);
+        $this->redirectRoute('tramite.paso2', ['escuela' => $resultado->escuelaId]);
     }
 
     public function render(ListarPlantelesDisponibles $listarPlantelesDisponibles)
