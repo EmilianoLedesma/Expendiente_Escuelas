@@ -1,6 +1,6 @@
 # PENDIENTE — Owner scoping de la ruta de Paso 2 (`/tramite/paso2/{escuela}`)
 
-**Estado: abierto.** No adjudicado por el agente. Requiere confirmación del arquitecto/SEDEQ.
+**Estado: resuelto (2026-09-09).** Ver "## Resolución" al final de este documento.
 
 ## Por qué existe este documento
 
@@ -50,3 +50,19 @@ Sin fix aplicado. No se ha tocado código de rutas, middleware ni Livewire como 
 este documento. Marcado como pendiente de decisión del arquitecto sobre el mecanismo de
 enforcement (Policy vs. chequeo inline vs. route-model-binding con scope) — debe
 resolverse antes o durante el diseño de Paso 2, no después.
+
+## Resolución (2026-09-09)
+
+Cerrado como parte de construir Paso 2 (`docs/superpowers/specs/2026-09-09-paso2-responsable-niveles-design.md`,
+`docs/superpowers/plans/2026-09-09-paso2-responsable-niveles.md`), no por
+separado. Mecanismo elegido: `app/Application/Escuelas/VerificarPropietarioEscuela`
+(decisión pura) + `app/Policies/EscuelaPolicy` (delega, no reimplementa) +
+middleware `can:view,escuela` con route-model binding implícito en
+`/tramite/paso2/{escuela}`. Extendido a `/tramite/paso3/{escuelaNivel}`
+con la misma forma (`VerificarPropietarioEscuelaNivel` +
+`EscuelaNivelPolicy`).
+
+`EscuelaPolicy::view`/`EscuelaNivelPolicy::view` hoy conflan "es dueño"
+con "puede ver" — nota de simplificación MVP dejada en el docblock de
+ambas clases, no resuelta aquí: en cuanto el panel SEDEQ necesite `view`
+sin ser dueño, ambas Policies deben dejar de hacerlo.
