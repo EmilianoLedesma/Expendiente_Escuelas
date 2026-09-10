@@ -182,6 +182,27 @@ class Paso2ResponsableTest extends TestCase
         ]);
     }
 
+    public function test_rfc_y_curp_se_guardan_en_mayusculas(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->set('personaFisicaForm.rfc', 'perj850620ab1')
+            ->set('personaFisicaForm.curp', 'perj850620mqrrn01')
+            ->call('guardarResponsable')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('personas_fisicas', [
+            'rfc' => 'PERJ850620AB1',
+            'curp' => 'PERJ850620MQRRN01',
+        ]);
+    }
+
     public function test_rechaza_envio_sin_ningun_nivel_seleccionado(): void
     {
         $solicitante = Solicitante::factory()->create();

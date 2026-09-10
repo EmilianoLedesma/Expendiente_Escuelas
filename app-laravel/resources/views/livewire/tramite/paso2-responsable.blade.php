@@ -21,8 +21,8 @@
             @if ($tipoPersona !== 'moral')
                 <x-ui.text-input name="personaFisicaForm.nombre" label="Nombre completo" wire:model="personaFisicaForm.nombre" required />
                 <x-ui.text-input name="personaFisicaForm.fechaNacimiento" label="Fecha de nacimiento" type="date" wire:model="personaFisicaForm.fechaNacimiento" />
-                <x-ui.text-input name="personaFisicaForm.rfc" label="RFC" wire:model="personaFisicaForm.rfc" />
-                <x-ui.text-input name="personaFisicaForm.curp" label="CURP" wire:model="personaFisicaForm.curp" />
+                <x-ui.text-input name="personaFisicaForm.rfc" label="RFC" wire:model="personaFisicaForm.rfc" class="uppercase" />
+                <x-ui.text-input name="personaFisicaForm.curp" label="CURP" wire:model="personaFisicaForm.curp" class="uppercase" />
 
                 @if ($tipoPersona === 'fisica_con_gestor')
                     <x-ui.text-input name="gestorForm.nombre" label="Nombre del gestor" wire:model="gestorForm.nombre" required />

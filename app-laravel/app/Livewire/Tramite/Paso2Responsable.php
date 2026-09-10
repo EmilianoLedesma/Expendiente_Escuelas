@@ -68,6 +68,8 @@ class Paso2Responsable extends Component
             $this->personaMoralForm->validate();
         } else {
             $this->personaFisicaForm->validate();
+            $this->personaFisicaForm->rfc = mb_strtoupper($this->personaFisicaForm->rfc);
+            $this->personaFisicaForm->curp = mb_strtoupper($this->personaFisicaForm->curp);
 
             if ($this->tipoPersona === 'fisica_con_gestor') {
                 $this->gestorForm->validate();
