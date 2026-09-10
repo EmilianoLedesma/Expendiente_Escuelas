@@ -73,10 +73,23 @@ class RegistrarResponsableLegalTest extends TestCase
     {
         $escuela = $this->crearEscuela();
 
-        $this->expectException(InvalidArgumentException::class);
+        try {
+            (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'invalido'));
+            $this->fail('Se esperaba InvalidArgumentException.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertDatabaseCount('responsables_legales', 0);
+        }
+    }
 
-        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'invalido'));
+    public function test_un_segundo_envio_para_la_misma_escuela_es_un_no_op(): void
+    {
+        $escuela = $this->crearEscuela();
+        $datos = new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez');
 
-        $this->assertDatabaseCount('responsables_legales', 0);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, $datos);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, $datos);
+
+        $this->assertDatabaseCount('responsables_legales', 1);
+        $this->assertDatabaseCount('personas_fisicas', 1);
     }
 }

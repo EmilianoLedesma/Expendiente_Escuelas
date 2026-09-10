@@ -24,6 +24,13 @@ class RegistrarResponsableLegal
             throw new InvalidArgumentException("tipo_persona desconocido: {$datos->tipoPersona}");
         }
 
+        // ponytail: idempotency guard — a repeated submit for an escuela that already
+        // has a responsable_legal (escuela_id is NOT NULL UNIQUE) is treated as a no-op
+        // rather than a QueryException.
+        if (ResponsableLegalModel::where('escuela_id', $escuelaId)->exists()) {
+            return;
+        }
+
         DB::transaction(function () use ($escuelaId, $datos) {
             $responsable = ResponsableLegalModel::create([
                 'escuela_id' => $escuelaId,
