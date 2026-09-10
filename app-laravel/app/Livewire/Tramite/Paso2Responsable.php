@@ -60,6 +60,7 @@ class Paso2Responsable extends Component
     public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal): void
     {
         $this->validate([
+            'tipoPersona' => ['required', 'in:fisica,fisica_con_gestor,moral'],
             'domicilioNotificaciones' => ['required', 'string', 'max:250'],
             'personaAutorizadaRecoger' => ['nullable', 'string', 'max:200'],
         ]);
@@ -107,6 +108,7 @@ class Paso2Responsable extends Component
     {
         $this->validate([
             'nivelesSeleccionados' => ['required', 'array', 'min:1'],
+            'nivelesSeleccionados.*' => ['integer', 'exists:niveles_educativos,id'],
         ]);
 
         try {

@@ -101,6 +101,21 @@ class Paso2ResponsableTest extends TestCase
         ]);
     }
 
+    public function test_rechaza_tipo_persona_desconocido(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'algo_inventado')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->call('guardarResponsable')
+            ->assertHasErrors('tipoPersona');
+
+        $this->assertDatabaseCount('responsables_legales', 0);
+    }
+
     public function test_domicilio_notificaciones_es_requerido(): void
     {
         $solicitante = Solicitante::factory()->create();
@@ -214,6 +229,21 @@ class Paso2ResponsableTest extends TestCase
             ->set('nivelesSeleccionados', [])
             ->call('guardarNiveles')
             ->assertHasErrors('nivelesSeleccionados');
+
+        $this->assertDatabaseCount('escuela_niveles', 0);
+    }
+
+    public function test_rechaza_nivel_seleccionado_no_numerico(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('nivelesSeleccionados', ['no-es-un-id'])
+            ->call('guardarNiveles')
+            ->assertHasErrors('nivelesSeleccionados.0');
 
         $this->assertDatabaseCount('escuela_niveles', 0);
     }
