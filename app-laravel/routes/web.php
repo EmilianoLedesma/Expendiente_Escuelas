@@ -14,6 +14,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:view,escuela')
         ->name('tramite.paso2');
 
+    Route::get('/tramite/paso2/{escuela}/documentos', fn () => abort(501))
+        ->middleware('can:view,escuela')
+        ->name('tramite.paso2-documentos');
+
     Route::get('/tramite/paso3/{escuelaNivel}', Paso3Placeholder::class)
         ->middleware('can:view,escuelaNivel')
         ->name('tramite.paso3-placeholder');

@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property int $id
+ * @property int $escuela_id
+ * @property string $tipo_persona
+ */
 class ResponsableLegal extends Model
 {
     protected $table = 'responsables_legales';

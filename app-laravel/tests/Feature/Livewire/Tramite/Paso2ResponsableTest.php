@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\Documentos\DTO\DatosDocumento;
+use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
@@ -12,7 +14,10 @@ use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\CatalogoMinimoSeeder;
+use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -39,13 +44,31 @@ class Paso2ResponsableTest extends TestCase
 
     public function test_resume_en_fase_niveles_cuando_ya_hay_responsable_legal(): void
     {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->assertSet('fase', 'niveles');
+    }
+
+    public function test_redirige_a_documentos_si_responsable_legal_existe_pero_documentos_incompletos(): void
+    {
+        (new TiposDocumentosSeeder)->run();
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertSet('fase', 'niveles');
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
     }
 
     public function test_redirige_a_paso3_cuando_la_escuela_ya_tiene_niveles(): void
@@ -271,11 +294,23 @@ class Paso2ResponsableTest extends TestCase
         $this->assertDatabaseCount('ternas_nombres', 0);
     }
 
+    /** Registra los 6 documentos requeridos para que mount() no redirija a paso2-documentos. */
+    private function registrarDocumentosCompletos(Escuela $escuela): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+    }
+
     public function test_rechaza_envio_sin_ningun_nivel_seleccionado(): void
     {
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->registrarDocumentosCompletos($escuela);
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
@@ -291,6 +326,7 @@ class Paso2ResponsableTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->registrarDocumentosCompletos($escuela);
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
@@ -307,6 +343,7 @@ class Paso2ResponsableTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->registrarDocumentosCompletos($escuela);
         $this->actingAs($solicitante->user);
         $preescolar = NivelEducativo::where('clave', 'preescolar')->first();
 

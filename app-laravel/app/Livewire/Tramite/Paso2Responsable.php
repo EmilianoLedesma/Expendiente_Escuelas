@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tramite;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
@@ -11,6 +12,7 @@ use App\Livewire\Forms\PersonaMoralForm;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
+use App\Models\ResponsableLegal;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -48,7 +50,7 @@ class Paso2Responsable extends Component
 
     public array $nivelesSeleccionados = [];
 
-    public function mount(Escuela $escuela): void
+    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos): void
     {
         $this->escuela = $escuela;
 
@@ -60,7 +62,21 @@ class Paso2Responsable extends Component
             return;
         }
 
-        $this->fase = $escuela->responsableLegal()->exists() ? 'niveles' : 'responsable';
+        $responsableLegal = ResponsableLegal::where('escuela_id', $escuela->id)->first();
+
+        if ($responsableLegal !== null) {
+            if (! $documentosCompletos->paraEscuela($escuela->id, $responsableLegal->tipo_persona)) {
+                $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $escuela->id]);
+
+                return;
+            }
+
+            $this->fase = 'niveles';
+
+            return;
+        }
+
+        $this->fase = 'responsable';
     }
 
     public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal): void
