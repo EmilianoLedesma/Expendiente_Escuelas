@@ -34,5 +34,6 @@ final readonly class DatosDocumento
         public ?string $usoAutorizado = null,
         public ?bool $ratificadoNotario = null,
         public ?string $otroEspecifique = null,
+        public ?string $observaciones = null,
     ) {}
 }

@@ -26,8 +26,41 @@
             <input type="file" wire:model="archivo" accept="application/pdf">
             @error('archivo') <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p> @enderror
 
-            <x-ui.text-input name="acreditacionForm.numeroEscritura" label="Número de escritura" wire:model="acreditacionForm.numeroEscritura" />
-            <x-ui.text-input name="acreditacionForm.notarioNombre" label="Nombre del notario" wire:model="acreditacionForm.notarioNombre" />
+            <div>
+                <label class="block font-sans text-body-sm font-medium text-ink mb-xxs">Tipo de acreditación</label>
+                <label class="block"><input type="radio" wire:model.live="acreditacionForm.tipo" value="escritura_publica"> Escritura pública</label>
+                <label class="block"><input type="radio" wire:model.live="acreditacionForm.tipo" value="arrendamiento"> Arrendamiento</label>
+                <label class="block"><input type="radio" wire:model.live="acreditacionForm.tipo" value="comodato"> Comodato</label>
+                <label class="block"><input type="radio" wire:model.live="acreditacionForm.tipo" value="otro"> Otro</label>
+                @error('acreditacionForm.tipo') <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p> @enderror
+            </div>
+
+            @if ($acreditacionForm->tipo === 'escritura_publica')
+                <x-ui.text-input name="acreditacionForm.numeroEscritura" label="Número de escritura" wire:model="acreditacionForm.numeroEscritura" required />
+                <x-ui.text-input name="acreditacionForm.notarioNombre" label="Nombre del notario" wire:model="acreditacionForm.notarioNombre" required />
+                <x-ui.text-input name="acreditacionForm.notarioNumero" label="Número del notario" wire:model="acreditacionForm.notarioNumero" />
+                <x-ui.text-input name="acreditacionForm.notarioLocalidad" label="Localidad del notario" wire:model="acreditacionForm.notarioLocalidad" />
+                <x-ui.text-input name="acreditacionForm.folioRpp" label="Folio del Registro Público de la Propiedad" wire:model="acreditacionForm.folioRpp" />
+                <x-ui.text-input name="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción RPP" type="date" wire:model="acreditacionForm.fechaInscripcionRpp" />
+            @endif
+
+            @if (in_array($acreditacionForm->tipo, ['arrendamiento', 'comodato']))
+                <x-ui.text-input name="acreditacionForm.arrendadorComodante" label="Arrendador / comodante" wire:model="acreditacionForm.arrendadorComodante" required />
+                <x-ui.text-input name="acreditacionForm.arrendatarioComodatario" label="Arrendatario / comodatario" wire:model="acreditacionForm.arrendatarioComodatario" required />
+                <x-ui.text-input name="acreditacionForm.fechaContrato" label="Fecha del contrato" type="date" wire:model="acreditacionForm.fechaContrato" required />
+                <x-ui.text-input name="acreditacionForm.vigenciaContrato" label="Vigencia del contrato" type="date" wire:model="acreditacionForm.vigenciaContrato" required />
+                <x-ui.text-input name="acreditacionForm.usoAutorizado" label="Uso autorizado" wire:model="acreditacionForm.usoAutorizado" />
+            @endif
+
+            @if ($acreditacionForm->tipo === 'otro')
+                <x-ui.text-input name="acreditacionForm.otroEspecifique" label="Especifique" wire:model="acreditacionForm.otroEspecifique" required />
+            @endif
+
+            <div>
+                <label for="acreditacionForm.observaciones" class="block font-sans text-body-sm font-medium text-ink mb-xxs">Observaciones</label>
+                <textarea id="acreditacionForm.observaciones" wire:model="acreditacionForm.observaciones" class="w-full px-[13px] py-[9px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas focus:outline-none focus:ring-[3px] focus:border-primary focus:ring-primary/10"></textarea>
+                @error('acreditacionForm.observaciones') <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p> @enderror
+            </div>
 
             <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
         </form>
