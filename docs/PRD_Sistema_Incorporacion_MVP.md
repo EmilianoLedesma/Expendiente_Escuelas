@@ -155,10 +155,24 @@ Seis sub-pasos, en este orden, como un wizard:
 2. **Infraestructura del nivel** (`instalaciones_espacios`, `sanitarios`,
    `inmueble_estudios_actuales`) — el formulario debe mostrar dinámicamente los
    `tipos_espacios` correspondientes según `niveles_tipos_espacios` para el nivel
-   en curso.
+   en curso. **Misma regla que el domicilio (2026-09-11), verificada contra el
+   esquema**: `instalaciones_espacios` y `sanitarios` (y sus tablas relacionadas)
+   están anclados a `plantel_id`, NO a `escuela_nivel_id` — solo `aulas_nivel` es
+   genuinamente específico del nivel. Esto significa que espacios administrativos,
+   cubículos, sanitarios, instalaciones recreativas y especiales son datos
+   compartidos a nivel plantel, exactamente igual que el domicilio: **editables
+   únicamente la primera vez que el plantel se usa**; de solo lectura al reutilizar
+   un plantel existente (misma justificación normativa que domicilio — evitar
+   sobrescritura silenciosa de datos ya establecidos entre distintos
+   niveles/escuelas del mismo plantel).
 3. **Mobiliario** (`mobiliario_nivel`) — mostrar dinámicamente los conceptos de
    `mobiliario_conceptos` aplicables (por sala, si el nivel es Inicial); capturar
-   cantidad declarada.
+   cantidad declarada. **Nota de alcance del MVP**: la captura de mobiliario aplica
+   ÚNICAMENTE a Educación Inicial en este MVP — es el único nivel con catálogo de
+   ratios confirmado (`mobiliario_conceptos`/`salas` ya migrados y verificados
+   palabra por palabra contra la fuente). Preescolar/Primaria/Secundaria/Media
+   Superior/Superior/Posgrado quedan explícitamente fuera de este sub-paso hasta
+   que exista un catálogo equivalente confirmado.
 4. **Plan de estudios y modalidad** (`escuela_niveles.modalidad`,
    `plan_estudios_referencia`) — alcance mínimo para MVP: capturar modalidad
    (escolarizada/no escolarizada/mixta) y una referencia de texto libre al plan de
