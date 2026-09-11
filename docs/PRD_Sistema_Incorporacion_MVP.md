@@ -204,6 +204,20 @@ bloquear el guardado (el expediente puede quedar "con observaciones").
 - Idioma: español (México) en toda la interfaz.
 - Diseño: seguir la skill `frontend-design` disponible en el entorno para la UI.
 
+**Fuera de alcance del MVP (operación en producción)**: estas son necesidades reales
+de un sistema en producción, no descartadas — simplemente no aplican mientras el MVP
+sigue en validación de alcance con SEDEQ:
+
+- **Almacenamiento de documentos en producción** (retención, backup, cuota en RHEL)
+  — hoy es disco local sin política definida; aplazado hasta que haya un entorno de
+  producción real.
+- **Respaldo de base de datos** (Postgres) — sin estrategia definida; aplazado por
+  la misma razón.
+- **Pipeline de despliegue a RHEL** — no existe hoy más allá de CI
+  (test/static-analysis/style); aplazado hasta que haya fecha de despliegue real.
+- **Observabilidad/monitoreo de errores en producción** — sin decidir; aplazado,
+  revisar si aplica una vez que exista Etapa 2 (revisión humana).
+
 ## 8. Criterios de aceptación del MVP
 
 - [ ] Un solicitante puede completar los Pasos 1-3 para Educación Inicial de inicio
