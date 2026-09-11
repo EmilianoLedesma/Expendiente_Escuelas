@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Infrastructure\Documentos\AlmacenDocumentos;
+use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
 use App\Listeners\CrearSolicitanteAlRegistrarUsuario;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Blade;
@@ -15,7 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            AlmacenDocumentos::class,
+            AlmacenDocumentosLocal::class,
+        );
     }
 
     /**
