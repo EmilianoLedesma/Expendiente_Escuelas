@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Tramite\Paso1Preregistro;
+use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3Placeholder;
 use Illuminate\Support\Facades\Route;
@@ -14,7 +15,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:view,escuela')
         ->name('tramite.paso2');
 
-    Route::get('/tramite/paso2/{escuela}/documentos', fn () => abort(501))
+    Route::get('/tramite/paso2/{escuela}/documentos', Paso2Documentos::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos');
 
