@@ -1,6 +1,9 @@
-# PENDIENTE — Owner scoping de la ruta de Paso 2 (`/tramite/paso2/{escuela}`)
+# ADR-004 — Owner scoping de la ruta de Paso 2 (`/tramite/paso2/{escuela}`)
 
 **Estado: resuelto (2026-09-09).** Ver "## Resolución" al final de este documento.
+Archivo renombrado de `paso2-owner-scoping.md` (nunca tuvo el prefijo
+`ADR-`/`PENDIENTE-` correcto) a `ADR-004-paso2-owner-scoping.md` — ver
+CLAUDE.md, sección "Ways of working", criterio ADR vs. PENDIENTE.
 
 ## Por qué existe este documento
 

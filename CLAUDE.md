@@ -136,6 +136,19 @@ Never let implementer subagents touch `.gitignore` or run `git push` — that's 
 
 `docs/progress.md` is the append-only ledger of what is **on `master`** — not of what any given branch did. Agents working in a worktree don't know whether their branch will be merged, reworked, or discarded, so they don't write to it. Record the session's work in a dated `docs/reports/YYYY-MM-DD-<topic>.md` instead, with enough detail (evidence, decisions, what was deliberately left undone) that `progress.md` can later be written from it without re-reading the diff. The controller updates `progress.md` at merge time, from the reports. This rule exists because it was violated three times: every branch appended its Session Log entry at the same anchor line at the end of the file, and every merge conflicted there — a conflict that carries no information and is pure cost. Any open decision the session couldn't resolve gets its own `docs/decisions/PENDIENTE-<topic>.md` rather than living as a bullet, so it survives independently of whether the branch lands. ECC session files under `~/.claude/session-data/` are transient scratch and are never a substitute for either; where they disagree with `progress.md`, `progress.md` wins. Controller changes applied straight to `master` with no branch involved still get their own Session Log entry, marked as such — "at merge time" describes the usual trigger, not the only one.
 
+### Language convention
+
+- **Instructions given TO the agent** (task specs, this chat, commit messages describing what to do) — English.
+- **Evidence of work performed and its reasoning** — `docs/reports/*.md` and `docs/decisions/*.md` — Spanish. These are read by a Spanish-speaking human as the record of what was built and why.
+- **`docs/progress.md` stays English** — explicit exception, not an oversight. It's read by the agent at the start of every session as machine-facing project context/history, not human-facing evidence — the same category as CLAUDE.md itself, not as reports/decisions.
+
+This rule applies going forward; it does not retroactively translate existing files. Several existing `docs/reports/*.md` files predate this convention and are in English (see `docs/reports/2026-09-07-*.md`, `2026-09-08-*.md`, and `2026-09-11-paso2-documentos.md`) — retroactive translation is a separate decision, not implied by this rule's existence.
+
+### ADR vs. PENDIENTE
+
+- **`ADR-NNN-<slug>.md`**: an architectural decision that's durable once made — reverting it would require touching multiple already-built files. Numbered sequentially. Written once the decision is made (may be before or after the code exists — ADR-001 preceded its code, ADR-002 followed it).
+- **`PENDIENTE-<slug>.md`**: an open, blocking question with no decision yet — normative (needs SEDEQ/an external authority) or architectural (needs the project owner). No number; renamed to `ADR-NNN-<slug>.md` (numbered in creation-of-resolution order, not retroactively renumbered) the moment it's resolved, in the same commit that resolves it — not left with a stale `PENDIENTE-` prefix and an internal "Estado: resuelto" line, which already happened twice (`ADR-003`'s original file, and `paso2-owner-scoping.md`, closed 2026-09-09 but never renamed until this rule was written — since renamed to `ADR-004-paso2-owner-scoping.md`).
+
 ### Register/tone
 Default to concise, direct answers — lead with the result, skip the preamble, keep exploratory questions to 2-3 sentences with a clear recommendation rather than an exhaustive options survey. Match whatever tone mode is active without letting it override the substance underneath — code, security notices, and irreversible-action confirmations always stay in full, clear language regardless of active tone mode.
 
