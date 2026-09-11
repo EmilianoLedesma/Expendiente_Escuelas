@@ -74,7 +74,7 @@ class RegistrarDocumento
                 );
             }
 
-            if ($tipo->clave === 'escritura_inmueble') {
+            if ($tipo->clave === 'escritura_inmueble' && $datos->tipoAcreditacion !== null) {
                 AcreditacionOcupacionLegal::updateOrCreate(
                     ['documento_plantel_id' => $documento->id],
                     [
