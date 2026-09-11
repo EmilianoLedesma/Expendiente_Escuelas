@@ -250,6 +250,28 @@ class Paso2DocumentosTest extends TestCase
         ]);
     }
 
+    public function test_variante_arrendamiento_sin_datos_de_contrato_falla_validacion(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors([
+                'acreditacionForm.arrendadorComodante',
+                'acreditacionForm.arrendatarioComodatario',
+                'acreditacionForm.fechaContrato',
+                'acreditacionForm.vigenciaContrato',
+            ]);
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
+    }
+
     public function test_variante_comodato_captura_arrendador_y_contrato(): void
     {
         Storage::fake('documentos');
