@@ -5,6 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $documento_plantel_id
+ * @property string|null $perito_nombre
+ * @property string|null $perito_cedula_profesional
+ * @property string|null $perito_registro_dro
+ * @property string|null $perito_registro_autoridad
+ * @property string|null $perito_registro_vigencia
+ */
 class ConstanciaSeguridadEstructural extends Model
 {
     public $timestamps = false;
