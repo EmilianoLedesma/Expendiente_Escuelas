@@ -112,6 +112,16 @@ class Paso2Documentos extends Component
         $this->avanzar($documentosCompletos);
     }
 
+    public function guardarFormatoSolicitud(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+
+        $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivo, new DatosDocumento);
+        $this->archivo = null;
+
+        $this->avanzar($documentosCompletos);
+    }
+
     private function avanzar(DocumentosCompletos $documentosCompletos): void
     {
         $tipoPersona = $this->tipoPersona();

@@ -55,4 +55,18 @@
             <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
         </form>
     @endif
+
+    @if ($fase === 'formato_solicitud')
+        <a href="{{ route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]) }}" target="_blank" class="underline text-primary">
+            Generar y descargar Formato de Solicitud
+        </a>
+
+        <form wire:submit="guardarFormatoSolicitud" class="space-y-md mt-md">
+            <label class="block font-sans text-body-sm font-medium text-ink mb-xxs">Subir Formato de Solicitud firmado</label>
+            <input type="file" wire:model="archivo" accept="application/pdf">
+            @error('archivo') <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p> @enderror
+
+            <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
+        </form>
+    @endif
 </div>

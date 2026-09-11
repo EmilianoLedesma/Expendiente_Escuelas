@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\Documentos\DTO\DatosDocumento;
+use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso2Documentos;
@@ -111,5 +113,24 @@ class Paso2DocumentosTest extends TestCase
             ->assertSet('fase', 'formato_solicitud')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez']);
+    }
+
+    public function test_sube_formato_de_solicitud_y_redirige_a_paso2(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSet('fase', 'formato_solicitud')
+            ->set('archivo', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
+            ->call('guardarFormatoSolicitud')
+            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+
+        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
     }
 }

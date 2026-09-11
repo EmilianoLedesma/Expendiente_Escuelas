@@ -1,9 +1,11 @@
 <?php
 
+use App\Infrastructure\Pdf\FormatoSolicitudPdf;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3Placeholder;
+use App\Models\Escuela;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
@@ -18,6 +20,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/tramite/paso2/{escuela}/documentos', Paso2Documentos::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos');
+
+    Route::get('/tramite/paso2/{escuela}/documentos/formato-solicitud.pdf', function (Escuela $escuela, FormatoSolicitudPdf $pdf) {
+        return $pdf->generar($escuela);
+    })
+        ->middleware('can:view,escuela')
+        ->name('tramite.paso2-documentos.formato-solicitud');
 
     Route::get('/tramite/paso3/{escuelaNivel}', Paso3Placeholder::class)
         ->middleware('can:view,escuelaNivel')
