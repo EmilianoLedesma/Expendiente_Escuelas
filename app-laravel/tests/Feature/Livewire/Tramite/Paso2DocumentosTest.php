@@ -133,4 +133,25 @@ class Paso2DocumentosTest extends TestCase
 
         $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
     }
+
+    public function test_bloquea_el_avance_final_si_dictamen_esta_vencido(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(60)->toDateString(),
+        ));
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSet('fase', 'formato_solicitud')
+            ->set('archivo', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
+            ->call('guardarFormatoSolicitud')
+            ->assertHasErrors('vigencia')
+            ->assertNoRedirect();
+    }
 }

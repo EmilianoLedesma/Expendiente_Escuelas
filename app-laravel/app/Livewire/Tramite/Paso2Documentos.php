@@ -5,6 +5,7 @@ namespace App\Livewire\Tramite;
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
+use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
@@ -127,13 +128,21 @@ class Paso2Documentos extends Component
         $tipoPersona = $this->tipoPersona();
         $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $tipoPersona);
 
-        if ($pendientes === []) {
-            $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
+        if ($pendientes !== []) {
+            $this->fase = $pendientes[0];
 
             return;
         }
 
-        $this->fase = $pendientes[0];
+        $violaciones = app(ValidarVigenciaDocumentos::class)->ejecutar($this->escuela->id);
+
+        if ($violaciones !== []) {
+            $this->addError('vigencia', implode(' ', $violaciones));
+
+            return;
+        }
+
+        $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
     }
 
     private function tipoPersona(): string

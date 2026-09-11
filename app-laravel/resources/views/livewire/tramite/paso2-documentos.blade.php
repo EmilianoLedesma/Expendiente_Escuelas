@@ -2,6 +2,10 @@
 <div class="rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
     <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Documentos</h1>
 
+    @error('vigencia')
+        <div class="mb-lg"><x-ui.alert variant="error">{{ $message }}</x-ui.alert></div>
+    @enderror
+
     @if (in_array($fase, ['ine', 'acta_nacimiento', 'escritura_poder_facultades']))
         <form wire:submit="guardarDocumentoSimple" class="space-y-md">
             <label class="block font-sans text-body-sm font-medium text-ink mb-xxs">
