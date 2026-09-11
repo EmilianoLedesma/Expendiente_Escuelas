@@ -78,4 +78,38 @@ class Paso2DocumentosTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_sube_escritura_dictamen_y_constancia_en_secuencia(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->call('guardarAcreditacion')
+            ->assertSet('fase', 'dictamen_uso_suelo')
+            ->assertHasNoErrors();
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
+
+        $component->set('archivo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
+            ->set('dictamenForm.fechaEmision', now()->toDateString())
+            ->call('guardarDictamen')
+            ->assertSet('fase', 'constancia_seguridad_estructural')
+            ->assertHasNoErrors();
+        $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
+
+        $component->set('archivo', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
+            ->set('constanciaForm.fechaEmision', now()->toDateString())
+            ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
+            ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->call('guardarConstancia')
+            ->assertSet('fase', 'formato_solicitud')
+            ->assertHasNoErrors();
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez']);
+    }
 }
