@@ -138,8 +138,20 @@ cada uno).
 Seis sub-pasos, en este orden, como un wizard:
 
 1. **Datos del inmueble** (`planteles` + `servicios_cercanos` + `acreditaciones_ocupacion_legal`
-   + `constancias_seguridad_estructural`) — si el plantel ya existe (Paso 1), precargar
-   y permitir edición; si es nuevo, formulario completo.
+   + `constancias_seguridad_estructural`) — si el plantel ya existe (Paso 1), precargar;
+   si es nuevo, formulario completo. **Corrección (2026-09-11)** a una suposición
+   informal anterior de una discusión de diseño previa ("el plantel ya existe →
+   precargar y permitir edición" — implicaba escribir libremente de vuelta a
+   `planteles`): el domicilio del plantel (calle, número, colonia, municipio, código
+   postal) se muestra prellenado en este paso, pero es **editable únicamente cuando
+   el plantel se está registrando por primera vez** (bifurcación "nuevo" de Paso 1).
+   Si el plantel ya existe y se está reutilizando (bifurcación "existente"), el
+   domicilio se muestra de **solo lectura** — cualquier corrección real queda
+   diferida a un trámite formal de modificación (fuera de este MVP). Razón: COMPENDIO
+   §"Tipos de modificación de expediente ya reconocidos por la normativa" confirma
+   que el cambio de domicilio de un plantel requiere "solicitud y autorización previa
+   de la Dirección de Educación" — no es un campo de formulario libre. Permitir
+   edición sin control durante la captura de Paso 3 violaría ese proceso normativo.
 2. **Infraestructura del nivel** (`instalaciones_espacios`, `sanitarios`,
    `inmueble_estudios_actuales`) — el formulario debe mostrar dinámicamente los
    `tipos_espacios` correspondientes según `niveles_tipos_espacios` para el nivel
