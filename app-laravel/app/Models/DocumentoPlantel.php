@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DocumentoPlantel extends Model
 {
@@ -31,5 +32,15 @@ class DocumentoPlantel extends Model
     public function tipoDocumento(): BelongsTo
     {
         return $this->belongsTo(TipoDocumento::class);
+    }
+
+    public function constanciaSeguridadEstructural(): HasOne
+    {
+        return $this->hasOne(ConstanciaSeguridadEstructural::class);
+    }
+
+    public function acreditacionOcupacionLegal(): HasOne
+    {
+        return $this->hasOne(AcreditacionOcupacionLegal::class);
     }
 }
