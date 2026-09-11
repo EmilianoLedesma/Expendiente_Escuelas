@@ -3,6 +3,7 @@
 namespace App\Livewire\Tramite;
 
 use App\Application\Documentos\DocumentosCompletos;
+use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
@@ -50,7 +51,7 @@ class Paso2Responsable extends Component
 
     public array $nivelesSeleccionados = [];
 
-    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos): void
+    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
     {
         $this->escuela = $escuela;
 
@@ -65,7 +66,10 @@ class Paso2Responsable extends Component
         $responsableLegal = ResponsableLegal::where('escuela_id', $escuela->id)->first();
 
         if ($responsableLegal !== null) {
-            if (! $documentosCompletos->paraEscuela($escuela->id, $responsableLegal->tipo_persona)) {
+            // Una vigencia vencida es incompletitud, no un callejón sin salida:
+            // 2.2 vuelve a pedir el documento infractor.
+            if (! $documentosCompletos->paraEscuela($escuela->id, $responsableLegal->tipo_persona)
+                || $validarVigencia->ejecutar($escuela->id) !== []) {
                 $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $escuela->id]);
 
                 return;

@@ -134,6 +134,55 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
     }
 
+    public function test_reentrar_con_todo_completo_y_dictamen_vencido_muestra_el_error_sin_reventar(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(60)->toDateString(),
+        ));
+
+        $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))->assertOk();
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSet('fase', 'dictamen_uso_suelo')
+            ->assertHasErrors('vigencia');
+    }
+
+    public function test_reentrar_con_todo_completo_y_vigente_redirige_a_paso2(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+    }
+
+    public function test_una_fase_manipulada_no_puede_saltarse_la_captura_estructurada(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('fase', 'dictamen_uso_suelo')
+            ->set('archivo', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple')
+            ->assertStatus(403);
+
+        $this->assertDatabaseCount('documentos_plantel', 0);
+    }
+
     public function test_bloquea_el_avance_final_si_dictamen_esta_vencido(): void
     {
         Storage::fake('documentos');

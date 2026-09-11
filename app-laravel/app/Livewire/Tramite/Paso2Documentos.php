@@ -37,17 +37,39 @@ class Paso2Documentos extends Component
 
     public AcreditacionOcupacionForm $acreditacionForm;
 
-    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos): void
+    /** Claves cuyo único dato capturable es el archivo (sin extensión estructurada). */
+    private const CLAVES_SOLO_ARCHIVO = ['ine', 'acta_nacimiento', 'escritura_poder_facultades'];
+
+    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
     {
         $this->escuela = $escuela;
         $tipoPersona = $this->tipoPersona();
         $pendientes = $documentosCompletos->clavesPendientes($escuela->id, $tipoPersona);
 
-        $this->fase = $pendientes[0];
+        if ($pendientes !== []) {
+            $this->fase = $pendientes[0];
+
+            return;
+        }
+
+        // Los 6 documentos existen: o una vigencia venció (se vuelve a pedir
+        // ese documento) o el paso ya terminó y esto es back-navigation.
+        $violaciones = $validarVigencia->ejecutar($escuela->id);
+        $this->fase = (string) (array_key_first($violaciones) ?? 'formato_solicitud');
+
+        if ($violaciones === []) {
+            $this->redirectRoute('tramite.paso2', ['escuela' => $escuela->id]);
+
+            return;
+        }
+
+        $this->addError('vigencia', implode(' ', $violaciones));
     }
 
     public function guardarDocumentoSimple(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
+        abort_unless(in_array($this->fase, self::CLAVES_SOLO_ARCHIVO, true), 403);
+
         $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
         $registrarDocumento->ejecutar($this->escuela->id, $this->fase, $this->archivo, new DatosDocumento);

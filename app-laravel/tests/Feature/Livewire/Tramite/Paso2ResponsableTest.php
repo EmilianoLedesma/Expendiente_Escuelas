@@ -71,6 +71,26 @@ class Paso2ResponsableTest extends TestCase
             ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
     }
 
+    public function test_redirige_a_documentos_si_el_dictamen_de_uso_de_suelo_esta_vencido(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(60)->toDateString(),
+        ));
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+    }
+
     public function test_redirige_a_paso3_cuando_la_escuela_ya_tiene_niveles(): void
     {
         (new CatalogoMinimoSeeder)->run();

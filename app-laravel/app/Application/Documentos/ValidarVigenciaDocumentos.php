@@ -14,7 +14,7 @@ use App\Models\TipoDocumento;
  */
 class ValidarVigenciaDocumentos
 {
-    /** @return list<string> */
+    /** @return array<string, string> mensaje por clave de documento infractor */
     public function ejecutar(int $escuelaId): array
     {
         $escuela = Escuela::findOrFail($escuelaId);
@@ -26,7 +26,7 @@ class ValidarVigenciaDocumentos
             ->first();
 
         if ($dictamen !== null && $dictamen->fecha_vigencia !== null && now()->toDateString() > $dictamen->fecha_vigencia) {
-            $violaciones[] = 'Dictamen de Uso de Suelo: ha superado su vigencia máxima, debe resubirse.';
+            $violaciones['dictamen_uso_suelo'] = 'Dictamen de Uso de Suelo: ha superado su vigencia máxima, debe resubirse.';
         }
 
         $constanciaTipo = TipoDocumento::where('clave', 'constancia_seguridad_estructural')->first();
@@ -41,7 +41,7 @@ class ValidarVigenciaDocumentos
             $anioEmision = date('Y', strtotime($constancia->fecha_emision));
 
             if ($anioRegistro !== $anioEmision) {
-                $violaciones[] = 'Constancia de Seguridad Estructural: el año del registro del perito no coincide con el año de emisión.';
+                $violaciones['constancia_seguridad_estructural'] = 'Constancia de Seguridad Estructural: el año del registro del perito no coincide con el año de emisión.';
             }
         }
 

@@ -46,7 +46,7 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $violaciones = (new ValidarVigenciaDocumentos)->ejecutar($escuela->id);
 
         $this->assertNotEmpty($violaciones);
-        $this->assertStringContainsString('Dictamen de Uso de Suelo', $violaciones[0]);
+        $this->assertStringContainsString('Dictamen de Uso de Suelo', $violaciones['dictamen_uso_suelo']);
     }
 
     public function test_acepta_dictamen_de_uso_de_suelo_vigente(): void
@@ -74,6 +74,6 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $violaciones = (new ValidarVigenciaDocumentos)->ejecutar($escuela->id);
 
         $this->assertNotEmpty($violaciones);
-        $this->assertStringContainsString('Constancia de Seguridad Estructural', $violaciones[0]);
+        $this->assertStringContainsString('Constancia de Seguridad Estructural', $violaciones['constancia_seguridad_estructural']);
     }
 }
