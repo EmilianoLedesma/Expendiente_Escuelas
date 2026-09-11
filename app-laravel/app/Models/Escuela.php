@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property int $id
+ * @property int $plantel_id
+ * @property int $solicitante_id
+ * @property string|null $nombre_aprobado
+ */
 class Escuela extends Model
 {
     protected $fillable = [
