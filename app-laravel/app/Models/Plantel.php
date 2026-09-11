@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -31,4 +32,9 @@ class Plantel extends Model
         'telefono',
         'correo_electronico',
     ];
+
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(DocumentoPlantel::class);
+    }
 }

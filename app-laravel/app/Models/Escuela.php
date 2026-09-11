@@ -39,4 +39,9 @@ class Escuela extends Model
     {
         return $this->hasMany(TernaNombre::class);
     }
+
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(DocumentoEscuela::class);
+    }
 }
