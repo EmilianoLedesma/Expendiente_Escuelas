@@ -15,6 +15,16 @@ Construir la primera versión funcional del sistema web que digitaliza el trámi
 incorporación de escuelas ante SEDEQ, cubriendo el flujo completo de captura y
 prevalidación (Pasos 1-3 del proceso) para los 4 niveles de Educación Básica.
 
+**Alcance confirmado (2026-09-11)**: este MVP cubre únicamente la captura documental
+y la prevalidación automática (Motor de Validación de Capacidad Instalada) del
+trámite de registro de escuela — sea un trámite nuevo o la continuación de uno ya
+iniciado. La revisión humana de SEDEQ (un revisor real actuando sobre
+`estado_validacion`, el flujo de revisión propiamente dicho, notificaciones) queda
+explícitamente fuera de este MVP. COMPENDIO §6 agrupa ambas cosas bajo un mismo
+encabezado ("Etapa 2 — Validación y revisión interna"), pero este PRD las separa
+porque la distinción cambia qué significa "MVP terminado": el Motor evalúa y muestra
+el resultado al solicitante; ningún flujo de revisor humano se construye en esta fase.
+
 **Fuera de alcance de este MVP** (explícitamente, no ambigüedad):
 - Media Superior, Superior y Posgrado (normativa aún no recabada por completo).
 - El flujo de revisión interna de SEDEQ más allá de un estado básico de expediente
@@ -36,6 +46,18 @@ prevalidación (Pasos 1-3 del proceso) para los 4 niveles de Educación Básica.
 | Roles y permisos | `spatie/laravel-permission` |
 | Panel administrativo (SEDEQ) | Filament PHP 3 |
 | Entorno de desarrollo | Windows + Laravel Herd (local); producción futura en RHEL |
+
+**Arquitectura por capas (confirmada, tal como implementada)**: Presentación =
+Livewire (wizard del solicitante) + Filament (panel SEDEQ); Aplicación = casos de
+uso en `app/Application/`, invocados en proceso — no por una ronda HTTP interna
+(ver `docs/decisions/ADR-001-frontera-de-capas.md`); Dominio = `app/Domain/`,
+agnóstico de framework, sin dependencia de `Illuminate\*`; Persistencia = modelos
+Eloquent, invocados directamente desde Aplicación, sin una capa de interfaz de
+repositorio — decisión deliberada, no un vacío: no existe hoy un segundo backend de
+persistencia concreto ni una necesidad real de pruebas en memoria que lo justifique
+(los tests ya requieren Postgres real, porque las migraciones ejecutan DDL crudo que
+SQLite no puede parsear), mismo razonamiento ya aplicado en otras partes de este
+proyecto para rechazar abstracción prematura.
 
 ## 3. Roles de usuario
 
@@ -97,6 +119,15 @@ de seguridad estructural + datos del perito/DRO, formato de pago).
   30 días).
 - Generar el **Formato de Solicitud** como PDF prellenado (dompdf) a partir de los
   datos capturados, para descarga, firma autógrafa y resubida.
+- Nota de alcance confirmada: "Constancia de Seguridad Estructural" y "Carta
+  responsiva del DRO" son **un solo documento** (ya implementado así, ya reflejado
+  en el compendio) — el listado anterior ya los trata como una unidad ("constancia
+  de seguridad estructural + datos del perito/DRO"), no dos documentos separados.
+  Para persona moral, el documento específico sigue siendo la escritura/poder
+  notarial de facultades del representante legal — no se agrega "Acta Constitutiva"
+  como documento separado; esa pregunta quedó explícitamente diferida por el
+  usuario, la implementación actual se mantiene tal cual hasta una revisión
+  posterior.
 
 **2.3 Selección de niveles educativos**: checklist de los 4 niveles de Básica. Por
 cada nivel marcado, crear un registro en `escuela_niveles` (dispara el Paso 3 para
@@ -131,8 +162,16 @@ Seis sub-pasos, en este orden, como un wizard:
 
 ### Motor de Validación de Capacidad Instalada
 
-Al completar los sub-pasos 2, 3, 5 y 6 de un nivel, ejecutar validación cruzada
-contra `reglas_validacion`:
+**Momento de ejecución (confirmado 2026-09-11)**: el Motor se ejecuta **una sola
+vez**, como evaluación final por lote, después de que la captura completa de los 6
+sub-pasos del Paso 3 de un nivel esté terminada — no incrementalmente por sub-paso,
+ni en tiempo real conforme se captura cada campo (una suposición inicial incorrecta,
+ya corregida). Esto es distinto de la validación de vigencia de documentos del Paso
+2.2 (`ValidarVigenciaDocumentos`), que sí valida incrementalmente en la transición
+2.2→2.3 — son dos mecanismos separados, en dos puntos distintos del flujo. El Motor
+compara de forma cruzada contra `reglas_validacion` y devuelve aceptación/rechazo
+con un mensaje por regla incumplida (ej. "se requieren al menos 2m² de construcción
+de aulas por alumno"):
 - **Superficie**: comparar `aulas_nivel.superficie_m2` y m² de áreas recreativas
   contra los rangos de `reglas_validacion` (tipo `superficie`) según la matrícula
   declarada.
