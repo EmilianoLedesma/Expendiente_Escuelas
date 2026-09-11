@@ -93,6 +93,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->call('guardarAcreditacion')
             ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasNoErrors();
@@ -202,5 +203,123 @@ class Paso2DocumentosTest extends TestCase
             ->call('guardarFormatoSolicitud')
             ->assertHasErrors('vigencia')
             ->assertNoRedirect();
+    }
+
+    public function test_escritura_publica_sin_notario_falla_validacion(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors(['acreditacionForm.numeroEscritura', 'acreditacionForm.notarioNombre']);
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
+    }
+
+    public function test_variante_arrendamiento_captura_arrendador_contrato_y_observaciones(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->set('acreditacionForm.arrendadorComodante', 'Juan Arrendador')
+            ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
+            ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
+            ->set('acreditacionForm.observaciones', 'Contrato renovable anualmente')
+            ->call('guardarAcreditacion')
+            ->assertSet('fase', 'dictamen_uso_suelo')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'arrendamiento',
+            'arrendador_comodante' => 'Juan Arrendador',
+            'arrendatario_comodatario' => 'Juana Pérez',
+            'observaciones' => 'Contrato renovable anualmente',
+        ]);
+    }
+
+    public function test_variante_arrendamiento_sin_datos_de_contrato_falla_validacion(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors([
+                'acreditacionForm.arrendadorComodante',
+                'acreditacionForm.arrendatarioComodatario',
+                'acreditacionForm.fechaContrato',
+                'acreditacionForm.vigenciaContrato',
+            ]);
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
+    }
+
+    public function test_variante_comodato_captura_arrendador_y_contrato(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('comodato.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->set('acreditacionForm.arrendadorComodante', 'Comodante SA')
+            ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
+            ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
+            ->call('guardarAcreditacion')
+            ->assertSet('fase', 'dictamen_uso_suelo')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'comodato',
+            'arrendador_comodante' => 'Comodante SA',
+        ]);
+    }
+
+    public function test_variante_otro_requiere_especificacion(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+
+        $component->set('archivo', UploadedFile::fake()->create('otro.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'otro')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors('acreditacionForm.otroEspecifique');
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
+
+        $component->set('acreditacionForm.otroEspecifique', 'Posesión por resolución judicial')
+            ->call('guardarAcreditacion')
+            ->assertSet('fase', 'dictamen_uso_suelo')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'otro',
+            'otro_especifique' => 'Posesión por resolución judicial',
+        ]);
     }
 }

@@ -129,6 +129,7 @@ class Paso2Documentos extends Component
             usoAutorizado: $this->acreditacionForm->usoAutorizado !== '' ? $this->acreditacionForm->usoAutorizado : null,
             ratificadoNotario: $this->acreditacionForm->ratificadoNotario,
             otroEspecifique: $this->acreditacionForm->otroEspecifique !== '' ? $this->acreditacionForm->otroEspecifique : null,
+            observaciones: $this->acreditacionForm->observaciones !== '' ? $this->acreditacionForm->observaciones : null,
         ));
         $this->archivo = null;
 

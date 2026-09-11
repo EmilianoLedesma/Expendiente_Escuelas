@@ -92,6 +92,7 @@ class RegistrarDocumento
                         'uso_autorizado' => $datos->usoAutorizado,
                         'ratificado_notario' => $datos->ratificadoNotario,
                         'otro_especifique' => $datos->otroEspecifique,
+                        'observaciones' => $datos->observaciones,
                     ],
                 );
             }
