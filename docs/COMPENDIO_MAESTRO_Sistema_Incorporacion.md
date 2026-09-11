@@ -403,7 +403,7 @@ Además de superficie y personal, la norma de Educación Inicial exige **mobilia
 | Sala de Usos Múltiples | Mesa infantil | 1 por cada 6 niños |
 
 > **Correcciones respecto a la versión anterior de esta tabla**: (1) Lactantes B también requiere **cuna con barandal** (antes solo se le atribuía a Lactantes A); (2) se agrega el ítem contable **"material didáctico adecuado a la edad"** en Lactantes B, Lactantes C y Maternal A/B (antes solo era un principio cualitativo general, no un ítem de equipo obligatorio); (3) se precisa que el baño de artesa incluye regadera de teléfono, y la silla para adulto de Lactantes A es específicamente para el espacio de lactancia materna.
-> Este catálogo de mobiliario/equipo es específico de Educación Inicial; queda pendiente confirmar si existe un equivalente para Preescolar/Primaria/Secundaria/Media Superior/Superior/Posgrado (posiblemente dentro de los Acuerdos 357/254/255 aún no disponibles).
+> Este catálogo de mobiliario/equipo es específico de Educación Inicial **por decisión de alcance del MVP** (no una pregunta abierta) — ver la sección "Paso 3" (Mobiliario) para el razonamiento completo.
 
 ### Requisitos cualitativos de instalaciones — Anexo B (checklist, no numéricos)
 
