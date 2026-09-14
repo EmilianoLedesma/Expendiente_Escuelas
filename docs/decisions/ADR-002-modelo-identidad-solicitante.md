@@ -61,6 +61,20 @@ Reporte de sesión con el detalle de ejecución, hallazgos y decisiones tomadas 
    público, no secreto). El arreglo correcto es el middleware, no redacción
    ni un segundo estado "reclamado/no reclamado".
 
+   **Corrección (2026-09-14):** lo anterior ya no describe el comportamiento
+   actual. `ListarPlantelesDisponibles` ahora sí filtra — solo devuelve
+   planteles con al menos una `Escuela` del solicitante autenticado — como
+   endurecimiento interino mientras
+   `docs/decisions/PENDIENTE-plantel-solicitante-cardinalidad.md` permanece
+   sin resolver; ese documento identificó este mismo listado como el
+   mecanismo de facto por el que hoy ocurre, por defecto y no por decisión,
+   el compartir planteles entre solicitantes. El razonamiento original de
+   este punto (5) se conserva arriba sin editar — era correcto para el
+   alcance de esta ADR en su momento (cerrar la fuga a visitantes anónimos);
+   la pregunta de si el dato de plantel debe ser semi-público *entre
+   solicitantes* es la que la PENDIENTE referida deja abierta, y este
+   endurecimiento es reversible según cómo se resuelva.
+
 6. **Personal SEDEQ vs. solicitantes: misma tabla `users`, separados por
    rol** (`spatie/laravel-permission`, ya instalado). Sin guard de
    autenticación separado. `historial_estados_expediente.usuario_sedeq`

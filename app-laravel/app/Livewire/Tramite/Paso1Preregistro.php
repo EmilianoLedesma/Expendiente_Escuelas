@@ -88,7 +88,9 @@ class Paso1Preregistro extends Component
     public function render(ListarPlantelesDisponibles $listarPlantelesDisponibles)
     {
         return view('livewire.tramite.paso1-preregistro', [
-            'planteles' => $this->bifurcacion === 'existente' ? $listarPlantelesDisponibles->ejecutar() : collect(),
+            'planteles' => $this->bifurcacion === 'existente'
+                ? $listarPlantelesDisponibles->ejecutar(auth()->user()->solicitante->getKey())
+                : collect(),
         ]);
     }
 }

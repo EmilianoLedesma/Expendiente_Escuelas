@@ -37,4 +37,9 @@ class Plantel extends Model
     {
         return $this->hasMany(DocumentoPlantel::class);
     }
+
+    public function escuelas(): HasMany
+    {
+        return $this->hasMany(Escuela::class);
+    }
 }

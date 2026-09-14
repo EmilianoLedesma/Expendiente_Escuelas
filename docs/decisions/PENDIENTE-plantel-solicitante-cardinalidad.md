@@ -70,3 +70,20 @@ Una de dos:
   SEDEQ.
 
 No implementado aquí — este documento solo registra la pregunta.
+
+## Actualización (2026-09-14): endurecimiento interino en `ListarPlantelesDisponibles`
+
+`ListarPlantelesDisponibles` (el selector de "plantel ya existente" en Paso 1) ya no
+devuelve los planteles de otros solicitantes — ahora filtra por
+`whereHas('escuelas', ...solicitante_id = $solicitanteId)`. Esto **no resuelve** la
+pregunta de cardinalidad de este documento: es un endurecimiento de alcance
+provisional del dropdown mismo, confirmado con el usuario, mientras esta pregunta
+sigue abierta. `escuelas.solicitante_id` sigue sin restricción a nivel de esquema o
+de `IniciarTramiteNuevo` — un solicitante que ya conoce el `plantel_id` de otro (por
+ejemplo, por coordinación fuera de banda) todavía puede adjuntarle una escuela.
+
+Si la decisión eventual es "los planteles pueden compartirse entre solicitantes",
+este filtro debe revisarse — hoy oculta del dropdown exactamente el escenario que
+ese resultado permitiría. Ver `docs/progress.md` y
+`docs/decisions/ADR-002-modelo-identidad-solicitante.md` §3 para el detalle del
+cambio.
