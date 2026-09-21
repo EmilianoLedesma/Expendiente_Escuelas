@@ -165,6 +165,56 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->assertDatabaseHas('aulas_nivel', ['escuela_nivel_id' => $preescolar->id, 'numero_aulas' => 3]);
     }
 
+    public function test_bodega_destinado_a_limpieza_se_guarda(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $bodegaId = $this->idTipo('bodega');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$bodegaId}.cantidad", 1)
+            ->set("espacios.{$bodegaId}.destinadoA", 'limpieza')
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $this->assertDatabaseHas('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $bodegaId,
+            'destinado_a' => 'limpieza',
+        ]);
+    }
+
+    public function test_bodega_destinado_a_invalido_no_escribe_nada(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $bodegaId = $this->idTipo('bodega');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$bodegaId}.cantidad", 1)
+            ->set("espacios.{$bodegaId}.destinadoA", 'otra-cosa-no-valida')
+            ->set('numeroAulas', 6)
+            ->call('guardar')
+            ->assertHasErrors("espacios.{$bodegaId}.destinadoA");
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+    }
+
+    public function test_material_biblioteca_con_id_inexistente_no_causa_error_500_ni_escribe_nada(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $bibliotecaId = $this->idTipo('biblioteca');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$bibliotecaId}.cantidad", 1)
+            ->set('materialesBiblioteca.9999.numeroTitulos', 1)
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $this->assertDatabaseCount('biblioteca_materiales', 0);
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $primaria = $this->escuelaNivel('primaria');

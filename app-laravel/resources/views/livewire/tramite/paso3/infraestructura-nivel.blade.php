@@ -34,7 +34,16 @@
                                 <input type="number" min="0" placeholder="Cantidad" wire:model.blur="espacios.{{ $tipo->id }}.cantidad" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
                                 <input type="number" step="0.01" min="0" placeholder="Superficie m²" wire:model.blur="espacios.{{ $tipo->id }}.superficieM2" class="w-[130px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
                                 <input type="number" min="0" placeholder="Capacidad" wire:model.blur="espacios.{{ $tipo->id }}.capacidadPromedio" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                                <input type="text" placeholder="Destinado a" wire:model.blur="espacios.{{ $tipo->id }}.destinadoA" class="flex-1 min-w-[160px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
+                                @if ($tipo->clave === 'bodega')
+                                    <select wire:model.blur="espacios.{{ $tipo->id }}.destinadoA" class="flex-1 min-w-[160px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
+                                        <option value="">Destinado a…</option>
+                                        <option value="limpieza">Limpieza</option>
+                                        <option value="general">General</option>
+                                        <option value="otro">Otro</option>
+                                    </select>
+                                @else
+                                    <input type="text" placeholder="Destinado a" wire:model.blur="espacios.{{ $tipo->id }}.destinadoA" class="flex-1 min-w-[160px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
+                                @endif
                             </div>
                             <div class="flex flex-wrap gap-sm">
                                 <label class="flex items-center gap-xxs font-sans text-[11px] text-body">

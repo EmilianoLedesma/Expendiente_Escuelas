@@ -68,6 +68,8 @@ class InfraestructuraNivel extends Component
 
     public function guardar(RegistrarInfraestructuraNivel $registrarInfraestructura): void
     {
+        $bodegaId = $this->idTipoBodega();
+
         $this->validate([
             'numeroAulas' => ['required', 'integer', 'min:1', 'max:32767'],
             'superficieAulasM2' => ['nullable', 'numeric', 'min:0'],
@@ -75,6 +77,7 @@ class InfraestructuraNivel extends Component
             'espacios.*.superficieM2' => ['nullable', 'numeric', 'min:0'],
             'espacios.*.capacidadPromedio' => ['nullable', 'integer', 'min:0', 'max:32767'],
             'espacios.*.destinadoA' => ['nullable', 'string', 'max:200'],
+            "espacios.{$bodegaId}.destinadoA" => ['nullable', 'in:limpieza,general,otro'],
             'espacios.*.campoFutbolTipoSuperficie' => ['nullable', 'string', 'max:50'],
             'espacios.*.campoFutbolFormato' => ['nullable', 'string', 'max:20'],
             'sanitarios.*.cantidadRetretes' => ['nullable', 'integer', 'min:0', 'max:32767'],
@@ -144,6 +147,12 @@ class InfraestructuraNivel extends Component
         return (int) $this->escuelaNivel->escuela->plantel_id;
     }
 
+    /** Id de tipos_espacios cuya clave es 'bodega', resuelto por clave (nunca hardcodeado). */
+    private function idTipoBodega(): ?int
+    {
+        return TipoEspacio::where('clave', 'bodega')->value('id');
+    }
+
     /** @return list<array<string, mixed>> */
     private function espaciosDeclarados(): array
     {
@@ -182,8 +191,13 @@ class InfraestructuraNivel extends Component
     private function materialesDeclarados(): array
     {
         $declarados = [];
+        $idsValidos = $this->materialesDisponibles()->pluck('id')->all();
 
         foreach ($this->materialesBiblioteca as $tipoMaterialId => $entrada) {
+            if (! in_array((int) $tipoMaterialId, $idsValidos, true)) {
+                continue;
+            }
+
             $titulos = $entrada['numeroTitulos'] ?? null;
             $volumenes = $entrada['numeroVolumenes'] ?? null;
 
