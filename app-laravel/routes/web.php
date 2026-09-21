@@ -4,6 +4,7 @@ use App\Infrastructure\Pdf\FormatoSolicitudPdf;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
+use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Livewire\Tramite\Paso3Placeholder;
 use App\Livewire\Tramite\Paso3ProximosPasos;
@@ -51,6 +52,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/tramite/paso3/{escuelaNivel}', Paso3Placeholder::class)
         ->middleware('can:view,escuelaNivel')
         ->name('tramite.paso3-placeholder');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/infraestructura', InfraestructuraNivel::class)
+        ->middleware('can:view,escuelaNivel')
+        ->name('tramite.paso3-infraestructura');
 
     Route::get('/tramite/paso3/{escuelaNivel}/mobiliario', MobiliarioNivel::class)
         ->middleware('can:view,escuelaNivel')
