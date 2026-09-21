@@ -16,6 +16,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $codigo_postal
  * @property string|null $telefono
  * @property string|null $correo_electronico
+ * @property string|null $metros_totales
+ * @property string|null $metros_construidos
+ * @property string|null $colindancia_norte
+ * @property string|null $colindancia_sur
+ * @property string|null $colindancia_este
+ * @property string|null $colindancia_oeste
+ * @property string|null $latitud
+ * @property string|null $longitud
+ * @property string|null $area_civica_m2
+ * @property bool|null $tiene_asta_bandera
  */
 class Plantel extends Model
 {
@@ -31,6 +41,16 @@ class Plantel extends Model
         'codigo_postal',
         'telefono',
         'correo_electronico',
+        'metros_totales',
+        'metros_construidos',
+        'colindancia_norte',
+        'colindancia_sur',
+        'colindancia_este',
+        'colindancia_oeste',
+        'latitud',
+        'longitud',
+        'area_civica_m2',
+        'tiene_asta_bandera',
     ];
 
     public function documentos(): HasMany
@@ -41,5 +61,15 @@ class Plantel extends Model
     public function escuelas(): HasMany
     {
         return $this->hasMany(Escuela::class);
+    }
+
+    public function serviciosCercanos(): HasMany
+    {
+        return $this->hasMany(ServicioCercano::class);
+    }
+
+    public function estudiosActuales(): HasMany
+    {
+        return $this->hasMany(InmuebleEstudioActual::class);
     }
 }

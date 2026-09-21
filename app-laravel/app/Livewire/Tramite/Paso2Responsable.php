@@ -56,7 +56,7 @@ class Paso2Responsable extends Component
         $this->escuela = $escuela;
 
         if ($escuela->escuelaNiveles()->exists()) {
-            $this->redirectRoute('tramite.paso3-placeholder', [
+            $this->redirectRoute('tramite.paso3-inmueble', [
                 'escuelaNivel' => $escuela->escuelaNiveles()->orderBy('id')->first(),
             ]);
 
@@ -153,7 +153,7 @@ class Paso2Responsable extends Component
 
         $primerEscuelaNivel = EscuelaNivel::where('escuela_id', $this->escuela->id)->orderBy('id')->firstOrFail();
 
-        $this->redirectRoute('tramite.paso3-placeholder', ['escuelaNivel' => $primerEscuelaNivel]);
+        $this->redirectRoute('tramite.paso3-inmueble', ['escuelaNivel' => $primerEscuelaNivel]);
     }
 
     public function render()

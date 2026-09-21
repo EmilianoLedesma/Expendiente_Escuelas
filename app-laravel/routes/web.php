@@ -4,7 +4,10 @@ use App\Infrastructure\Pdf\FormatoSolicitudPdf;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
-use App\Livewire\Tramite\Paso3Placeholder;
+use App\Livewire\Tramite\Paso3\DatosInmueble;
+use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
+use App\Livewire\Tramite\Paso3\MobiliarioNivel;
+use App\Livewire\Tramite\Paso3ProximosPasos;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
@@ -46,9 +49,21 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.descargar');
 
-    Route::get('/tramite/paso3/{escuelaNivel}', Paso3Placeholder::class)
+    Route::get('/tramite/paso3/{escuelaNivel}', DatosInmueble::class)
         ->middleware('can:view,escuelaNivel')
-        ->name('tramite.paso3-placeholder');
+        ->name('tramite.paso3-inmueble');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/infraestructura', InfraestructuraNivel::class)
+        ->middleware('can:view,escuelaNivel')
+        ->name('tramite.paso3-infraestructura');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/mobiliario', MobiliarioNivel::class)
+        ->middleware('can:view,escuelaNivel')
+        ->name('tramite.paso3-mobiliario');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/proximos-pasos', Paso3ProximosPasos::class)
+        ->middleware('can:view,escuelaNivel')
+        ->name('tramite.paso3-proximos-pasos');
 });
 
 Route::view('dashboard', 'dashboard')

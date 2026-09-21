@@ -103,7 +103,7 @@ class Paso2ResponsableTest extends TestCase
         $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso3-placeholder', ['escuelaNivel' => $escuelaNivel->id]));
+            ->assertRedirect(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
     }
 
     public function test_tipo_fisica_guarda_y_avanza_a_fase_niveles(): void
@@ -373,6 +373,6 @@ class Paso2ResponsableTest extends TestCase
 
         $this->assertDatabaseHas('escuela_niveles', ['escuela_id' => $escuela->id, 'nivel_educativo_id' => $preescolar->id]);
         $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
-        $component->assertRedirect(route('tramite.paso3-placeholder', ['escuelaNivel' => $escuelaNivel->id]));
+        $component->assertRedirect(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
     }
 }
