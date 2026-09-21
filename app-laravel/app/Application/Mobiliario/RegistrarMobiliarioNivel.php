@@ -6,7 +6,6 @@ use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Models\EscuelaNivel;
 use App\Models\MobiliarioConcepto;
 use App\Models\MobiliarioNivel;
-use App\Models\NivelEducativo;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -33,13 +32,9 @@ class RegistrarMobiliarioNivel
             throw new InvalidArgumentException('Debe declararse al menos un concepto de mobiliario.');
         }
 
-        EscuelaNivel::findOrFail($escuelaNivelId);
-        $claveNivel = NivelEducativo::query()
-            ->join('escuela_niveles', 'escuela_niveles.nivel_educativo_id', '=', 'niveles_educativos.id')
-            ->where('escuela_niveles.id', $escuelaNivelId)
-            ->value('niveles_educativos.clave');
+        $escuelaNivel = EscuelaNivel::with('nivelEducativo')->findOrFail($escuelaNivelId);
 
-        if ($claveNivel !== 'inicial') {
+        if ($escuelaNivel->nivelEducativo->clave !== 'inicial') {
             throw new InvalidArgumentException('La captura de mobiliario aplica únicamente a Educación Inicial en este MVP.');
         }
 

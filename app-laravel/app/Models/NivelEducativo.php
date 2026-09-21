@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Catálogo de solo lectura — nada en este proyecto escribe niveles_educativos
  * fuera de CatalogoMinimoSeeder.
+ *
+ * @property int $id
+ * @property string $clave
+ * @property string $nombre
+ * @property int $orden
  */
 class NivelEducativo extends Model
 {
