@@ -241,6 +241,44 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         $this->assertDatabaseHas('aulas_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'numero_aulas' => 8]);
     }
 
+    /** @return list<array<string, mixed>> */
+    private function soloSanitarios(): array
+    {
+        return [
+            [
+                'categoria' => 'alumnado_masculino',
+                'cantidadRetretes' => 4,
+                'cantidadMingitorios' => 3,
+                'cantidadLavabos' => 4,
+                'superficieM2' => 12.0,
+                'ventilacionNatural' => true,
+                'iluminacionNatural' => true,
+                'cantidadBacinicas' => null,
+            ],
+        ];
+    }
+
+    public function test_sanitarios_sin_espacios_marcan_el_plantel_como_capturado_y_no_se_duplican(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $yaCapturada = app(InfraestructuraYaCapturada::class);
+
+        $datosSoloSanitarios = new DatosInfraestructuraNivel(
+            espacios: [],
+            sanitarios: $this->soloSanitarios(),
+            numeroAulas: 6,
+        );
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $primaria->id, $datosSoloSanitarios);
+
+        $this->assertTrue($yaCapturada->ejecutar($this->plantel->id));
+        $this->assertSame(1, DB::table('sanitarios')->where('plantel_id', $this->plantel->id)->count());
+
+        $preescolar = $this->escuelaNivel('preescolar');
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $preescolar->id, $datosSoloSanitarios);
+
+        $this->assertSame(1, DB::table('sanitarios')->where('plantel_id', $this->plantel->id)->count());
+    }
+
     public function test_ya_capturada_es_falso_antes_y_verdadero_despues(): void
     {
         $escuelaNivel = $this->escuelaNivel('primaria');
