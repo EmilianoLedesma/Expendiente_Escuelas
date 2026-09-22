@@ -9,16 +9,23 @@ use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
+use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\ResponsableLegal;
+use App\Models\TipoDocumento;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
- * Presentación pura: un sub-paso (fase) por documento de Paso 2.2. Ninguna
- * escritura directa a Eloquent — RegistrarDocumento es la única escritura
- * (ADR-001).
+ * Presentación pura: checklist de los documentos de Paso 2.2, todos
+ * renderizados a la vez, cada sección editable/solo-lectura de forma
+ * independiente (docs/superpowers/specs/2026-09-22-paso2-documentos-checklist-redesign.md).
+ * Ninguna escritura directa a Eloquent — RegistrarDocumento es la única
+ * escritura (ADR-001).
  */
 #[Layout('layouts.tramite')]
 class Paso2Documentos extends Component
@@ -27,18 +34,16 @@ class Paso2Documentos extends Component
 
     public Escuela $escuela;
 
-    public string $fase;
+    public array $archivos = [];
 
-    public $archivo;
+    /** @var array<string, bool> clave => true mientras se muestra el form de reemplazo. */
+    public array $reemplazando = [];
 
     public DictamenUsoSueloForm $dictamenForm;
 
     public ConstanciaSeguridadForm $constanciaForm;
 
     public AcreditacionOcupacionForm $acreditacionForm;
-
-    /** Claves cuyo único dato capturable es el archivo (sin extensión estructurada). */
-    private const CLAVES_SOLO_ARCHIVO = ['ine', 'acta_nacimiento', 'escritura_poder_facultades'];
 
     public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
     {
@@ -47,15 +52,12 @@ class Paso2Documentos extends Component
         $pendientes = $documentosCompletos->clavesPendientes($escuela->id, $tipoPersona);
 
         if ($pendientes !== []) {
-            $this->fase = $pendientes[0];
-
             return;
         }
 
         // Los 6 documentos existen: o una vigencia venció (se vuelve a pedir
         // ese documento) o el paso ya terminó y esto es back-navigation.
         $violaciones = $validarVigencia->ejecutar($escuela->id);
-        $this->fase = (string) (array_key_first($violaciones) ?? 'formato_solicitud');
 
         if ($violaciones === []) {
             $this->redirectRoute('tramite.paso2', ['escuela' => $escuela->id]);
@@ -66,37 +68,43 @@ class Paso2Documentos extends Component
         $this->addError('vigencia', implode(' ', $violaciones));
     }
 
-    public function guardarDocumentoSimple(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    public function guardarDocumentoSimple(string $clave, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        abort_unless(in_array($this->fase, self::CLAVES_SOLO_ARCHIVO, true), 403);
+        $simples = array_intersect(
+            $documentosCompletos->clavesAplicables($this->tipoPersona()),
+            ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud'],
+        );
+        abort_unless(in_array($clave, $simples, true), 403);
 
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
-        $registrarDocumento->ejecutar($this->escuela->id, $this->fase, $this->archivo, new DatosDocumento);
-        $this->archivo = null;
+        $registrarDocumento->ejecutar($this->escuela->id, $clave, $this->archivos[$clave], new DatosDocumento);
+        $this->archivos[$clave] = null;
+        $this->reemplazando[$clave] = false;
 
         $this->avanzar($documentosCompletos);
     }
 
     public function guardarDictamen(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.dictamen_uso_suelo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->dictamenForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'dictamen_uso_suelo', $this->archivo, new DatosDocumento(
+        $registrarDocumento->ejecutar($this->escuela->id, 'dictamen_uso_suelo', $this->archivos['dictamen_uso_suelo'], new DatosDocumento(
             fechaEmision: $this->dictamenForm->fechaEmision,
         ));
-        $this->archivo = null;
+        $this->archivos['dictamen_uso_suelo'] = null;
+        $this->reemplazando['dictamen_uso_suelo'] = false;
 
         $this->avanzar($documentosCompletos);
     }
 
     public function guardarConstancia(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.constancia_seguridad_estructural' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->constanciaForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'constancia_seguridad_estructural', $this->archivo, new DatosDocumento(
+        $registrarDocumento->ejecutar($this->escuela->id, 'constancia_seguridad_estructural', $this->archivos['constancia_seguridad_estructural'], new DatosDocumento(
             fechaEmision: $this->constanciaForm->fechaEmision,
             peritoNombre: $this->constanciaForm->peritoNombre,
             peritoCedulaProfesional: $this->constanciaForm->peritoCedulaProfesional !== '' ? $this->constanciaForm->peritoCedulaProfesional : null,
@@ -104,17 +112,18 @@ class Paso2Documentos extends Component
             peritoRegistroAutoridad: $this->constanciaForm->peritoRegistroAutoridad !== '' ? $this->constanciaForm->peritoRegistroAutoridad : null,
             peritoRegistroVigencia: $this->constanciaForm->peritoRegistroVigencia !== '' ? $this->constanciaForm->peritoRegistroVigencia : null,
         ));
-        $this->archivo = null;
+        $this->archivos['constancia_seguridad_estructural'] = null;
+        $this->reemplazando['constancia_seguridad_estructural'] = false;
 
         $this->avanzar($documentosCompletos);
     }
 
     public function guardarAcreditacion(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.escritura_inmueble' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->acreditacionForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'escritura_inmueble', $this->archivo, new DatosDocumento(
+        $registrarDocumento->ejecutar($this->escuela->id, 'escritura_inmueble', $this->archivos['escritura_inmueble'], new DatosDocumento(
             tipoAcreditacion: $this->acreditacionForm->tipo,
             numeroEscritura: $this->acreditacionForm->numeroEscritura !== '' ? $this->acreditacionForm->numeroEscritura : null,
             notarioNombre: $this->acreditacionForm->notarioNombre !== '' ? $this->acreditacionForm->notarioNombre : null,
@@ -131,19 +140,62 @@ class Paso2Documentos extends Component
             otroEspecifique: $this->acreditacionForm->otroEspecifique !== '' ? $this->acreditacionForm->otroEspecifique : null,
             observaciones: $this->acreditacionForm->observaciones !== '' ? $this->acreditacionForm->observaciones : null,
         ));
-        $this->archivo = null;
+        $this->archivos['escritura_inmueble'] = null;
+        $this->reemplazando['escritura_inmueble'] = false;
 
         $this->avanzar($documentosCompletos);
     }
 
     public function guardarFormatoSolicitud(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.formato_solicitud' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivo, new DatosDocumento);
-        $this->archivo = null;
+        $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivos['formato_solicitud'], new DatosDocumento);
+        $this->archivos['formato_solicitud'] = null;
+        $this->reemplazando['formato_solicitud'] = false;
 
         $this->avanzar($documentosCompletos);
+    }
+
+    public function toggleReemplazar(string $clave): void
+    {
+        $this->reemplazando[$clave] = ! ($this->reemplazando[$clave] ?? false);
+    }
+
+    /**
+     * Documentos ya capturados (escuela o plantel según ambito), para el
+     * bloque de solo lectura de cada sección. Mismo patrón de lectura en el
+     * componente que InfraestructuraNivel::espaciosCapturados() (ADR-001);
+     * dispatch por ambito igual que RegistrarDocumento::ejecutar() en la
+     * escritura.
+     *
+     * @return Collection<string, array{nombreArchivo: string, subidoEn: Carbon}>
+     */
+    public function documentosCapturados(DocumentosCompletos $documentosCompletos): Collection
+    {
+        $claves = $documentosCompletos->clavesAplicables($this->tipoPersona());
+        $tipos = TipoDocumento::whereIn('clave', $claves)->get()->keyBy('clave');
+
+        $capturados = collect();
+
+        foreach ($claves as $clave) {
+            $tipo = $tipos[$clave];
+
+            $documento = $tipo->ambito === 'plantel'
+                ? DocumentoPlantel::where('plantel_id', $this->escuela->plantel_id)->where('tipo_documento_id', $tipo->id)->first()
+                : DocumentoEscuela::where('escuela_id', $this->escuela->id)->where('tipo_documento_id', $tipo->id)->first();
+
+            if ($documento === null) {
+                continue;
+            }
+
+            $capturados[$clave] = [
+                'nombreArchivo' => basename((string) $documento->archivo_path),
+                'subidoEn' => $documento->updated_at,
+            ];
+        }
+
+        return $capturados;
     }
 
     private function avanzar(DocumentosCompletos $documentosCompletos): void
@@ -152,8 +204,6 @@ class Paso2Documentos extends Component
         $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $tipoPersona);
 
         if ($pendientes !== []) {
-            $this->fase = $pendientes[0];
-
             return;
         }
 
@@ -173,9 +223,16 @@ class Paso2Documentos extends Component
         return ResponsableLegal::where('escuela_id', $this->escuela->id)->firstOrFail()->tipo_persona;
     }
 
-    public function render()
+    public function render(DocumentosCompletos $documentosCompletos)
     {
-        return view('livewire.tramite.paso2-documentos')
-            ->layoutData(['escuelaId' => $this->escuela->id]);
+        $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
+        $capturados = $this->documentosCapturados($documentosCompletos);
+
+        return view('livewire.tramite.paso2-documentos', [
+            'clavesAplicables' => $clavesAplicables,
+            'capturados' => $capturados,
+            'totalAplicables' => count($clavesAplicables),
+            'totalCompletos' => $capturados->count(),
+        ])->layoutData(['escuelaId' => $this->escuela->id]);
     }
 }
