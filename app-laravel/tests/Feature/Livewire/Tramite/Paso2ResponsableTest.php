@@ -59,6 +59,34 @@ class Paso2ResponsableTest extends TestCase
             ->assertSet('fase', 'niveles');
     }
 
+    /**
+     * Antes de esto: navegar de vuelta a fase 'niveles' no mostraba nada del
+     * responsable ya capturado — mount() saltaba directo al selector de
+     * niveles sin ningún resumen de lo ya enviado.
+     */
+    public function test_fase_niveles_muestra_un_resumen_de_solo_lectura_del_responsable_ya_capturado(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(
+            tipoPersona: 'fisica',
+            domicilioNotificaciones: 'Calle Falsa 123, Centro',
+            nombre: 'Juana Pérez',
+        ));
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->assertSee('Juana Pérez')
+            ->assertSee('Calle Falsa 123, Centro')
+            ->assertSee('Persona física');
+    }
+
     public function test_redirige_a_documentos_si_responsable_legal_existe_pero_documentos_incompletos(): void
     {
         (new TiposDocumentosSeeder)->run();

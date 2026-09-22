@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int $id
  * @property int $escuela_id
  * @property string $tipo_persona
+ * @property string|null $domicilio_notificaciones
+ * @property string|null $persona_autorizada_recoger
  */
 class ResponsableLegal extends Model
 {

@@ -13,6 +13,8 @@ use App\Livewire\Forms\PersonaMoralForm;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
+use App\Models\PersonaFisica;
+use App\Models\PersonaMoral;
 use App\Models\ResponsableLegal;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
@@ -51,6 +53,21 @@ class Paso2Responsable extends Component
 
     public array $nivelesSeleccionados = [];
 
+    /**
+     * Resumen de solo lectura de lo que ya se envió, para cuando fase es
+     * 'niveles' por un responsable ya capturado (por ejemplo, al volver por
+     * el enlace de navegación). No hay edición: RegistrarResponsableLegal
+     * es un no-op si escuela_id ya tiene fila (guardián de idempotencia),
+     * así que prellenar el formulario de captura sería un formulario que
+     * silenciosamente no guarda los cambios. Mismo patrón que
+     * InfraestructuraNivel: mostrar, no re-capturar; cambiarlo es una
+     * decisión normativa aparte (¿requiere autorización de SEDEQ?), no
+     * resuelta aquí.
+     *
+     * @var array{}|array{tipo: string, nombre: ?string, domicilio: ?string}
+     */
+    public array $responsableCapturado = [];
+
     public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
     {
         $this->escuela = $escuela;
@@ -75,12 +92,29 @@ class Paso2Responsable extends Component
                 return;
             }
 
+            $this->responsableCapturado = $this->resumenResponsable($responsableLegal);
             $this->fase = 'niveles';
 
             return;
         }
 
         $this->fase = 'responsable';
+    }
+
+    /** @return array{tipo: string, nombre: ?string, domicilio: ?string} */
+    private function resumenResponsable(ResponsableLegal $responsableLegal): array
+    {
+        $nombre = match ($responsableLegal->tipo_persona) {
+            'fisica', 'fisica_con_gestor' => PersonaFisica::find($responsableLegal->id)?->nombre,
+            'moral' => PersonaMoral::find($responsableLegal->id)?->razon_social,
+            default => null,
+        };
+
+        return [
+            'tipo' => $responsableLegal->tipo_persona,
+            'nombre' => $nombre,
+            'domicilio' => $responsableLegal->domicilio_notificaciones,
+        ];
     }
 
     public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal): void

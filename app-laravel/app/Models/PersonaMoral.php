@@ -5,6 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $responsable_legal_id
+ * @property string $razon_social
+ * @property string|null $numero_escritura_constitutiva
+ * @property string|null $fecha_escritura_constitutiva
+ * @property string|null $notario_nombre
+ * @property string|null $notario_numero
+ * @property string|null $notario_ciudad
+ * @property string|null $folio_registro_publico
+ * @property string|null $fecha_inscripcion_rpp
+ * @property string $nombre_representante_legal
+ */
 class PersonaMoral extends Model
 {
     public $timestamps = false;
