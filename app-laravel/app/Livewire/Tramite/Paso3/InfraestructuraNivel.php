@@ -24,10 +24,17 @@ use Livewire\Component;
  * alumnado_maternal y personal, que solo tienen sentido en Inicial. Ese
  * reparto es la inferencia aplicada aquí.
  *
- * Reutilización de plantel: cuando InfraestructuraYaCapturada es true no se
- * auto-completa el paso (a diferencia del sub-paso 1) porque aulas_nivel
- * sigue siendo por-nivel y este formulario siempre la debe. Narrowing
- * deliberado de spec §6, documentado en el reporte de la Tarea 8.
+ * Reutilización de plantel: nunca se auto-completa el paso (a diferencia del
+ * sub-paso 1) porque aulas_nivel sigue siendo por-nivel y este formulario
+ * siempre la debe. Narrowing deliberado de spec §6, documentado en el
+ * reporte de la Tarea 8.
+ *
+ * ADR-005: lo capturable no es "todo o nada" por plantel — es una unión por
+ * nivel. La pantalla se parte en dos: "ya capturado" (solo lectura, lo que
+ * cualquier nivel de este plantel ya escribió) y "por capturar" (editable,
+ * solo lo aplicable a este nivel que aún no existe). tiposAplicables() y
+ * categoriasSanitarios() ya excluyen lo capturado, así que lo que se
+ * renderiza como editable es exactamente lo que se envía en guardar().
  */
 #[Layout('layouts.tramite')]
 class InfraestructuraNivel extends Component
@@ -38,8 +45,11 @@ class InfraestructuraNivel extends Component
 
     public EscuelaNivel $escuelaNivel;
 
-    /** Los datos a nivel plantel ya se capturaron: se muestran, no se re-capturan. */
-    public bool $soloLectura = false;
+    /** @var list<int> ids de tipos_espacios ya capturados por este plantel (cualquier nivel). */
+    public array $tiposCapturados = [];
+
+    /** @var list<string> categorías de sanitario ya capturadas por este plantel (cualquier nivel). */
+    public array $categoriasCapturadas = [];
 
     /** @var array<int, array<string, mixed>> tipo_espacio_id => campos del espacio */
     public array $espacios = [];
@@ -57,7 +67,8 @@ class InfraestructuraNivel extends Component
     public function mount(EscuelaNivel $escuelaNivel, InfraestructuraYaCapturada $yaCapturada): void
     {
         $this->escuelaNivel = $escuelaNivel;
-        $this->soloLectura = $yaCapturada->ejecutar($this->plantelId());
+        $this->tiposCapturados = $yaCapturada->tiposCapturados($this->plantelId());
+        $this->categoriasCapturadas = $yaCapturada->categoriasCapturadas($this->plantelId());
 
         $aulas = AulaNivel::where('escuela_nivel_id', $escuelaNivel->id)->first();
         if ($aulas !== null) {
@@ -93,8 +104,8 @@ class InfraestructuraNivel extends Component
             $this->plantelId(),
             $this->escuelaNivel->id,
             new DatosInfraestructuraNivel(
-                espacios: $this->soloLectura ? [] : $this->espaciosDeclarados(),
-                sanitarios: $this->soloLectura ? [] : $this->sanitariosDeclarados(),
+                espacios: $this->espaciosDeclarados(),
+                sanitarios: $this->sanitariosDeclarados(),
                 numeroAulas: (int) $this->numeroAulas,
                 superficieAulasM2: $this->superficieAulasM2 === null || $this->superficieAulasM2 === '' ? null : (float) $this->superficieAulasM2,
             ),
@@ -103,27 +114,31 @@ class InfraestructuraNivel extends Component
         $this->redirectRoute('tramite.paso3-mobiliario', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 
-    /** Tipos de espacio aplicables al nivel en curso, en orden de captura. */
+    /** Tipos de espacio aplicables al nivel en curso y aún no capturados por el plantel, en orden de captura. */
     public function tiposAplicables(): Collection
     {
         return TipoEspacio::query()
             ->join('niveles_tipos_espacios', 'niveles_tipos_espacios.tipo_espacio_id', '=', 'tipos_espacios.id')
             ->where('niveles_tipos_espacios.nivel_educativo_id', $this->escuelaNivel->nivel_educativo_id)
+            ->whereNotIn('tipos_espacios.id', $this->tiposCapturados)
             ->orderBy('tipos_espacios.categoria')
             ->orderBy('tipos_espacios.nombre')
             ->select('tipos_espacios.*')
             ->get();
     }
 
+    /** Categorías de sanitario aplicables al nivel en curso y aún no capturadas por el plantel. */
     /** @return list<string> */
     public function categoriasSanitarios(): array
     {
-        return $this->escuelaNivel->nivelEducativo->clave === 'inicial'
+        $aplicables = $this->escuelaNivel->nivelEducativo->clave === 'inicial'
             ? self::SANITARIOS_INICIAL
             : self::SANITARIOS_BASICA;
+
+        return array_values(array_diff($aplicables, $this->categoriasCapturadas));
     }
 
-    /** Solo se consulta cuando $soloLectura: lo ya capturado, para mostrarlo. */
+    /** Lo que el plantel ya capturó (en este nivel o en otro), para mostrarlo de solo lectura. */
     public function espaciosCapturados(): Collection
     {
         return InstalacionEspacio::with('tipoEspacio')
@@ -131,7 +146,6 @@ class InfraestructuraNivel extends Component
             ->get();
     }
 
-    /** Solo se consulta cuando $soloLectura. */
     public function sanitariosCapturados(): Collection
     {
         return DB::table('sanitarios')->where('plantel_id', $this->plantelId())->orderBy('categoria')->get();
@@ -253,11 +267,11 @@ class InfraestructuraNivel extends Component
     public function render()
     {
         return view('livewire.tramite.paso3.infraestructura-nivel', [
-            'tipos' => $this->soloLectura ? collect() : $this->tiposAplicables(),
-            'categorias' => $this->soloLectura ? [] : $this->categoriasSanitarios(),
-            'materiales' => $this->soloLectura ? collect() : $this->materialesDisponibles(),
-            'espaciosCapturados' => $this->soloLectura ? $this->espaciosCapturados() : collect(),
-            'sanitariosCapturados' => $this->soloLectura ? $this->sanitariosCapturados() : collect(),
+            'tipos' => $this->tiposAplicables(),
+            'categorias' => $this->categoriasSanitarios(),
+            'materiales' => $this->materialesDisponibles(),
+            'espaciosCapturados' => $this->espaciosCapturados(),
+            'sanitariosCapturados' => $this->sanitariosCapturados(),
         ])->layoutData(['escuelaNivelId' => $this->escuelaNivel->id]);
     }
 }

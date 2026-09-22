@@ -87,7 +87,6 @@ class Paso3InfraestructuraNivelTest extends TestCase
 
         Livewire::actingAs($this->solicitante->user)
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $inicial])
-            ->assertSet('soloLectura', false)
             ->assertSee('Bacinicas');
     }
 
@@ -141,7 +140,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->assertDatabaseCount('aulas_nivel', 0);
     }
 
-    public function test_un_segundo_nivel_del_mismo_plantel_ve_la_infraestructura_en_solo_lectura(): void
+    public function test_un_segundo_nivel_no_vuelve_a_ofrecer_lo_que_el_plantel_ya_capturo(): void
     {
         $primaria = $this->escuelaNivel('primaria');
         $direccionId = $this->idTipo('direccion');
@@ -149,20 +148,61 @@ class Paso3InfraestructuraNivelTest extends TestCase
         Livewire::actingAs($this->solicitante->user)
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$direccionId}.cantidad", 1)
+            ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
             ->set('numeroAulas', 6)
             ->call('guardar');
 
         $preescolar = $this->escuelaNivel('preescolar');
 
-        Livewire::actingAs($this->solicitante->user)
-            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $preescolar])
-            ->assertSet('soloLectura', true)
-            ->set('numeroAulas', 3)
+        $testable = Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $preescolar]);
+
+        $this->assertNotContains($direccionId, $testable->instance()->tiposAplicables()->pluck('id')->all());
+        $this->assertNotContains('alumnado_masculino', $testable->instance()->categoriasSanitarios());
+
+        $testable->set('numeroAulas', 3)
             ->call('guardar')
             ->assertRedirect(route('tramite.paso3-mobiliario', ['escuelaNivel' => $preescolar->id]));
 
-        $this->assertSame(1, DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->count());
+        $this->assertSame(1, DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->where('tipo_espacio_id', $direccionId)->count());
         $this->assertDatabaseHas('aulas_nivel', ['escuela_nivel_id' => $preescolar->id, 'numero_aulas' => 3]);
+    }
+
+    public function test_un_segundo_nivel_captura_sus_propios_campos_exclusivos_de_inicial(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $direccionId = $this->idTipo('direccion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$direccionId}.cantidad", 1)
+            ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $inicial = $this->escuelaNivel('inicial');
+        $filtroId = $this->idTipo('filtro_recepcion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $inicial])
+            ->assertSee('Filtro / Recepción')
+            ->set("espacios.{$filtroId}.cantidad", 1)
+            ->set('sanitarios.alumnado_maternal.cantidadRetretes', 2)
+            ->set('sanitarios.alumnado_maternal.cantidadBacinicas', 3)
+            ->set('numeroAulas', 2)
+            ->call('guardar');
+
+        $this->assertDatabaseHas('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $filtroId,
+        ]);
+        $this->assertSame(2, DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->count());
+        $this->assertDatabaseHas('sanitarios', [
+            'plantel_id' => $this->plantel->id,
+            'categoria' => 'alumnado_maternal',
+            'cantidad_retretes' => 2,
+        ]);
+        $this->assertSame(2, DB::table('sanitarios')->where('plantel_id', $this->plantel->id)->count());
     }
 
     public function test_bodega_destinado_a_limpieza_se_guarda(): void
