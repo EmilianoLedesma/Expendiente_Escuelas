@@ -117,7 +117,7 @@ class Paso2Responsable extends Component
         ];
     }
 
-    public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal): void
+    public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal, DocumentosCompletos $documentosCompletos): void
     {
         $this->validate([
             'tipoPersona' => ['required', 'in:fisica,fisica_con_gestor,moral'],
@@ -166,6 +166,15 @@ class Paso2Responsable extends Component
             gestorNotarioNumero: $this->gestorForm->notarioNumero !== '' ? $this->gestorForm->notarioNumero : null,
             gestorFechaPoder: $this->gestorForm->fechaPoder !== '' ? $this->gestorForm->fechaPoder : null,
         ));
+
+        // Mismo gate que mount() ya aplica en una visita posterior — aplicado aquí
+        // también, porque antes de esto guardarResponsable() saltaba directo a
+        // 'niveles' sin pasar por Documentos (Paso 2.2) en la misma visita.
+        if (! $documentosCompletos->paraEscuela($this->escuela->id, $this->tipoPersona)) {
+            $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $this->escuela->id]);
+
+            return;
+        }
 
         $this->fase = 'niveles';
     }

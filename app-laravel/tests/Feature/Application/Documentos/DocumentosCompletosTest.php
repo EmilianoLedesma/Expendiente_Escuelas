@@ -70,4 +70,21 @@ class DocumentosCompletosTest extends TestCase
         $this->assertTrue((new DocumentosCompletos)->paraEscuela($escuela->id, 'fisica'));
         $this->assertSame([], (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
     }
+
+    /**
+     * Defecto real encontrado en dev: tipos_documentos vacío (seeder nunca
+     * corrido ahí) producía "Undefined array key" — un crash opaco en vez de
+     * un error diagnosticable. clavesPendientes() no debe asumir que el
+     * catálogo está completo.
+     */
+    public function test_clave_sin_fila_en_el_catalogo_lanza_un_error_diagnosticable_en_vez_de_undefined_array_key(): void
+    {
+        // Deliberadamente sin TiposDocumentosSeeder: catálogo vacío.
+        $escuela = $this->crearEscuela();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('ine');
+
+        (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica');
+    }
 }
