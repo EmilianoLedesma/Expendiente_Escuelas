@@ -110,4 +110,23 @@ class ProgresoTest extends TestCase
         $this->assertStringContainsString(route('tramite.paso2-documentos', ['escuela' => $escuela->id]), $conEscuela);
         $this->assertMatchesRegularExpression('/data-estado="completado"[^>]*>\s*<span[^>]*bg-success[^>]*><\/span>\s*<a[^>]*>\s*Responsable legal/s', $conEscuela);
     }
+
+    /**
+     * Antes de esto: el <a> de un dot clicable usaba la misma clase de color
+     * (text-ink) que el texto plano de un dot no clicable — el enlace
+     * existía en el DOM pero era visualmente indistinguible hasta el hover.
+     */
+    public function test_un_dot_clicable_se_distingue_visualmente_de_uno_de_solo_texto(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
+
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $solicitante = Solicitante::factory()->create();
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+
+        $html = (string) $this->blade('<x-tramite.progreso :escuela-id="$id" />', ['id' => $escuela->id]);
+
+        $this->assertMatchesRegularExpression('/<a href="[^"]*"\s+class="[^"]*text-primary/', $html);
+    }
 }

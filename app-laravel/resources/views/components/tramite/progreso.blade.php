@@ -17,7 +17,7 @@
                 ])
             ></span>
             @if ($paso->href)
-                <a href="{{ $paso->href }}" class="hover:underline">{{ $paso->nombre }}</a>
+                <a href="{{ $paso->href }}" class="text-primary underline-offset-2 hover:underline">{{ $paso->nombre }}</a>
             @else
                 {{ $paso->nombre }}
             @endif
