@@ -79,23 +79,23 @@ class Paso2Documentos extends Component
 
     public function guardarDictamen(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.dictamen_uso_suelo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->dictamenForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'dictamen_uso_suelo', $this->archivo, new DatosDocumento(
+        $registrarDocumento->ejecutar($this->escuela->id, 'dictamen_uso_suelo', $this->archivos['dictamen_uso_suelo'], new DatosDocumento(
             fechaEmision: $this->dictamenForm->fechaEmision,
         ));
-        $this->archivo = null;
+        $this->archivos['dictamen_uso_suelo'] = null;
 
         $this->avanzar($documentosCompletos);
     }
 
     public function guardarConstancia(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.constancia_seguridad_estructural' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->constanciaForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'constancia_seguridad_estructural', $this->archivo, new DatosDocumento(
+        $registrarDocumento->ejecutar($this->escuela->id, 'constancia_seguridad_estructural', $this->archivos['constancia_seguridad_estructural'], new DatosDocumento(
             fechaEmision: $this->constanciaForm->fechaEmision,
             peritoNombre: $this->constanciaForm->peritoNombre,
             peritoCedulaProfesional: $this->constanciaForm->peritoCedulaProfesional !== '' ? $this->constanciaForm->peritoCedulaProfesional : null,
@@ -103,17 +103,17 @@ class Paso2Documentos extends Component
             peritoRegistroAutoridad: $this->constanciaForm->peritoRegistroAutoridad !== '' ? $this->constanciaForm->peritoRegistroAutoridad : null,
             peritoRegistroVigencia: $this->constanciaForm->peritoRegistroVigencia !== '' ? $this->constanciaForm->peritoRegistroVigencia : null,
         ));
-        $this->archivo = null;
+        $this->archivos['constancia_seguridad_estructural'] = null;
 
         $this->avanzar($documentosCompletos);
     }
 
     public function guardarAcreditacion(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.escritura_inmueble' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->acreditacionForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'escritura_inmueble', $this->archivo, new DatosDocumento(
+        $registrarDocumento->ejecutar($this->escuela->id, 'escritura_inmueble', $this->archivos['escritura_inmueble'], new DatosDocumento(
             tipoAcreditacion: $this->acreditacionForm->tipo,
             numeroEscritura: $this->acreditacionForm->numeroEscritura !== '' ? $this->acreditacionForm->numeroEscritura : null,
             notarioNombre: $this->acreditacionForm->notarioNombre !== '' ? $this->acreditacionForm->notarioNombre : null,
@@ -130,7 +130,7 @@ class Paso2Documentos extends Component
             otroEspecifique: $this->acreditacionForm->otroEspecifique !== '' ? $this->acreditacionForm->otroEspecifique : null,
             observaciones: $this->acreditacionForm->observaciones !== '' ? $this->acreditacionForm->observaciones : null,
         ));
-        $this->archivo = null;
+        $this->archivos['escritura_inmueble'] = null;
 
         $this->avanzar($documentosCompletos);
     }

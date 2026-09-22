@@ -108,7 +108,7 @@ class Paso2DocumentosTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_sube_escritura_dictamen_y_constancia_en_secuencia(): void
+    public function test_sube_acreditacion_de_forma_independiente(): void
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
@@ -117,7 +117,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
-        $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
@@ -125,15 +125,39 @@ class Paso2DocumentosTest extends TestCase
             ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
+    }
 
-        $component->set('archivo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
+    public function test_sube_dictamen_de_forma_independiente(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
             ->set('dictamenForm.fechaEmision', now()->toDateString())
             ->call('guardarDictamen')
             ->assertSet('fase', 'constancia_seguridad_estructural')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
+    }
 
-        $component->set('archivo', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
+    public function test_sube_constancia_de_forma_independiente(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
             ->set('constanciaForm.fechaEmision', now()->toDateString())
             ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
             ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
@@ -141,6 +165,35 @@ class Paso2DocumentosTest extends TestCase
             ->assertSet('fase', 'formato_solicitud')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez']);
+    }
+
+    public function test_sube_dictamen_antes_que_acreditacion_demuestra_orden_independiente(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+
+        // Upload dictamen BEFORE acreditacion to prove order independence
+        $component->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
+            ->set('dictamenForm.fechaEmision', now()->toDateString())
+            ->call('guardarDictamen')
+            ->assertHasNoErrors();
+        $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
+
+        // Then upload acreditacion
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
     }
 
     public function test_sube_formato_de_solicitud_y_redirige_a_paso2(): void
@@ -240,7 +293,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
-        $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->call('guardarAcreditacion')
             ->assertHasErrors(['acreditacionForm.numeroEscritura', 'acreditacionForm.notarioNombre']);
@@ -257,7 +310,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
-        $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'arrendamiento')
             ->set('acreditacionForm.arrendadorComodante', 'Juan Arrendador')
             ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
@@ -285,7 +338,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
-        $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'arrendamiento')
             ->call('guardarAcreditacion')
             ->assertHasErrors([
@@ -307,7 +360,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
-        $component->set('archivo', UploadedFile::fake()->create('comodato.pdf', 10, 'application/pdf'))
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('comodato.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'comodato')
             ->set('acreditacionForm.arrendadorComodante', 'Comodante SA')
             ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
@@ -332,7 +385,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
-        $component->set('archivo', UploadedFile::fake()->create('otro.pdf', 10, 'application/pdf'))
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('otro.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'otro')
             ->call('guardarAcreditacion')
             ->assertHasErrors('acreditacionForm.otroEspecifique');
