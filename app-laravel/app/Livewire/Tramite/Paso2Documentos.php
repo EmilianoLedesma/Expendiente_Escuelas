@@ -70,7 +70,11 @@ class Paso2Documentos extends Component
 
     public function guardarDocumentoSimple(string $clave, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        abort_unless(in_array($clave, ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud'], true), 403);
+        $simples = array_intersect(
+            $documentosCompletos->clavesAplicables($this->tipoPersona()),
+            ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud'],
+        );
+        abort_unless(in_array($clave, $simples, true), 403);
 
         $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 

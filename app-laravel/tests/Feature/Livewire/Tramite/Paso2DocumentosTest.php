@@ -29,7 +29,9 @@ class Paso2DocumentosTest extends TestCase
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(
             tipoPersona: $tipoPersona,
-            nombre: 'Juana Pérez',
+            nombre: $tipoPersona === 'moral' ? null : 'Juana Pérez',
+            razonSocial: $tipoPersona === 'moral' ? 'Colegio Ejemplo S.C.' : null,
+            nombreRepresentanteLegal: $tipoPersona === 'moral' ? 'Miguel Torres' : null,
         ));
 
         return $escuela;
@@ -110,18 +112,17 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseCount('documentos_escuela', 0);
     }
 
-    public function test_sube_ine_y_avanza_a_la_siguiente_clave(): void
+    public function test_guardar_documento_simple_rechaza_clave_no_aplicable_al_tipo_persona(): void
     {
-        Storage::fake('documentos');
-        $escuela = $this->crearEscuelaConResponsable();
+        $escuela = $this->crearEscuelaConResponsable('moral');
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'ine')
-            ->assertHasNoErrors();
+            ->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 50, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'acta_nacimiento')
+            ->assertStatus(403);
 
-        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
+        $this->assertDatabaseCount('documentos_escuela', 0);
     }
 
     public function test_rechaza_archivo_que_no_es_pdf(): void

@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-09-22  
 **Rama:** `worktree-paso2-documentos-checklist`  
-**Commits asociados:** d6e95bc..5201568 (6 commits de implementación + arreglos, más 1 de reporte)
+**Commits asociados:** la rama completa (incluye una ola final de fixes tras revisión de código; ver nota de cierre al final del documento)
 
 ---
 
@@ -14,24 +14,29 @@ La propiedad `$fase` de `Paso2Documentos` fue eliminada completamente. El compon
 
 **Estructura de datos:**
 - Eliminada la propiedad `public string $fase` que controlaba el estado del "paso actual" dentro de Paso 2
-- Introducida `public array $archivos` (array asociativo keyed por `$clave` de documento: `'ine'`, `'curp'`, ..., `'formato_solicitud'`)
+- Introducida `public array $archivos` (array asociativo keyed por `$clave` de documento, p. ej. `'ine'`, `'acta_nacimiento'`/`'escritura_poder_facultades'`, `'escritura_inmueble'`, `'dictamen_uso_suelo'`, `'constancia_seguridad_estructural'`, `'formato_solicitud'`)
 - Cada clave del array `$archivos` aloja el objeto `UploadedFile` correspondiente (o null si no hay captura aún)
 
 **Lógica de captura:**
 - Los métodos `guardar*` ahora leen/escriben `$this->archivos[$clave]` en lugar de depender de `$fase` para el dispatch
-- `guardarDocumentoSimple(string $clave)` — método parametrizado que maneja 6 documentos simples con validación de vigencia (ine, curp, rfc, etc.)
-- `guardarInmueble(array $datos)`, `guardarPlanEstudios(array $datos)`, `guardarFormatoSolicitud()` — métodos estructurados independientes
+- Hay 5 métodos de captura reales:
+  - `guardarDocumentoSimple(string $clave)` — método parametrizado, sin formulario estructurado propio (solo el archivo). Su whitelist son las 4 claves "simples": `ine`, `acta_nacimiento`, `escritura_poder_facultades`, `formato_solicitud`. Esa whitelist está además scoped por tipo_persona: se intersecta con `DocumentosCompletos::clavesAplicables($tipoPersona)`, así que una escuela `moral` no puede persistir `acta_nacimiento` (le corresponde `escritura_poder_facultades`) ni viceversa — ver corrección aplicada en la ola final de fixes, abajo.
+  - `guardarAcreditacion(...)` — documento `escritura_inmueble`, con `AcreditacionOcupacionForm` (tipo de acreditación, datos notariales/RPP, arrendamiento, etc.)
+  - `guardarDictamen(...)` — documento `dictamen_uso_suelo`, con `DictamenUsoSueloForm` (fecha de emisión)
+  - `guardarConstancia(...)` — documento `constancia_seguridad_estructural`, con `ConstanciaSeguridadForm` (fecha de emisión, datos del perito)
+  - `guardarFormatoSolicitud()` — documento `formato_solicitud`, sin formulario estructurado propio
+- No existen `guardarInmueble(array $datos)` ni `guardarPlanEstudios(array $datos)` en este componente — no forman parte de Paso 2.2.
 
 **Vista (Blade):**
 - Transformada de 6 iteraciones secuenciales (por fase) a un checklist con secciones independientes por documento
 - Cada sección tiene su propio toggle read-only/editable basado en si existe una captura
 - `wire:model` vinculados a `archivos.<clave>` para cada upload
-- Query `documentosCapturados()` determina en tiempo real qué secciones muestran captura vs. formulario
+- Query `documentosCapturados()` determina en tiempo real qué secciones muestran captura vs. formulario — método de solo lectura que devuelve `{nombreArchivo, subidoEn}` por clave ya capturada; no evalúa vigencia.
 - Toggle "Reemplazar" permite al usuario overwrite de un documento ya capturado
 
 **Validación:**
-- Siguen siendo validados per-document la vigencia (para documentos de identidad con fecha de expiración)
-- La pregunta "¿completo?" ahora es: "¿todos los documentos requeridos están capturados y vigentes?" — consulta única `documentosCapturados()`, no iteración por fase
+- La vigencia se sigue validando, pero no dentro de los métodos `guardar*` ni de `documentosCapturados()`: vive en `ValidarVigenciaDocumentos`, invocada desde `mount()` (al entrar a la vista) y desde `avanzar()` (llamado al final de cada `guardar*`, una vez que `DocumentosCompletos::clavesPendientes()` reporta cero pendientes). Este flujo no cambió con el rediseño.
+- La pregunta "¿completo?" ahora es: "¿todos los documentos requeridos están capturados y vigentes?" — vía `DocumentosCompletos::clavesPendientes()` + `ValidarVigenciaDocumentos`, no iteración por fase
 
 ### Especificación y plan
 
@@ -108,3 +113,13 @@ Dos hallazgos marked as Minor durante el ciclo de revisiones, sin bloquear pero 
 El rediseño está completo y verificado. La propiedad `$fase` ha sido erradicada de `Paso2Documentos`. El checklist de orden independiente funciona con 318 tests all green, sin regresiones. El código está listo para revisión pre-merge.
 
 **Siguiente paso:** pendiente de que el propietario del proyecto dé el go-ahead para mergear a `master` y pushear.
+
+### Nota de cierre: ola final de fixes (revisión de código pre-merge)
+
+Tras la revisión final de la rama completa se aplicaron 3 correcciones en un solo commit:
+
+1. **Whitelist de `guardarDocumentoSimple` scoped por tipo_persona:** antes era un array estático hardcodeado (`['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud']`), lo que permitía que una escuela `moral` persistiera `acta_nacimiento` (clave que no le aplica) y viceversa para `fisica`/`escritura_poder_facultades`. Ahora se intersecta esa lista con `DocumentosCompletos::clavesAplicables($tipoPersona)`. Se agregó `test_guardar_documento_simple_rechaza_clave_no_aplicable_al_tipo_persona`.
+2. **Test duplicado eliminado:** `test_sube_ine_y_avanza_a_la_siguiente_clave` era idéntico byte-a-byte a `test_sube_ine_de_forma_independiente_sin_pasar_por_las_demas_claves` y describía un comportamiento (avance de fase) que ya no existe en este rediseño. Eliminado.
+3. **Este reporte corregido:** se retiraron afirmaciones fabricadas sobre `guardarDocumentoSimple` (no maneja 6 claves ni valida vigencia internamente — son 4 claves, y la vigencia se valida aparte, en `avanzar()`/`mount()` vía `ValidarVigenciaDocumentos`) y sobre métodos inexistentes (`guardarInmueble`, `guardarPlanEstudios`).
+
+Conteo final de tests tras esta ola: 318 (−1 duplicado eliminado, +1 test nuevo de tipo_persona — neto sin cambio sobre los 318 previos). Ver comandos de verificación ejecutados: `php artisan test`, `vendor/bin/pint --test`, `vendor/bin/phpstan analyse --memory-limit=512M` — los tres limpios.
