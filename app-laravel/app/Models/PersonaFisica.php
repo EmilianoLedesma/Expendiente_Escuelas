@@ -5,6 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $responsable_legal_id
+ * @property string $nombre
+ * @property string|null $fecha_nacimiento
+ * @property string|null $rfc
+ * @property string|null $curp
+ */
 class PersonaFisica extends Model
 {
     public $timestamps = false;

@@ -52,6 +52,20 @@
     @endif
 
     @if ($fase === 'niveles')
+        @if ($responsableCapturado !== [])
+            <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md space-y-xs mb-lg">
+                <p class="font-sans text-body-sm font-medium text-ink">Responsable legal (ya registrado)</p>
+                <p class="font-sans text-[11px] text-muted">
+                    Estos datos ya se capturaron. Cambiarlos requiere autorización previa de la Dirección de Educación.
+                </p>
+                <ul class="font-sans text-body-sm text-body space-y-xxs">
+                    <li>Tipo: {{ ['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral'][$responsableCapturado['tipo']] ?? $responsableCapturado['tipo'] }}</li>
+                    <li>Nombre: {{ $responsableCapturado['nombre'] ?? '—' }}</li>
+                    <li>Domicilio para notificaciones: {{ $responsableCapturado['domicilio'] ?? '—' }}</li>
+                </ul>
+            </div>
+        @endif
+
         <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Selección de niveles</h1>
 
         @error('nivelesSeleccionados')
