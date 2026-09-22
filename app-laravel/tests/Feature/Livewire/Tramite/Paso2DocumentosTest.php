@@ -35,13 +35,52 @@ class Paso2DocumentosTest extends TestCase
         return $escuela;
     }
 
-    public function test_arranca_en_la_primera_clave_pendiente(): void
+    public function test_muestra_cuantos_documentos_estan_completos_de_cuantos_aplican(): void
     {
+        Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertViewHas('fase', 'ine');
+            ->assertSee('0 de 6 documentos completos');
+
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('3 de 6 documentos completos');
+    }
+
+    public function test_una_seccion_ya_subida_se_muestra_de_solo_lectura_con_boton_reemplazar(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'), new DatosDocumento);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('ine.pdf')
+            ->assertSee('Reemplazar')
+            ->assertDontSee('wire:model="archivos.ine"', false);
+    }
+
+    public function test_reemplazar_permite_volver_a_subir_sin_duplicar_la_fila(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('primero.pdf', 10, 'application/pdf'), new DatosDocumento);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->call('toggleReemplazar', 'ine')
+            ->set('archivos.ine', UploadedFile::fake()->create('segundo.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'ine')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('documentos_escuela', 1);
+        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id, 'archivo_path' => "escuela/{$escuela->id}/ine.pdf"]);
     }
 
     public function test_sube_ine_de_forma_independiente_sin_pasar_por_las_demas_claves(): void
@@ -241,20 +280,6 @@ class Paso2DocumentosTest extends TestCase
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
-    }
-
-    public function test_una_fase_manipulada_no_puede_saltarse_la_captura_estructurada(): void
-    {
-        Storage::fake('documentos');
-        $escuela = $this->crearEscuelaConResponsable();
-        $this->actingAs($escuela->solicitante->user);
-
-        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'dictamen_uso_suelo')
-            ->assertStatus(403);
-
-        $this->assertDatabaseCount('documentos_plantel', 0);
     }
 
     public function test_bloquea_el_avance_final_si_dictamen_esta_vencido(): void

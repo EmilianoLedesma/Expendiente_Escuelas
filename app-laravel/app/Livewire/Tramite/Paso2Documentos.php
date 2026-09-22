@@ -9,16 +9,23 @@ use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
+use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\ResponsableLegal;
+use App\Models\TipoDocumento;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
- * Presentación pura: un sub-paso (fase) por documento de Paso 2.2. Ninguna
- * escritura directa a Eloquent — RegistrarDocumento es la única escritura
- * (ADR-001).
+ * Presentación pura: checklist de los documentos de Paso 2.2, todos
+ * renderizados a la vez, cada sección editable/solo-lectura de forma
+ * independiente (docs/superpowers/specs/2026-09-22-paso2-documentos-checklist-redesign.md).
+ * Ninguna escritura directa a Eloquent — RegistrarDocumento es la única
+ * escritura (ADR-001).
  */
 #[Layout('layouts.tramite')]
 class Paso2Documentos extends Component
@@ -27,9 +34,10 @@ class Paso2Documentos extends Component
 
     public Escuela $escuela;
 
-    public $archivo;
-
     public array $archivos = [];
+
+    /** @var array<string, bool> clave => true mientras se muestra el form de reemplazo. */
+    public array $reemplazando = [];
 
     public DictamenUsoSueloForm $dictamenForm;
 
@@ -68,6 +76,7 @@ class Paso2Documentos extends Component
 
         $registrarDocumento->ejecutar($this->escuela->id, $clave, $this->archivos[$clave], new DatosDocumento);
         $this->archivos[$clave] = null;
+        $this->reemplazando[$clave] = false;
 
         $this->avanzar($documentosCompletos);
     }
@@ -81,6 +90,7 @@ class Paso2Documentos extends Component
             fechaEmision: $this->dictamenForm->fechaEmision,
         ));
         $this->archivos['dictamen_uso_suelo'] = null;
+        $this->reemplazando['dictamen_uso_suelo'] = false;
 
         $this->avanzar($documentosCompletos);
     }
@@ -99,6 +109,7 @@ class Paso2Documentos extends Component
             peritoRegistroVigencia: $this->constanciaForm->peritoRegistroVigencia !== '' ? $this->constanciaForm->peritoRegistroVigencia : null,
         ));
         $this->archivos['constancia_seguridad_estructural'] = null;
+        $this->reemplazando['constancia_seguridad_estructural'] = false;
 
         $this->avanzar($documentosCompletos);
     }
@@ -126,6 +137,7 @@ class Paso2Documentos extends Component
             observaciones: $this->acreditacionForm->observaciones !== '' ? $this->acreditacionForm->observaciones : null,
         ));
         $this->archivos['escritura_inmueble'] = null;
+        $this->reemplazando['escritura_inmueble'] = false;
 
         $this->avanzar($documentosCompletos);
     }
@@ -136,8 +148,50 @@ class Paso2Documentos extends Component
 
         $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivos['formato_solicitud'], new DatosDocumento);
         $this->archivos['formato_solicitud'] = null;
+        $this->reemplazando['formato_solicitud'] = false;
 
         $this->avanzar($documentosCompletos);
+    }
+
+    public function toggleReemplazar(string $clave): void
+    {
+        $this->reemplazando[$clave] = ! ($this->reemplazando[$clave] ?? false);
+    }
+
+    /**
+     * Documentos ya capturados (escuela o plantel según ambito), para el
+     * bloque de solo lectura de cada sección. Mismo patrón de lectura en el
+     * componente que InfraestructuraNivel::espaciosCapturados() (ADR-001);
+     * dispatch por ambito igual que RegistrarDocumento::ejecutar() en la
+     * escritura.
+     *
+     * @return Collection<string, array{nombreArchivo: string, subidoEn: Carbon}>
+     */
+    public function documentosCapturados(DocumentosCompletos $documentosCompletos): Collection
+    {
+        $claves = $documentosCompletos->clavesAplicables($this->tipoPersona());
+        $tipos = TipoDocumento::whereIn('clave', $claves)->get()->keyBy('clave');
+
+        $capturados = collect();
+
+        foreach ($claves as $clave) {
+            $tipo = $tipos[$clave];
+
+            $documento = $tipo->ambito === 'plantel'
+                ? DocumentoPlantel::where('plantel_id', $this->escuela->plantel_id)->where('tipo_documento_id', $tipo->id)->first()
+                : DocumentoEscuela::where('escuela_id', $this->escuela->id)->where('tipo_documento_id', $tipo->id)->first();
+
+            if ($documento === null) {
+                continue;
+            }
+
+            $capturados[$clave] = [
+                'nombreArchivo' => basename((string) $documento->archivo_path),
+                'subidoEn' => $documento->updated_at,
+            ];
+        }
+
+        return $capturados;
     }
 
     private function avanzar(DocumentosCompletos $documentosCompletos): void
@@ -165,18 +219,16 @@ class Paso2Documentos extends Component
         return ResponsableLegal::where('escuela_id', $this->escuela->id)->firstOrFail()->tipo_persona;
     }
 
-    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia)
+    public function render(DocumentosCompletos $documentosCompletos)
     {
-        // Vista temporal: el Blade todavía rama por una sola "fase" (Task 4
-        // la rediseña a checklist). Se deriva aquí en vez de mantenerla como
-        // propiedad pública, que era el estado que este task elimina.
-        $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $this->tipoPersona());
-        $fase = $pendientes !== []
-            ? $pendientes[0]
-            : (string) (array_key_first($validarVigencia->ejecutar($this->escuela->id)) ?? 'formato_solicitud');
+        $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
+        $capturados = $this->documentosCapturados($documentosCompletos);
 
-        return view('livewire.tramite.paso2-documentos')
-            ->with('fase', $fase)
-            ->layoutData(['escuelaId' => $this->escuela->id]);
+        return view('livewire.tramite.paso2-documentos', [
+            'clavesAplicables' => $clavesAplicables,
+            'capturados' => $capturados,
+            'totalAplicables' => count($clavesAplicables),
+            'totalCompletos' => $capturados->count(),
+        ])->layoutData(['escuelaId' => $this->escuela->id]);
     }
 }

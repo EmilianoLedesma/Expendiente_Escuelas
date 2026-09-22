@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string|null $fecha_emision
  * @property string|null $fecha_vigencia
  * @property string $estado_validacion
+ * @property Carbon|null $updated_at
  */
 class DocumentoPlantel extends Model
 {
