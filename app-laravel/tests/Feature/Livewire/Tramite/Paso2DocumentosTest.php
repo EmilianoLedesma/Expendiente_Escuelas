@@ -249,6 +249,22 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
     }
 
+    public function test_el_enlace_de_formato_de_solicitud_sigue_visible_cuando_la_seccion_ya_esta_capturada(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        // Solo formato_solicitud capturado; las demás claves quedan pendientes
+        // para que mount() no redirija y la sección se pueda inspeccionar en
+        // su estado de solo lectura.
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'), new DatosDocumento);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('formato_solicitud.pdf')
+            ->assertSee('Generar y descargar Formato de Solicitud')
+            ->assertSee(route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]), false);
+    }
+
     public function test_reentrar_con_todo_completo_y_dictamen_vencido_muestra_el_error_sin_reventar(): void
     {
         Storage::fake('documentos');

@@ -29,6 +29,12 @@
             <section class="rounded-md border-[0.5px] border-hairline p-md {{ $capturado && ! $editable ? 'bg-surface-soft' : 'bg-canvas' }}">
                 <h2 class="font-sans text-body-sm font-semibold text-ink mb-sm">{{ $titulos[$clave] ?? $clave }}</h2>
 
+                @if ($clave === 'formato_solicitud')
+                    <a href="{{ route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]) }}" target="_blank" class="underline text-primary block mb-md">
+                        Generar y descargar Formato de Solicitud
+                    </a>
+                @endif
+
                 @if (! $editable)
                     {{-- Ya capturado: solo lectura + Reemplazar --}}
                     <div class="flex items-center justify-between gap-md">
@@ -118,11 +124,7 @@
                         <x-ui.button-primary type="submit">Guardar</x-ui.button-primary>
                     </form>
                 @elseif ($clave === 'formato_solicitud')
-                    <a href="{{ route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]) }}" target="_blank" class="underline text-primary">
-                        Generar y descargar Formato de Solicitud
-                    </a>
-
-                    <form wire:submit="guardarFormatoSolicitud" class="space-y-md mt-md">
+                    <form wire:submit="guardarFormatoSolicitud" class="space-y-md">
                         <label class="block font-sans text-body-sm font-medium text-ink mb-xxs">Subir Formato de Solicitud firmado</label>
                         <input type="file" wire:model="archivos.formato_solicitud" accept="application/pdf">
                         @error('archivos.formato_solicitud') <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p> @enderror
