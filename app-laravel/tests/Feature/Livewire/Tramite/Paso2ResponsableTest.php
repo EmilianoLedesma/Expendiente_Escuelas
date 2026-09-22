@@ -25,6 +25,16 @@ class Paso2ResponsableTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // guardarResponsable() ahora consulta el catálogo (gate a Documentos);
+        // sin esto, cualquier test que llegue a guardarResponsable() lanza la
+        // RuntimeException de catálogo incompleto.
+        (new TiposDocumentosSeeder)->run();
+    }
+
     private function crearEscuelaPara(Solicitante $solicitante): Escuela
     {
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
@@ -134,10 +144,42 @@ class Paso2ResponsableTest extends TestCase
             ->assertRedirect(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
     }
 
-    public function test_tipo_fisica_guarda_y_avanza_a_fase_niveles(): void
+    /**
+     * Antes de esto: guardarResponsable() ponía fase='niveles' sin condición
+     * — Documentos (Paso 2.2) nunca se hacía cumplir dentro de la misma
+     * visita, solo en un mount() posterior (que ya no se vuelve a ejecutar
+     * una vez que escuela_niveles existe). En la práctica, Documentos era
+     * inalcanzable en el flujo normal de un solo tramo.
+     */
+    public function test_guardar_responsable_redirige_a_documentos_si_documentos_no_estan_completos(): void
     {
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+
+        $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+    }
+
+    public function test_guardar_responsable_avanza_a_fase_niveles_si_los_documentos_ya_estaban_completos(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])

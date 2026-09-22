@@ -6,6 +6,7 @@ use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\TipoDocumento;
+use RuntimeException;
 
 /**
  * Única fuente de verdad para "¿ya se completaron los 6 documentos de
@@ -52,7 +53,13 @@ class DocumentosCompletos
 
         return array_values(array_filter(
             $aplicables,
-            fn (string $clave) => ! in_array($idsAplicables[$clave], $idsCompletados, true),
+            function (string $clave) use ($idsAplicables, $idsCompletados) {
+                if (! $idsAplicables->has($clave)) {
+                    throw new RuntimeException("tipos_documentos no tiene una fila con clave \"{$clave}\" — corre TiposDocumentosSeeder.");
+                }
+
+                return ! in_array($idsAplicables[$clave], $idsCompletados, true);
+            },
         ));
     }
 
