@@ -35,6 +35,15 @@ class Paso2DocumentosTest extends TestCase
         return $escuela;
     }
 
+    public function test_arranca_en_la_primera_clave_pendiente(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertViewHas('fase', 'ine');
+    }
+
     public function test_sube_ine_de_forma_independiente_sin_pasar_por_las_demas_claves(): void
     {
         Storage::fake('documentos');
