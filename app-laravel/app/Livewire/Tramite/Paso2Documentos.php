@@ -175,6 +175,7 @@ class Paso2Documentos extends Component
 
     public function render()
     {
-        return view('livewire.tramite.paso2-documentos');
+        return view('livewire.tramite.paso2-documentos')
+            ->layoutData(['escuelaId' => $this->escuela->id]);
     }
 }

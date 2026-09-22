@@ -272,6 +272,6 @@ class InfraestructuraNivel extends Component
             'materiales' => $this->materialesDisponibles(),
             'espaciosCapturados' => $this->espaciosCapturados(),
             'sanitariosCapturados' => $this->sanitariosCapturados(),
-        ])->layoutData(['escuelaNivelId' => $this->escuelaNivel->id]);
+        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id]);
     }
 }

@@ -80,8 +80,12 @@ class Paso3ProximosPasosTest extends TestCase
         $response->assertOk();
         $html = $response->getContent();
 
-        $this->assertSame(3, substr_count($html, 'data-estado="completado"'));
-        $this->assertSame(3, substr_count($html, 'data-estado="pendiente"'));
+        // 9 etapas en total ahora (Preregistro/Responsable/Documentos + los 6 de
+        // Paso 3): Preregistro y Documentos también leen "completado" aquí —
+        // ambos se derivan por existencia (escuela y escuela_niveles), y esta
+        // escuela ya tiene ambos — solo Responsable legal queda pendiente.
+        $this->assertSame(5, substr_count($html, 'data-estado="completado"'));
+        $this->assertSame(4, substr_count($html, 'data-estado="pendiente"'));
     }
 
     public function test_muestra_enlace_a_un_segundo_nivel_de_la_misma_escuela_que_aun_no_termina(): void
