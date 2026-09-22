@@ -13,10 +13,12 @@ use Illuminate\Support\Facades\DB;
  * Caso de uso de PRD §5 Paso 3, sub-paso 2 (Infraestructura del nivel).
  *
  * instalaciones_espacios (+ campos_futbol, biblioteca_materiales) y
- * sanitarios (+ sanitarios_bacinicas) están anclados a plantel_id: se
- * escriben solo la primera vez que el plantel se captura. aulas_nivel es lo
- * único genuinamente por nivel y se escribe siempre. Ambos ámbitos vienen
- * del mismo envío de formulario, así que van en una sola transacción.
+ * sanitarios (+ sanitarios_bacinicas) están anclados a plantel_id: cada fila
+ * se escribe solo la primera vez que *ese* tipo_espacio / categoría de
+ * sanitario se captura para el plantel (ADR-005 — guardián por-fila, no un
+ * booleano por plantel, porque la aplicabilidad varía por nivel). aulas_nivel
+ * es lo único genuinamente por nivel y se escribe siempre. Ambos ámbitos
+ * vienen del mismo envío de formulario, así que van en una sola transacción.
  */
 class RegistrarInfraestructuraNivel
 {
@@ -28,10 +30,8 @@ class RegistrarInfraestructuraNivel
     public function ejecutar(int $plantelId, int $escuelaNivelId, DatosInfraestructuraNivel $datos): void
     {
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
-            if (! $this->yaCapturada->ejecutar($plantelId)) {
-                $this->escribirEspacios($plantelId, $datos);
-                $this->escribirSanitarios($plantelId, $datos);
-            }
+            $this->escribirEspacios($plantelId, $datos);
+            $this->escribirSanitarios($plantelId, $datos);
 
             // ponytail: aulas_nivel no tiene índice único sobre escuela_nivel_id,
             // así que updateOrCreate sobre esa clave es lo que evita filas dobles
@@ -47,7 +47,13 @@ class RegistrarInfraestructuraNivel
 
     private function escribirEspacios(int $plantelId, DatosInfraestructuraNivel $datos): void
     {
+        $yaCapturados = $this->yaCapturada->tiposCapturados($plantelId);
+
         foreach ($datos->espacios as $espacio) {
+            if (in_array($espacio['tipoEspacioId'], $yaCapturados, true)) {
+                continue;
+            }
+
             $fila = InstalacionEspacio::create([
                 'plantel_id' => $plantelId,
                 'tipo_espacio_id' => $espacio['tipoEspacioId'],
@@ -80,7 +86,13 @@ class RegistrarInfraestructuraNivel
 
     private function escribirSanitarios(int $plantelId, DatosInfraestructuraNivel $datos): void
     {
+        $yaCapturadas = $this->yaCapturada->categoriasCapturadas($plantelId);
+
         foreach ($datos->sanitarios as $sanitario) {
+            if (in_array($sanitario['categoria'], $yaCapturadas, true)) {
+                continue;
+            }
+
             $fila = Sanitario::create([
                 'plantel_id' => $plantelId,
                 'categoria' => $sanitario['categoria'],

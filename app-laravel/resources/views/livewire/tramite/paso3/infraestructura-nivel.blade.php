@@ -5,7 +5,7 @@
     </p>
 
     <form wire:submit="guardar" class="space-y-lg">
-        @if ($soloLectura)
+        @if ($espaciosCapturados->isNotEmpty() || $sanitariosCapturados->isNotEmpty())
             <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md space-y-xs">
                 <p class="font-sans text-body-sm font-medium text-ink">Infraestructura del plantel (ya registrada)</p>
                 <p class="font-sans text-[11px] text-muted">
@@ -20,7 +20,9 @@
                     @endforeach
                 </ul>
             </div>
-        @else
+        @endif
+
+        @if ($tipos->isNotEmpty())
             @foreach ($tipos->groupBy('categoria') as $categoria => $tiposCategoria)
                 <fieldset class="space-y-sm">
                     <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">
@@ -83,7 +85,9 @@
                     @endforeach
                 </fieldset>
             @endforeach
+        @endif
 
+        @if (count($categorias) > 0)
             <fieldset class="space-y-sm">
                 <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Sanitarios</legend>
                 @foreach ($categorias as $categoria)

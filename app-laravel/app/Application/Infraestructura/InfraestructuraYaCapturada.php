@@ -25,4 +25,21 @@ class InfraestructuraYaCapturada
         return InstalacionEspacio::where('plantel_id', $plantelId)->exists()
             || Sanitario::where('plantel_id', $plantelId)->exists();
     }
+
+    /**
+     * ADR-005: qué se capturó ya no se responde con un booleano — depende de
+     * *qué* tipo_espacio, porque la aplicabilidad varía por nivel.
+     *
+     * @return list<int>
+     */
+    public function tiposCapturados(int $plantelId): array
+    {
+        return InstalacionEspacio::where('plantel_id', $plantelId)->pluck('tipo_espacio_id')->all();
+    }
+
+    /** @return list<string> */
+    public function categoriasCapturadas(int $plantelId): array
+    {
+        return Sanitario::where('plantel_id', $plantelId)->pluck('categoria')->all();
+    }
 }
