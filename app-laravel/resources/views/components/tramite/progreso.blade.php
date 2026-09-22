@@ -16,7 +16,11 @@
                     'bg-hairline' => $paso->estado === 'pendiente',
                 ])
             ></span>
-            {{ $paso->nombre }}
+            @if ($paso->href)
+                <a href="{{ $paso->href }}" class="hover:underline">{{ $paso->nombre }}</a>
+            @else
+                {{ $paso->nombre }}
+            @endif
         </li>
     @endforeach
 </ol>

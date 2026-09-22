@@ -70,7 +70,44 @@ class ProgresoTest extends TestCase
             $html
         );
 
+        // 5 de los 6 sub-pasos de Paso 3 + Preregistro/Responsable/Documentos: sin
+        // escuelaId no hay contexto para evaluarlos como completados.
         $pendientesCount = substr_count($html, 'data-estado="pendiente"');
-        $this->assertSame(5, $pendientesCount);
+        $this->assertSame(8, $pendientesCount);
+    }
+
+    public function test_incluye_preregistro_responsable_y_documentos_antes_de_los_seis_de_paso3(): void
+    {
+        (new PasosCapturaSeeder)->run();
+
+        $html = (string) $this->blade('<x-tramite.progreso />');
+
+        $this->assertSame(9, substr_count($html, '<li'));
+        $this->assertTrue(strpos($html, 'Preregistro') < strpos($html, 'Responsable legal'));
+        $this->assertTrue(strpos($html, 'Responsable legal') < strpos($html, 'Documentos'));
+        $this->assertTrue(strpos($html, 'Documentos') < strpos($html, 'Datos del inmueble'));
+    }
+
+    public function test_enlaza_preregistro_responsable_y_documentos_segun_el_contexto_disponible(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
+
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $solicitante = Solicitante::factory()->create();
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+
+        DB::table('responsables_legales')->insert([
+            'escuela_id' => $escuela->id,
+            'tipo_persona' => 'fisica',
+        ]);
+
+        $sinEscuela = (string) $this->blade('<x-tramite.progreso />');
+        $this->assertStringNotContainsString(route('tramite.paso2', ['escuela' => $escuela->id]), $sinEscuela);
+
+        $conEscuela = (string) $this->blade('<x-tramite.progreso :escuela-id="$id" />', ['id' => $escuela->id]);
+        $this->assertStringContainsString(route('tramite.paso2', ['escuela' => $escuela->id]), $conEscuela);
+        $this->assertStringContainsString(route('tramite.paso2-documentos', ['escuela' => $escuela->id]), $conEscuela);
+        $this->assertMatchesRegularExpression('/data-estado="completado"[^>]*>\s*<span[^>]*bg-success[^>]*><\/span>\s*<a[^>]*>\s*Responsable legal/s', $conEscuela);
     }
 }

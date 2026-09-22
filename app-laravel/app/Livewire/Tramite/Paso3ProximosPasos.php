@@ -66,6 +66,6 @@ class Paso3ProximosPasos extends Component
     {
         return view('livewire.tramite.paso3-proximos-pasos', [
             'nivelesPendientes' => $this->nivelesPendientes(),
-        ])->layoutData(['escuelaNivelId' => $this->escuelaNivel->id]);
+        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id]);
     }
 }

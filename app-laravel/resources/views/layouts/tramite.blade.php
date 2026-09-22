@@ -15,7 +15,7 @@
 
         <main class="max-w-[720px] mx-auto px-lg py-xl">
             <div class="mb-lg">
-                <x-tramite.progreso :escuela-nivel-id="$escuelaNivelId ?? null" />
+                <x-tramite.progreso :escuela-id="$escuelaId ?? null" :escuela-nivel-id="$escuelaNivelId ?? null" />
             </div>
 
             {{ $slot }}
