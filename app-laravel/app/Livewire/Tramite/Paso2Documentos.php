@@ -27,8 +27,6 @@ class Paso2Documentos extends Component
 
     public Escuela $escuela;
 
-    public string $fase;
-
     public $archivo;
 
     public array $archivos = [];
@@ -46,15 +44,12 @@ class Paso2Documentos extends Component
         $pendientes = $documentosCompletos->clavesPendientes($escuela->id, $tipoPersona);
 
         if ($pendientes !== []) {
-            $this->fase = $pendientes[0];
-
             return;
         }
 
         // Los 6 documentos existen: o una vigencia venció (se vuelve a pedir
         // ese documento) o el paso ya terminó y esto es back-navigation.
         $violaciones = $validarVigencia->ejecutar($escuela->id);
-        $this->fase = (string) (array_key_first($violaciones) ?? 'formato_solicitud');
 
         if ($violaciones === []) {
             $this->redirectRoute('tramite.paso2', ['escuela' => $escuela->id]);
@@ -137,10 +132,10 @@ class Paso2Documentos extends Component
 
     public function guardarFormatoSolicitud(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(['archivos.formato_solicitud' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivo, new DatosDocumento);
-        $this->archivo = null;
+        $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivos['formato_solicitud'], new DatosDocumento);
+        $this->archivos['formato_solicitud'] = null;
 
         $this->avanzar($documentosCompletos);
     }
@@ -151,8 +146,6 @@ class Paso2Documentos extends Component
         $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $tipoPersona);
 
         if ($pendientes !== []) {
-            $this->fase = $pendientes[0];
-
             return;
         }
 
@@ -172,9 +165,18 @@ class Paso2Documentos extends Component
         return ResponsableLegal::where('escuela_id', $this->escuela->id)->firstOrFail()->tipo_persona;
     }
 
-    public function render()
+    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia)
     {
+        // Vista temporal: el Blade todavía rama por una sola "fase" (Task 4
+        // la rediseña a checklist). Se deriva aquí en vez de mantenerla como
+        // propiedad pública, que era el estado que este task elimina.
+        $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $this->tipoPersona());
+        $fase = $pendientes !== []
+            ? $pendientes[0]
+            : (string) (array_key_first($validarVigencia->ejecutar($this->escuela->id)) ?? 'formato_solicitud');
+
         return view('livewire.tramite.paso2-documentos')
+            ->with('fase', $fase)
             ->layoutData(['escuelaId' => $this->escuela->id]);
     }
 }

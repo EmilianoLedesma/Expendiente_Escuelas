@@ -35,15 +35,6 @@ class Paso2DocumentosTest extends TestCase
         return $escuela;
     }
 
-    public function test_arranca_en_la_primera_clave_pendiente(): void
-    {
-        $escuela = $this->crearEscuelaConResponsable();
-        $this->actingAs($escuela->solicitante->user);
-
-        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSet('fase', 'ine');
-    }
-
     public function test_sube_ine_de_forma_independiente_sin_pasar_por_las_demas_claves(): void
     {
         Storage::fake('documentos');
@@ -80,7 +71,6 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
             ->call('guardarDocumentoSimple', 'ine')
-            ->assertSet('fase', 'acta_nacimiento')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
@@ -122,7 +112,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.numeroEscritura', 'E-500')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->call('guardarAcreditacion')
-            ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
     }
@@ -141,7 +130,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
             ->set('dictamenForm.fechaEmision', now()->toDateString())
             ->call('guardarDictamen')
-            ->assertSet('fase', 'constancia_seguridad_estructural')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
     }
@@ -162,7 +150,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
             ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
             ->call('guardarConstancia')
-            ->assertSet('fase', 'formato_solicitud')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez']);
     }
@@ -196,7 +183,7 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
     }
 
-    public function test_sube_formato_de_solicitud_y_redirige_a_paso2(): void
+    public function test_sube_formato_de_solicitud_de_forma_independiente(): void
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
@@ -207,8 +194,7 @@ class Paso2DocumentosTest extends TestCase
         }
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSet('fase', 'formato_solicitud')
-            ->set('archivo', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
+            ->set('archivos.formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
             ->call('guardarFormatoSolicitud')
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
 
@@ -231,7 +217,6 @@ class Paso2DocumentosTest extends TestCase
         $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))->assertOk();
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasErrors('vigencia');
     }
 
@@ -277,8 +262,7 @@ class Paso2DocumentosTest extends TestCase
         ));
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSet('fase', 'formato_solicitud')
-            ->set('archivo', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
+            ->set('archivos.formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
             ->call('guardarFormatoSolicitud')
             ->assertHasErrors('vigencia')
             ->assertNoRedirect();
@@ -318,7 +302,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
             ->set('acreditacionForm.observaciones', 'Contrato renovable anualmente')
             ->call('guardarAcreditacion')
-            ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
@@ -367,7 +350,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.fechaContrato', '2026-01-01')
             ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
             ->call('guardarAcreditacion')
-            ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
@@ -393,7 +375,6 @@ class Paso2DocumentosTest extends TestCase
 
         $component->set('acreditacionForm.otroEspecifique', 'Posesión por resolución judicial')
             ->call('guardarAcreditacion')
-            ->assertSet('fase', 'dictamen_uso_suelo')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
