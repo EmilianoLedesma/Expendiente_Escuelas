@@ -31,14 +31,13 @@ class Paso2Documentos extends Component
 
     public $archivo;
 
+    public array $archivos = [];
+
     public DictamenUsoSueloForm $dictamenForm;
 
     public ConstanciaSeguridadForm $constanciaForm;
 
     public AcreditacionOcupacionForm $acreditacionForm;
-
-    /** Claves cuyo único dato capturable es el archivo (sin extensión estructurada). */
-    private const CLAVES_SOLO_ARCHIVO = ['ine', 'acta_nacimiento', 'escritura_poder_facultades'];
 
     public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
     {
@@ -66,14 +65,14 @@ class Paso2Documentos extends Component
         $this->addError('vigencia', implode(' ', $violaciones));
     }
 
-    public function guardarDocumentoSimple(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    public function guardarDocumentoSimple(string $clave, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        abort_unless(in_array($this->fase, self::CLAVES_SOLO_ARCHIVO, true), 403);
+        abort_unless(in_array($clave, ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud'], true), 403);
 
-        $this->validate(['archivo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
-        $registrarDocumento->ejecutar($this->escuela->id, $this->fase, $this->archivo, new DatosDocumento);
-        $this->archivo = null;
+        $registrarDocumento->ejecutar($this->escuela->id, $clave, $this->archivos[$clave], new DatosDocumento);
+        $this->archivos[$clave] = null;
 
         $this->avanzar($documentosCompletos);
     }

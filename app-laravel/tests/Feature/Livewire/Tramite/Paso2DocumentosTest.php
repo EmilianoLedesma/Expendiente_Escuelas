@@ -44,6 +44,33 @@ class Paso2DocumentosTest extends TestCase
             ->assertSet('fase', 'ine');
     }
 
+    public function test_sube_ine_de_forma_independiente_sin_pasar_por_las_demas_claves(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'ine')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
+    }
+
+    public function test_guardar_documento_simple_rechaza_una_clave_fuera_de_la_whitelist(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.algo_inventado', UploadedFile::fake()->create('fake.pdf', 50, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'algo_inventado')
+            ->assertStatus(403);
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
     public function test_sube_ine_y_avanza_a_la_siguiente_clave(): void
     {
         Storage::fake('documentos');
@@ -51,8 +78,8 @@ class Paso2DocumentosTest extends TestCase
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivo', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
-            ->call('guardarDocumentoSimple')
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'ine')
             ->assertSet('fase', 'acta_nacimiento')
             ->assertHasNoErrors();
 
@@ -65,9 +92,9 @@ class Paso2DocumentosTest extends TestCase
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivo', UploadedFile::fake()->create('ine.jpg', 50, 'image/jpeg'))
-            ->call('guardarDocumentoSimple')
-            ->assertHasErrors('archivo');
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.jpg', 50, 'image/jpeg'))
+            ->call('guardarDocumentoSimple', 'ine')
+            ->assertHasErrors('archivos.ine');
     }
 
     public function test_un_no_dueno_recibe_403(): void
@@ -87,8 +114,8 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
-        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
@@ -176,9 +203,8 @@ class Paso2DocumentosTest extends TestCase
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('fase', 'dictamen_uso_suelo')
-            ->set('archivo', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple')
+            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'dictamen_uso_suelo')
             ->assertStatus(403);
 
         $this->assertDatabaseCount('documentos_plantel', 0);
@@ -211,8 +237,8 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
-        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivo', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
@@ -228,8 +254,8 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
-        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'arrendamiento')
@@ -256,8 +282,8 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
-        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivo', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'arrendamiento')
@@ -278,8 +304,8 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
-        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivo', UploadedFile::fake()->create('comodato.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'comodato')
@@ -303,8 +329,8 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivo', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
-        $component->set('archivo', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivo', UploadedFile::fake()->create('otro.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'otro')
