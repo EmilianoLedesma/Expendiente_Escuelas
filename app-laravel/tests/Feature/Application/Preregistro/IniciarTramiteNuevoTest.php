@@ -4,6 +4,7 @@ namespace Tests\Feature\Application\Preregistro;
 
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
+use App\Application\Preregistro\PlantelNoDisponible;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Models\Escuela;
@@ -30,6 +31,20 @@ class IniciarTramiteNuevoTest extends TestCase
         );
     }
 
+    /** Plantel ya registrado por el solicitante (escuela sin responsable legal). */
+    private function plantelConEscuelaDe(Solicitante $solicitante): Plantel
+    {
+        $plantel = Plantel::create([
+            'calle' => 'Calle Ya Registrada 5',
+            'colonia' => 'Centro',
+            'municipio' => 'Querétaro',
+            'codigo_postal' => '76000',
+        ]);
+        Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+
+        return $plantel;
+    }
+
     public function test_crea_plantel_y_escuela_para_bifurcacion_nuevo(): void
     {
         $solicitante = Solicitante::factory()->create();
@@ -53,12 +68,7 @@ class IniciarTramiteNuevoTest extends TestCase
     public function test_reutiliza_plantel_existente_para_bifurcacion_existente(): void
     {
         $solicitante = Solicitante::factory()->create();
-        $plantel = Plantel::create([
-            'calle' => 'Calle Ya Registrada 5',
-            'colonia' => 'Centro',
-            'municipio' => 'Querétaro',
-            'codigo_postal' => '76000',
-        ]);
+        $plantel = $this->plantelConEscuelaDe($solicitante);
 
         $resultado = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
             bifurcacion: 'existente',
@@ -76,12 +86,7 @@ class IniciarTramiteNuevoTest extends TestCase
     public function test_reutiliza_escuela_existente_del_mismo_solicitante_y_plantel(): void
     {
         $solicitante = Solicitante::factory()->create();
-        $plantel = Plantel::create([
-            'calle' => 'Calle Ya Registrada 5',
-            'colonia' => 'Centro',
-            'municipio' => 'Querétaro',
-            'codigo_postal' => '76000',
-        ]);
+        $plantel = $this->plantelConEscuelaDe($solicitante);
 
         $primero = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
             bifurcacion: 'existente',
@@ -100,12 +105,7 @@ class IniciarTramiteNuevoTest extends TestCase
     public function test_crea_una_segunda_escuela_distinta_si_la_primera_ya_tiene_responsable_legal(): void
     {
         $solicitante = Solicitante::factory()->create();
-        $plantel = Plantel::create([
-            'calle' => 'Calle Ya Registrada 5',
-            'colonia' => 'Centro',
-            'municipio' => 'Querétaro',
-            'codigo_postal' => '76000',
-        ]);
+        $plantel = $this->plantelConEscuelaDe($solicitante);
 
         $primero = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
             bifurcacion: 'existente',
@@ -126,29 +126,48 @@ class IniciarTramiteNuevoTest extends TestCase
         $this->assertDatabaseCount('escuelas', 2);
     }
 
-    public function test_dos_solicitantes_distintos_obtienen_escuelas_distintas_en_el_mismo_plantel(): void
+    /**
+     * Cambio intencional de comportamiento (auditoría 2026-09-23, WS-1.1):
+     * antes dos solicitantes distintos podían colgar escuelas del mismo
+     * plantel; eso permitía a B leer/sobrescribir documentos_plantel de A.
+     * Ahora "existente" exige que el plantel ya tenga una escuela del propio
+     * solicitante. Ver docs/decisions/PENDIENTE-plantel-solicitante-cardinalidad.md.
+     */
+    public function test_rechaza_que_otro_solicitante_reutilice_un_plantel_ajeno(): void
     {
+        $solicitanteA = Solicitante::factory()->create();
+        $solicitanteB = Solicitante::factory()->create();
+        $resultadoA = (new IniciarTramiteNuevo)->ejecutar($this->datosNuevoValidos(), $solicitanteA->id);
+
+        try {
+            (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+                bifurcacion: 'existente',
+                plantelId: $resultadoA->plantelId,
+            ), $solicitanteB->id);
+            $this->fail('Se esperaba PlantelNoDisponible.');
+        } catch (PlantelNoDisponible) {
+        }
+
+        $this->assertDatabaseCount('escuelas', 1);
+        $this->assertDatabaseMissing('escuelas', ['solicitante_id' => $solicitanteB->id]);
+    }
+
+    public function test_rechaza_plantel_sin_escuelas_del_solicitante(): void
+    {
+        $solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create([
-            'calle' => 'Calle Compartida 1',
+            'calle' => 'Calle Huérfana 1',
             'colonia' => 'Centro',
             'municipio' => 'Querétaro',
             'codigo_postal' => '76000',
         ]);
-        $solicitanteA = Solicitante::factory()->create();
-        $solicitanteB = Solicitante::factory()->create();
 
-        $resultadoA = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
+        $this->expectException(PlantelNoDisponible::class);
+
+        (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
             bifurcacion: 'existente',
             plantelId: $plantel->id,
-        ), $solicitanteA->id);
-
-        $resultadoB = (new IniciarTramiteNuevo)->ejecutar(new DatosPreregistro(
-            bifurcacion: 'existente',
-            plantelId: $plantel->id,
-        ), $solicitanteB->id);
-
-        $this->assertNotSame($resultadoA->escuelaId, $resultadoB->escuelaId);
-        $this->assertDatabaseCount('escuelas', 2);
+        ), $solicitante->id);
     }
 
     public function test_rechaza_dto_de_bifurcacion_nuevo_sin_campos_requeridos(): void

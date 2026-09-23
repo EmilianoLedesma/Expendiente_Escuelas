@@ -18,12 +18,23 @@ use InvalidArgumentException;
  * `$solicitanteId` es resuelto por el llamador desde la sesión autenticada
  * (nunca desde input del cliente) — ver
  * docs/superpowers/specs/2026-09-08-modelo-identidad-solicitante-design.md.
+ *
+ * Propiedad (auditoría 2026-09-23): con bifurcación "existente" el plantel
+ * debe tener ya al menos una escuela de `$solicitanteId`
+ * (PlantelesDelSolicitante); si no, lanza PlantelNoDisponible. Compartir un
+ * plantel entre solicitantes distintos requeriría un mecanismo explícito —
+ * ver docs/decisions/PENDIENTE-plantel-solicitante-cardinalidad.md.
  */
 class IniciarTramiteNuevo
 {
     public function ejecutar(DatosPreregistro $datos, int $solicitanteId): ResultadoPreregistro
     {
         $this->validar($datos);
+
+        if ($datos->bifurcacion === 'existente'
+            && ! PlantelesDelSolicitante::query($solicitanteId)->whereKey($datos->plantelId)->exists()) {
+            throw new PlantelNoDisponible;
+        }
 
         return DB::transaction(function () use ($datos, $solicitanteId) {
             $plantelId = $datos->bifurcacion === 'nuevo'

@@ -14,8 +14,7 @@ final class ListarPlantelesDisponibles
     /** @return Collection<int, array{id: int, etiqueta: non-falsy-string}> */
     public function ejecutar(int $solicitanteId): Collection
     {
-        return Plantel::query()
-            ->whereHas('escuelas', fn ($q) => $q->where('solicitante_id', $solicitanteId))
+        return PlantelesDelSolicitante::query($solicitanteId)
             ->orderBy('calle')
             ->get(['id', 'calle', 'municipio'])
             ->map(fn (Plantel $p) => ['id' => $p->id, 'etiqueta' => "{$p->calle}, {$p->municipio}"]);

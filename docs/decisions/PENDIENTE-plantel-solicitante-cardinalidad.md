@@ -87,3 +87,35 @@ este filtro debe revisarse — hoy oculta del dropdown exactamente el escenario 
 ese resultado permitiría. Ver `docs/progress.md` y
 `docs/decisions/ADR-002-modelo-identidad-solicitante.md` §3 para el detalle del
 cambio.
+
+## Actualización (2026-09-23): la propiedad se exige en `IniciarTramiteNuevo`
+
+La auditoría de seguridad del 2026-09-23 demostró que el endurecimiento del
+2026-09-14 no bastaba: filtrar solo el *dropdown* dejaba que un solicitante B
+enviara el `plantel_id` de A (bifurcación "existente"), obtuviera una escuela en
+ese plantel y con ella leyera o sobrescribiera los `documentos_plantel` de A
+(escritura, uso de suelo, etc.).
+
+Desde este cambio:
+
+- `IniciarTramiteNuevo` rechaza la bifurcación "existente" con
+  `PlantelNoDisponible` (subclase de `InvalidArgumentException`) si el plantel no
+  tiene ya al menos una escuela del propio solicitante. La regla vive en la capa
+  Application, así que un futuro adaptador de API la hereda.
+- El predicado "planteles de este solicitante" está en un solo lugar,
+  `App\Application\Preregistro\PlantelesDelSolicitante`, usado tanto por el
+  selector (`ListarPlantelesDisponibles`) como por la compuerta.
+- Paso 1 muestra el error en `plantelId` con un mensaje genérico en español, el
+  mismo para un plantel ajeno que para uno inexistente, para no revelar qué
+  planteles existen.
+- La prueba `test_dos_solicitantes_distintos_obtienen_escuelas_distintas_en_el_mismo_plantel`
+  (citada arriba en "Estado actual en código") fue reemplazada por
+  `test_rechaza_que_otro_solicitante_reutilice_un_plantel_ajeno`: el
+  comportamiento cambió intencionalmente. Lo dicho en esa sección sobre "sin
+  restricción a nivel de aplicación" ya no aplica; a nivel de esquema sigue igual.
+
+Si la decisión final es permitir que un plantel se comparta entre solicitantes
+distintos, eso requerirá un mecanismo explícito (por ejemplo, invitación o
+vinculación autorizada por el titular, con su propio control de acceso a
+`documentos_plantel`), no retirar esta compuerta. **La pregunta de cardinalidad
+de este documento sigue abierta.**
