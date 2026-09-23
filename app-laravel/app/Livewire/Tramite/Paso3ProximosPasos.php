@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tramite;
 
+use App\Livewire\Tramite\Paso3\Concerns\RequierePaso2Completo;
 use App\Models\EscuelaNivel;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class Paso3ProximosPasos extends Component
 {
+    use RequierePaso2Completo;
+
     private const PASOS_PASO3 = ['inmueble', 'infraestructura', 'mobiliario'];
 
     public EscuelaNivel $escuelaNivel;
@@ -33,6 +36,8 @@ class Paso3ProximosPasos extends Component
     public function mount(EscuelaNivel $escuelaNivel): void
     {
         $this->escuelaNivel = $escuelaNivel;
+
+        $this->redirigirSiPaso2Incompleto($escuelaNivel);
     }
 
     /** @return Collection<int, object{id: int, nombre: string}&\stdClass> nivel hermanos con Paso 3 aún incompleto. */

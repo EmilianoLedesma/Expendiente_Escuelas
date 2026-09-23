@@ -4,6 +4,7 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
+use App\Livewire\Tramite\Paso3\Concerns\RequierePaso2Completo;
 use App\Models\EscuelaNivel;
 use App\Models\MobiliarioConcepto;
 use App\Models\MobiliarioNivel as MobiliarioNivelModel;
@@ -21,6 +22,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class MobiliarioNivel extends Component
 {
+    use RequierePaso2Completo;
+
     public EscuelaNivel $escuelaNivel;
 
     /** @var array<int, int|string|null> concepto_id => cantidad declarada */
@@ -29,6 +32,10 @@ class MobiliarioNivel extends Component
     public function mount(EscuelaNivel $escuelaNivel, MarcarPasoCompletado $marcarPasoCompletado): void
     {
         $this->escuelaNivel = $escuelaNivel;
+
+        if ($this->redirigirSiPaso2Incompleto($escuelaNivel)) {
+            return;
+        }
 
         if ($escuelaNivel->nivelEducativo->clave !== 'inicial') {
             // Un paso que no aplica al nivel no está pendiente: está

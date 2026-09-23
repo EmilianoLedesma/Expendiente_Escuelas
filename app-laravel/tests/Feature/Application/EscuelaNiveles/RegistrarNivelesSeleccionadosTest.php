@@ -11,10 +11,12 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class RegistrarNivelesSeleccionadosTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuela(): Escuela
@@ -22,7 +24,10 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
 
-        return Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
+
+        return $escuela;
     }
 
     public function test_crea_un_escuela_nivel_por_cada_nivel_seleccionado(): void
@@ -33,7 +38,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         $primaria = NivelEducativo::where('clave', 'primaria')->first();
         $estadoEnCaptura = DB::table('estados_expediente')->where('clave', 'en_captura')->first();
 
-        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, [$preescolar->id, $primaria->id]);
+        app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [$preescolar->id, $primaria->id]);
 
         $this->assertDatabaseCount('escuela_niveles', 2);
         $this->assertDatabaseHas('escuela_niveles', [
@@ -57,7 +62,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
 
-        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, []);
+        app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, []);
     }
 
     public function test_rechaza_un_nivel_fuera_de_educacion_basica(): void
@@ -68,7 +73,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
 
-        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, [$mediaSuperior->id]);
+        app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [$mediaSuperior->id]);
 
         $this->assertDatabaseCount('escuela_niveles', 0);
     }
@@ -79,8 +84,8 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         $escuela = $this->crearEscuela();
         $preescolar = NivelEducativo::where('clave', 'preescolar')->first();
 
-        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, [$preescolar->id]);
-        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, [$preescolar->id]);
+        app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [$preescolar->id]);
+        app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [$preescolar->id]);
 
         $this->assertDatabaseCount('escuela_niveles', 1);
     }

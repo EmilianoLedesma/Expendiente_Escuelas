@@ -6,6 +6,7 @@ use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
+use App\Livewire\Tramite\Paso3\Concerns\RequierePaso2Completo;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoPlantel;
@@ -33,6 +34,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class DatosInmueble extends Component
 {
+    use RequierePaso2Completo;
+
     public EscuelaNivel $escuelaNivel;
 
     public float|int|string $metrosTotales = '';
@@ -67,6 +70,10 @@ class DatosInmueble extends Component
         MarcarPasoCompletado $marcarPasoCompletado,
     ): void {
         $this->escuelaNivel = $escuelaNivel;
+
+        if ($this->redirigirSiPaso2Incompleto($escuelaNivel)) {
+            return;
+        }
 
         // Auto-completado multi-nivel (spec §6): los datos son del plantel y ya
         // están capturados, así que este nivel no tiene nada que capturar aquí.

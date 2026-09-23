@@ -14,10 +14,12 @@ use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class Paso3InfraestructuraNivelTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Solicitante $solicitante;
@@ -37,6 +39,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->solicitante = Solicitante::factory()->create();
         $this->plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $this->plantel->id, 'solicitante_id' => $this->solicitante->id]);
+        $this->completarPaso2($this->escuela->id);
     }
 
     private function escuelaNivel(string $claveNivel): EscuelaNivel

@@ -12,10 +12,12 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class Paso3ProximosPasosTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuelaNivelPara(Solicitante $solicitante): EscuelaNivel
@@ -25,6 +27,7 @@ class Paso3ProximosPasosTest extends TestCase
 
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
         $nivel = NivelEducativo::where('clave', 'primaria')->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
@@ -83,9 +86,11 @@ class Paso3ProximosPasosTest extends TestCase
         // 9 etapas en total ahora (Preregistro/Responsable/Documentos + los 6 de
         // Paso 3): Preregistro y Documentos también leen "completado" aquí —
         // ambos se derivan por existencia (escuela y escuela_niveles), y esta
-        // escuela ya tiene ambos — solo Responsable legal queda pendiente.
-        $this->assertSame(5, substr_count($html, 'data-estado="completado"'));
-        $this->assertSame(4, substr_count($html, 'data-estado="pendiente"'));
+        // escuela ya tiene ambos — y desde WS-1.2 el fixture también captura
+        // el Responsable legal (precondición para entrar a Paso 3), así que las
+        // 3 etapas de Paso 1-2 más los 3 sub-pasos de Paso 3 leen completado.
+        $this->assertSame(6, substr_count($html, 'data-estado="completado"'));
+        $this->assertSame(3, substr_count($html, 'data-estado="pendiente"'));
     }
 
     public function test_muestra_enlace_a_un_segundo_nivel_de_la_misma_escuela_que_aun_no_termina(): void
@@ -96,6 +101,7 @@ class Paso3ProximosPasosTest extends TestCase
 
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
         $primaria = EscuelaNivel::create([
@@ -130,6 +136,7 @@ class Paso3ProximosPasosTest extends TestCase
 
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
         $primaria = EscuelaNivel::create([

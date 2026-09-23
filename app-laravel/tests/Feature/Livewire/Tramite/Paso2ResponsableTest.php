@@ -135,8 +135,9 @@ class Paso2ResponsableTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->registrarDocumentosCompletos($escuela);
         $preescolar = NivelEducativo::where('clave', 'preescolar')->first();
-        (new RegistrarNivelesSeleccionados)->ejecutar($escuela->id, [$preescolar->id]);
+        app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [$preescolar->id]);
         $this->actingAs($solicitante->user);
         $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
 
@@ -194,6 +195,32 @@ class Paso2ResponsableTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+    }
+
+    /** WS-1.2: guardarResponsable() aplica también la vigencia, no solo la completitud. */
+    public function test_guardar_responsable_redirige_a_documentos_si_el_dictamen_esta_vencido(): void
+    {
+        Storage::fake('documentos');
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(60)->toDateString(),
+        ));
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
     }
 
     public function test_captura_domicilio_notificaciones_y_persona_autorizada_recoger(): void

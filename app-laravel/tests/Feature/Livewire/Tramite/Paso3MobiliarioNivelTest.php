@@ -14,10 +14,12 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class Paso3MobiliarioNivelTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuelaNivel(Solicitante $solicitante, string $claveNivel): EscuelaNivel
@@ -28,6 +30,7 @@ class Paso3MobiliarioNivelTest extends TestCase
 
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
