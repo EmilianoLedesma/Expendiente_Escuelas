@@ -4,12 +4,16 @@ namespace Tests\Feature;
 
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
+use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
+use App\Application\ResponsableLegal\RegistrarResponsableLegal;
+use App\Http\Controllers\Tramite\DescargarDocumentoController;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -17,47 +21,99 @@ class DocumentoDownloadTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_el_dueno_puede_descargar_un_documento_de_ambito_escuela(): void
+    private Solicitante $solicitante;
+
+    private Escuela $escuela;
+
+    protected function setUp(): void
     {
+        parent::setUp();
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
-        $solicitante = Solicitante::factory()->create();
-        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
-        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'), new DatosDocumento);
-        $this->actingAs($solicitante->user);
+    }
 
-        $response = $this->get(route('tramite.paso2-documentos.descargar', ['escuela' => $escuela->id, 'clave' => 'ine']));
+    private function crearEscuela(string $tipoPersona): void
+    {
+        $this->solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $this->escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $this->solicitante->id]);
+        (new RegistrarResponsableLegal)->ejecutar($this->escuela->id, $tipoPersona === 'moral'
+            ? new DatosResponsableLegal(tipoPersona: 'moral', domicilioNotificaciones: 'Calle 1', razonSocial: 'Colegio SA', nombreRepresentanteLegal: 'Juan Pérez')
+            : new DatosResponsableLegal(tipoPersona: 'fisica', domicilioNotificaciones: 'Calle 1', nombre: 'Juana Pérez'));
+    }
+
+    private function capturar(string $clave, string $contenido = 'PDF'): void
+    {
+        (new RegistrarDocumento)->ejecutar($this->escuela->id, $clave, UploadedFile::fake()->createWithContent("{$clave}.pdf", $contenido), new DatosDocumento);
+    }
+
+    private function descargar(string $clave)
+    {
+        return $this->get(route('tramite.paso2-documentos.descargar', ['escuela' => $this->escuela->id, 'clave' => $clave]));
+    }
+
+    public function test_el_dueno_descarga_el_contenido_del_documento_capturado(): void
+    {
+        $this->crearEscuela('fisica');
+        $this->capturar('ine', 'CONTENIDO-INE');
+        $this->actingAs($this->solicitante->user);
+
+        $response = $this->descargar('ine');
 
         $response->assertOk();
+        $this->assertSame('CONTENIDO-INE', $response->streamedContent());
     }
 
     public function test_un_no_dueno_recibe_403(): void
     {
-        Storage::fake('documentos');
-        (new TiposDocumentosSeeder)->run();
-        $solicitante = Solicitante::factory()->create();
-        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
-        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'), new DatosDocumento);
-        $otro = Solicitante::factory()->create();
-        $this->actingAs($otro->user);
+        $this->crearEscuela('fisica');
+        $this->capturar('ine');
+        $this->actingAs(Solicitante::factory()->create()->user);
 
-        $response = $this->get(route('tramite.paso2-documentos.descargar', ['escuela' => $escuela->id, 'clave' => 'ine']));
-
-        $response->assertForbidden();
+        $this->descargar('ine')->assertForbidden();
     }
 
     public function test_404_si_el_documento_no_existe(): void
     {
-        (new TiposDocumentosSeeder)->run();
-        $solicitante = Solicitante::factory()->create();
+        $this->crearEscuela('fisica');
+        $this->actingAs($this->solicitante->user);
+
+        $this->descargar('ine')->assertNotFound();
+    }
+
+    public function test_404_si_la_clave_no_aplica_al_tipo_persona_aunque_exista_el_archivo(): void
+    {
+        $this->crearEscuela('moral');
+        $this->capturar('acta_nacimiento', 'NO-APLICA');
+        $this->actingAs($this->solicitante->user);
+
+        $this->descargar('acta_nacimiento')->assertNotFound();
+    }
+
+    public function test_404_si_la_clave_no_existe_en_el_catalogo(): void
+    {
+        $this->crearEscuela('fisica');
+        $this->actingAs($this->solicitante->user);
+
+        $this->descargar('no_existe')->assertNotFound();
+    }
+
+    public function test_404_sin_responsable_legal_registrado(): void
+    {
+        $this->solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
-        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
-        $this->actingAs($solicitante->user);
+        $this->escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $this->solicitante->id]);
+        $this->capturar('ine');
+        $this->actingAs($this->solicitante->user);
 
-        $response = $this->get(route('tramite.paso2-documentos.descargar', ['escuela' => $escuela->id, 'clave' => 'ine']));
+        $this->descargar('ine')->assertNotFound();
+    }
 
-        $response->assertNotFound();
+    public function test_la_ruta_la_atiende_un_controlador_no_un_closure(): void
+    {
+        $this->assertSame(
+            DescargarDocumentoController::class,
+            Route::getRoutes()->getByName('tramite.paso2-documentos.descargar')->getActionName(),
+        );
     }
 }

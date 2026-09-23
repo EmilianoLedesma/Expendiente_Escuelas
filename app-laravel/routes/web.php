@@ -1,6 +1,7 @@
 <?php
 
-use App\Infrastructure\Pdf\FormatoSolicitudPdf;
+use App\Http\Controllers\Tramite\DescargarDocumentoController;
+use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
@@ -8,12 +9,7 @@ use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Livewire\Tramite\Paso3ProximosPasos;
-use App\Models\DocumentoEscuela;
-use App\Models\DocumentoPlantel;
-use App\Models\Escuela;
-use App\Models\TipoDocumento;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 
 Route::view('/', 'welcome');
 
@@ -28,24 +24,11 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:update,escuela')
         ->name('tramite.paso2-documentos');
 
-    Route::get('/tramite/paso2/{escuela}/documentos/formato-solicitud.pdf', function (Escuela $escuela, FormatoSolicitudPdf $pdf) {
-        return $pdf->generar($escuela);
-    })
+    Route::get('/tramite/paso2/{escuela}/documentos/formato-solicitud.pdf', FormatoSolicitudPdfController::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.formato-solicitud');
 
-    Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', function (Escuela $escuela, string $clave) {
-        $tipo = TipoDocumento::where('clave', $clave)->firstOrFail();
-        $ownerId = $tipo->ambito === 'plantel' ? $escuela->plantel_id : $escuela->id;
-
-        $documento = $tipo->ambito === 'plantel'
-            ? DocumentoPlantel::where('plantel_id', $ownerId)->where('tipo_documento_id', $tipo->id)->first()
-            : DocumentoEscuela::where('escuela_id', $ownerId)->where('tipo_documento_id', $tipo->id)->first();
-
-        abort_if($documento === null, 404);
-
-        return Storage::disk('documentos')->response($documento->archivo_path);
-    })
+    Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', DescargarDocumentoController::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.descargar');
 
