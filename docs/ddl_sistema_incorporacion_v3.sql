@@ -1,4 +1,15 @@
 -- ============================================================================
+-- PREREQUISITO: Este script NO ES EJECUTABLE de arriba abajo en una base de datos
+-- vacía porque referencia la tabla `users` de Laravel (ej. FKs a users(id))
+-- que no define aquí. Antes de ejecutar:
+--   1. Corre las migraciones base de Laravel (users), O
+--   2. Usa las migraciones en app-laravel/database/migrations/2026_01_01_*
+--      (estas son el puerto ejecutable 1:1 de este script).
+-- El esquema espejea la base de datos migrada, salvo las FK-indexes
+-- (2026_01_02_000000_add_indexes_to_incorporacion_tables.php) y un nombre de constraint.
+-- ============================================================================
+
+-- ============================================================================
 -- DDL: Sistema de Incorporación de Escuelas (SEDEQ) — v3 (impulsado por catálogos)
 -- Motor: PostgreSQL 15+
 -- Convención: snake_case, nombres de tabla en plural (convención Laravel/Eloquent)

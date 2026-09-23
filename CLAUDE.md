@@ -14,7 +14,7 @@ All application commands below run from `app-laravel/`.
 
 ## Stack
 
-Laravel 13 (PHP 8.3) · Livewire 3 · Filament 4 · PostgreSQL 18 · `spatie/laravel-permission` · `barryvdh/laravel-dompdf` · Laravel Breeze · Vite + Tailwind.
+Laravel 13 (PHP 8.4) · Livewire 3 · Filament 4 · PostgreSQL 18 · `spatie/laravel-permission` · `barryvdh/laravel-dompdf` · Laravel Breeze · Vite + Tailwind.
 
 (The PRD specified Laravel 11 / Livewire 3 / Filament 3 / PostgreSQL 16 — bumped to current stable at setup time because the originals weren't installable together. See `docs/progress.md` Decisions Log for the full reasoning.)
 
@@ -48,7 +48,7 @@ php artisan migrate:fresh   # drops all tables, re-runs everything — never run
 composer dump-autoload
 ```
 
-Tests run against **sqlite in-memory** (`phpunit.xml` overrides `DB_CONNECTION`), independent of the app's normal PostgreSQL connection — no separate test DB to provision.
+Tests run against PostgreSQL (`phpunit.xml` configures `DB_CONNECTION=pgsql` with database `sedeq_incorporacion_testing` on `127.0.0.1:5432`) — requires a reachable Postgres instance. Migrations run raw Postgres DDL, so sqlite cannot work.
 
 ## Database — read before touching migrations
 
@@ -59,7 +59,7 @@ Before creating or editing a migration:
 - Don't generate duplicate migrations or recreate existing tables.
 - If the schema needs a structural change, it should trace back to the DDL/PRD, not be invented ad hoc.
 
-Catalog seed data (`niveles_educativos`, `estados_expediente`, `tipos_documentos`, `reglas_validacion`, etc. — PRD §4, DDL "SEEDS MÍNIMOS") is not yet ported to Seeder classes — check `docs/progress.md` Phase 3 before assuming seeds exist.
+Catalog seed data is ported to Seeder classes: RolesSeeder, CatalogoMinimoSeeder, TiposEspaciosSeeder, MobiliarioConceptosSeeder, TiposDocumentosSeeder, PasosCapturaSeeder, AsignaturasSeeder, CargosPuestosSeeder, PerfilesProfesionalesSeeder, ReglasValidacionSeeder — all wired in DatabaseSeeder.
 
 ## Architecture
 
@@ -68,37 +68,52 @@ Domain-first / modular-monolith `app/` layout — **not** the Controllers/Servic
 ```
 app/
 ├── Domain/            # framework-agnostic business rules, per bounded concern
-│   └── Validaciones/
-│       └── Engine/     # Motor de Validación de Capacidad Instalada — the most
-│                        # business-critical piece; new rules must plug in here,
-│                        # not get scattered across Livewire/Filament/observers
-├── Infrastructure/     # concrete implementations of things the domain needs
-│   ├── Pdf/            # Formato de Solicitud PDF generation (dompdf)
-│   └── Documentos/     # document/checklist handling
+│   ├── Personal/
+│   └── Validaciones/  # Motor de Validación de Capacidad Instalada
+│       ├── Engine/    # (Validaciones-specific rules plugged here, not scattered)
+│       └── Regla/
+├── Application/       # transactional use cases (one Action per operation), DTOs,
+│   │                  # ownership decision classes; called by Livewire/Http,
+│   │                  # never the reverse (per ADR-001 frontera-de-capas)
+│   ├── Documentos/
+│   ├── EscuelaNiveles/
+│   ├── Escuelas/
+│   ├── Infraestructura/
+│   ├── Inmueble/
+│   ├── Mobiliario/
+│   ├── Preregistro/
+│   └── ResponsableLegal/
+├── Infrastructure/    # concrete implementations the domain depends on
+│   ├── Documentos/    # document/checklist handling
+│   └── Pdf/           # Formato de Solicitud PDF generation (dompdf)
 ├── Http/
 │   └── Controllers/
-├── Livewire/           # Livewire components — presentation only, thin: a
-│   ├── Actions/         # component method should call into Domain/Infrastructure,
-│   ├── Forms/            # not contain the business logic itself
-│   └── Tramite/          # the incorporation wizard (Paso1Preregistro,
-│                          # Paso2Responsable, Paso3/{Inmueble,Infraestructura,
-│                          # Mobiliario,PlanEstudios,PlantillaDocente,Matricula})
+├── Livewire/          # Livewire components — presentation only, thin:
+│   ├── Actions/       # component method should call into Application/,
+│   ├── Forms/         # not contain business logic; never import Domain directly
+│   └── Tramite/       # wizard page components: Paso1Preregistro, Paso2Documentos,
+│                      # Paso2Responsable, Paso3/{DatosInmueble,
+│                      # InfraestructuraNivel,MobiliarioNivel,PlanEstudios,
+│                      # PlantillaDocente,Matricula}, Paso3ProximosPasos
 ├── Filament/
-│   └── Resources/      # SEDEQ admin panel (id: 'admin', path: /admin)
-├── Models/
+│   └── Resources/     # SEDEQ admin panel (id: 'admin', path: /admin)
+├── Models/            # Eloquent persistence layer (25 models)
+├── Policies/          # authorization policies (2 policies)
+├── View/
+│   └── Components/    # reusable Blade components (3)
 └── Providers/
 ```
 
 Rules for this layout (from the architecture doc, already applied — keep following them for new code):
 
-- New business logic goes in `app/Domain/<Concern>/`, not in a Livewire method body or a Filament Resource. Only create a new `Domain/<Concern>/` folder when its first real Action/Service is written — don't pre-scaffold empty domain folders for concerns that don't have code yet, even though the eventual domain list is large (Expedientes, Documentos, Validaciones, Planteles, Escuelas, Personal, Matricula, Infraestructura, Mobiliario, Seguridad).
+- Transactional use cases and orchestration go in `app/Application/<Feature>/` (per ADR-001); pure business rules go in `app/Domain/<Concern>/`. Only create a new folder when its first real Action/Service is written — don't pre-scaffold empty folders for concerns that don't have code yet.
 - `app/Infrastructure/` holds concrete implementations the domain depends on (storage, PDF, notifications, external integrations) — the domain should not know infrastructure details.
 - Eloquent models are persistence, not business logic — don't let them grow into God objects with validation/calculation/transactional flow baked in.
 - Single Laravel app / single repo is the deliberate choice (confirmed via architecture review, see `docs/progress.md` Decisions Log) — no independent deploy needs, one DB as shared contract. Don't introduce microservices or split repos preemptively; only if real scaling/team-isolation needs appear later.
 - As of this writing, `app/Services/*` (Domain root was `app/Domain/Validacion/`) is the **old** location — code has since moved to `app/Infrastructure/*`, `app/Domain/Validaciones/Engine/`. If you see references to the old paths anywhere (docs, comments), they're stale.
 - Livewire components live under `app/Livewire/`, Livewire 3's own auto-discovered convention — **not** `app/Http/Livewire/`. They briefly lived under `app/Http/Livewire/` (2026-09-03 to 2026-09-08); that path broke every Livewire AJAX round-trip with a misleading "page expired" 419, because Livewire's `ComponentRegistry` looks a component up by a name it auto-derives from the class's namespace, and that lookup only resolves under Livewire's own convention. Do not move Livewire components back under `app/Http/` — see `docs/decisions/ADR-003-namespace-livewire.md` and `docs/reports/2026-09-08-namespace-livewire.md` before reconsidering this.
 
-Everything under `app/Domain`, `app/Infrastructure` is currently empty stubs — structure exists ahead of the logic that will fill it in.
+app/Domain and app/Infrastructure are populated: Domain has Personal (RegistroPersonalCompleto) and Validaciones (ValidacionCapacidadService as empty stub, CalculadoraRequerimiento with code). Infrastructure has Documentos and Pdf implementations. ValidacionCapacidadService remains a stub pending specification; all others are working code.
 
 ## Ways of working
 

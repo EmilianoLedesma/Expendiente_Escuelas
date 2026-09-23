@@ -71,3 +71,13 @@ Session Log) encontró que ese diseño no ejecuta en absoluto:
   el diseño de origen de magnitud y composición de reglas sigue abierto en
   `docs/decisions/PENDIENTE-origen-de-magnitud.md`, sin relación con esta
   ADR salvo que ambos alimentan la misma capa `Application/` futura.
+
+## Nota de estado (2026-09-23)
+
+`app/Application/` existe con 8 subdirectorios reales: Documentos, EscuelaNiveles, Escuelas, Infraestructura, Inmueble, Mobiliario, Preregistro, ResponsableLegal. Livewire escribe únicamente a través de estos casos de uso.
+
+La consecuencia "Ningún código de app/Application/ existe todavía" y la mención a `app/Http/Livewire` están obsoletas: los componentes viven en `app/Livewire/` por ADR-003.
+
+La enforcement con PHPat existe en `tests/Architecture/DomainBoundaryTest.php` y `phpstan.neon`, pero cubre solo: `app/Domain` no depende de `Illuminate\*`.
+
+**Advertencia:** El código actual viola "Livewire nunca toca Eloquent" — hay lecturas directas de Eloquent/DB en 6 componentes Livewire (Paso2Documentos, Paso2Responsable, Paso3/DatosInmueble, Paso3/InfraestructuraNivel, Paso3/MobiliarioNivel, Paso3ProximosPasos). ADR-006 (por escribirse en remediación 2026-09-23) lo resolverá; esta nota solo lo señala.

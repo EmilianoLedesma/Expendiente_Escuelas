@@ -8,7 +8,7 @@
 
 <br/><br/>
 
-[![PHP](https://img.shields.io/badge/PHP-8.3-1E3A5F?style=for-the-badge&logo=php&logoColor=F5F0E1)](app-laravel/composer.json)
+[![PHP](https://img.shields.io/badge/PHP-8.4-1E3A5F?style=for-the-badge&logo=php&logoColor=F5F0E1)](app-laravel/composer.json)
 [![Laravel](https://img.shields.io/badge/Laravel-13-C9A227?style=for-the-badge&logo=laravel&logoColor=1E3A5F)](app-laravel/composer.json)
 [![Livewire](https://img.shields.io/badge/Livewire-3-1E3A5F?style=for-the-badge&logo=livewire&logoColor=F5F0E1)](app-laravel/composer.json)
 [![Filament](https://img.shields.io/badge/Filament-4-C9A227?style=for-the-badge&logo=php&logoColor=1E3A5F)](app-laravel/composer.json)
@@ -57,7 +57,7 @@ consistente en cada expediente.
 
 | Capa | Tecnología |
 |:--|:--|
-| **Backend** | `Laravel 13` (PHP 8.3) |
+| **Backend** | `Laravel 13` (PHP 8.4) |
 | **UI reactiva** | `Livewire 3` |
 | **Panel admin** | `Filament 4` (`/admin`) |
 | **Base de datos** | `PostgreSQL 18` |
@@ -115,10 +115,12 @@ Monorepo, app única — sin split en repos/servicios por diseño (una sola
 base de datos como contrato compartido, sin necesidades de despliegue
 independiente).
 
-El DDL de base de datos (`ddl_sistema_incorporacion_v3.sql`) y las
-instrucciones de entorno (`INSTRUCCIONES_SETUP_ENTORNO.md`) viven
-localmente en `docs/` pero están excluidos del repositorio (ver
-`.gitignore`) — solicítalos al equipo si los necesitas.
+El DDL de base de datos (`ddl_sistema_incorporacion_v3.sql`) es una referencia
+local únicamente, no versionada (ignorado en `.gitignore` como `*.sql`). El esquema
+es ejecutable a través de las migraciones en `app-laravel/database/migrations/2026_01_01_*`,
+que son la fuente de verdad en el repositorio. Las instrucciones de entorno
+(`INSTRUCCIONES_SETUP_ENTORNO.md`) viven localmente en `docs/` pero están excluidas
+del repositorio — solicítalas al equipo si las necesitas.
 
 <br/>
 
@@ -139,6 +141,10 @@ no versionado — solicítalo al equipo).
 <br/>
 
 ## Tests
+
+La suite de tests se ejecuta contra la base de datos PostgreSQL `sedeq_incorporacion_testing`
+(ver `app-laravel/phpunit.xml` y `app-laravel/.env.testing`); se requiere que PostgreSQL
+esté disponible.
 
 ```bash
 cd app-laravel
