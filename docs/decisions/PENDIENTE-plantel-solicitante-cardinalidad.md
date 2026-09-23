@@ -119,3 +119,5 @@ distintos, eso requerirá un mecanismo explícito (por ejemplo, invitación o
 vinculación autorizada por el titular, con su propio control de acceso a
 `documentos_plantel`), no retirar esta compuerta. **La pregunta de cardinalidad
 de este documento sigue abierta.**
+
+**Dato heredado (2026-09-23):** una consulta de solo lectura a la base de desarrollo halló 1 plantel con escuelas de más de un solicitante; sigue pasando la compuerta y ambos dueños pueden leer/sobrescribir los documentos del plantel del otro. Requiere decisión de limpieza del dueño (reasignar o separar el plantel) antes de producción.

@@ -69,3 +69,7 @@ con la misma forma (`VerificarPropietarioEscuelaNivel` +
 con "puede ver" — nota de simplificación MVP dejada en el docblock de
 ambas clases, no resuelta aquí: en cuanto el panel SEDEQ necesite `view`
 sin ser dueño, ambas Policies deben dejar de hacerlo.
+
+## Nota de estado (2026-09-23)
+
+Las rutas del asistente que escriben ahora usan `can:update` (no `can:view`); `view` queda para descarga, PDF y próximos-pasos. `EscuelaPolicy` y `EscuelaNivelPolicy` tienen ambas habilidades, con el mismo chequeo de propiedad, y sus docblocks indican que `view` se abrirá a revisores SEDEQ y que las escrituras no deben depender de él. Reemplaza la nota de simplificación MVP del párrafo de Resolución. Ver `docs/reports/2026-09-23-seguridad-propiedad-y-compuertas.md`.

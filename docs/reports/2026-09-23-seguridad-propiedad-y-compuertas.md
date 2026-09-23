@@ -1,7 +1,7 @@
 # 2026-09-23 — WS-1: seguridad, propiedad y compuertas de flujo
 
 **Rama:** `fix/seguridad-propiedad-y-compuertas`. **Origen:** auditoría externa del 2026-09-23 (brief `docs/superpowers/auditoria/AGENT_BRIEF_remediacion-auditoria-2026-09-23.md`, WS-1).
-**Método:** TDD con las 6 pruebas de regresión del Apéndice A (rojas en `776ffee`, primer commit de la rama), un implementador opus por tarea y un revisor opus por tarea; una ola de correcciones tras la revisión de 1.6/1.7.
+**Método:** TDD con las 6 pruebas de regresión del Apéndice A (rojas sobre la base auditada `776ffee`; primer commit de la rama: `a05dbcc`), un implementador opus por tarea y un revisor opus por tarea; una ola de correcciones tras la revisión de 1.6/1.7.
 
 ## Qué se corrigió
 
@@ -41,3 +41,10 @@ Seguimientos de revisión cerrados: 404 (no 500) si el archivo falta en disco; p
 ## Acciones para el dueño
 
 - Ninguna contra la base de desarrollo en este WS. Las cuentas de desarrollo sin verificar deberán verificar su correo (driver `log`: el enlace queda en `storage/logs`).
+
+## Hallazgos de la revisión final trasladados
+
+- Los casos de uso `RegistrarDatosInmueble`, `RegistrarInfraestructuraNivel`, `RegistrarMobiliarioNivel` y `MarcarPasoCompletado` no validan `EstadoPaso2`/`EstadoPaso3` por sí mismos (solo la compuerta de `mount()` de Livewire); un futuro adaptador de API no la heredaría → WS-2.4 (invariantes en Application).
+- `routes/web.php` conserva un cierre nuevo (redirección de `dashboard`); un controlador invocable es opcional.
+- Plantel con escuelas de dos solicitantes en dev: sigue pasando la compuerta; ambos dueños pueden leer/sobrescribir los documentos del plantel del otro. Decisión de limpieza pendiente del dueño (ver `PENDIENTE-plantel-solicitante-cardinalidad.md`).
+- ADR-002 y ADR-004 citan `can:view` para las páginas del asistente; ahora usan `can:update` (nota de estado añadida en ambos).

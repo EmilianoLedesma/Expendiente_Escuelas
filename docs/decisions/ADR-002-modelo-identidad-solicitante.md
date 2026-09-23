@@ -141,3 +141,5 @@ quedó obsoleta el mismo 2026-09-09: ADR-004 la cerró con `can:view,escuela`
 (`EscuelaPolicy` + `VerificarPropietarioEscuela`), y las rutas de Paso 3 usan
 `can:view,escuelaNivel`. El texto original se conserva arriba sin editar. Verificado contra
 `routes/web.php` en la auditoría de remediación de 2026-09-23.
+
+**Nota adicional (2026-09-23):** las páginas del asistente que escriben usan ahora `can:update`, no `can:view` (ver ADR-004, nota de estado); todo `/tramite/*` exige además correo verificado.
