@@ -116,4 +116,27 @@ class DocumentoDownloadTest extends TestCase
             Route::getRoutes()->getByName('tramite.paso2-documentos.descargar')->getActionName(),
         );
     }
+
+    public function test_el_dueno_descarga_un_documento_de_ambito_plantel(): void
+    {
+        $this->crearEscuela('fisica');
+        $this->capturar('escritura_inmueble', 'CONTENIDO-ESCRITURA');
+        $this->actingAs($this->solicitante->user);
+
+        $response = $this->descargar('escritura_inmueble');
+
+        $response->assertOk();
+        $this->assertSame('CONTENIDO-ESCRITURA', $response->streamedContent());
+    }
+
+    public function test_404_si_el_registro_existe_pero_falta_el_archivo(): void
+    {
+        $this->crearEscuela('fisica');
+        $this->capturar('ine');
+        $disco = Storage::disk('documentos');
+        $disco->delete($disco->allFiles());
+        $this->actingAs($this->solicitante->user);
+
+        $this->descargar('ine')->assertNotFound();
+    }
 }

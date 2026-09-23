@@ -13,8 +13,10 @@ class DescargarDocumentoController
     {
         $ruta = $obtener->ejecutar($escuela->id, $clave);
 
-        abort_if($ruta === null, 404);
+        $disco = Storage::disk('documentos');
 
-        return Storage::disk('documentos')->response($ruta);
+        abort_if($ruta === null || ! $disco->exists($ruta), 404);
+
+        return $disco->response($ruta);
     }
 }
