@@ -80,4 +80,4 @@ La consecuencia "Ningún código de app/Application/ existe todavía" y la menci
 
 La enforcement con PHPat existe en `tests/Architecture/DomainBoundaryTest.php` y `phpstan.neon`, pero cubre solo: `app/Domain` no depende de `Illuminate\*`.
 
-**Advertencia:** El código actual viola "Livewire nunca toca Eloquent" — hay lecturas directas de Eloquent/DB en 5 componentes Livewire. ADR-006 (por escribirse en remediación 2026-09-23) lo resolverá; esta nota solo lo señala.
+**Advertencia:** El código actual viola "Livewire nunca toca Eloquent" — hay lecturas directas de Eloquent/DB en 6 componentes Livewire (Paso2Documentos, Paso2Responsable, Paso3/DatosInmueble, Paso3/InfraestructuraNivel, Paso3/MobiliarioNivel, Paso3ProximosPasos). ADR-006 (por escribirse en remediación 2026-09-23) lo resolverá; esta nota solo lo señala.

@@ -91,7 +91,7 @@ app/
 ├── Livewire/          # Livewire components — presentation only, thin:
 │   ├── Actions/       # component method should call into Application/,
 │   ├── Forms/         # not contain business logic; never import Domain directly
-│   └── Tramite/       # wizard: Paso1Preregistro, Paso2Documentos,
+│   └── Tramite/       # wizard page components: Paso1Preregistro, Paso2Documentos,
 │                      # Paso2Responsable, Paso3/{DatosInmueble,
 │                      # InfraestructuraNivel,MobiliarioNivel,PlanEstudios,
 │                      # PlantillaDocente,Matricula}, Paso3ProximosPasos
