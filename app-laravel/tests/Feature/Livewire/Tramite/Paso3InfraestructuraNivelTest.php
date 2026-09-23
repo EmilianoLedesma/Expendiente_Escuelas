@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -14,10 +15,12 @@ use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class Paso3InfraestructuraNivelTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Solicitante $solicitante;
@@ -37,6 +40,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->solicitante = Solicitante::factory()->create();
         $this->plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $this->plantel->id, 'solicitante_id' => $this->solicitante->id]);
+        $this->completarPaso2($this->escuela->id);
     }
 
     private function escuelaNivel(string $claveNivel): EscuelaNivel
@@ -44,12 +48,16 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $this->escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-1.3: Infraestructura solo es alcanzable con Inmueble completado.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+
+        return $escuelaNivel;
     }
 
     private function idTipo(string $clave): int

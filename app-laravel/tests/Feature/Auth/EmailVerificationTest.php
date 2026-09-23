@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Livewire\Volt\Volt;
 use Tests\TestCase;
 
 class EmailVerificationTest extends TestCase
@@ -40,7 +42,7 @@ class EmailVerificationTest extends TestCase
 
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+        $response->assertRedirect(route('tramite.preregistro', absolute: false).'?verified=1');
     }
 
     public function test_email_is_not_verified_with_invalid_hash(): void
@@ -56,5 +58,41 @@ class EmailVerificationTest extends TestCase
         $this->actingAs($user)->get($verificationUrl);
 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_unverified_user_is_sent_from_the_tramite_to_the_verification_notice(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)->get('/tramite/preregistro')
+            ->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_verified_user_reaches_the_tramite(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/tramite/preregistro')->assertOk();
+    }
+
+    public function test_every_tramite_route_requires_a_verified_email(): void
+    {
+        $rutas = collect(Route::getRoutes()->getRoutes())
+            ->filter(fn ($ruta) => str_starts_with($ruta->uri(), 'tramite/'));
+
+        $this->assertNotEmpty($rutas);
+        foreach ($rutas as $ruta) {
+            $this->assertContains('verified', $ruta->gatherMiddleware(), $ruta->uri());
+            $this->assertContains('auth', $ruta->gatherMiddleware(), $ruta->uri());
+        }
+    }
+
+    public function test_resend_when_already_verified_goes_to_the_tramite(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Volt::test('pages.auth.verify-email')
+            ->call('sendVerification')
+            ->assertRedirect(route('tramite.preregistro', absolute: false));
     }
 }

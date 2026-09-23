@@ -5,6 +5,7 @@ namespace App\Livewire\Tramite;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
 use App\Application\Preregistro\ListarPlantelesDisponibles;
+use App\Application\Preregistro\PlantelNoDisponible;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -56,6 +57,12 @@ class Paso1Preregistro extends Component
         ];
     }
 
+    /** Mismo texto que PlantelNoDisponible: no revelar si el plantel existe para otro solicitante. */
+    protected function messages(): array
+    {
+        return ['plantelId.exists' => (new PlantelNoDisponible)->getMessage()];
+    }
+
     public function guardar(IniciarTramiteNuevo $iniciarTramiteNuevo): void
     {
         $this->validate();
@@ -76,6 +83,10 @@ class Paso1Preregistro extends Component
 
         try {
             $resultado = $iniciarTramiteNuevo->ejecutar($dto, auth()->user()->solicitante->getKey());
+        } catch (PlantelNoDisponible $e) {
+            $this->addError('plantelId', $e->getMessage());
+
+            return;
         } catch (InvalidArgumentException $e) {
             $this->addError('bifurcacion', $e->getMessage());
 

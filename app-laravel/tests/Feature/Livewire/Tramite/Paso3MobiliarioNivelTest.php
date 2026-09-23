@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -14,10 +15,12 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class Paso3MobiliarioNivelTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuelaNivel(Solicitante $solicitante, string $claveNivel): EscuelaNivel
@@ -28,15 +31,21 @@ class Paso3MobiliarioNivelTest extends TestCase
 
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-1.3: Mobiliario solo es alcanzable con Infraestructura completada.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
+
+        return $escuelaNivel;
     }
 
     public function test_inicial_ve_las_cinco_salas_y_el_grupo_de_usos_multiples(): void

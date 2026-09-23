@@ -5,6 +5,7 @@ namespace App\Livewire\Tramite\Paso3;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
+use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
@@ -39,6 +40,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class InfraestructuraNivel extends Component
 {
+    use CompuertaPaso3;
+
     private const SANITARIOS_INICIAL = ['alumnado_maternal', 'personal'];
 
     private const SANITARIOS_BASICA = ['alumnado_masculino', 'alumnado_femenino', 'personal_masculino', 'personal_femenino'];
@@ -67,6 +70,11 @@ class InfraestructuraNivel extends Component
     public function mount(EscuelaNivel $escuelaNivel, InfraestructuraYaCapturada $yaCapturada): void
     {
         $this->escuelaNivel = $escuelaNivel;
+
+        if ($this->redirigirSiNoAlcanzable($escuelaNivel, 'infraestructura')) {
+            return;
+        }
+
         $this->tiposCapturados = $yaCapturada->tiposCapturados($this->plantelId());
         $this->categoriasCapturadas = $yaCapturada->categoriasCapturadas($this->plantelId());
 

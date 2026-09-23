@@ -6,6 +6,7 @@ use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
+use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoPlantel;
@@ -21,6 +22,10 @@ use Livewire\Component;
  * RegistrarDatosInmueble es la única escritura (ADR-001); el auto-completado
  * multi-nivel pasa por MarcarPasoCompletado.
  *
+ * Ese auto-completado es en GET: solo corre DESPUÉS de CompuertaPaso3 (Paso 2
+ * completo; Inmueble es el primer sub-paso, así que la precondición de orden
+ * siempre se cumple). Es idempotente (updateOrInsert).
+ *
  * Los datos de Paso 2.2 (escritura del inmueble, constancia de seguridad
  * estructural) y la terna de nombres de Paso 2.1 se muestran como texto
  * plano de solo lectura, solo para contexto. Es el primer caso de
@@ -33,6 +38,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class DatosInmueble extends Component
 {
+    use CompuertaPaso3;
+
     public EscuelaNivel $escuelaNivel;
 
     public float|int|string $metrosTotales = '';
@@ -67,6 +74,10 @@ class DatosInmueble extends Component
         MarcarPasoCompletado $marcarPasoCompletado,
     ): void {
         $this->escuelaNivel = $escuelaNivel;
+
+        if ($this->redirigirSiNoAlcanzable($escuelaNivel, 'inmueble')) {
+            return;
+        }
 
         // Auto-completado multi-nivel (spec §6): los datos son del plantel y ya
         // están capturados, así que este nivel no tiene nada que capturar aquí.

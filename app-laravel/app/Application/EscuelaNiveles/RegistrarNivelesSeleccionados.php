@@ -2,6 +2,8 @@
 
 namespace App\Application\EscuelaNiveles;
 
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso2;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,9 @@ use InvalidArgumentException;
  */
 class RegistrarNivelesSeleccionados
 {
+    public function __construct(private readonly EstadoPaso2 $estadoPaso2) {}
+
+    /** @throws PrecondicionIncumplida si Paso 2 (responsable + documentos vigentes) no está completo. */
     public function ejecutar(int $escuelaId, array $nivelesEducativosIds): void
     {
         if ($nivelesEducativosIds === []) {
@@ -24,6 +29,13 @@ class RegistrarNivelesSeleccionados
         $permitidos = NivelEducativo::educacionBasica()->pluck('id')->all();
         if (array_diff($nivelesEducativosIds, $permitidos) !== []) {
             throw new InvalidArgumentException('Nivel educativo fuera de Educación Básica.');
+        }
+
+        // WS-1.2: sin esto, seleccionar niveles justo después de Paso 1 creaba
+        // escuela_niveles sin responsable ni documentos y saltaba Paso 2 entero.
+        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el responsable legal y los documentos (Paso 2) antes de seleccionar niveles.');
         }
 
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');

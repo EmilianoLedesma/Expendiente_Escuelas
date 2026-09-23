@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
+use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class FormatoSolicitudPdfTest extends TestCase
@@ -43,5 +45,13 @@ class FormatoSolicitudPdfTest extends TestCase
         $response = $this->get(route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]));
 
         $response->assertForbidden();
+    }
+
+    public function test_la_ruta_la_atiende_un_controlador_no_un_closure(): void
+    {
+        $this->assertSame(
+            FormatoSolicitudPdfController::class,
+            Route::getRoutes()->getByName('tramite.paso2-documentos.formato-solicitud')->getActionName(),
+        );
     }
 }

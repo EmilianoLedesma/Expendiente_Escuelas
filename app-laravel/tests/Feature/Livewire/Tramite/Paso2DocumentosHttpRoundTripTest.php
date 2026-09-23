@@ -28,4 +28,16 @@ class Paso2DocumentosHttpRoundTripTest extends TestCase
         $response->assertOk();
         $response->assertSeeLivewire('tramite.paso2-documentos');
     }
+
+    public function test_sin_responsable_redirige_a_paso2_en_vez_de_404(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+
+        $response = $this->actingAs($solicitante->user)->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+
+        $response->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+    }
 }

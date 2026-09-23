@@ -61,4 +61,35 @@ class Paso1PreregistroHttpRoundTripTest extends TestCase
 
         $response->assertOk();
     }
+
+    /**
+     * `verified` debe re-aplicarse en POST /livewire/update (middleware persistente
+     * de Livewire), no solo en el GET inicial: un usuario cuyo correo deja de estar
+     * verificado no puede reenviar el snapshot y llegar a `guardar`.
+     */
+    public function test_un_usuario_no_verificado_no_puede_guardar_por_livewire_update(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $user = $solicitante->user;
+
+        $html = $this->actingAs($user)->get('/tramite/preregistro')->assertOk()->getContent();
+        preg_match('/wire:snapshot="([^"]*)"/', $html, $match);
+        $this->assertNotEmpty($match, 'No se encontró wire:snapshot en la página.');
+
+        $update = fn () => $this->withHeaders(['X-Livewire' => 'true'])->postJson('/livewire/update', [
+            'components' => [[
+                'snapshot' => html_entity_decode($match[1]),
+                'updates' => ['calle' => 'Av. Reforma 100', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigoPostal' => '76000'],
+                'calls' => [['path' => '', 'method' => 'guardar', 'params' => []]],
+            ]],
+        ]);
+
+        $user->forceFill(['email_verified_at' => null])->save();
+        $update()->assertForbidden();
+        $this->assertDatabaseCount('escuelas', 0);
+
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $update()->assertOk();
+        $this->assertDatabaseCount('escuelas', 1);
+    }
 }

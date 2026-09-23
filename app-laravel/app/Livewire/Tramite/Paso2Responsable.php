@@ -2,11 +2,11 @@
 
 namespace App\Livewire\Tramite;
 
-use App\Application\Documentos\DocumentosCompletos;
-use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
+use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
 use App\Livewire\Forms\PersonaMoralForm;
@@ -18,6 +18,7 @@ use App\Models\PersonaMoral;
 use App\Models\ResponsableLegal;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -31,6 +32,8 @@ class Paso2Responsable extends Component
 {
     public Escuela $escuela;
 
+    /** Estado del servidor, no del cliente: un $set('fase') forjado saltaba a 'niveles' (WS-1.2). */
+    #[Locked]
     public string $fase = 'responsable';
 
     public string $tipoPersona = 'fisica';
@@ -68,9 +71,27 @@ class Paso2Responsable extends Component
      */
     public array $responsableCapturado = [];
 
-    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
+    public function mount(Escuela $escuela, EstadoPaso2 $estadoPaso2): void
     {
         $this->escuela = $escuela;
+
+        // EstadoPaso2 va ANTES del salto a Paso 3: una escuela_niveles creada
+        // sin Paso 2 completo (bypass previo a WS-1.2) no debe atorar al
+        // usuario en Paso 3 — vuelve a la etapa que le falta. Una vigencia
+        // vencida también es incompletitud: 2.2 vuelve a pedir el documento.
+        $etapaFaltante = $estadoPaso2->etapaFaltante($escuela->id);
+
+        if ($etapaFaltante === EstadoPaso2::RESPONSABLE) {
+            $this->fase = 'responsable';
+
+            return;
+        }
+
+        if ($etapaFaltante === EstadoPaso2::DOCUMENTOS) {
+            $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $escuela->id]);
+
+            return;
+        }
 
         if ($escuela->escuelaNiveles()->exists()) {
             $this->redirectRoute('tramite.paso3-inmueble', [
@@ -80,25 +101,8 @@ class Paso2Responsable extends Component
             return;
         }
 
-        $responsableLegal = ResponsableLegal::where('escuela_id', $escuela->id)->first();
-
-        if ($responsableLegal !== null) {
-            // Una vigencia vencida es incompletitud, no un callejón sin salida:
-            // 2.2 vuelve a pedir el documento infractor.
-            if (! $documentosCompletos->paraEscuela($escuela->id, $responsableLegal->tipo_persona)
-                || $validarVigencia->ejecutar($escuela->id) !== []) {
-                $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $escuela->id]);
-
-                return;
-            }
-
-            $this->responsableCapturado = $this->resumenResponsable($responsableLegal);
-            $this->fase = 'niveles';
-
-            return;
-        }
-
-        $this->fase = 'responsable';
+        $this->responsableCapturado = $this->resumenResponsable(ResponsableLegal::where('escuela_id', $escuela->id)->firstOrFail());
+        $this->fase = 'niveles';
     }
 
     /** @return array{tipo: string, nombre: ?string, domicilio: ?string} */
@@ -117,7 +121,7 @@ class Paso2Responsable extends Component
         ];
     }
 
-    public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal, DocumentosCompletos $documentosCompletos): void
+    public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal, EstadoPaso2 $estadoPaso2): void
     {
         $this->validate([
             'tipoPersona' => ['required', 'in:fisica,fisica_con_gestor,moral'],
@@ -167,10 +171,10 @@ class Paso2Responsable extends Component
             gestorFechaPoder: $this->gestorForm->fechaPoder !== '' ? $this->gestorForm->fechaPoder : null,
         ));
 
-        // Mismo gate que mount() ya aplica en una visita posterior — aplicado aquí
-        // también, porque antes de esto guardarResponsable() saltaba directo a
+        // Mismo gate que mount() (EstadoPaso2: completitud Y vigencia) — aplicado
+        // aquí también, porque antes guardarResponsable() saltaba directo a
         // 'niveles' sin pasar por Documentos (Paso 2.2) en la misma visita.
-        if (! $documentosCompletos->paraEscuela($this->escuela->id, $this->tipoPersona)) {
+        if ($estadoPaso2->etapaFaltante($this->escuela->id) !== null) {
             $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $this->escuela->id]);
 
             return;
@@ -188,6 +192,12 @@ class Paso2Responsable extends Component
 
         try {
             $registrarNivelesSeleccionados->ejecutar($this->escuela->id, $this->nivelesSeleccionados);
+        } catch (PrecondicionIncumplida $e) {
+            // mount() de /tramite/paso2 re-deriva la etapa faltante y manda al
+            // formulario de responsable o a Documentos según corresponda.
+            $this->redirectRoute($e->etapaFaltante === EstadoPaso2::DOCUMENTOS ? 'tramite.paso2-documentos' : 'tramite.paso2', ['escuela' => $this->escuela->id]);
+
+            return;
         } catch (InvalidArgumentException $e) {
             $this->addError('nivelesSeleccionados', $e->getMessage());
 

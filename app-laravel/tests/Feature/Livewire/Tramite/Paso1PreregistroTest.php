@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire\Tramite;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\DTO\ResultadoPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
+use App\Application\Preregistro\PlantelNoDisponible;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Models\Solicitante;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -77,5 +78,25 @@ class Paso1PreregistroTest extends TestCase
             ->set('plantelId', null)
             ->call('guardar')
             ->assertHasErrors(['plantelId']);
+    }
+
+    /** Plantel ajeno e inexistente deben verse igual: no filtrar qué planteles existen. */
+    public function test_plantel_ajeno_e_inexistente_dan_el_mismo_error_en_plantel_id(): void
+    {
+        $ajeno = app(IniciarTramiteNuevo::class)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'nuevo', calle: 'Calle', colonia: 'Col', municipio: 'Querétaro', codigoPostal: '76000',
+        ), Solicitante::factory()->create()->id);
+        $this->actingAs(Solicitante::factory()->create()->user);
+        $mensaje = (new PlantelNoDisponible)->getMessage();
+
+        foreach ([$ajeno->plantelId, 999999] as $plantelId) {
+            Livewire::test(Paso1Preregistro::class)
+                ->set('bifurcacion', 'existente')
+                ->set('plantelId', $plantelId)
+                ->call('guardar')
+                ->assertHasErrors(['plantelId'])
+                ->assertHasNoErrors(['bifurcacion'])
+                ->assertSee($mensaje);
+        }
     }
 }

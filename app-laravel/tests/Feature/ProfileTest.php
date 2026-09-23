@@ -98,4 +98,13 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_resend_verification_when_already_verified_goes_to_the_tramite(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Volt::test('profile.update-profile-information-form')
+            ->call('sendVerification')
+            ->assertRedirect(route('tramite.preregistro', absolute: false));
+    }
 }

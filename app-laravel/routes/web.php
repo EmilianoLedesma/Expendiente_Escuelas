@@ -1,6 +1,7 @@
 <?php
 
-use App\Infrastructure\Pdf\FormatoSolicitudPdf;
+use App\Http\Controllers\Tramite\DescargarDocumentoController;
+use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
@@ -8,57 +9,39 @@ use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Livewire\Tramite\Paso3ProximosPasos;
-use App\Models\DocumentoEscuela;
-use App\Models\DocumentoPlantel;
-use App\Models\Escuela;
-use App\Models\TipoDocumento;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 
 Route::view('/', 'welcome');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/preregistro', Paso1Preregistro::class)->name('tramite.preregistro');
 
     Route::get('/tramite/paso2/{escuela}', Paso2Responsable::class)
-        ->middleware('can:view,escuela')
+        ->middleware('can:update,escuela')
         ->name('tramite.paso2');
 
     Route::get('/tramite/paso2/{escuela}/documentos', Paso2Documentos::class)
-        ->middleware('can:view,escuela')
+        ->middleware('can:update,escuela')
         ->name('tramite.paso2-documentos');
 
-    Route::get('/tramite/paso2/{escuela}/documentos/formato-solicitud.pdf', function (Escuela $escuela, FormatoSolicitudPdf $pdf) {
-        return $pdf->generar($escuela);
-    })
+    Route::get('/tramite/paso2/{escuela}/documentos/formato-solicitud.pdf', FormatoSolicitudPdfController::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.formato-solicitud');
 
-    Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', function (Escuela $escuela, string $clave) {
-        $tipo = TipoDocumento::where('clave', $clave)->firstOrFail();
-        $ownerId = $tipo->ambito === 'plantel' ? $escuela->plantel_id : $escuela->id;
-
-        $documento = $tipo->ambito === 'plantel'
-            ? DocumentoPlantel::where('plantel_id', $ownerId)->where('tipo_documento_id', $tipo->id)->first()
-            : DocumentoEscuela::where('escuela_id', $ownerId)->where('tipo_documento_id', $tipo->id)->first();
-
-        abort_if($documento === null, 404);
-
-        return Storage::disk('documentos')->response($documento->archivo_path);
-    })
+    Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', DescargarDocumentoController::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.descargar');
 
     Route::get('/tramite/paso3/{escuelaNivel}', DatosInmueble::class)
-        ->middleware('can:view,escuelaNivel')
+        ->middleware('can:update,escuelaNivel')
         ->name('tramite.paso3-inmueble');
 
     Route::get('/tramite/paso3/{escuelaNivel}/infraestructura', InfraestructuraNivel::class)
-        ->middleware('can:view,escuelaNivel')
+        ->middleware('can:update,escuelaNivel')
         ->name('tramite.paso3-infraestructura');
 
     Route::get('/tramite/paso3/{escuelaNivel}/mobiliario', MobiliarioNivel::class)
-        ->middleware('can:view,escuelaNivel')
+        ->middleware('can:update,escuelaNivel')
         ->name('tramite.paso3-mobiliario');
 
     Route::get('/tramite/paso3/{escuelaNivel}/proximos-pasos', Paso3ProximosPasos::class)
@@ -66,8 +49,9 @@ Route::middleware('auth')->group(function () {
         ->name('tramite.paso3-proximos-pasos');
 });
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
+// Breeze views still link to 'dashboard'; it only routes by role (WS-1.7).
+Route::get('dashboard', fn () => redirect(auth()->user()->hasRole('sedeq') ? '/admin' : route('tramite.preregistro')))
+    ->middleware('auth')
     ->name('dashboard');
 
 Route::view('profile', 'profile')

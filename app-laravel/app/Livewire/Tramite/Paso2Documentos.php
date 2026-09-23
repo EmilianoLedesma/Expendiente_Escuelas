@@ -6,6 +6,7 @@ use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
+use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
@@ -45,9 +46,18 @@ class Paso2Documentos extends Component
 
     public AcreditacionOcupacionForm $acreditacionForm;
 
-    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia): void
+    public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, EstadoPaso2 $estadoPaso2): void
     {
         $this->escuela = $escuela;
+
+        // Sin responsable no hay tipo_persona con qué armar la checklist:
+        // se manda a capturarlo en vez de responder 404.
+        if (! $estadoPaso2->responsableCapturado($escuela->id)) {
+            $this->redirectRoute('tramite.paso2', ['escuela' => $escuela->id]);
+
+            return;
+        }
+
         $tipoPersona = $this->tipoPersona();
         $pendientes = $documentosCompletos->clavesPendientes($escuela->id, $tipoPersona);
 
