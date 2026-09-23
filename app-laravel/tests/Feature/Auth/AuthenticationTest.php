@@ -80,7 +80,7 @@ class AuthenticationTest extends TestCase
 
         $this->actingAs($user);
 
-        $response = $this->get('/dashboard');
+        $response = $this->get('/profile');
 
         $response
             ->assertOk()
@@ -124,5 +124,21 @@ class AuthenticationTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('action="'.route('logout').'"', false);
+    }
+
+    public function test_dashboard_redirects_solicitantes_to_the_tramite(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/dashboard')
+            ->assertRedirect(route('tramite.preregistro'));
+    }
+
+    public function test_dashboard_redirects_sedeq_users_to_the_admin_panel(): void
+    {
+        Role::create(['name' => 'sedeq', 'guard_name' => 'web']);
+        $user = User::factory()->unverified()->create();
+        $user->assignRole('sedeq');
+
+        $this->actingAs($user)->get('/dashboard')->assertRedirect('/admin');
     }
 }

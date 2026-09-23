@@ -49,8 +49,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('tramite.paso3-proximos-pasos');
 });
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
+// Breeze views still link to 'dashboard'; it only routes by role (WS-1.7).
+Route::get('dashboard', fn () => redirect(auth()->user()->hasRole('sedeq') ? '/admin' : route('tramite.preregistro')))
+    ->middleware('auth')
     ->name('dashboard');
 
 Route::view('profile', 'profile')
