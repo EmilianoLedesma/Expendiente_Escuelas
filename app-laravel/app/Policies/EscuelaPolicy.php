@@ -7,13 +7,14 @@ use App\Models\Escuela;
 use App\Models\User;
 
 /**
- * Nota de simplificación MVP: `view` hoy es idéntico a "es dueño" —
- * correcto mientras el único consumidor de esta Policy es el wizard del
- * solicitante. En cuanto el panel SEDEQ (Etapa 2, revisor) necesite
- * `view` sin ser dueño, esta Policy debe dejar de conflar ambos casos
- * (p. ej. `view` permite dueño O rol `sedeq`; `update` sigue exigiendo
- * dueño). No implementado aquí a propósito — el panel Filament no
- * consume esta Policy todavía.
+ * `update` autoriza toda página que escribe (Paso 2 responsable y
+ * documentos) y es SOLO del dueño. `view` autoriza lectura pura (descarga
+ * de documento, PDF del Formato de Solicitud) y hoy también es solo dueño,
+ * pero es la habilidad que deberá abrirse a revisores SEDEQ (Etapa 2:
+ * dueño O rol `sedeq`) — por eso ninguna ruta que escribe puede usar
+ * `view`: abrir `view` nunca debe abrir escrituras. No abierto aquí a
+ * propósito — el panel Filament no consume esta Policy todavía. Ambas
+ * delegan en VerificarPropietarioEscuela, sin reimplementar la comparación.
  */
 class EscuelaPolicy
 {

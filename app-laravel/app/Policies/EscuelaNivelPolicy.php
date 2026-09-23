@@ -7,18 +7,29 @@ use App\Models\EscuelaNivel;
 use App\Models\User;
 
 /**
- * Nota de simplificación MVP (misma que EscuelaPolicy, repetida aquí a
- * propósito para que quien lea esta clase de forma aislada la vea sin
- * tener que ir a buscar la otra primero): `view` hoy equivale a "es dueño
- * de la escuela padre" — correcto mientras el único consumidor es el
- * wizard del solicitante; deberá dejar de conflar ambos casos en cuanto
- * el panel SEDEQ necesite `view` sin ser dueño.
+ * Misma semántica que EscuelaPolicy (repetida aquí a propósito para quien
+ * lea esta clase aislada): `update` autoriza toda página que escribe y es
+ * SOLO del dueño de la escuela padre. `view` autoriza lectura pura y hoy
+ * también es solo dueño, pero es la habilidad que deberá abrirse a
+ * revisores SEDEQ — por eso ninguna ruta que escribe puede usar `view`:
+ * abrir `view` nunca debe abrir escrituras. Ambas delegan en
+ * VerificarPropietarioEscuelaNivel, sin reimplementar la comparación.
  */
 class EscuelaNivelPolicy
 {
     public function __construct(private readonly VerificarPropietarioEscuelaNivel $verificar) {}
 
     public function view(User $user, EscuelaNivel $escuelaNivel): bool
+    {
+        return $this->esDueno($user, $escuelaNivel);
+    }
+
+    public function update(User $user, EscuelaNivel $escuelaNivel): bool
+    {
+        return $this->esDueno($user, $escuelaNivel);
+    }
+
+    private function esDueno(User $user, EscuelaNivel $escuelaNivel): bool
     {
         if ($user->solicitante === null) {
             return false;
