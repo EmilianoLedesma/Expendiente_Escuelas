@@ -8,7 +8,6 @@ use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\DatabaseSeeder;
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -24,26 +23,33 @@ class Paso3RequierePaso2CompletoTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const RUTAS_PASO3 = [
+        'tramite.paso3-inmueble',
+        'tramite.paso3-infraestructura',
+        'tramite.paso3-mobiliario',
+        'tramite.paso3-proximos-pasos',
+    ];
+
     /**
-     * Derivado del router, no de una lista a mano: una página nueva de Paso 3
-     * que olvide la compuerta hace fallar este test. Los data providers corren
-     * antes de setUp(), así que arrancan su propia instancia de la app.
+     * Lista estática: arrancar la app dentro de un data provider instala los
+     * manejadores globales de errores de Laravel y vuelve "risky" a toda la suite.
      *
      * @return array<string, array{string}>
      */
     public static function rutasPaso3(): array
     {
-        $app = require dirname(__DIR__, 4).'/bootstrap/app.php';
-        $app->make(Kernel::class)->bootstrap();
+        return array_combine(self::RUTAS_PASO3, array_map(fn ($r) => [$r], self::RUTAS_PASO3));
+    }
 
-        $rutas = [];
-        foreach (array_keys($app['router']->getRoutes()->getRoutesByName()) as $nombre) {
-            if (str_starts_with($nombre, 'tramite.paso3-')) {
-                $rutas[$nombre] = [$nombre];
-            }
-        }
+    /** Una página nueva de Paso 3 que no se agregue a la lista (y a la compuerta) hace fallar este test. */
+    public function test_la_lista_cubre_todas_las_rutas_paso3_del_router(): void
+    {
+        $delRouter = array_values(array_filter(
+            array_keys(app('router')->getRoutes()->getRoutesByName()),
+            fn ($nombre) => str_starts_with($nombre, 'tramite.paso3-'),
+        ));
 
-        return $rutas;
+        $this->assertEqualsCanonicalizing($delRouter, self::RUTAS_PASO3);
     }
 
     #[DataProvider('rutasPaso3')]
