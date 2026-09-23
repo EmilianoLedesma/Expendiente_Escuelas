@@ -454,6 +454,23 @@ class Paso2ResponsableTest extends TestCase
         $this->assertDatabaseCount('escuela_niveles', 0);
     }
 
+    /** Handler de PrecondicionIncumplida: guardarNiveles() sin Paso 2 completo manda de vuelta a /tramite/paso2 sin escribir. */
+    public function test_guardar_niveles_con_paso2_incompleto_redirige_a_paso2_sin_escribir(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->assertNoRedirect()
+            ->set('nivelesSeleccionados', [NivelEducativo::where('clave', 'preescolar')->value('id')])
+            ->call('guardarNiveles')
+            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+
+        $this->assertDatabaseCount('escuela_niveles', 0);
+    }
+
     public function test_envio_con_niveles_crea_escuela_niveles_y_redirige(): void
     {
         (new CatalogoMinimoSeeder)->run();

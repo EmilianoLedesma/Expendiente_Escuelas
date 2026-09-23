@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -47,12 +48,16 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $this->escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-1.3: Infraestructura solo es alcanzable con Inmueble completado.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+
+        return $escuelaNivel;
     }
 
     private function idTipo(string $clave): int

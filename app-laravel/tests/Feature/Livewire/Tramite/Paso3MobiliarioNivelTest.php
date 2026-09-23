@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -34,12 +35,17 @@ class Paso3MobiliarioNivelTest extends TestCase
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-1.3: Mobiliario solo es alcanzable con Infraestructura completada.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
+
+        return $escuelaNivel;
     }
 
     public function test_inicial_ve_las_cinco_salas_y_el_grupo_de_usos_multiples(): void

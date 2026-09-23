@@ -20,8 +20,14 @@ use Illuminate\View\Component;
  */
 class Progreso extends Component
 {
-    /** @var array<string, string> clave de pasos_captura => nombre de ruta, solo para los sub-pasos ya construidos. */
-    private const RUTAS_PASO3 = [
+    /**
+     * clave de pasos_captura => nombre de ruta, solo para los sub-pasos ya
+     * construidos. Público: CompuertaPaso3 lo reutiliza para redirigir, así
+     * que hay un solo mapa clave => ruta.
+     *
+     * @var array<string, string>
+     */
+    public const RUTAS_PASO3 = [
         'inmueble' => 'tramite.paso3-inmueble',
         'infraestructura' => 'tramite.paso3-infraestructura',
         'mobiliario' => 'tramite.paso3-mobiliario',

@@ -31,12 +31,18 @@ class Paso3ProximosPasosTest extends TestCase
         $nivel = NivelEducativo::where('clave', 'primaria')->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-1.3: el aterrizaje solo es alcanzable con los sub-pasos construidos completados.
+        foreach (['inmueble', 'infraestructura', 'mobiliario'] as $paso) {
+            (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
+        }
+
+        return $escuelaNivel;
     }
 
     public function test_el_dueno_ve_el_aterrizaje(): void

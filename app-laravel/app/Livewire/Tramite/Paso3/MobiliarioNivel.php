@@ -4,7 +4,7 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
-use App\Livewire\Tramite\Paso3\Concerns\RequierePaso2Completo;
+use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use App\Models\MobiliarioConcepto;
 use App\Models\MobiliarioNivel as MobiliarioNivelModel;
@@ -18,11 +18,16 @@ use Livewire\Component;
  * RegistrarMobiliarioNivel es la única escritura (ADR-001); el salto de los
  * niveles distintos de Inicial pasa por MarcarPasoCompletado, nunca escribe
  * escuela_nivel_pasos desde aquí.
+ *
+ * Ese salto es un auto-completado en GET: solo corre DESPUÉS de la compuerta
+ * de orden (CompuertaPaso3 — Infraestructura completada). Con la precondición
+ * cumplida es idempotente (MarcarPasoCompletado hace updateOrInsert); sin
+ * ella, un GET directo marcaría Mobiliario sin Infraestructura (WS-1.3).
  */
 #[Layout('layouts.tramite')]
 class MobiliarioNivel extends Component
 {
-    use RequierePaso2Completo;
+    use CompuertaPaso3;
 
     public EscuelaNivel $escuelaNivel;
 
@@ -33,7 +38,7 @@ class MobiliarioNivel extends Component
     {
         $this->escuelaNivel = $escuelaNivel;
 
-        if ($this->redirigirSiPaso2Incompleto($escuelaNivel)) {
+        if ($this->redirigirSiNoAlcanzable($escuelaNivel, 'mobiliario')) {
             return;
         }
 

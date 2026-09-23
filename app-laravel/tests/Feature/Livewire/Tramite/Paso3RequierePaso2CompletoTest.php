@@ -8,6 +8,7 @@ use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -23,15 +24,26 @@ class Paso3RequierePaso2CompletoTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @return array<string, array{string}> */
+    /**
+     * Derivado del router, no de una lista a mano: una página nueva de Paso 3
+     * que olvide la compuerta hace fallar este test. Los data providers corren
+     * antes de setUp(), así que arrancan su propia instancia de la app.
+     *
+     * @return array<string, array{string}>
+     */
     public static function rutasPaso3(): array
     {
-        return [
-            'inmueble' => ['tramite.paso3-inmueble'],
-            'infraestructura' => ['tramite.paso3-infraestructura'],
-            'mobiliario' => ['tramite.paso3-mobiliario'],
-            'proximos-pasos' => ['tramite.paso3-proximos-pasos'],
-        ];
+        $app = require dirname(__DIR__, 4).'/bootstrap/app.php';
+        $app->make(Kernel::class)->bootstrap();
+
+        $rutas = [];
+        foreach (array_keys($app['router']->getRoutes()->getRoutesByName()) as $nombre) {
+            if (str_starts_with($nombre, 'tramite.paso3-')) {
+                $rutas[$nombre] = [$nombre];
+            }
+        }
+
+        return $rutas;
     }
 
     #[DataProvider('rutasPaso3')]
