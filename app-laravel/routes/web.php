@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/preregistro', Paso1Preregistro::class)->name('tramite.preregistro');
 
     Route::get('/tramite/paso2/{escuela}', Paso2Responsable::class)
