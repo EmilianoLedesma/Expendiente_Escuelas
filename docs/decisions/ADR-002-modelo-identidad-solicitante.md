@@ -133,3 +133,11 @@ Reporte de sesión con el detalle de ejecución, hallazgos y decisiones tomadas 
   documentación, sin impacto funcional. No corregido (implicaría cirugía de
   historial de git sobre una rama ya fusionada); queda como nota para quien
   decida si vale la pena.
+
+## Nota de estado (2026-09-23)
+
+La consecuencia que afirma que `/tramite/paso2/{escuela}` "no está todavía protegida por dueño"
+quedó obsoleta el mismo 2026-09-09: ADR-004 la cerró con `can:view,escuela`
+(`EscuelaPolicy` + `VerificarPropietarioEscuela`), y las rutas de Paso 3 usan
+`can:view,escuelaNivel`. El texto original se conserva arriba sin editar. Verificado contra
+`routes/web.php` en la auditoría de remediación de 2026-09-23.
