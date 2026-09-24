@@ -382,3 +382,26 @@ Non-obvious calls made during setup that deviated from the PRD/doc as written �
   - Owner-only at the end: push `master`, run listed seeders against dev, refresh the Claude.ai COMPENDIO copy, take SEDEQ questions to SEDEQ.
   - Standing gate: ask before each bounded workstream; stop for approval on the WS-4/5/6 plans.
 - Nothing pushed.
+
+### 2026-09-24 (continued, direct on `master`, no branch) — status checkpoint after WS-3
+- **Dev seeders run by the owner** (the WS-3 owner action). Verified with a read-only SELECT against dev `sedeq_incorporacion`: `reglas_validacion` 32, of which 12 personal rules have `cargo_puesto_id`; `cargos_puestos` 18; `perfiles_profesionales` 89; Inicial now maps to `salon_usos_multiples`/`cocina`/`comedor` (3 rows). Matches the branch exactly. That owner action is closed.
+- **Current state of `master`**: WS-0, WS-1, WS-2 and WS-3 of the audit remediation merged; tests 441/441, Pint clean, PHPStan 0 errors. Local `master` is ahead of `origin/master` (the owner pushes).
+- **UI redesign track (parallel, not part of the audit remediation)**: branch `feat/rediseno-ui`, worktree `.claude/worktrees/rediseno-ui`, driven by teammate agent `rediseno-ui`.
+  - The owner approved the spec (`docs/superpowers/specs/2026-09-24-rediseno-ui-wizard-design.md`) and plan (`docs/superpowers/plans/2026-09-24-rediseno-ui-wizard.md`, 10 tasks, deviations D1–D12); both are gitignored.
+  - Owner answer Q1: completed Responsable/Documentos/Niveles/Inmueble hub rows show "Completado" with no link until WS-7.
+  - Progress: Task 1 (tokens, contrast fixes, global focus/reduced-motion CSS, institutional shell) committed `3ee1567` and review-approved. Tasks 2–10 pending/in progress.
+  - Its tests run against the separate DB `sedeq_incorporacion_testing_ui`.
+  - Browser checks (Task 10) need owner permission.
+  - It gets its own ledger entry at merge; the walkthrough guide gets updated then.
+- **Pending under the current plan (audit remediation)**:
+  1. WS-4 — read-side boundary + ADR-006 (architectural: Opus plan first, owner approval). Recommended to implement after the redesign merges, because both touch the same Livewire components and views.
+  2. WS-5 — documents coverage + Paso 2.4 + rebuilt Formato de Solicitud (plan first; D1–D3).
+  3. WS-6 — Inicial aulas per sala + new migration (plan first; D4).
+  4. WS-7 — "edición hasta el envío" (superset of D8; `PENDIENTE-edicion-hasta-envio.md`).
+  5. WS-8 — Paso 3.4 Plan de estudios (D9).
+  6. WS-9 — decision-dependent docs, consolidated report, SEDEQ question list.
+  - Owner-only at the end: push `master`; refresh the Claude.ai COMPENDIO copy; take the SEDEQ questions to SEDEQ.
+  - Standing gate: ask before each bounded workstream; stop for approval on the WS-4/5/6 plans.
+- **Still-open owner decisions** (unchanged): the shared plantel in dev (`PENDIENTE-plantel-solicitante-cardinalidad.md`); accepting `FormatoSolicitudPdfController` calling Infrastructure directly.
+- **Still-open SEDEQ/architect questions**: EF threshold (≥60 vs >60, capacidad vs matrícula), perfiles for Trabajador Social/Prefecto, grade-conditioned staffing, espacios matrix, magnitude origin.
+- Nothing pushed.
