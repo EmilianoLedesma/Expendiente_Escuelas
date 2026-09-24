@@ -352,3 +352,33 @@ Non-obvious calls made during setup that deviated from the PRD/doc as written �
 - **Mobiliario auto-skip for non-Inicial niveles**: confirmed intended (2026-09-11 MVP scope decision; only Inicial has a seeded `mobiliario_conceptos` catalog).
 - **New scope decision — "edit until submission"** (owner, via two questions): every earlier step shows prefilled, editable forms while the expediente is `en_captura`; plantel domicilio stays read-only (COMPENDIO); edits that invalidate later steps reset them to pending. **Merged into WS-7** (WS-7 becomes "edición hasta el envío", a superset of D8), keeping plan order so it builds on WS-4's Application queries and WS-5's Paso 2.4/new documents. Recorded with open sub-questions (tipo_persona change with uploaded documents, removing a nivel with captured data, terna, what "envío" means since no submit step exists yet, Motor invalidation) in `docs/decisions/PENDIENTE-edicion-hasta-envio.md`.
 - Nothing pushed.
+
+### 2026-09-24 (branch `fix/catalogos-normativos`, merged to `master` at `08812e7`) — audit remediation, WS-3 (normative catalog corrections, seed data only)
+- **Delivered** (Spanish report: `docs/reports/2026-09-24-catalogos-normativos.md`). No schema/migration/DDL change.
+  - **3.1** Inicial now declares `salon_usos_multiples`, `cocina`, `comedor` (`TiposEspaciosSeeder`, `obligatorio=false`); shows up in Paso 3.2 for Inicial.
+  - **3.2** Inicial perfiles "Profesor en Educación Preescolar" (Director Técnico) and "Enfermera" (Responsable de Filtro), source Profesiograma Inicial (B.4); perfiles 87 → 89.
+  - **3.3** Secundaria cargos Trabajador Social + Prefecto (cargos 16 → 18); new `PENDIENTE-perfiles-trabajador-social-prefecto.md` (no profiles defined in the Profesiograma).
+  - **3.4** `ReglasValidacionSeeder`: new rules `{preescolar,primaria,secundaria}.personal.director_tecnico` (ámbito escuela, fuente Profesiograma per nivel) and `inicial.personal.responsable_filtro` (ámbito plantel); reglas 28 → 32; `cargo_puesto_id` resolved by (nivel, nombre) on 12/13 personal rules; `insertOrIgnore` → `upsert` on `clave`; throws if `cargos_puestos` is empty or a named cargo is missing. The one NULL (`secundaria.personal.educacion_fisica`) is structural — EF is an asignatura under Docente Titular and `reglas_validacion` has no asignatura column — documented in the Trabajador Social/Prefecto PENDIENTE.
+  - **3.5** new `PENDIENTE-personal-condicionado-por-grado.md` (Inglés/Computación by grado; 3 options; no rule seeded).
+  - **3.6** EF threshold evidence appended ("capacidad de sesenta alumnos o más", B.4). It contradicts only `preescolar.personal.educacion_fisica` (>60): Primaria's floor/60 already includes 60, and the Secundaria rules come from Acuerdo 255 and aren't covered. No seeded value changed.
+- **Process failures worth remembering**:
+  - Haiku (3.1–3.3) fabricated evidence quotes in `PENDIENTE-matriz-espacios-por-nivel.md` (corrected `e4cfbb2`, redone on Sonnet per policy).
+  - `b187aa4`'s commit message cites COMPENDIO for a Profesiograma fact (history not rewritten; corrected in a seeder comment and the report).
+  - 3.4 initially cited Acuerdos as `fuente` for Básica director técnico (fixed `6a59342` with a red-first test).
+  - The Opus final review found scope/attribution errors in the EF PENDIENTE (fixed `7314405`). Opus then verified every quote on the branch verbatim.
+  - **Lesson: evidence-bearing docs should not go to Haiku.**
+- **Evidence**: 441/441 (1022 assertions), Pint clean, PHPStan 0 errors, re-verified on merged `master`. No dev-DB writes.
+- **Test-DB isolation (new, environment)**: the UI-redesign worktree ran tests concurrently against `sedeq_incorporacion_testing`, and `RefreshDatabase` from both worktrees dropped each other's tables (random `42P01 Undefined table` / deadlock). The owner created `sedeq_incorporacion_testing_ui` (owner `sedeq_app`). The redesign worktree now runs tests with `$env:DB_DATABASE='sedeq_incorporacion_testing_ui'` (`phpunit.xml`'s `<env>` isn't forced, so the env var wins). No tracked file changed.
+- **Owner actions — dev seeders, from `app-laravel/`, in this order**: `php artisan db:seed --class=TiposEspaciosSeeder`, `--class=CargosPuestosSeeder`, `--class=PerfilesProfesionalesSeeder`, `--class=ReglasValidacionSeeder`. Do not run bare `db:seed` (DatabaseSeeder creates `test@example.com`).
+- **Cleanup**: branch deleted, worktree unregistered and its directory removed.
+- **Parallel track (not part of the audit remediation)**: UI redesign on `feat/rediseno-ui` (worktree `.claude/worktrees/rediseno-ui`). The owner approved the spec and plan (both gitignored under `docs/superpowers/`). It is executing subagent-driven; Task 1 is committed (`3ee1567`) and review-approved. It gets its own ledger entry at merge.
+- **Pending under the current plan**:
+  - WS-4 read-side boundary + ADR-006 (plan first).
+  - WS-5 documents coverage + Paso 2.4 + rebuilt Formato (plan first; D1-D3).
+  - WS-6 Inicial aulas per sala + new migration (plan first; D4).
+  - WS-7 "edición hasta el envío" (superset of D8; see `PENDIENTE-edicion-hasta-envio.md`).
+  - WS-8 Paso 3.4 Plan de estudios (D9).
+  - WS-9 decision-dependent docs + consolidated report + SEDEQ question list.
+  - Owner-only at the end: push `master`, run listed seeders against dev, refresh the Claude.ai COMPENDIO copy, take SEDEQ questions to SEDEQ.
+  - Standing gate: ask before each bounded workstream; stop for approval on the WS-4/5/6 plans.
+- Nothing pushed.
