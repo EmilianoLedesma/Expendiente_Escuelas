@@ -29,6 +29,20 @@ class ReglasValidacionSeederTest extends TestCase
         $this->assertDatabaseCount('reglas_validacion', 32);
     }
 
+    /** Director Técnico's obligation for Básica comes from the Profesiogramas (COMPENDIO §5.1), not the Acuerdos (§5.2). */
+    public function test_basica_director_tecnico_rules_cite_the_profesiograma_and_are_per_escuela(): void
+    {
+        $this->seedReglas();
+
+        foreach (['preescolar' => 'Preescolar', 'primaria' => 'Primaria', 'secundaria' => 'Secundaria'] as $clave => $nombre) {
+            $regla = DB::table('reglas_validacion')->where('clave', "{$clave}.personal.director_tecnico")->first();
+
+            $this->assertSame("Profesiograma {$nombre} (SEDEQ, ciclo 2023-2024)", $regla->fuente);
+            $this->assertSame('escuela', $regla->ambito);
+            $this->assertSame('director/escuela', $regla->unidad);
+        }
+    }
+
     public function test_clave_is_unique_and_never_null(): void
     {
         $this->seedReglas();
