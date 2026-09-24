@@ -12,8 +12,10 @@ use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use RuntimeException;
 use Tests\TestCase;
 
 class RegistrarDocumentoTest extends TestCase
@@ -188,5 +190,40 @@ class RegistrarDocumentoTest extends TestCase
 
         $archivosPlantel = Storage::disk('documentos')->allFiles("plantel/{$escuela->plantel_id}");
         $this->assertCount(1, $archivosPlantel, 'no debe quedar un archivo nuevo huérfano');
+    }
+
+    public function test_rollback_de_una_transaccion_externa_que_envuelve_ejecutar_conserva_archivo_y_fila_previos(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento);
+
+        $documentoAntes = DocumentoEscuela::first();
+        $rutaAnterior = $documentoAntes->archivo_path;
+        $bytesAnteriores = Storage::disk('documentos')->get($rutaAnterior);
+
+        try {
+            // RegistrarDocumento::ejecutar() puede correr dentro de una
+            // transacción de un caller externo (p. ej. un caso de uso mayor
+            // o un adaptador de API futuro). Si ese exterior hace rollback,
+            // el archivo previo no debe borrarse: el borrado se difiere con
+            // DB::afterCommit() hasta que la transacción externa confirme de
+            // verdad, no hasta que el DB::transaction() interno de
+            // RegistrarDocumento termine su propio savepoint.
+            DB::transaction(function () use ($escuela) {
+                (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento);
+
+                throw new RuntimeException('fuerza rollback de la transacción externa');
+            });
+            $this->fail('Se esperaba que la transacción externa fallara.');
+        } catch (RuntimeException) {
+            // esperado
+        }
+
+        $documentoDespues = DocumentoEscuela::first();
+        $this->assertSame($rutaAnterior, $documentoDespues->archivo_path);
+        Storage::disk('documentos')->assertExists($rutaAnterior);
+        $this->assertSame($bytesAnteriores, Storage::disk('documentos')->get($rutaAnterior), 'el archivo previo no debe borrarse si la transacción externa hace rollback');
     }
 }

@@ -50,7 +50,7 @@ class RegistrarDocumento
             : null;
 
         try {
-            DB::transaction(function () use ($tipo, $ownerId, $ruta, $datos, $fechaVigencia) {
+            DB::transaction(function () use ($tipo, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen) {
                 $atributos = [
                     'archivo_path' => $ruta,
                     'fecha_emision' => $datos->fechaEmision,
@@ -105,6 +105,23 @@ class RegistrarDocumento
                         ],
                     );
                 }
+
+                // DB::afterCommit(), no borrado directo aquí: si quien llama a
+                // ejecutar() envuelve esto en su propia transacción externa
+                // (p. ej. un futuro caso de uso más grande, o un adaptador de
+                // API), este DB::transaction() es solo un savepoint anidado —
+                // el archivo anterior no debe borrarse hasta que la
+                // transacción externa confirme de verdad, y si esa
+                // transacción externa hace rollback, este callback nunca debe
+                // ejecutarse. Verificado para este proyecto de Laravel:
+                // Illuminate\Foundation\Testing\DatabaseTransactionsManager
+                // (activo bajo RefreshDatabase) dispara los callbacks
+                // afterCommit cuando el nivel de transacción baja a 1 (el
+                // wrapper de test), no a 0, así que este callback sí se
+                // observa en los tests sin necesitar un commit real a la BD.
+                if ($rutaAnterior !== null && $rutaAnterior !== $ruta) {
+                    DB::afterCommit(fn () => $almacen->eliminar($rutaAnterior));
+                }
             });
         } catch (Throwable $e) {
             // La fila previa nunca se tocó (updateOrCreate corrió dentro de la
@@ -113,17 +130,6 @@ class RegistrarDocumento
             $almacen->eliminar($ruta);
 
             throw $e;
-        }
-
-        // Fuera del try/catch: solo se llega aquí si la transacción confirmó.
-        // RegistrarDocumento nunca corre anidado dentro de otra transacción
-        // (único caller es Livewire), así que esto es equivalente a un
-        // DB::afterCommit() real sin depender de que el nivel de transacción
-        // llegue a 0 — cosa que no ocurre bajo RefreshDatabase, donde el
-        // DB::transaction() de arriba es un savepoint anidado dentro de la
-        // transacción de test y un callback afterCommit real nunca dispara.
-        if ($rutaAnterior !== null && $rutaAnterior !== $ruta) {
-            $almacen->eliminar($rutaAnterior);
         }
     }
 }
