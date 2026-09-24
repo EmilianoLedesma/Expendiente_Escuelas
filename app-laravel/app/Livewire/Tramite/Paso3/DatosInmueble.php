@@ -14,6 +14,7 @@ use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoPlantel;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
+use App\Models\Plantel;
 use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -193,6 +194,12 @@ class DatosInmueble extends Component
         )->first();
     }
 
+    /** Domicilio del plantel, capturado en Paso 1 — solo lectura (PRD §5 Paso 3.1). */
+    public function plantel(): Plantel
+    {
+        return Plantel::findOrFail($this->plantelId());
+    }
+
     public function nivelesDisponibles(): Collection
     {
         return NivelEducativo::orderBy('orden')->get();
@@ -238,6 +245,7 @@ class DatosInmueble extends Component
     public function render()
     {
         return view('livewire.tramite.paso3.datos-inmueble', [
+            'plantel' => $this->plantel(),
             'terna' => $this->terna(),
             'acreditacion' => $this->acreditacion(),
             'constancia' => $this->constancia(),

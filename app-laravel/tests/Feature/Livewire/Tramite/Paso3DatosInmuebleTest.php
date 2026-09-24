@@ -67,6 +67,31 @@ class Paso3DatosInmuebleTest extends TestCase
         $response->assertSee('Datos del inmueble', false);
     }
 
+    // WS-2.6 — PRD §5 Paso 3.1: el domicilio del plantel (capturado en Paso 1)
+    // se muestra siempre, de solo lectura, nunca como input editable.
+    public function test_muestra_el_domicilio_del_plantel_en_solo_lectura(): void
+    {
+        $escuelaNivel = $this->escuelaNivel();
+
+        $response = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
+
+        $response->assertSee('Calle 1', false);
+        $response->assertSee('Centro', false);
+        $response->assertSee('Querétaro', false);
+        $response->assertSee('76000', false);
+
+        // Nunca un input editable sobre el domicilio.
+        $response->assertDontSee('id="calle"', false);
+        $response->assertDontSee('id="colonia"', false);
+        $response->assertDontSee('id="municipio"', false);
+        $response->assertDontSee('id="codigoPostal"', false);
+        $response->assertDontSee('wire:model.blur="calle"', false);
+        $response->assertDontSee('wire:model.blur="colonia"', false);
+        $response->assertDontSee('wire:model.blur="municipio"', false);
+        $response->assertDontSee('wire:model.blur="codigoPostal"', false);
+    }
+
     public function test_muestra_la_terna_de_nombres_ya_capturada_en_solo_lectura(): void
     {
         $escuelaNivel = $this->escuelaNivel();

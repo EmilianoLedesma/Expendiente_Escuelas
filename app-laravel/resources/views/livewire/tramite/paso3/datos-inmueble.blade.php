@@ -4,6 +4,17 @@
         Dimensiones, colindancias y servicios del inmueble donde operará la escuela.
     </p>
 
+    {{-- Domicilio del plantel, capturado en Paso 1 — solo lectura siempre
+         (primera captura y reuso). Texto plano a propósito, igual que el
+         resto de este bloque de contexto: no es un formulario editable. --}}
+    <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md mb-lg space-y-xxs">
+        <p class="font-sans text-[11px] text-muted">Domicilio del plantel</p>
+        <p class="font-sans text-body-sm text-body">
+            {{ $plantel->calle }}{{ $plantel->numero_ext ? ' #'.$plantel->numero_ext : '' }}{{ $plantel->numero_int ? ' Int. '.$plantel->numero_int : '' }},
+            {{ $plantel->colonia }}, {{ $plantel->municipio }}, C.P. {{ $plantel->codigo_postal }}
+        </p>
+    </div>
+
     {{-- Contexto de solo lectura, ya capturado en Paso 2.1 / 2.2. Texto plano
          a propósito: no es una pantalla de revisión de documentos. --}}
     <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md mb-lg space-y-xxs">
