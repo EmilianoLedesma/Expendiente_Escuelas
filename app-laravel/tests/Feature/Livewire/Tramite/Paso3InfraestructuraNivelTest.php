@@ -263,6 +263,32 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->assertDatabaseCount('biblioteca_materiales', 0);
     }
 
+    // WS-2.1 — materials entered without a biblioteca cantidad must not vanish:
+    // a biblioteca_materiales row requires an instalaciones_espacios row (FK NOT NULL),
+    // so materials present implies the biblioteca espacio row is created.
+    public function test_material_biblioteca_sin_cantidad_se_guarda_con_fila_de_biblioteca(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $bibliotecaId = $this->idTipo('biblioteca');
+        $librosId = (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("materialesBiblioteca.$librosId.numeroTitulos", 300)
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $bibliotecaEspacioId = DB::table('instalaciones_espacios')
+            ->where('plantel_id', $this->plantel->id)
+            ->where('tipo_espacio_id', $bibliotecaId)
+            ->value('id');
+        $this->assertNotNull($bibliotecaEspacioId, 'Los materiales de biblioteca se descartaron en silencio.');
+        $this->assertDatabaseHas('biblioteca_materiales', [
+            'instalacion_espacio_id' => $bibliotecaEspacioId,
+            'numero_titulos' => 300,
+        ]);
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $primaria = $this->escuelaNivel('primaria');

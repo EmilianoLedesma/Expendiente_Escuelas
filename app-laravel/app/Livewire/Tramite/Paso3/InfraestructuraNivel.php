@@ -182,15 +182,24 @@ class InfraestructuraNivel extends Component
 
         foreach ($this->tiposAplicables() as $tipo) {
             $entrada = $this->espacios[$tipo->id] ?? [];
+            $materiales = $tipo->permite_material_biblioteca ? $this->materialesDeclarados() : [];
             $cantidad = $entrada['cantidad'] ?? null;
 
-            if ($cantidad === null || $cantidad === '') {
+            // Anexo 2 pide SI/NO + descripción/superficie para espacios recreativos:
+            // cantidad puede legítimamente faltar (instalaciones_espacios.cantidad es
+            // nullable). Se persiste el espacio si trae cualquier dato, o si trae
+            // materiales de biblioteca (biblioteca_materiales.instalacion_espacio_id
+            // es NOT NULL, así que los materiales exigen esta fila).
+            $tieneAlgo = $materiales !== []
+                || collect($entrada)->contains(fn ($valor) => $valor !== null && $valor !== '');
+
+            if (! $tieneAlgo) {
                 continue;
             }
 
             $declarados[] = [
                 'tipoEspacioId' => (int) $tipo->id,
-                'cantidad' => (int) $cantidad,
+                'cantidad' => ($cantidad === null || $cantidad === '') ? null : (int) $cantidad,
                 'superficieM2' => $this->numeroONull($entrada['superficieM2'] ?? null),
                 'capacidadPromedio' => ($entrada['capacidadPromedio'] ?? '') === '' ? null : (int) $entrada['capacidadPromedio'],
                 'ventilacionNatural' => isset($entrada['ventilacionNatural']) ? (bool) $entrada['ventilacionNatural'] : null,
@@ -202,7 +211,7 @@ class InfraestructuraNivel extends Component
                         'formato' => ($entrada['campoFutbolFormato'] ?? '') === '' ? null : (string) $entrada['campoFutbolFormato'],
                     ]
                     : null,
-                'materialesBiblioteca' => $tipo->permite_material_biblioteca ? $this->materialesDeclarados() : [],
+                'materialesBiblioteca' => $materiales,
             ];
         }
 

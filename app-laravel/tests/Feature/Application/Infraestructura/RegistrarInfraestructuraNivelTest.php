@@ -290,4 +290,38 @@ class RegistrarInfraestructuraNivelTest extends TestCase
 
         $this->assertTrue($yaCapturada->ejecutar($this->plantel->id));
     }
+
+    // WS-2.1 — the use case itself must not drop an espacio whose cantidad is null
+    // but that carries other data (e.g. superficie for a recreational space per Anexo 2).
+    public function test_escribe_un_espacio_con_cantidad_null_y_superficie_declarada(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [
+                [
+                    'tipoEspacioId' => $this->idTipo('areas_verdes'),
+                    'cantidad' => null,
+                    'superficieM2' => 120.0,
+                    'capacidadPromedio' => null,
+                    'ventilacionNatural' => null,
+                    'iluminacionNatural' => null,
+                    'destinadoA' => null,
+                    'campoFutbol' => null,
+                    'materialesBiblioteca' => [],
+                ],
+            ],
+            sanitarios: [],
+            numeroAulas: 6,
+        );
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+
+        $this->assertDatabaseHas('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $this->idTipo('areas_verdes'),
+            'cantidad' => null,
+            'superficie_m2' => 120.0,
+        ]);
+    }
 }
