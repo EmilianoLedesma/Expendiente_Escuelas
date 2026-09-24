@@ -2,6 +2,7 @@
 
 namespace App\View\Components\Tramite;
 
+use App\Application\Tramite\EstadoPaso2;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -38,15 +39,15 @@ class Progreso extends Component
 
     public function __construct(public readonly ?int $escuelaId = null, public readonly ?int $escuelaNivelId = null)
     {
-        $this->pasos = $this->etapasDelFlujo()->concat($this->etapasDePaso3());
+        $this->pasos = $this->etapasDelFlujo(app(EstadoPaso2::class))->concat($this->etapasDePaso3());
     }
 
-    private function etapasDelFlujo(): Collection
+    private function etapasDelFlujo(EstadoPaso2 $estadoPaso2): Collection
     {
-        $tieneResponsable = $this->escuelaId !== null
-            && DB::table('responsables_legales')->where('escuela_id', $this->escuelaId)->exists();
-        $tieneNiveles = $this->escuelaId !== null
-            && DB::table('escuela_niveles')->where('escuela_id', $this->escuelaId)->exists();
+        $tieneResponsable = $this->escuelaId !== null && $estadoPaso2->responsableCapturado($this->escuelaId);
+        $documentosCompletos = $this->escuelaId !== null
+            && $estadoPaso2->documentosCompletos($this->escuelaId)
+            && $estadoPaso2->documentosVigentes($this->escuelaId);
 
         return collect([
             (object) [
@@ -61,8 +62,8 @@ class Progreso extends Component
             ],
             (object) [
                 'nombre' => 'Documentos',
-                'estado' => $tieneNiveles ? 'completado' : 'pendiente',
-                'href' => $this->escuelaId !== null ? route('tramite.paso2-documentos', ['escuela' => $this->escuelaId]) : null,
+                'estado' => $documentosCompletos ? 'completado' : 'pendiente',
+                'href' => $tieneResponsable ? route('tramite.paso2-documentos', ['escuela' => $this->escuelaId]) : null,
             ],
         ]);
     }
