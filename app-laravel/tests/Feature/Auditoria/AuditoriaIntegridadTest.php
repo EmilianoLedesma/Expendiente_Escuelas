@@ -2,17 +2,11 @@
 
 namespace Tests\Feature\Auditoria;
 
-use App\Application\Documentos\DTO\DatosDocumento;
-use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
-use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\DTO\ResultadoPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
-use App\Livewire\Tramite\Paso1Preregistro;
-use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
-use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
 use App\Models\NivelEducativo;
@@ -20,14 +14,10 @@ use App\Models\Solicitante;
 use App\Models\TipoEspacio;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
-use Throwable;
 
 /**
  * Regression tests from the 2026-09-23 audit. Each one FAILS on master 776ffee
@@ -54,7 +44,6 @@ class AuditoriaIntegridadTest extends TestCase
             codigoPostal: '76000'
         ), $s->id);
     }
-
 
     // WS-2.2 — Documentos before responsable exists must not 404.
     public function test_documentos_antes_de_responsable_redirige_a_paso2(): void
@@ -94,4 +83,3 @@ class AuditoriaIntegridadTest extends TestCase
         $this->assertEquals(120, (float) $fila->superficie_m2);
     }
 }
-
