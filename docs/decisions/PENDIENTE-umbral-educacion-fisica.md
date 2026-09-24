@@ -109,3 +109,67 @@ en `floor(alumnos / 60)` (ver `docs/reports/2026-09-07-reglas-validacion-schema.
 lo cual introduce una tercera variante práctica: bajo división entera, el umbral
 efectivo es 60 (inclusive), no 61 — otro punto que esta misma pregunta a SEDEQ
 debería resolver de forma consistente para los tres niveles.
+
+## Actualización (2026-09-24)
+
+Evidencia adicional del Profesiograma, tal como la cita el Apéndice B.4 del
+brief de remediación de auditoría
+(`docs/superpowers/auditoria/AGENT_BRIEF_remediacion-auditoria-2026-09-23.md`,
+sección "Appendix B — Normative evidence", B.4 "Profesiogramas (SEDEQ, ciclo
+2023-2024)"):
+
+> "Preescolar and Primaria notes: 'Cuando las instalaciones tengan una
+> **capacidad** de sesenta alumnos **o más**, será obligatorio … un docente
+> de educación física.'"
+
+Esta es una quinta redacción distinta de las ya catalogadas arriba (filas
+1–9), y la más directamente trazable a los Profesiogramas mismos —
+transcrita, según el propio brief, de los documentos SEDEQ 2023-24 (la misma
+familia de fuente que las filas 1–4 de §5.1, que el brief declara derivadas
+de `PROFESIOGRAMA_INICIAL.pdf`/`PROFESIOGRAMA_PREESCOLAR.pdf`/
+`PROFESIOGRAMA_PRIMARIA.pdf`/`PROFESIOGRAMA_SECUNDARIA.pdf`, ciclo escolar
+2023-2024).
+
+Esta redacción tiene dos implicaciones que ninguna de las filas 1–9
+anteriores separaba con claridad:
+
+**1. "o más" significa ≥60, no >60.** La frase "capacidad de sesenta alumnos
+o más" es inequívoca en ese punto: sesenta alumnos exactos ya alcanzan el
+umbral ("o más" incluye el propio 60). Esto coincide con la lectura de las
+filas 1 y 3 (COMPENDIO §5.1, "60 alumnos o más" / "≥60 alumnos") y contradice
+directamente el valor actualmente sembrado — `condicion_min = 61` en
+`preescolar.personal.educacion_fisica`, `secundaria.personal.
+educacion_fisica`, `secundaria.personal.trabajador_social` y
+`secundaria.personal.prefecto` (`app-laravel/database/seeders/
+ReglasValidacionSeeder.php`) — que implementa "más de 60" (>60, es decir 61).
+
+**2. Dice *capacidad*, no matrícula.** El Profesiograma habla de la
+**capacidad de las instalaciones** ("cuando las instalaciones tengan una
+capacidad de sesenta alumnos o más"), no de la matrícula inscrita
+(`matricula`/alumnos efectivamente inscritos). Son magnitudes distintas: una
+escuela puede tener instalaciones con capacidad para 70 alumnos pero
+matricular solo 40, o viceversa (dentro de los límites que el resto del Motor
+de Validación permitiría). Hoy `CalculadoraRequerimiento::umbral()`
+(`app-laravel/app/Domain/Validaciones/Regla/CalculadoraRequerimiento.php`,
+líneas 43–50) recibe una `$magnitud` genérica sin que este documento, ni el
+seeder, ni el motor, distingan explícitamente si esa magnitud debe ser
+capacidad instalada o matrícula — el nombre del sistema completo es "Motor de
+Validación de **Capacidad Instalada**" (ver `CLAUDE.md`), lo que sugiere
+capacidad, pero ninguna fuente revisada hasta ahora lo había hecho explícito
+con esta claridad ("capacidad de sesenta alumnos", no "sesenta alumnos
+inscritos").
+
+Ninguna de las dos implicaciones se resuelve en este documento ni cambia
+ningún valor sembrado — `condicion_min = 61` permanece igual, sin cambios,
+marcado PROVISIONAL como ya lo estaba. Ambos puntos se añaden a la pregunta
+para SEDEQ:
+
+> "Para que una escuela de nivel Preescolar, Primaria o Secundaria esté
+> obligada a tener un maestro de Educación Física: (1) ¿el número de alumnos
+> debe ser **de 60 en adelante** (una escuela con exactamente 60 ya lo
+> requiere), o **mayor a 60, es decir 61 o más**? (2) ¿esa cifra se mide
+> sobre la **capacidad instalada** de las instalaciones (cuántos alumnos caben
+> físicamente) o sobre la **matrícula** (cuántos alumnos están efectivamente
+> inscritos)? Los documentos internos que tenemos usan ambas redacciones en
+> distintos lugares y necesitamos que SEDEQ confirme cuál aplica en cada
+> caso."
