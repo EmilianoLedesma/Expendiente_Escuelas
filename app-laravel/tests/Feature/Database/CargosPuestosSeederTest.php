@@ -12,12 +12,12 @@ class CargosPuestosSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_seeds_16_cargos_across_4_niveles(): void
+    public function test_it_seeds_18_cargos_across_4_niveles(): void
     {
         (new CatalogoMinimoSeeder)->run();
         (new CargosPuestosSeeder)->run();
 
-        $this->assertDatabaseCount('cargos_puestos', 16);
+        $this->assertDatabaseCount('cargos_puestos', 18);
     }
 
     public function test_it_seeds_inicial_cargos_with_correct_flags(): void
@@ -60,6 +60,25 @@ class CargosPuestosSeederTest extends TestCase
         (new CargosPuestosSeeder)->run();
         (new CargosPuestosSeeder)->run();
 
-        $this->assertDatabaseCount('cargos_puestos', 16);
+        $this->assertDatabaseCount('cargos_puestos', 18);
+    }
+
+    public function test_it_seeds_secundaria_trabajador_social_and_prefecto(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new CargosPuestosSeeder)->run();
+
+        $secundariaId = DB::table('niveles_educativos')->where('clave', 'secundaria')->value('id');
+
+        $this->assertDatabaseHas('cargos_puestos', [
+            'nivel_educativo_id' => $secundariaId,
+            'nombre' => 'Trabajador Social',
+            'requiere_asignatura' => false,
+        ]);
+        $this->assertDatabaseHas('cargos_puestos', [
+            'nivel_educativo_id' => $secundariaId,
+            'nombre' => 'Prefecto',
+            'requiere_asignatura' => false,
+        ]);
     }
 }
