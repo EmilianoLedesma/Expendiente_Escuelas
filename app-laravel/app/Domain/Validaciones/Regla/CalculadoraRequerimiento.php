@@ -68,8 +68,19 @@ class CalculadoraRequerimiento
         return (int) $producto;
     }
 
+    /**
+     * personal_proporcional divide magnitud entre valorNumerico (p. ej.
+     * alumnos por trabajador). Un valorNumerico <= 0 no tiene sentido como
+     * divisor — 0 dispararía DivisionByZeroError, y un negativo produciría un
+     * cociente sin significado — así que se falla explícitamente en vez de
+     * propagar cualquiera de los dos en silencio.
+     */
     private function proporcional(float $valorNumerico, string $redondeo, float $magnitud): int
     {
+        if ($valorNumerico <= 0) {
+            throw new InvalidArgumentException("personal_proporcional requiere valorNumerico > 0; recibido: {$valorNumerico}");
+        }
+
         $cociente = $magnitud / $valorNumerico;
 
         return match ($redondeo) {
