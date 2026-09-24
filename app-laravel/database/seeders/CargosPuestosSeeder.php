@@ -36,6 +36,8 @@ class CargosPuestosSeeder extends Seeder
             // Secundaria
             ['nivel_educativo_id' => $niveles['secundaria'], 'nombre' => 'Director Técnico', 'requiere_asignatura' => false, 'requiere_sala' => false],
             ['nivel_educativo_id' => $niveles['secundaria'], 'nombre' => 'Docente Titular', 'requiere_asignatura' => true, 'requiere_sala' => false],
+            ['nivel_educativo_id' => $niveles['secundaria'], 'nombre' => 'Trabajador Social', 'requiere_asignatura' => false, 'requiere_sala' => false],
+            ['nivel_educativo_id' => $niveles['secundaria'], 'nombre' => 'Prefecto', 'requiere_asignatura' => false, 'requiere_sala' => false],
         ]);
     }
 }

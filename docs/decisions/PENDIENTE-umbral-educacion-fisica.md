@@ -27,6 +27,7 @@ reabre la pregunta correctamente.
 | 7 | "si hay **más de 60 alumnos**, es obligatorio contar no solo con profesor de Educación Física, sino también con un trabajador social y un prefecto" | §5.2, línea 626, dentro de "### Secundaria (Acuerdo 255)" | Secundaria |
 | 8 | Fila de tabla: "Educación Física obligatoria \| **>60 alumnos** \| **>60 alumnos** \| **>60 alumnos** (+ trabajador social + prefecto)" | §5.2, línea 640, tabla "Comparativo rápido entre los tres niveles" | Preescolar/Primaria/Secundaria |
 | 9 | PRD §5: "> 60" | `docs/PRD_Sistema_Incorporacion_MVP.md`, §5 | (no distingue nivel en el pasaje citado en la tarea original) |
+| 10 | "Preescolar and Primaria notes: 'Cuando las instalaciones tengan una **capacidad** de sesenta alumnos **o más**, será obligatorio … un docente de educación física.'" | `docs/superpowers/auditoria/AGENT_BRIEF_remediacion-auditoria-2026-09-23.md`, Apéndice B.4 "Profesiogramas (SEDEQ, ciclo 2023-2024)" | Preescolar, Primaria |
 
 **Corrección a una caracterización previa**: un reporte anterior de este mismo trabajo
 afirmó que ">60" "aparece en una tabla resumen" mientras que "60 o más" era "prosa más
@@ -109,3 +110,89 @@ en `floor(alumnos / 60)` (ver `docs/reports/2026-09-07-reglas-validacion-schema.
 lo cual introduce una tercera variante práctica: bajo división entera, el umbral
 efectivo es 60 (inclusive), no 61 — otro punto que esta misma pregunta a SEDEQ
 debería resolver de forma consistente para los tres niveles.
+
+## Actualización (2026-09-24)
+
+Evidencia adicional del Profesiograma, tal como la cita el Apéndice B.4 del
+brief de remediación de auditoría
+(`docs/superpowers/auditoria/AGENT_BRIEF_remediacion-auditoria-2026-09-23.md`,
+sección "Appendix B — Normative evidence", B.4 "Profesiogramas (SEDEQ, ciclo
+2023-2024)"):
+
+> "Preescolar and Primaria notes: 'Cuando las instalaciones tengan una
+> **capacidad** de sesenta alumnos **o más**, será obligatorio … un docente
+> de educación física.'"
+
+Esta es una redacción adicional a las ya catalogadas arriba (filas 1–9; se
+agrega como fila 10 a la tabla de la sección anterior), y la más
+directamente trazable a los Profesiogramas mismos — transcrita, según el
+propio brief, de los documentos SEDEQ 2023-24 (la misma familia de fuente
+que las filas 1–4, que COMPENDIO §5.1 declara derivadas de los Profesiogramas
+en su propio encabezado — línea 447, ya citado arriba en "De dónde viene
+cada redacción").
+
+Esta redacción tiene dos implicaciones que ninguna de las filas 1–9
+anteriores separaba con claridad:
+
+**1. "o más" significa ≥60, no >60 — pero solo para Preescolar.** La frase
+"capacidad de sesenta alumnos o más" es inequívoca en ese punto: sesenta
+alumnos exactos ya alcanzan el umbral ("o más" incluye el propio 60). Esto
+coincide con la lectura de las filas 1 y 3 (COMPENDIO §5.1, "60 alumnos o
+más" / "≥60 alumnos") y contradice directamente el valor actualmente
+sembrado — `condicion_min = 61` en `preescolar.personal.educacion_fisica`
+(`app-laravel/database/seeders/ReglasValidacionSeeder.php`) — que implementa
+"más de 60" (>60, es decir 61).
+
+`primaria.personal.educacion_fisica` no forma parte de esta contradicción:
+como ya señala este mismo documento más arriba ("Valor sembrado mientras
+tanto"), su umbral no está sembrado como `condicion_min = 61` sino como
+`floor(alumnos / 60)`, que bajo división entera ya es inclusivo en 60 — es
+decir, ya coincide con la lectura "o más" de la fila 10 (B.4), sin cambios
+necesarios.
+
+Las tres reglas de Secundaria (`secundaria.personal.educacion_fisica`,
+`secundaria.personal.trabajador_social`, `secundaria.personal.prefecto`) NO
+están cubiertas por esta evidencia de la fila 10 (B.4), cuya cita se limita
+explícitamente a "Preescolar and Primaria notes". El umbral de Secundaria
+viene de una fuente distinta: el Acuerdo 255 vía COMPENDIO §5.2 ("si hay
+**más de 60 alumnos**, es obligatorio contar no solo con profesor de
+Educación Física, sino también con un trabajador social y un prefecto",
+línea 626, dentro de la sección "### Secundaria (Acuerdo 255)") — y el
+propio Profesiograma de Secundaria (§5.1) no define una regla de capacidad
+para esto ("No se encontraron en este documento reglas de proporción por
+capacidad de alumnos...", línea 494). Por lo tanto `condicion_min = 61`
+sigue siendo la lectura correcta de su única fuente (Acuerdo 255, "más de
+60") para las tres reglas de Secundaria; esta actualización no las afecta.
+
+**2. Dice *capacidad*, no matrícula.** El Profesiograma habla de la
+**capacidad de las instalaciones** ("cuando las instalaciones tengan una
+capacidad de sesenta alumnos o más"), no de la matrícula inscrita
+(`matricula`/alumnos efectivamente inscritos). Son magnitudes distintas: una
+escuela puede tener instalaciones con capacidad para 70 alumnos pero
+matricular solo 40, o viceversa (dentro de los límites que el resto del Motor
+de Validación permitiría). Hoy `CalculadoraRequerimiento::umbral()`
+(`app-laravel/app/Domain/Validaciones/Regla/CalculadoraRequerimiento.php`,
+líneas 43–50) recibe una `$magnitud` genérica sin que este documento, ni el
+seeder, ni el motor, distingan explícitamente si esa magnitud debe ser
+capacidad instalada o matrícula — el nombre del sistema completo es "Motor de
+Validación de **Capacidad Instalada**" (ver `CLAUDE.md`), lo que sugiere
+capacidad. Esta distinción capacidad-vs-matrícula no es nueva en este
+documento: ya aparece en las filas 1 y 3 de la tabla anterior (COMPENDIO
+§5.1, línea 452: "capacidad de 60 alumnos o más"; línea 473: "capacidad
+≥60 alumnos") — la fila 10 (B.4) no la introduce, la confirma desde la
+fuente primaria (el propio Profesiograma, no un resumen derivado).
+
+Ninguna de las dos implicaciones se resuelve en este documento ni cambia
+ningún valor sembrado — `condicion_min = 61` permanece igual, sin cambios,
+marcado PROVISIONAL como ya lo estaba. Ambos puntos se añaden a la pregunta
+para SEDEQ:
+
+> "Para que una escuela de nivel Preescolar, Primaria o Secundaria esté
+> obligada a tener un maestro de Educación Física: (1) ¿el número de alumnos
+> debe ser **de 60 en adelante** (una escuela con exactamente 60 ya lo
+> requiere), o **mayor a 60, es decir 61 o más**? (2) ¿esa cifra se mide
+> sobre la **capacidad instalada** de las instalaciones (cuántos alumnos caben
+> físicamente) o sobre la **matrícula** (cuántos alumnos están efectivamente
+> inscritos)? Los documentos internos que tenemos usan ambas redacciones en
+> distintos lugares y necesitamos que SEDEQ confirme cuál aplica en cada
+> caso."

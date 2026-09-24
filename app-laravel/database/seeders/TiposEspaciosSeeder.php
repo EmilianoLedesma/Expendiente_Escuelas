@@ -30,10 +30,10 @@ class TiposEspaciosSeeder extends Seeder
         'biblioteca' => ['primaria', 'secundaria'],
         'taller' => ['preescolar', 'primaria', 'secundaria'],
         'laboratorio_polifuncional' => ['preescolar', 'primaria', 'secundaria'],
-        'salon_usos_multiples' => ['preescolar', 'primaria', 'secundaria'],
+        'salon_usos_multiples' => ['inicial', 'preescolar', 'primaria', 'secundaria'],
         'auditorio' => ['preescolar', 'primaria', 'secundaria'],
-        'cocina' => ['preescolar', 'primaria', 'secundaria'],
-        'comedor' => ['preescolar', 'primaria', 'secundaria'],
+        'cocina' => ['inicial', 'preescolar', 'primaria', 'secundaria'],
+        'comedor' => ['inicial', 'preescolar', 'primaria', 'secundaria'],
         'sala_artes' => ['preescolar', 'primaria', 'secundaria'],
     ];
 

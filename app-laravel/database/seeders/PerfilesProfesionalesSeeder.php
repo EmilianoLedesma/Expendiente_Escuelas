@@ -39,10 +39,14 @@ class PerfilesProfesionalesSeeder extends Seeder
         };
 
         // Inicial
-        $add('inicial:Director Técnico', ['Lic. en Educación Preescolar', 'Puericultura y Educación Infantil', 'Intervención Educativa', 'Trabajo Social', 'Psicología', 'Médico'], $tituloCedula);
+        // 'Profesor en Educación Preescolar' y 'Enfermera' vienen del Profesiograma
+        // Inicial (SEDEQ, ciclo 2023-2024), no de COMPENDIO: COMPENDIO_MAESTRO
+        // línea 461 no los lista (línea 540 es Preescolar/Acuerdo 357, otro perfil).
+        // Ver Apéndice B.4 de AGENT_BRIEF_remediacion-auditoria-2026-09-23.md.
+        $add('inicial:Director Técnico', ['Lic. en Educación Preescolar', 'Profesor en Educación Preescolar', 'Puericultura y Educación Infantil', 'Intervención Educativa', 'Trabajo Social', 'Psicología', 'Médico'], $tituloCedula);
         $add('inicial:Responsable de Sala', ['TSU o Lic. en Puericultura', 'Educación Preescolar', 'Enfermería'], $tituloCedula);
         $add('inicial:Asistente Educativo', ['Puericultista', 'Técnico en Enfermería', 'Asistente Educativo'], $certificado);
-        $add('inicial:Responsable de Filtro y Fomento a la Salud', ['Médico General o Pediatra', 'Enfermera Pediatra'], $tituloCedula);
+        $add('inicial:Responsable de Filtro y Fomento a la Salud', ['Médico General o Pediatra', 'Enfermera Pediatra', 'Enfermera'], $tituloCedula);
 
         // Preescolar
         $add('preescolar:Director Técnico', ['Normalista', 'Lic. en Educación', 'Lic. en Preescolar', 'Lic. en Inicial', 'Pedagogía', 'Intervención Educativa'], $tituloCedula);
