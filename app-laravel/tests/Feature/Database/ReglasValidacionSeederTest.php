@@ -542,6 +542,7 @@ class ReglasValidacionSeederTest extends TestCase
             'ambito' => 'plantel',
             'redondeo' => 'na',
             'valor_numerico' => 1.00,
+            'fuente' => 'Profesiograma Inicial (SEDEQ, ciclo 2023-2024)',
         ]);
     }
 

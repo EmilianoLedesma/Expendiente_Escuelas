@@ -25,7 +25,7 @@ tiene forma de expresar "grado ofertado" como condición.
   > `PROFESIOGRAMA_PRIMARIA.pdf`, `PROFESIOGRAMA_SECUNDARIA.pdf` (ciclo
   > escolar 2023-2024)."
 
-- Líneas 455–457 (§5.1, "Reglas de personal condicionadas por grado
+- Líneas 455–458 (§5.1, "Reglas de personal condicionadas por grado
   ofertado"):
   > "### Reglas de personal condicionadas por grado ofertado
   > - **Preescolar**: docente de Inglés obligatorio **a partir de 3º grado**.
@@ -137,7 +137,7 @@ tarea).
 - **Owner/arquitecto**: cuál de las tres opciones (o una variante) encaja
   mejor con la dirección de `app/Domain/Validaciones/Engine/` — es una
   decisión de diseño interno, no depende de SEDEQ.
-- **SEDEQ**: la redacción de COMPENDIO §5.1 (líneas 455–457) ya es específica
+- **SEDEQ**: la redacción de COMPENDIO §5.1 (líneas 455–458) ya es específica
   ("a partir de 3º grado", "obligatorio siempre") y trazable a los
   Profesiogramas citados en la línea 447 — no hay ambigüedad normativa
   detectada que requiera confirmación adicional de SEDEQ para *esta* regla en

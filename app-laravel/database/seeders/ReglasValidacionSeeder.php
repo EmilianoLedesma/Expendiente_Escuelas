@@ -23,9 +23,16 @@ class ReglasValidacionSeeder extends Seeder
      * fijo. Si esa dependencia no corrió, o el cargo nombrado no existe
      * para ese nivel, se falla con RuntimeException en vez de sembrar
      * cargo_puesto_id = null en silencio. La única excepción documentada es
-     * `secundaria.personal.educacion_fisica`: Secundaria nunca siembra un
-     * cargo "Docente de Educación Física" en `cargos_puestos`, así que esa
-     * fila se deja sin `cargo` a propósito (cargo_puesto_id queda null).
+     * `secundaria.personal.educacion_fisica`: en Secundaria, Educación
+     * Física no es un cargo propio, es una asignatura que imparte el cargo
+     * "Docente Titular" (`requiere_asignatura = true`, COMPENDIO §5.1
+     * líneas 487–489). `reglas_validacion` no tiene columna `asignatura_id`,
+     * así que enlazarla a un `cargo_puesto_id` real requiere una decisión de
+     * esquema o de Motor, no solo de datos — ver
+     * docs/decisions/PENDIENTE-perfiles-trabajador-social-prefecto.md,
+     * sección "Hueco relacionado: secundaria.personal.educacion_fisica sin
+     * cargo_puesto_id". Esa fila se deja sin `cargo` a propósito
+     * (cargo_puesto_id queda null).
      *
      * NOTA (umbral vs. proporcional): §5.1 distingue Preescolar ("solo si
      * la instalación tiene capacidad de 60 alumnos o más" — umbral, un
@@ -104,9 +111,14 @@ class ReglasValidacionSeeder extends Seeder
                 ['clave' => 'secundaria.superficie.areas_recreativas_minimas', 'tipo_regla' => 'superficie', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'plantel', 'redondeo' => 'na', 'concepto' => 'Áreas recreativas/deportivas mínimas', 'valor_numerico' => 200, 'unidad' => 'm² fijo'],
                 ['clave' => 'secundaria.infraestructura.acervo_bibliografico', 'tipo_regla' => 'infraestructura', 'tipo_calculo' => 'minimo_fijo', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Acervo bibliográfico mínimo total', 'valor_numerico' => 300, 'unidad' => 'títulos totales'],
                 // secundaria.personal.educacion_fisica: NO tiene 'cargo' a propósito.
-                // Secundaria nunca siembra un cargo "Docente de Educación Física" en
-                // cargos_puestos (ver CargosPuestosSeeder) — cargo_puesto_id queda
-                // null; documentado, no un lookup fallido (WS-3.4).
+                // En Secundaria, Educación Física es una asignatura del cargo
+                // "Docente Titular" (requiere_asignatura = true), no un cargo propio
+                // como en Preescolar/Primaria — reglas_validacion no tiene columna
+                // asignatura_id, así que enlazarla requiere una decisión de esquema
+                // o de Motor. Ver docs/decisions/
+                // PENDIENTE-perfiles-trabajador-social-prefecto.md, sección "Hueco
+                // relacionado". cargo_puesto_id queda null; documentado, no un
+                // lookup fallido (WS-3.4).
                 ['clave' => 'secundaria.personal.educacion_fisica', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Docente de Educación Física obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'docente'],
                 ['clave' => 'secundaria.personal.trabajador_social', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Trabajador social obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'trabajador social', 'cargo' => 'Trabajador Social'],
                 ['clave' => 'secundaria.personal.prefecto', 'tipo_regla' => 'personal', 'tipo_calculo' => 'personal_umbral', 'ambito' => 'escuela', 'redondeo' => 'na', 'concepto' => 'Prefecto obligatorio', 'condicion_min' => 61, 'valor_numerico' => 1, 'unidad' => 'prefecto', 'cargo' => 'Prefecto'],
