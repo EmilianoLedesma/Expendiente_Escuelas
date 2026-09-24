@@ -7,6 +7,7 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso2Documentos;
+use App\Models\DocumentoEscuela;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
@@ -61,9 +62,10 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'), new DatosDocumento);
+        $nombreArchivo = basename(DocumentoEscuela::where('escuela_id', $escuela->id)->value('archivo_path'));
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSee('ine.pdf')
+            ->assertSee($nombreArchivo)
             ->assertSee('Reemplazar')
             ->assertDontSee('wire:model="archivos.ine"', false);
     }
@@ -82,7 +84,10 @@ class Paso2DocumentosTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseCount('documentos_escuela', 1);
-        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id, 'archivo_path' => "escuela/{$escuela->id}/ine.pdf"]);
+        $this->assertMatchesRegularExpression(
+            '#^escuela/'.$escuela->id.'/ine-[0-9A-Z]{26}\.pdf$#',
+            DocumentoEscuela::where('escuela_id', $escuela->id)->value('archivo_path'),
+        );
     }
 
     public function test_sube_ine_de_forma_independiente_sin_pasar_por_las_demas_claves(): void
@@ -259,9 +264,10 @@ class Paso2DocumentosTest extends TestCase
         // para que mount() no redirija y la sección se pueda inspeccionar en
         // su estado de solo lectura.
         (new RegistrarDocumento)->ejecutar($escuela->id, 'formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'), new DatosDocumento);
+        $nombreArchivo = basename(DocumentoEscuela::where('escuela_id', $escuela->id)->value('archivo_path'));
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSee('formato_solicitud.pdf')
+            ->assertSee($nombreArchivo)
             ->assertSee('Generar y descargar Formato de Solicitud')
             ->assertSee(route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]), false);
     }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Application\Documentos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
@@ -119,5 +120,73 @@ class RegistrarDocumentoTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new RegistrarDocumento)->ejecutar($escuela->id, 'clave_inventada', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
+    }
+
+    public function test_primera_carga_guarda_en_ruta_unica_registrada_en_la_fila(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('v1.pdf', 50, 'application/pdf'), new DatosDocumento);
+
+        $documento = DocumentoEscuela::first();
+        $this->assertNotNull($documento);
+        $this->assertMatchesRegularExpression('#^escuela/'.$escuela->id.'/ine-[0-9A-Z]{26}\.pdf$#', $documento->archivo_path);
+        Storage::disk('documentos')->assertExists($documento->archivo_path);
+    }
+
+    public function test_reemplazo_exitoso_apunta_a_ruta_nueva_y_borra_la_anterior(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('v1.pdf', 50, 'application/pdf'), new DatosDocumento);
+
+        $rutaAnterior = DocumentoEscuela::first()->archivo_path;
+        Storage::disk('documentos')->assertExists($rutaAnterior);
+
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('v2.pdf', 60, 'application/pdf'), new DatosDocumento);
+
+        $documento = DocumentoEscuela::first();
+        $this->assertNotSame($rutaAnterior, $documento->archivo_path);
+        Storage::disk('documentos')->assertExists($documento->archivo_path);
+        Storage::disk('documentos')->assertMissing($rutaAnterior);
+    }
+
+    public function test_fallo_dentro_de_la_transaccion_conserva_archivo_y_fila_previos(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'escritura_inmueble', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento(
+            tipoAcreditacion: 'escritura_publica',
+            numeroEscritura: 'E-100',
+        ));
+
+        $documentoAntes = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->first();
+        $rutaAnterior = $documentoAntes->archivo_path;
+        Storage::disk('documentos')->assertExists($rutaAnterior);
+        $bytesAnteriores = Storage::disk('documentos')->get($rutaAnterior);
+
+        try {
+            // tipoAcreditacion inválido viola el CHECK de acreditaciones_ocupacion_legal.tipo,
+            // forzando el fallo dentro de la transacción tras reemplazar la fila base.
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'escritura_inmueble', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento(
+                tipoAcreditacion: 'tipo_invalido',
+            ));
+            $this->fail('Se esperaba que la transacción fallara por el CHECK de tipo.');
+        } catch (\Throwable) {
+            // esperado
+        }
+
+        $documentoDespues = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->first();
+        $this->assertSame($rutaAnterior, $documentoDespues->archivo_path);
+        $this->assertSame($documentoAntes->estado_validacion, $documentoDespues->estado_validacion);
+        Storage::disk('documentos')->assertExists($rutaAnterior);
+        $this->assertSame($bytesAnteriores, Storage::disk('documentos')->get($rutaAnterior), 'los bytes del archivo previo no deben alterarse');
+
+        $archivosPlantel = Storage::disk('documentos')->allFiles("plantel/{$escuela->plantel_id}");
+        $this->assertCount(1, $archivosPlantel, 'no debe quedar un archivo nuevo huérfano');
     }
 }
