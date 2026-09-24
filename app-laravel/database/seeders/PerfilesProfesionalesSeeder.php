@@ -39,10 +39,10 @@ class PerfilesProfesionalesSeeder extends Seeder
         };
 
         // Inicial
-        $add('inicial:Director Técnico', ['Lic. en Educación Preescolar', 'Puericultura y Educación Infantil', 'Intervención Educativa', 'Trabajo Social', 'Psicología', 'Médico'], $tituloCedula);
+        $add('inicial:Director Técnico', ['Lic. en Educación Preescolar', 'Profesor en Educación Preescolar', 'Puericultura y Educación Infantil', 'Intervención Educativa', 'Trabajo Social', 'Psicología', 'Médico'], $tituloCedula);
         $add('inicial:Responsable de Sala', ['TSU o Lic. en Puericultura', 'Educación Preescolar', 'Enfermería'], $tituloCedula);
         $add('inicial:Asistente Educativo', ['Puericultista', 'Técnico en Enfermería', 'Asistente Educativo'], $certificado);
-        $add('inicial:Responsable de Filtro y Fomento a la Salud', ['Médico General o Pediatra', 'Enfermera Pediatra'], $tituloCedula);
+        $add('inicial:Responsable de Filtro y Fomento a la Salud', ['Médico General o Pediatra', 'Enfermera Pediatra', 'Enfermera'], $tituloCedula);
 
         // Preescolar
         $add('preescolar:Director Técnico', ['Normalista', 'Lic. en Educación', 'Lic. en Preescolar', 'Lic. en Inicial', 'Pedagogía', 'Intervención Educativa'], $tituloCedula);

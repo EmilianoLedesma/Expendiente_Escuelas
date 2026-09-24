@@ -19,12 +19,12 @@ class PerfilesProfesionalesSeederTest extends TestCase
         (new CargosPuestosSeeder)->run();
     }
 
-    public function test_it_seeds_87_perfiles_across_inicial_preescolar_primaria_secundaria(): void
+    public function test_it_seeds_89_perfiles_across_inicial_preescolar_primaria_secundaria(): void
     {
         $this->seedDependencies();
         (new PerfilesProfesionalesSeeder)->run();
 
-        $this->assertDatabaseCount('perfiles_profesionales', 87);
+        $this->assertDatabaseCount('perfiles_profesionales', 89);
     }
 
     public function test_it_seeds_inicial_director_tecnico_perfiles(): void
@@ -41,6 +41,29 @@ class PerfilesProfesionalesSeederTest extends TestCase
         $this->assertDatabaseHas('perfiles_profesionales', [
             'cargo_puesto_id' => $cargoId,
             'carrera_aceptada' => 'Psicología',
+            'documento_acreditacion' => 'titulo_cedula',
+        ]);
+        $this->assertDatabaseHas('perfiles_profesionales', [
+            'cargo_puesto_id' => $cargoId,
+            'carrera_aceptada' => 'Profesor en Educación Preescolar',
+            'documento_acreditacion' => 'titulo_cedula',
+        ]);
+    }
+
+    public function test_it_seeds_inicial_responsable_filtro_with_enfermera(): void
+    {
+        $this->seedDependencies();
+        (new PerfilesProfesionalesSeeder)->run();
+
+        $inicialId = DB::table('niveles_educativos')->where('clave', 'inicial')->value('id');
+        $cargoId = DB::table('cargos_puestos')
+            ->where('nivel_educativo_id', $inicialId)
+            ->where('nombre', 'Responsable de Filtro y Fomento a la Salud')
+            ->value('id');
+
+        $this->assertDatabaseHas('perfiles_profesionales', [
+            'cargo_puesto_id' => $cargoId,
+            'carrera_aceptada' => 'Enfermera',
             'documento_acreditacion' => 'titulo_cedula',
         ]);
     }
@@ -107,7 +130,7 @@ class PerfilesProfesionalesSeederTest extends TestCase
         (new PerfilesProfesionalesSeeder)->run();
         (new PerfilesProfesionalesSeeder)->run();
 
-        $this->assertDatabaseCount('perfiles_profesionales', 87);
+        $this->assertDatabaseCount('perfiles_profesionales', 89);
     }
 
     public function test_seeder_does_not_delete_secundaria_perfiles_outside_its_scope(): void
