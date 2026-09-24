@@ -34,6 +34,8 @@ class DatabaseSeeder extends Seeder
         $this->call(AsignaturasSeeder::class);
         $this->call(CargosPuestosSeeder::class);
         $this->call(PerfilesProfesionalesSeeder::class);
+        // ReglasValidacionSeeder enlaza reglas de personal a cargos_puestos por
+        // (nivel, nombre) y falla si CargosPuestosSeeder no corrió antes (WS-3.4).
         $this->call(ReglasValidacionSeeder::class);
     }
 }

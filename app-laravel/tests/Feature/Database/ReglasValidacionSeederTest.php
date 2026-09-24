@@ -3,6 +3,7 @@
 namespace Tests\Feature\Database;
 
 use App\Domain\Validaciones\Regla\CalculadoraRequerimiento;
+use Database\Seeders\CargosPuestosSeeder;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\ReglasValidacionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,14 +18,15 @@ class ReglasValidacionSeederTest extends TestCase
     private function seedReglas(): void
     {
         (new CatalogoMinimoSeeder)->run();
+        (new CargosPuestosSeeder)->run();
         (new ReglasValidacionSeeder)->run();
     }
 
-    public function test_it_seeds_28_reglas_across_4_niveles(): void
+    public function test_it_seeds_32_reglas_across_4_niveles(): void
     {
         $this->seedReglas();
 
-        $this->assertDatabaseCount('reglas_validacion', 28);
+        $this->assertDatabaseCount('reglas_validacion', 32);
     }
 
     public function test_clave_is_unique_and_never_null(): void
@@ -33,8 +35,8 @@ class ReglasValidacionSeederTest extends TestCase
 
         $claves = DB::table('reglas_validacion')->pluck('clave');
 
-        $this->assertCount(28, $claves);
-        $this->assertCount(28, $claves->unique());
+        $this->assertCount(32, $claves);
+        $this->assertCount(32, $claves->unique());
         $this->assertFalse($claves->contains(null));
     }
 
@@ -110,7 +112,7 @@ class ReglasValidacionSeederTest extends TestCase
             ->pluck('total', 'tipo_regla');
 
         $this->assertSame(16, $counts['superficie']);
-        $this->assertSame(9, $counts['personal']);
+        $this->assertSame(13, $counts['personal']);
         $this->assertSame(3, $counts['infraestructura']);
     }
 
@@ -137,7 +139,30 @@ class ReglasValidacionSeederTest extends TestCase
         $this->seedReglas();
         (new ReglasValidacionSeeder)->run();
 
-        $this->assertDatabaseCount('reglas_validacion', 28);
+        $this->assertDatabaseCount('reglas_validacion', 32);
+    }
+
+    /**
+     * insertOrIgnore cannot update an existing row's columns once a clave
+     * exists — the seeder must upsert on clave. This locks that in: a
+     * stale valor_numerico gets corrected on re-run, without duplicating
+     * the row.
+     */
+    public function test_it_updates_existing_rows_on_rerun_instead_of_duplicating(): void
+    {
+        $this->seedReglas();
+
+        DB::table('reglas_validacion')
+            ->where('clave', 'secundaria.personal.prefecto')
+            ->update(['valor_numerico' => 99]);
+
+        (new ReglasValidacionSeeder)->run();
+
+        $this->assertDatabaseCount('reglas_validacion', 32);
+        $this->assertDatabaseHas('reglas_validacion', [
+            'clave' => 'secundaria.personal.prefecto',
+            'valor_numerico' => 1.00,
+        ]);
     }
 
     public function test_ratio_por_alumno_rule_inicial_area_recreativa(): void
@@ -462,5 +487,110 @@ class ReglasValidacionSeederTest extends TestCase
             '10 niños -> 1 asistente' => [10, 1],
             '11 niños -> 2 asistentes' => [11, 2],
         ];
+    }
+
+    /**
+     * WS-3.4: Director Técnico obligatorio, one row per nivel de Básica
+     * (Inicial's own director_tecnico row already existed before WS-3.4).
+     */
+    #[DataProvider('directorTecnicoNivelProvider')]
+    public function test_personal_obligatorio_rule_director_tecnico_por_nivel(string $clave): void
+    {
+        $this->seedReglas();
+
+        $this->assertDatabaseHas('reglas_validacion', [
+            'clave' => $clave,
+            'tipo_regla' => 'personal',
+            'tipo_calculo' => 'personal_obligatorio',
+            'ambito' => 'escuela',
+            'redondeo' => 'na',
+            'valor_numerico' => 1.00,
+        ]);
+    }
+
+    public static function directorTecnicoNivelProvider(): array
+    {
+        return [
+            'preescolar' => ['preescolar.personal.director_tecnico'],
+            'primaria' => ['primaria.personal.director_tecnico'],
+            'secundaria' => ['secundaria.personal.director_tecnico'],
+        ];
+    }
+
+    public function test_personal_obligatorio_rule_inicial_responsable_filtro(): void
+    {
+        $this->seedReglas();
+
+        $this->assertDatabaseHas('reglas_validacion', [
+            'clave' => 'inicial.personal.responsable_filtro',
+            'tipo_regla' => 'personal',
+            'tipo_calculo' => 'personal_obligatorio',
+            'ambito' => 'plantel',
+            'redondeo' => 'na',
+            'valor_numerico' => 1.00,
+        ]);
+    }
+
+    /**
+     * Long-open follow-up (WS-3.4): every personal rule whose cargo exists
+     * in cargos_puestos gets cargo_puesto_id populated, resolved by
+     * (nivel, nombre del cargo) — never a hardcoded id.
+     */
+    public function test_personal_rules_are_linked_to_their_cargo_puesto(): void
+    {
+        $this->seedReglas();
+
+        $cargoId = fn (string $nivel, string $nombre) => DB::table('cargos_puestos')
+            ->join('niveles_educativos', 'cargos_puestos.nivel_educativo_id', '=', 'niveles_educativos.id')
+            ->where('niveles_educativos.clave', $nivel)
+            ->where('cargos_puestos.nombre', $nombre)
+            ->value('cargos_puestos.id');
+
+        $expected = [
+            'inicial.personal.responsable_sala' => $cargoId('inicial', 'Responsable de Sala'),
+            'inicial.personal.asistente_lactantes' => $cargoId('inicial', 'Asistente Educativo'),
+            'inicial.personal.asistente_maternales' => $cargoId('inicial', 'Asistente Educativo'),
+            'inicial.personal.director_tecnico' => $cargoId('inicial', 'Director Técnico'),
+            'inicial.personal.responsable_filtro' => $cargoId('inicial', 'Responsable de Filtro y Fomento a la Salud'),
+            'preescolar.personal.educacion_fisica' => $cargoId('preescolar', 'Docente de Educación Física'),
+            'preescolar.personal.director_tecnico' => $cargoId('preescolar', 'Director Técnico'),
+            'primaria.personal.educacion_fisica' => $cargoId('primaria', 'Docente de Educación Física'),
+            'primaria.personal.director_tecnico' => $cargoId('primaria', 'Director Técnico'),
+            'secundaria.personal.trabajador_social' => $cargoId('secundaria', 'Trabajador Social'),
+            'secundaria.personal.prefecto' => $cargoId('secundaria', 'Prefecto'),
+            'secundaria.personal.director_tecnico' => $cargoId('secundaria', 'Director Técnico'),
+        ];
+
+        foreach ($expected as $clave => $expectedCargoId) {
+            $this->assertNotNull($expectedCargoId, "cargo lookup for {$clave} resolved to null — fixture problem");
+            $this->assertDatabaseHas('reglas_validacion', [
+                'clave' => $clave,
+                'cargo_puesto_id' => $expectedCargoId,
+            ]);
+        }
+    }
+
+    /**
+     * secundaria.personal.educacion_fisica has no matching row in
+     * cargos_puestos (Secundaria never seeds a "Docente de Educación
+     * Física" cargo) — documented NULL, not a lookup failure.
+     */
+    public function test_secundaria_educacion_fisica_rule_has_no_cargo_linked(): void
+    {
+        $this->seedReglas();
+
+        $this->assertDatabaseHas('reglas_validacion', [
+            'clave' => 'secundaria.personal.educacion_fisica',
+            'cargo_puesto_id' => null,
+        ]);
+    }
+
+    public function test_seeder_fails_loudly_when_cargos_puestos_seeder_never_ran(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+
+        $this->expectException(\RuntimeException::class);
+
+        (new ReglasValidacionSeeder)->run();
     }
 }
