@@ -4,7 +4,7 @@
     <p class="font-sans text-body-sm text-ink/70 mb-lg">{{ $totalCompletos }} de {{ $totalAplicables }} documentos completos</p>
 
     @error('vigencia')
-        <div class="mb-lg"><x-ui.alert variant="error">{{ $message }}</x-ui.alert></div>
+        <div class="mb-lg"><x-ui.alert tipo="error">{{ $message }}</x-ui.alert></div>
     @enderror
 
     @php

@@ -6,7 +6,7 @@
 
         @if ($errors->has('bifurcacion') && !$errors->has('plantelId'))
             <div class="mb-lg">
-                <x-ui.alert variant="error" title="No se pudo iniciar el trámite">
+                <x-ui.alert tipo="error" titulo="No se pudo iniciar el trámite">
                     {{ $errors->first('bifurcacion') }}
                 </x-ui.alert>
             </div>

@@ -6,7 +6,7 @@
 
     @error('cantidades')
         <div class="mb-lg">
-            <x-ui.alert variant="error" title="No se pudo guardar">{{ $message }}</x-ui.alert>
+            <x-ui.alert tipo="error" titulo="No se pudo guardar">{{ $message }}</x-ui.alert>
         </div>
     @enderror
 

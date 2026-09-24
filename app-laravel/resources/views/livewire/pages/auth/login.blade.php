@@ -37,7 +37,7 @@ new #[Layout('layouts.guest')] class extends Component
 
     @if (session('status'))
         <div class="mb-lg">
-            <x-ui.alert variant="success">{{ session('status') }}</x-ui.alert>
+            <x-ui.alert tipo="success">{{ session('status') }}</x-ui.alert>
         </div>
     @endif
 
