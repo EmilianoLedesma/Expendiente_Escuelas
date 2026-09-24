@@ -53,7 +53,9 @@ class RegistrarDocumento
         $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);
 
         if (! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
-            throw new DatosInvalidos(['clave' => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
+            // Minor 5 — 'clave' no mapea a ningún campo Livewire; "archivos.{clave}"
+            // es la misma ruta que usa el rechazo de PDF más abajo.
+            throw new DatosInvalidos(["archivos.{$tipoDocumentoClave}" => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
         }
 
         if ($archivo->getMimeType() !== 'application/pdf') {
@@ -77,8 +79,24 @@ class RegistrarDocumento
             ? date('Y-m-d', strtotime("{$datos->fechaEmision} +{$tipo->vigencia_max_dias} days"))
             : null;
 
+        // WS-2 item 2 — confirmado solo se pone en true DENTRO del callback
+        // afterCommit, no como última instrucción del closure de
+        // DB::transaction(): ese closure termina, y luego el commit real
+        // ocurre, ANTES de que DB::transaction() regrese a esta función — así
+        // que "última instrucción del closure" y "después de que
+        // DB::transaction() regrese" describen el mismo instante que el
+        // afterCommit ya usa para el borrado diferido (ver comentario más
+        // abajo), y son insuficientes por la misma razón: si algo lanzara
+        // entre el commit real y el retorno de DB::transaction(), ninguna de
+        // esas dos posiciones se alcanzaría. Poner la bandera dentro del
+        // propio callback afterCommit la ata al mismo evento que ya dispara
+        // el borrado, así que es información confiable sin importar si este
+        // DB::transaction() es la transacción real o solo un savepoint
+        // anidado de un caller externo.
+        $confirmado = false;
+
         try {
-            DB::transaction(function () use ($tipo, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen) {
+            DB::transaction(function () use ($tipo, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, &$confirmado) {
                 $atributos = [
                     'archivo_path' => $ruta,
                     'fecha_emision' => $datos->fechaEmision,
@@ -147,15 +165,38 @@ class RegistrarDocumento
                 // afterCommit cuando el nivel de transacción baja a 1 (el
                 // wrapper de test), no a 0, así que este callback sí se
                 // observa en los tests sin necesitar un commit real a la BD.
-                if ($rutaAnterior !== null && $rutaAnterior !== $ruta) {
-                    DB::afterCommit(fn () => $almacen->eliminar($rutaAnterior));
-                }
+                //
+                // WS-2 item 2 — este callback corre DENTRO de commit(), ANTES
+                // de que DB::transaction() regrese: si eliminar() lanzara
+                // (disco caído, permisos, etc.) esa excepción escaparía de
+                // DB::transaction() DESPUÉS del commit real y caería en el
+                // catch(Throwable) de abajo, que borraría $ruta — el archivo
+                // NUEVO al que la fila ya confirmada apunta. rescue(...,
+                // report: true) reporta el fallo sin dejarlo propagar.
+                DB::afterCommit(function () use (&$confirmado, $rutaAnterior, $ruta, $almacen) {
+                    $confirmado = true;
+
+                    if ($rutaAnterior !== null && $rutaAnterior !== $ruta) {
+                        rescue(fn () => $almacen->eliminar($rutaAnterior), report: true);
+                    }
+                });
+
+                // Minor 6 — si quien llama envuelve ejecutar() en su propia
+                // transacción externa y esa transacción hace rollback DESPUÉS
+                // de que este savepoint interno "confirmó", $ruta (el archivo
+                // nuevo) ya está en disco pero ninguna fila lo referencia:
+                // queda huérfano. afterRollBack solo dispara si la
+                // transacción real termina en rollback, así que no interfiere
+                // con el caso de commit real (afterCommit arriba).
+                DB::afterRollBack(fn () => rescue(fn () => $almacen->eliminar($ruta), report: true));
             });
         } catch (Throwable $e) {
-            // La fila previa nunca se tocó (updateOrCreate corrió dentro de la
-            // transacción que acaba de hacer rollback): solo el archivo nuevo,
-            // huérfano, necesita limpieza.
-            $almacen->eliminar($ruta);
+            if (! $confirmado) {
+                // La fila previa nunca se tocó (updateOrCreate corrió dentro de
+                // la transacción que acaba de hacer rollback): solo el archivo
+                // nuevo, huérfano, necesita limpieza.
+                $almacen->eliminar($ruta);
+            }
 
             throw $e;
         }

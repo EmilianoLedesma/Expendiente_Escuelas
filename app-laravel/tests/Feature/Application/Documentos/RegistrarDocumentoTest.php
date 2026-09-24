@@ -7,6 +7,8 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
+use App\Infrastructure\Documentos\AlmacenDocumentos;
+use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
@@ -143,7 +145,10 @@ class RegistrarDocumentoTest extends TestCase
             (new RegistrarDocumento)->ejecutar($escuela->id, 'acta_nacimiento', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
             $this->fail('Se esperaba DatosInvalidos.');
         } catch (DatosInvalidos $e) {
-            $this->assertArrayHasKey('clave', $e->errores);
+            // Minor 5 — la clave 'clave' no corresponde a ningún campo Livewire;
+            // "archivos.{clave}" es la misma ruta que usa el rechazo de PDF y sí
+            // resuelve a un campo real del formulario.
+            $this->assertArrayHasKey('archivos.acta_nacimiento', $e->errores);
         }
 
         $this->assertDatabaseCount('documentos_escuela', 0);
@@ -305,5 +310,54 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertSame($rutaAnterior, $documentoDespues->archivo_path);
         Storage::disk('documentos')->assertExists($rutaAnterior);
         $this->assertSame($bytesAnteriores, Storage::disk('documentos')->get($rutaAnterior), 'el archivo previo no debe borrarse si la transacción externa hace rollback');
+
+        // Minor 6 — el archivo nuevo (v2) que ejecutar() escribió a disco antes
+        // de que la transacción externa hiciera rollback no debe quedar huérfano:
+        // ninguna fila lo referencia.
+        $archivosEscuela = Storage::disk('documentos')->allFiles("escuela/{$escuela->id}");
+        $this->assertCount(1, $archivosEscuela, 'el archivo nuevo (v2) quedó huérfano tras el rollback de la transacción externa');
+    }
+
+    // WS-2 item 2 — si el borrado diferido del archivo anterior falla (p. ej.
+    // el disco fue removido entre la subida y el afterCommit), esa excepción
+    // corre DESPUÉS del commit real (DB::afterCommit se dispara dentro de
+    // commit(), antes de que DB::transaction() regrese) y no debe alcanzar el
+    // catch(Throwable) de ejecutar(): ese catch borraría $ruta, el archivo
+    // NUEVO al que la fila ya confirmada apunta.
+    public function test_fallo_al_borrar_el_archivo_anterior_no_borra_el_archivo_nuevo_ni_propaga(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+
+        $almacenReal = new AlmacenDocumentosLocal;
+        (new RegistrarDocumento($almacenReal))->ejecutar($escuela->id, 'ine', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento);
+        $rutaAnterior = DocumentoEscuela::first()->archivo_path;
+
+        $almacenQueFallaAlBorrar = new class($almacenReal, $rutaAnterior) implements AlmacenDocumentos
+        {
+            public function __construct(private AlmacenDocumentos $real, private string $rutaQueFalla) {}
+
+            public function guardar(string $ambito, int $ownerId, string $clave, UploadedFile $archivo): string
+            {
+                return $this->real->guardar($ambito, $ownerId, $clave, $archivo);
+            }
+
+            public function eliminar(string $path): void
+            {
+                if ($path === $this->rutaQueFalla) {
+                    throw new RuntimeException('disco no disponible');
+                }
+
+                $this->real->eliminar($path);
+            }
+        };
+
+        // No debe lanzar: la excepción del borrado diferido debe quedar contenida.
+        (new RegistrarDocumento($almacenQueFallaAlBorrar))->ejecutar($escuela->id, 'ine', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento);
+
+        $documento = DocumentoEscuela::first();
+        $this->assertNotSame($rutaAnterior, $documento->archivo_path);
+        Storage::disk('documentos')->assertExists($documento->archivo_path);
     }
 }
