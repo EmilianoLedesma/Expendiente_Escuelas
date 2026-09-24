@@ -1,5 +1,5 @@
 {{-- resources/views/livewire/tramite/paso2-documentos.blade.php --}}
-<div class="rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
+<div>
     <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Documentos</h1>
     <p class="font-sans text-body-sm text-ink/70 mb-lg">{{ $totalCompletos }} de {{ $totalAplicables }} documentos completos</p>
 

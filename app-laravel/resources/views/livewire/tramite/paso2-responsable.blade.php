@@ -1,4 +1,4 @@
-<div class="rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
+<div>
     @if ($fase === 'responsable')
         <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Responsable legal</h1>
 

@@ -10,16 +10,21 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
     </head>
-    <body class="font-sans antialiased bg-surface-soft min-h-screen">
-        <x-tramite.top-nav />
+    <body class="flex min-h-screen flex-col bg-surface-soft font-sans text-body-md text-body antialiased">
+        <x-shell.encabezado />
 
-        <main class="max-w-[720px] mx-auto px-lg py-xl">
-            <div class="mb-lg">
-                <x-tramite.progreso :escuela-id="$escuelaId ?? null" :escuela-nivel-id="$escuelaNivelId ?? null" />
+        <main id="contenido" tabindex="-1" class="mx-auto w-full max-w-[720px] flex-1 px-md py-xl sm:px-lg">
+            <div class="rounded-sm border border-hairline bg-canvas p-md sm:p-lg">
+                {{-- Se retira en la Tarea 9 junto con la clase Progreso. --}}
+                <div class="mb-lg">
+                    <x-tramite.progreso :escuela-id="$escuelaId ?? null" :escuela-nivel-id="$escuelaNivelId ?? null" />
+                </div>
+
+                {{ $slot }}
             </div>
-
-            {{ $slot }}
         </main>
+
+        <x-shell.pie />
 
         @livewireScripts
     </body>

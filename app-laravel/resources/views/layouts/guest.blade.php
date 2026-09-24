@@ -9,15 +9,15 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-surface-soft min-h-screen">
-        <nav class="flex items-center h-14 bg-canvas border-b-[0.5px] border-hairline px-lg">
-            <a href="/" class="font-display text-title-md font-semibold text-ink">SEDEQ</a>
-        </nav>
+    <body class="flex min-h-screen flex-col bg-surface-soft font-sans text-body-md text-body antialiased">
+        <x-shell.encabezado />
 
-        <main class="flex flex-col items-center justify-center px-lg py-xl min-h-[calc(100vh-56px)]">
-            <div class="w-full max-w-md rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
+        <main id="contenido" tabindex="-1" class="mx-auto w-full max-w-[440px] flex-1 px-md py-xl">
+            <div class="rounded-sm border border-hairline bg-canvas p-md sm:p-lg">
                 {{ $slot }}
             </div>
         </main>
+
+        <x-shell.pie />
     </body>
 </html>

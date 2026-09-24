@@ -18,7 +18,8 @@ export default {
                 'primary-disabled': '#e5e7eb',
                 ink: '#242B57',
                 body: '#374151',
-                muted: '#707F8F',
+                // DESIGN.md dice #707F8F (<4.5:1 sobre blanco). Rediseño UI: ver reporte.
+                muted: '#4B5563',
                 faint: '#9ca3af',
                 hairline: '#e5e7eb',
                 'hairline-soft': '#f3f4f6',
@@ -34,6 +35,17 @@ export default {
                 success: '#28a745',
                 warning: '#f59e0b',
                 error: '#ef4444',
+                // Rediseño UI (docs/reports/<fecha>-rediseno-ui.md): pares ink/soft ≥ 4.5:1.
+                // success/warning/error de arriba quedan solo para iconos.
+                'success-ink': '#1E6B34',
+                'success-soft': '#E8F5EC',
+                'warning-ink': '#8A4B08',
+                'warning-soft': '#FEF3E2',
+                'error-ink': '#B42318',
+                'error-soft': '#FDECEA',
+                'info-ink': '#242B57',
+                // Borde de controles de formulario: 4.8:1 (hairline es 1.2:1, no pasa WCAG 1.4.11).
+                control: '#6B7280',
                 'badge-blue': '#e8edf8',
                 'badge-aqua': '#e1f5fa',
                 'badge-gold': '#fdf4da',

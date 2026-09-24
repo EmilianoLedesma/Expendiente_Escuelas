@@ -1,4 +1,4 @@
-<div class="rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
+<div>
     <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Mobiliario</h1>
     <p class="font-sans text-body-sm text-body mb-lg">
         Declara la cantidad de mobiliario y equipo con que cuenta cada sala.

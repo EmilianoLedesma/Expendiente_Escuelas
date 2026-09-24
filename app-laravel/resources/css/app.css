@@ -3,3 +3,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    /* Foco visible en todo elemento enfocable (WCAG 2.4.7). !important porque
+       @tailwindcss/forms y las utilidades focus:outline-none lo anulan con
+       mayor especificidad. */
+    :focus-visible {
+        outline: 3px solid theme('colors.brand-accent') !important;
+        outline-offset: 2px !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}

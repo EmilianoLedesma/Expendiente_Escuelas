@@ -1,4 +1,4 @@
-<div class="rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
+<div>
         <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Preregistro</h1>
         <p class="font-sans text-body-sm text-body mb-lg">
             Indica si este trámite es para un plantel/escuela nuevo o uno ya existente.
