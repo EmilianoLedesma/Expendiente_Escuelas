@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Application\Mobiliario;
 
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -14,10 +16,12 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class RegistrarMobiliarioNivelTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuelaNivel(string $claveNivel): EscuelaNivel
@@ -29,15 +33,22 @@ class RegistrarMobiliarioNivelTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        // WS-2.4b: RegistrarMobiliarioNivel ahora exige Paso 2 completo antes de escribir.
+        $this->completarPaso2($escuela->id);
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-2.4b: Mobiliario solo es alcanzable con Inmueble e Infraestructura completados.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
+
+        return $escuelaNivel;
     }
 
     /** @return array<int, int> */
@@ -131,5 +142,59 @@ class RegistrarMobiliarioNivelTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, []);
+    }
+
+    // WS-2.4b — un caller que se salte CompuertaPaso3 no debe poder escribir
+    // mobiliario si Paso 2 no está completo.
+    public function test_rechaza_registrar_sin_paso_2_completo(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
+        (new MobiliarioConceptosSeeder)->run();
+
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 2', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $nivel = NivelEducativo::where('clave', 'inicial')->first();
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => $nivel->id,
+            'estado_id' => $estadoId,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        // Sin Paso 2 completo, ni el orden de Paso 3 se cumple tampoco.
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, $this->dosConceptos());
+    }
+
+    // WS-2.4b — con Paso 2 completo pero sin 'infraestructura' marcada, el
+    // orden de Paso 3 sigue rechazando la escritura.
+    public function test_rechaza_registrar_cuando_infraestructura_no_esta_completada(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
+        (new MobiliarioConceptosSeeder)->run();
+
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 3', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $this->completarPaso2($escuela->id);
+        $nivel = NivelEducativo::where('clave', 'inicial')->first();
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => $nivel->id,
+            'estado_id' => $estadoId,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+        // Deliberadamente NO se llama a MarcarPasoCompletado('infraestructura').
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, $this->dosConceptos());
     }
 }

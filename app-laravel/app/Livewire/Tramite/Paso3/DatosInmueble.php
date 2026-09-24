@@ -3,6 +3,8 @@
 namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
@@ -12,6 +14,7 @@ use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoPlantel;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
+use App\Models\Plantel;
 use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -130,24 +133,37 @@ class DatosInmueble extends Component
             'estudiosActuales.*.numeroAlumnos' => ['required', 'integer', 'min:0', 'max:32767'],
         ]);
 
-        $registrarDatosInmueble->ejecutar(
-            $this->plantelId(),
-            $this->escuelaNivel->id,
-            new DatosInmuebleDTO(
-                metrosTotales: (float) $this->metrosTotales,
-                metrosConstruidos: $this->numeroONull($this->metrosConstruidos),
-                colindanciaNorte: $this->textoONull($this->colindanciaNorte),
-                colindanciaSur: $this->textoONull($this->colindanciaSur),
-                colindanciaEste: $this->textoONull($this->colindanciaEste),
-                colindanciaOeste: $this->textoONull($this->colindanciaOeste),
-                latitud: $this->numeroONull($this->latitud),
-                longitud: $this->numeroONull($this->longitud),
-                areaCivicaM2: $this->numeroONull($this->areaCivicaM2),
-                tieneAstaBandera: $this->tieneAstaBandera,
-                serviciosCercanos: $this->serviciosDeclarados(),
-                estudiosActuales: $this->estudiosDeclarados(),
-            ),
-        );
+        try {
+            $registrarDatosInmueble->ejecutar(
+                $this->plantelId(),
+                $this->escuelaNivel->id,
+                new DatosInmuebleDTO(
+                    metrosTotales: (float) $this->metrosTotales,
+                    metrosConstruidos: $this->numeroONull($this->metrosConstruidos),
+                    colindanciaNorte: $this->textoONull($this->colindanciaNorte),
+                    colindanciaSur: $this->textoONull($this->colindanciaSur),
+                    colindanciaEste: $this->textoONull($this->colindanciaEste),
+                    colindanciaOeste: $this->textoONull($this->colindanciaOeste),
+                    latitud: $this->numeroONull($this->latitud),
+                    longitud: $this->numeroONull($this->longitud),
+                    areaCivicaM2: $this->numeroONull($this->areaCivicaM2),
+                    tieneAstaBandera: $this->tieneAstaBandera,
+                    serviciosCercanos: $this->serviciosDeclarados(),
+                    estudiosActuales: $this->estudiosDeclarados(),
+                ),
+            );
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+
+            return;
+        } catch (PrecondicionIncumplida) {
+            // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
+            $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'inmueble');
+
+            return;
+        }
 
         $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
@@ -176,6 +192,12 @@ class DatosInmueble extends Component
             'documento_plantel_id',
             DocumentoPlantel::where('plantel_id', $this->plantelId())->pluck('id')
         )->first();
+    }
+
+    /** Domicilio del plantel, capturado en Paso 1 — solo lectura (PRD §5 Paso 3.1). */
+    public function plantel(): Plantel
+    {
+        return Plantel::findOrFail($this->plantelId());
     }
 
     public function nivelesDisponibles(): Collection
@@ -223,6 +245,7 @@ class DatosInmueble extends Component
     public function render()
     {
         return view('livewire.tramite.paso3.datos-inmueble', [
+            'plantel' => $this->plantel(),
             'terna' => $this->terna(),
             'acreditacion' => $this->acreditacion(),
             'constancia' => $this->constancia(),

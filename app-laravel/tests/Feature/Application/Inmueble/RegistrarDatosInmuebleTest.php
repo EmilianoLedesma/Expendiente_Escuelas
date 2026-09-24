@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Application\Inmueble;
 
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble;
 use App\Application\Inmueble\RegistrarDatosInmueble;
@@ -14,10 +16,12 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class RegistrarDatosInmuebleTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Plantel $plantel;
@@ -34,6 +38,8 @@ class RegistrarDatosInmuebleTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $this->plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $this->plantel->id, 'solicitante_id' => $solicitante->id]);
+        // WS-2.4b: RegistrarDatosInmueble ahora exige Paso 2 completo antes de escribir.
+        $this->completarPaso2($this->escuela->id);
     }
 
     private function escuelaNivel(string $claveNivel): EscuelaNivel
@@ -162,5 +168,133 @@ class RegistrarDatosInmuebleTest extends TestCase
         app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
 
         $this->assertTrue($yaCapturados->ejecutar($this->plantel->id));
+    }
+
+    // WS-2.4a — invariantes de entrada, para que un caller que se salte el
+    // formulario no pueda escribir datos que violan un CHECK del DDL o un
+    // invariante de negocio.
+
+    public function test_rechaza_metros_totales_cero_o_negativos(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos(0.0));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('metrosTotales', $e->errores);
+        }
+
+        $this->assertNull($this->plantel->fresh()->metros_totales);
+    }
+
+    public function test_rechaza_latitud_fuera_de_rango(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $datos = new DatosInmueble(metrosTotales: 100.0, latitud: 95.0);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('latitud', $e->errores);
+        }
+    }
+
+    public function test_rechaza_longitud_fuera_de_rango(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $datos = new DatosInmueble(metrosTotales: 100.0, longitud: -185.0);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('longitud', $e->errores);
+        }
+    }
+
+    public function test_rechaza_tipo_de_servicio_cercano_fuera_del_enum(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $datos = new DatosInmueble(metrosTotales: 100.0, serviciosCercanos: [
+            ['nombre' => 'X', 'tipo' => 'bomberos', 'esPublico' => null, 'distanciaValor' => null, 'distanciaUnidad' => null],
+        ]);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('serviciosCercanos.0.tipo', $e->errores);
+        }
+
+        $this->assertSame(0, DB::table('servicios_cercanos')->count());
+    }
+
+    public function test_rechaza_unidad_de_distancia_fuera_del_enum(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $datos = new DatosInmueble(metrosTotales: 100.0, serviciosCercanos: [
+            ['nombre' => 'X', 'tipo' => 'salud', 'esPublico' => null, 'distanciaValor' => 3.0, 'distanciaUnidad' => 'millas'],
+        ]);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('serviciosCercanos.0.distanciaUnidad', $e->errores);
+        }
+    }
+
+    public function test_rechaza_estudio_actual_sin_nivel_ni_texto_otro(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $datos = new DatosInmueble(metrosTotales: 100.0, estudiosActuales: [
+            ['nivelEducativoId' => null, 'otroNivelTexto' => null, 'numeroAlumnos' => 10],
+        ]);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('estudiosActuales.0.nivelEducativoId', $e->errores);
+        }
+    }
+
+    // WS-2.4b — un caller que se salte CompuertaPaso3 no debe poder escribir
+    // datos del inmueble si Paso 2 (responsable + documentos) no está completo.
+    public function test_rechaza_registrar_sin_paso_2_completo(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 2', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $nivel = NivelEducativo::where('clave', 'primaria')->first();
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => $nivel->id,
+            'estado_id' => $estadoId,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarDatosInmueble::class)->ejecutar($plantel->id, $escuelaNivel->id, $this->datos());
+    }
+
+    public function test_rechaza_estudio_actual_con_nivel_y_texto_otro_a_la_vez(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $nivelId = (int) DB::table('niveles_educativos')->where('clave', 'preescolar')->value('id');
+        $datos = new DatosInmueble(metrosTotales: 100.0, estudiosActuales: [
+            ['nivelEducativoId' => $nivelId, 'otroNivelTexto' => 'Academia', 'numeroAlumnos' => 10],
+        ]);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('estudiosActuales.0.nivelEducativoId', $e->errores);
+        }
     }
 }

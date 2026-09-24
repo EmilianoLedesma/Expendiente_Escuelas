@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Inmueble\RegistrarDatosInmueble;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -63,6 +65,31 @@ class Paso3DatosInmuebleTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Datos del inmueble', false);
+    }
+
+    // WS-2.6 — PRD §5 Paso 3.1: el domicilio del plantel (capturado en Paso 1)
+    // se muestra siempre, de solo lectura, nunca como input editable.
+    public function test_muestra_el_domicilio_del_plantel_en_solo_lectura(): void
+    {
+        $escuelaNivel = $this->escuelaNivel();
+
+        $response = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
+
+        $response->assertSee('Calle 1', false);
+        $response->assertSee('Centro', false);
+        $response->assertSee('Querétaro', false);
+        $response->assertSee('76000', false);
+
+        // Nunca un input editable sobre el domicilio.
+        $response->assertDontSee('id="calle"', false);
+        $response->assertDontSee('id="colonia"', false);
+        $response->assertDontSee('id="municipio"', false);
+        $response->assertDontSee('id="codigoPostal"', false);
+        $response->assertDontSee('wire:model.blur="calle"', false);
+        $response->assertDontSee('wire:model.blur="colonia"', false);
+        $response->assertDontSee('wire:model.blur="municipio"', false);
+        $response->assertDontSee('wire:model.blur="codigoPostal"', false);
     }
 
     public function test_muestra_la_terna_de_nombres_ya_capturada_en_solo_lectura(): void
@@ -179,5 +206,30 @@ class Paso3DatosInmuebleTest extends TestCase
             ->get(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
 
         $response->assertForbidden();
+    }
+
+    // WS-2.4a — un DatosInvalidos lanzado por el caso de uso debe convertirse
+    // en errores de campo, no en un 500.
+    public function test_datos_invalidos_del_caso_de_uso_se_convierte_en_errores_de_campo(): void
+    {
+        $escuelaNivel = $this->escuelaNivel();
+
+        $this->mock(RegistrarDatosInmueble::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')->andThrow(new DatosInvalidos([
+                'latitud' => 'La latitud debe estar entre -90 y 90.',
+            ]));
+        });
+
+        // latitud dentro de rango para que la validación de Livewire (que ya
+        // la cubre client-side) no intercepte antes de llegar al caso de uso
+        // mockeado — así se prueba específicamente el catch de DatosInvalidos.
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $escuelaNivel])
+            ->set('metrosTotales', 900)
+            ->set('latitud', 20.0)
+            ->call('guardar')
+            ->assertHasErrors('latitud');
+
+        $this->assertNull($this->plantel->fresh()->metros_totales);
     }
 }

@@ -3,6 +3,8 @@
 namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -263,6 +265,74 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->assertDatabaseCount('biblioteca_materiales', 0);
     }
 
+    // WS-2.1 — materials entered without a biblioteca cantidad must not vanish:
+    // a biblioteca_materiales row requires an instalaciones_espacios row (FK NOT NULL),
+    // so materials present implies the biblioteca espacio row is created.
+    public function test_material_biblioteca_sin_cantidad_se_guarda_con_fila_de_biblioteca(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $bibliotecaId = $this->idTipo('biblioteca');
+        $librosId = (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("materialesBiblioteca.$librosId.numeroTitulos", 300)
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $bibliotecaEspacioId = DB::table('instalaciones_espacios')
+            ->where('plantel_id', $this->plantel->id)
+            ->where('tipo_espacio_id', $bibliotecaId)
+            ->value('id');
+        $this->assertNotNull($bibliotecaEspacioId, 'Los materiales de biblioteca se descartaron en silencio.');
+        $this->assertDatabaseHas('biblioteca_materiales', [
+            'instalacion_espacio_id' => $bibliotecaEspacioId,
+            'numero_titulos' => 300,
+        ]);
+    }
+
+    // WS-2.1 fix round 1 — an unchecked/blurred checkbox commits boolean false,
+    // which must NOT count as "content"; otherwise a tipo the user never
+    // touched gets a junk row and (per ADR-005) is permanently marked
+    // capturado for the plantel.
+    public function test_checkboxes_sin_marcar_no_crean_un_espacio_fantasma(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $direccionId = $this->idTipo('direccion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$direccionId}.ventilacionNatural", false)
+            ->set("espacios.{$direccionId}.iluminacionNatural", false)
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $this->assertDatabaseMissing('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $direccionId,
+        ]);
+    }
+
+    // WS-2 item 1 — un espacio con solo el formato de campo_futbol capturado
+    // no debe perderse: el componente lo construía pero el caso de uso no lo
+    // contaba como "dato significativo".
+    public function test_campo_futbol_con_solo_formato_se_guarda(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $campoFutbolId = $this->idTipo('campo_futbol');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$campoFutbolId}.campoFutbolFormato", '7')
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $this->assertDatabaseHas('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $campoFutbolId,
+        ]);
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $primaria = $this->escuelaNivel('primaria');
@@ -272,5 +342,28 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $primaria->id]));
 
         $response->assertForbidden();
+    }
+
+    // WS-2.4a — un DatosInvalidos lanzado por el caso de uso debe convertirse
+    // en errores de campo, no en un 500.
+    public function test_datos_invalidos_del_caso_de_uso_se_convierte_en_errores_de_campo(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $direccionId = $this->idTipo('direccion');
+
+        $this->mock(RegistrarInfraestructuraNivel::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')->andThrow(new DatosInvalidos([
+                'numeroAulas' => 'El número de aulas no puede ser negativo.',
+            ]));
+        });
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$direccionId}.cantidad", 1)
+            ->set('numeroAulas', 6)
+            ->call('guardar')
+            ->assertHasErrors('numeroAulas');
+
+        $this->assertDatabaseCount('aulas_nivel', 0);
     }
 }

@@ -17,10 +17,10 @@ class AlmacenDocumentosLocalTest extends TestCase
         $ruta = (new AlmacenDocumentosLocal)->guardar('plantel', 7, 'dictamen_uso_suelo', $archivo);
 
         Storage::disk('documentos')->assertExists($ruta);
-        $this->assertSame('plantel/7/dictamen_uso_suelo.pdf', $ruta);
+        $this->assertMatchesRegularExpression('#^plantel/7/dictamen_uso_suelo-[0-9A-Z]{26}\.pdf$#', $ruta);
     }
 
-    public function test_guardar_dos_veces_reemplaza_el_archivo_anterior(): void
+    public function test_guardar_dos_veces_produce_rutas_distintas_y_conserva_ambos_archivos(): void
     {
         Storage::fake('documentos');
         $almacen = new AlmacenDocumentosLocal;
@@ -28,7 +28,8 @@ class AlmacenDocumentosLocalTest extends TestCase
 
         $segundo = $almacen->guardar('escuela', 3, 'ine', UploadedFile::fake()->create('v2.pdf', 80, 'application/pdf'));
 
-        $this->assertSame($primero, $segundo);
+        $this->assertNotSame($primero, $segundo);
+        Storage::disk('documentos')->assertExists($primero);
         Storage::disk('documentos')->assertExists($segundo);
     }
 

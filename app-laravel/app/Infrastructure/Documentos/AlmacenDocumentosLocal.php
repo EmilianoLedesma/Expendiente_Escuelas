@@ -4,18 +4,23 @@ namespace App\Infrastructure\Documentos;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Decisión de MVP (docs/superpowers/specs/2026-09-10-paso2-documentos-design.md
  * §10): disco local, nunca dentro de public/. Un almacenamiento externo
  * (S3, etc.) queda considerado para el futuro, no para este MVP — cambiar
  * de disco es una edición de config, no un rediseño de este caso de uso.
+ *
+ * La ruta lleva un sufijo ULID único por escritura (WS-2.3): permite que
+ * RegistrarDocumento suba el archivo nuevo sin pisar el anterior antes de
+ * que la fila que lo referencia haya confirmado en transacción.
  */
 class AlmacenDocumentosLocal implements AlmacenDocumentos
 {
     public function guardar(string $ambito, int $ownerId, string $clave, UploadedFile $archivo): string
     {
-        $ruta = "{$ambito}/{$ownerId}/{$clave}.pdf";
+        $ruta = "{$ambito}/{$ownerId}/{$clave}-".Str::ulid().'.pdf';
 
         Storage::disk('documentos')->put($ruta, file_get_contents($archivo->getRealPath()));
 

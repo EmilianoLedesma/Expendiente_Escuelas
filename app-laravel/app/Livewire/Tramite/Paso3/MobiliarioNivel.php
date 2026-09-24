@@ -3,6 +3,7 @@
 namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
@@ -75,7 +76,14 @@ class MobiliarioNivel extends Component
             return;
         }
 
-        $registrarMobiliarioNivel->ejecutar($this->escuelaNivel->id, $declaradas);
+        try {
+            $registrarMobiliarioNivel->ejecutar($this->escuelaNivel->id, $declaradas);
+        } catch (PrecondicionIncumplida) {
+            // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
+            $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'mobiliario');
+
+            return;
+        }
 
         $this->redirectRoute('tramite.paso3-proximos-pasos', ['escuelaNivel' => $this->escuelaNivel->id]);
     }

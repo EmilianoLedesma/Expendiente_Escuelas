@@ -8,6 +8,8 @@ use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\DTO\ResultadoPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
+use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
+use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso2Responsable;
 use App\Models\Escuela;
@@ -82,6 +84,8 @@ class AuditoriaSeguridadTest extends TestCase
         Storage::fake('documentos');
         $a = Solicitante::factory()->create();
         $resA = $this->nuevoTramite($a);
+        // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado antes de escribir.
+        app(RegistrarResponsableLegal::class)->ejecutar($resA->escuelaId, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
         app(RegistrarDocumento::class)->ejecutar(
             $resA->escuelaId,
             'escritura_inmueble',

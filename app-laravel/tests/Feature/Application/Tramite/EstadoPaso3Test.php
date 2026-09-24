@@ -14,10 +14,12 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class EstadoPaso3Test extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private int $escuelaNivelId;
@@ -30,6 +32,8 @@ class EstadoPaso3Test extends TestCase
 
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => Solicitante::factory()->create()->id]);
+        // Minor 7 — MarcarPasoCompletado ahora exige Paso 2 completo.
+        $this->completarPaso2($escuela->id);
         $this->escuelaNivelId = EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),

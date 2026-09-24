@@ -3,8 +3,13 @@
 namespace App\Application\Infraestructura;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
+use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\EstadoPaso3;
 use App\Models\AulaNivel;
+use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
 use App\Models\Sanitario;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +30,18 @@ class RegistrarInfraestructuraNivel
     public function __construct(
         private readonly InfraestructuraYaCapturada $yaCapturada,
         private readonly MarcarPasoCompletado $marcarPasoCompletado,
+        private readonly EstadoPaso2 $estadoPaso2,
+        private readonly EstadoPaso3 $estadoPaso3,
+        private readonly CategoriasSanitariosPorNivel $categoriasSanitariosPorNivel = new CategoriasSanitariosPorNivel,
     ) {}
 
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso "infraestructura" aún no es alcanzable. */
     public function ejecutar(int $plantelId, int $escuelaNivelId, DatosInfraestructuraNivel $datos): void
     {
+        $escuelaNivel = EscuelaNivel::with('nivelEducativo')->findOrFail($escuelaNivelId);
+        $this->verificarPrecondicion($escuelaNivel);
+        $this->validar($plantelId, $escuelaNivel, $datos);
+
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
             $this->escribirEspacios($plantelId, $datos);
             $this->escribirSanitarios($plantelId, $datos);
@@ -45,12 +58,29 @@ class RegistrarInfraestructuraNivel
         });
     }
 
+    /** WS-2.4b: un adaptador que llame este caso de uso sin pasar por CompuertaPaso3 no debe poder saltarse el orden del wizard. */
+    private function verificarPrecondicion(EscuelaNivel $escuelaNivel): void
+    {
+        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de continuar.');
+        }
+
+        if (! $this->estadoPaso3->puedeAcceder($escuelaNivel->id, 'infraestructura')) {
+            throw new PrecondicionIncumplida('infraestructura', 'Completa los pasos anteriores de Paso 3 antes de continuar.');
+        }
+    }
+
     private function escribirEspacios(int $plantelId, DatosInfraestructuraNivel $datos): void
     {
         $yaCapturados = $this->yaCapturada->tiposCapturados($plantelId);
 
         foreach ($datos->espacios as $espacio) {
             if (in_array($espacio['tipoEspacioId'], $yaCapturados, true)) {
+                continue;
+            }
+
+            if (! $this->tieneDatosSignificativos($espacio)) {
                 continue;
             }
 
@@ -84,12 +114,61 @@ class RegistrarInfraestructuraNivel
         }
     }
 
+    /**
+     * Única fuente de verdad de "¿este espacio trae dato?" (WS-2 item 1): el
+     * componente Livewire ya no pre-filtra por su cuenta — construye la
+     * entrada para todo tipo aplicable y delega la decisión de persistir
+     * aquí, para que no puedan divergir dos copias de la misma regla. Un
+     * booleano solo cuenta como dato cuando es `true`, y campoFutbol solo
+     * cuenta si trae tipoSuperficie o formato — de lo contrario un caller de
+     * API podría crear filas vacías, y por ADR-005 ese tipo quedaría
+     * "capturado" para siempre sin que el solicitante haya declarado nada.
+     *
+     * @param  array{cantidad: int|null, superficieM2: float|null, capacidadPromedio: int|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, destinadoA: string|null, campoFutbol: array{tipoSuperficie: string|null, formato: string|null}|null, materialesBiblioteca: list<array<string, mixed>>}  $espacio
+     */
+    private function tieneDatosSignificativos(array $espacio): bool
+    {
+        return $espacio['cantidad'] !== null
+            || $espacio['superficieM2'] !== null
+            || $espacio['capacidadPromedio'] !== null
+            || $espacio['destinadoA'] !== null
+            || $espacio['ventilacionNatural'] === true
+            || $espacio['iluminacionNatural'] === true
+            || $espacio['materialesBiblioteca'] !== []
+            || ($espacio['campoFutbol'] !== null
+                && ($espacio['campoFutbol']['tipoSuperficie'] !== null || $espacio['campoFutbol']['formato'] !== null));
+    }
+
+    /**
+     * Minor 8 — mismo espíritu que tieneDatosSignificativos() para espacios:
+     * un sanitario todo-null (booleanos solo cuentan si son `true`) no debe
+     * crear fila, para que un caller de API que no filtre como el
+     * componente no marque una categoría como "capturada" (ADR-005) sin
+     * datos reales.
+     *
+     * @param  array{cantidadRetretes: int|null, cantidadMingitorios: int|null, cantidadLavabos: int|null, superficieM2: float|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, cantidadBacinicas: int|null}  $sanitario
+     */
+    private function tieneDatosSignificativosSanitario(array $sanitario): bool
+    {
+        return $sanitario['cantidadRetretes'] !== null
+            || $sanitario['cantidadMingitorios'] !== null
+            || $sanitario['cantidadLavabos'] !== null
+            || $sanitario['superficieM2'] !== null
+            || $sanitario['cantidadBacinicas'] !== null
+            || $sanitario['ventilacionNatural'] === true
+            || $sanitario['iluminacionNatural'] === true;
+    }
+
     private function escribirSanitarios(int $plantelId, DatosInfraestructuraNivel $datos): void
     {
         $yaCapturadas = $this->yaCapturada->categoriasCapturadas($plantelId);
 
         foreach ($datos->sanitarios as $sanitario) {
             if (in_array($sanitario['categoria'], $yaCapturadas, true)) {
+                continue;
+            }
+
+            if (! $this->tieneDatosSignificativosSanitario($sanitario)) {
                 continue;
             }
 
@@ -110,6 +189,104 @@ class RegistrarInfraestructuraNivel
                     'cantidad_bacinicas' => $sanitario['cantidadBacinicas'],
                 ]);
             }
+        }
+    }
+
+    /**
+     * Invariantes de entrada (WS-2.4a): un caller que se salte el formulario
+     * (o un futuro adaptador de API) no debe poder escribir un tipo_espacio o
+     * una categoría de sanitario que no aplica al nivel, ni un número
+     * negativo. Las claves de $errores usan la misma ruta que las propiedades
+     * Livewire (espacios.{tipoEspacioId}.*, sanitarios.{categoria}.*,
+     * materialesBiblioteca.{tipoMaterialId}.*) para que el componente pueda
+     * mapearlas 1:1 con addError().
+     *
+     * Un espacio/sanitario que el plantel ya capturó (en este nivel o en
+     * otro) se salta aquí igual que en escribirEspacios()/escribirSanitarios():
+     * no se va a escribir, así que no tiene sentido revalidar su
+     * aplicabilidad contra el nivel en curso — es exactamente el escenario de
+     * ADR-005 (unión por nivel) y un mismo tipo puede aplicar a un nivel y no
+     * a otro.
+     */
+    private function validar(int $plantelId, EscuelaNivel $escuelaNivel, DatosInfraestructuraNivel $datos): void
+    {
+        $errores = [];
+
+        if ($datos->numeroAulas < 0) {
+            $errores['numeroAulas'] = 'El número de aulas no puede ser negativo.';
+        }
+
+        if ($datos->superficieAulasM2 !== null && $datos->superficieAulasM2 < 0) {
+            $errores['superficieAulasM2'] = 'La superficie de aulas no puede ser negativa.';
+        }
+
+        $tiposAplicables = DB::table('niveles_tipos_espacios')
+            ->where('nivel_educativo_id', $escuelaNivel->nivel_educativo_id)
+            ->pluck('tipo_espacio_id')
+            ->all();
+        $tiposYaCapturados = $this->yaCapturada->tiposCapturados($plantelId);
+
+        foreach ($datos->espacios as $espacio) {
+            if (in_array($espacio['tipoEspacioId'], $tiposYaCapturados, true)) {
+                continue;
+            }
+
+            $prefijo = "espacios.{$espacio['tipoEspacioId']}";
+
+            if (! in_array($espacio['tipoEspacioId'], $tiposAplicables, true)) {
+                $errores["{$prefijo}.tipoEspacioId"] = 'Este tipo de espacio no aplica al nivel educativo.';
+
+                continue;
+            }
+
+            foreach (['cantidad' => 'cantidad', 'superficieM2' => 'superficieM2', 'capacidadPromedio' => 'capacidadPromedio'] as $campo => $rutaCampo) {
+                if ($espacio[$campo] !== null && $espacio[$campo] < 0) {
+                    $errores["{$prefijo}.{$rutaCampo}"] = 'No puede ser negativo.';
+                }
+            }
+
+            foreach ($espacio['materialesBiblioteca'] as $material) {
+                $prefijoMaterial = "materialesBiblioteca.{$material['tipoMaterialId']}";
+
+                if ($material['numeroTitulos'] !== null && $material['numeroTitulos'] < 0) {
+                    $errores["{$prefijoMaterial}.numeroTitulos"] = 'No puede ser negativo.';
+                }
+
+                if ($material['numeroVolumenes'] !== null && $material['numeroVolumenes'] < 0) {
+                    $errores["{$prefijoMaterial}.numeroVolumenes"] = 'No puede ser negativo.';
+                }
+            }
+        }
+
+        $categoriasAplicables = $this->categoriasSanitariosPorNivel->paraNivel($escuelaNivel->nivelEducativo->clave);
+        $categoriasYaCapturadas = $this->yaCapturada->categoriasCapturadas($plantelId);
+
+        foreach ($datos->sanitarios as $sanitario) {
+            if (in_array($sanitario['categoria'], $categoriasYaCapturadas, true)) {
+                continue;
+            }
+
+            $prefijo = "sanitarios.{$sanitario['categoria']}";
+
+            if (! in_array($sanitario['categoria'], $categoriasAplicables, true)) {
+                $errores["{$prefijo}.categoria"] = 'Esta categoría de sanitario no aplica al nivel educativo.';
+
+                continue;
+            }
+
+            foreach (['cantidadRetretes', 'cantidadMingitorios', 'cantidadLavabos', 'cantidadBacinicas'] as $campo) {
+                if ($sanitario[$campo] !== null && $sanitario[$campo] < 0) {
+                    $errores["{$prefijo}.{$campo}"] = 'No puede ser negativo.';
+                }
+            }
+
+            if ($sanitario['superficieM2'] !== null && $sanitario['superficieM2'] < 0) {
+                $errores["{$prefijo}.superficieM2"] = 'No puede ser negativo.';
+            }
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
         }
     }
 }

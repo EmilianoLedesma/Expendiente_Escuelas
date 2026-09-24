@@ -206,4 +206,33 @@ class CalculadoraRequerimientoTest extends TestCase
             magnitud: 3,
         );
     }
+
+    /**
+     * Guard: personal_proporcional divide magnitud entre valorNumerico. Un
+     * valorNumerico de 0 (o negativo, igualmente sin sentido como "alumnos
+     * por trabajador") produce división entre cero o un cociente negativo
+     * sin significado — debe fallar en vez de propagar un DivisionByZeroError
+     * o un resultado silenciosamente incorrecto.
+     */
+    #[DataProvider('proporcionalValorNoPositivoProvider')]
+    public function test_personal_proporcional_throws_on_valor_numerico_no_positivo(float $valorNumerico): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->calculadora->calcular(
+            tipoCalculo: 'personal_proporcional',
+            valorNumerico: $valorNumerico,
+            condicionMin: null,
+            redondeo: 'abajo',
+            magnitud: 60,
+        );
+    }
+
+    public static function proporcionalValorNoPositivoProvider(): array
+    {
+        return [
+            'cero' => [0.0],
+            'negativo' => [-5.0],
+        ];
+    }
 }

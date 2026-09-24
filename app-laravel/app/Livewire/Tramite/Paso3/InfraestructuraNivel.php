@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
@@ -41,10 +44,6 @@ use Livewire\Component;
 class InfraestructuraNivel extends Component
 {
     use CompuertaPaso3;
-
-    private const SANITARIOS_INICIAL = ['alumnado_maternal', 'personal'];
-
-    private const SANITARIOS_BASICA = ['alumnado_masculino', 'alumnado_femenino', 'personal_masculino', 'personal_femenino'];
 
     public EscuelaNivel $escuelaNivel;
 
@@ -108,16 +107,29 @@ class InfraestructuraNivel extends Component
             'materialesBiblioteca.*.numeroVolumenes' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $registrarInfraestructura->ejecutar(
-            $this->plantelId(),
-            $this->escuelaNivel->id,
-            new DatosInfraestructuraNivel(
-                espacios: $this->espaciosDeclarados(),
-                sanitarios: $this->sanitariosDeclarados(),
-                numeroAulas: (int) $this->numeroAulas,
-                superficieAulasM2: $this->superficieAulasM2 === null || $this->superficieAulasM2 === '' ? null : (float) $this->superficieAulasM2,
-            ),
-        );
+        try {
+            $registrarInfraestructura->ejecutar(
+                $this->plantelId(),
+                $this->escuelaNivel->id,
+                new DatosInfraestructuraNivel(
+                    espacios: $this->espaciosDeclarados(),
+                    sanitarios: $this->sanitariosDeclarados(),
+                    numeroAulas: (int) $this->numeroAulas,
+                    superficieAulasM2: $this->superficieAulasM2 === null || $this->superficieAulasM2 === '' ? null : (float) $this->superficieAulasM2,
+                ),
+            );
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+
+            return;
+        } catch (PrecondicionIncumplida) {
+            // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
+            $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'infraestructura');
+
+            return;
+        }
 
         $this->redirectRoute('tramite.paso3-mobiliario', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
@@ -139,9 +151,7 @@ class InfraestructuraNivel extends Component
     /** @return list<string> */
     public function categoriasSanitarios(): array
     {
-        $aplicables = $this->escuelaNivel->nivelEducativo->clave === 'inicial'
-            ? self::SANITARIOS_INICIAL
-            : self::SANITARIOS_BASICA;
+        $aplicables = app(CategoriasSanitariosPorNivel::class)->paraNivel($this->escuelaNivel->nivelEducativo->clave);
 
         return array_values(array_diff($aplicables, $this->categoriasCapturadas));
     }
@@ -182,15 +192,18 @@ class InfraestructuraNivel extends Component
 
         foreach ($this->tiposAplicables() as $tipo) {
             $entrada = $this->espacios[$tipo->id] ?? [];
+            $materiales = $tipo->permite_material_biblioteca ? $this->materialesDeclarados() : [];
             $cantidad = $entrada['cantidad'] ?? null;
 
-            if ($cantidad === null || $cantidad === '') {
-                continue;
-            }
-
+            // WS-2 item 1: si el "¿trae dato?" se decidiera aquí Y en
+            // RegistrarInfraestructuraNivel::tieneDatosSignificativos(), las
+            // dos copias podían divergir (como pasó con campoFutbol, que
+            // esta regla contaba pero la del caso de uso ignoraba). Ahora se
+            // construye la entrada para todo tipo aplicable y el caso de uso
+            // decide solo, con una única regla.
             $declarados[] = [
                 'tipoEspacioId' => (int) $tipo->id,
-                'cantidad' => (int) $cantidad,
+                'cantidad' => ($cantidad === null || $cantidad === '') ? null : (int) $cantidad,
                 'superficieM2' => $this->numeroONull($entrada['superficieM2'] ?? null),
                 'capacidadPromedio' => ($entrada['capacidadPromedio'] ?? '') === '' ? null : (int) $entrada['capacidadPromedio'],
                 'ventilacionNatural' => isset($entrada['ventilacionNatural']) ? (bool) $entrada['ventilacionNatural'] : null,
@@ -202,7 +215,7 @@ class InfraestructuraNivel extends Component
                         'formato' => ($entrada['campoFutbolFormato'] ?? '') === '' ? null : (string) $entrada['campoFutbolFormato'],
                     ]
                     : null,
-                'materialesBiblioteca' => $tipo->permite_material_biblioteca ? $this->materialesDeclarados() : [],
+                'materialesBiblioteca' => $materiales,
             ];
         }
 
@@ -245,11 +258,9 @@ class InfraestructuraNivel extends Component
         foreach ($this->categoriasSanitarios() as $categoria) {
             $entrada = $this->sanitarios[$categoria] ?? [];
 
-            $tieneAlgo = collect($entrada)->contains(fn ($valor) => $valor !== null && $valor !== '');
-            if (! $tieneAlgo) {
-                continue;
-            }
-
+            // WS-2 item 1 / Minor 8: misma razón que espaciosDeclarados() —
+            // RegistrarInfraestructuraNivel::tieneDatosSignificativosSanitario()
+            // es la única fuente de "¿trae dato?".
             $declarados[] = [
                 'categoria' => $categoria,
                 'cantidadRetretes' => ($entrada['cantidadRetretes'] ?? '') === '' ? null : (int) $entrada['cantidadRetretes'],

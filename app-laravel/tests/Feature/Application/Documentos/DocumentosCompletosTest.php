@@ -7,6 +7,7 @@ use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Models\Escuela;
 use App\Models\Plantel;
+use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,6 +62,8 @@ class DocumentosCompletosTest extends TestCase
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
+        // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado antes de escribir.
+        ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
         $registrar = new RegistrarDocumento;
 
         foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {

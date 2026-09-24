@@ -7,6 +7,7 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Models\Escuela;
 use App\Models\Plantel;
+use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,8 +23,11 @@ class ValidarVigenciaDocumentosTest extends TestCase
     {
         $solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado antes de escribir.
+        ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
 
-        return Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        return $escuela;
     }
 
     public function test_sin_violaciones_cuando_no_hay_documentos(): void
