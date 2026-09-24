@@ -78,8 +78,19 @@ class TiposEspaciosSeederTest extends TestCase
 
         $inicial = $this->clavesPara('inicial');
 
-        foreach (['subdireccion', 'atencion_publico', 'bodega', 'sala_maestros', 'taller', 'laboratorio_polifuncional', 'salon_usos_multiples', 'auditorio', 'cocina', 'comedor', 'sala_artes'] as $clave) {
+        foreach (['subdireccion', 'atencion_publico', 'bodega', 'sala_maestros', 'taller', 'laboratorio_polifuncional', 'auditorio', 'sala_artes'] as $clave) {
             $this->assertNotContains($clave, $inicial, "{$clave} no debe aplicar a Inicial");
+        }
+    }
+
+    public function test_salon_usos_multiples_cocina_comedor_aplican_a_inicial(): void
+    {
+        $this->sembrar();
+
+        $inicial = $this->clavesPara('inicial');
+
+        foreach (['salon_usos_multiples', 'cocina', 'comedor'] as $clave) {
+            $this->assertContains($clave, $inicial, "{$clave} debe aplicar a Inicial (Requisitos Inicial ñ)");
         }
     }
 

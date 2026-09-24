@@ -46,3 +46,21 @@ fue inventada.
 Solo datos de `TiposEspaciosSeeder` (constante `APLICABILIDAD_EXPLICITA` y
 los `obligatorio`). Ningún cambio de esquema, ningún cambio de código de
 captura: el formulario de sub-paso 2 se genera desde estas filas.
+
+---
+
+## Actualización — 2026-09-24: Tres espacios movidos a Inicial
+
+**Cambio:** `salon_usos_multiples`, `cocina`, `comedor` pasaron de la sección "inferidas" 
+a la sección "explícitas" (línea 19 anterior del COMPENDIO), aplicables ahora a Inicial.
+
+**Evidencia (WS-3.1):**
+- Requisitos Inicial §(ñ): "Sala de usos múltiples: 1.2 m² per child"
+- `reglas_validacion` en BD: `inicial.superficie.sala_usos_multiples` (1.2 m²/niño)
+- `mobiliario_conceptos` seeded: tres filas de SUM en el catálogo, incluyendo "Silla para niño" y mobiliario de comedor
+
+Estos espacios son **explícitamente requeridos** en Inicial, no inferidos. 
+Se han movido en `TiposEspaciosSeeder::APLICABILIDAD_EXPLICITA` (WS-3.1 commit).
+
+**Impacto:** La matriz ahora refleja más precisamente la normativa. 
+La pregunta principal (obligatoriedad) sigue abierta.
