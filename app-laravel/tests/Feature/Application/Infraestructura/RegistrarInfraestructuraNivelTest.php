@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Application\Infraestructura;
 
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
@@ -16,10 +18,12 @@ use Database\Seeders\PasosCapturaSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class RegistrarInfraestructuraNivelTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Plantel $plantel;
@@ -37,6 +41,8 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $this->plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $this->plantel->id, 'solicitante_id' => $solicitante->id]);
+        // WS-2.4b: RegistrarInfraestructuraNivel ahora exige Paso 2 completo antes de escribir.
+        $this->completarPaso2($this->escuela->id);
     }
 
     private function escuelaNivel(string $claveNivel): EscuelaNivel
@@ -44,12 +50,16 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $this->escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        // WS-2.4b: Infraestructura solo es alcanzable con Inmueble completado.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+
+        return $escuelaNivel;
     }
 
     private function idTipo(string $clave): int
@@ -445,6 +455,47 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         }
 
         $this->assertDatabaseCount('sanitarios', 0);
+    }
+
+    // WS-2.4b — un caller que se salte CompuertaPaso3 no debe poder escribir
+    // infraestructura si Paso 2 no está completo.
+    public function test_rechaza_registrar_sin_paso_2_completo(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 2', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $nivel = NivelEducativo::where('clave', 'primaria')->first();
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => $nivel->id,
+            'estado_id' => $estadoId,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        // Sin Paso 2 completo, ni el orden de Paso 3 ('inmueble' pendiente) se cumple.
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($plantel->id, $escuelaNivel->id, $this->datos());
+    }
+
+    // WS-2.4b — con Paso 2 completo pero sin 'inmueble' marcado, el orden de
+    // Paso 3 sigue rechazando la escritura.
+    public function test_rechaza_registrar_cuando_inmueble_no_esta_completado(): void
+    {
+        $nivel = NivelEducativo::where('clave', 'primaria')->first();
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $this->escuela->id,
+            'nivel_educativo_id' => $nivel->id,
+            'estado_id' => $estadoId,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        // Deliberadamente NO se llama a MarcarPasoCompletado('inmueble').
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
     }
 
     public function test_rechaza_numeros_negativos(): void

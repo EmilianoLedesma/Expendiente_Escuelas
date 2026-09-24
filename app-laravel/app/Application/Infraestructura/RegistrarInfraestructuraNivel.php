@@ -4,7 +4,10 @@ namespace App\Application\Infraestructura;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
+use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\EstadoPaso3;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
@@ -27,12 +30,16 @@ class RegistrarInfraestructuraNivel
     public function __construct(
         private readonly InfraestructuraYaCapturada $yaCapturada,
         private readonly MarcarPasoCompletado $marcarPasoCompletado,
+        private readonly EstadoPaso2 $estadoPaso2,
+        private readonly EstadoPaso3 $estadoPaso3,
         private readonly CategoriasSanitariosPorNivel $categoriasSanitariosPorNivel = new CategoriasSanitariosPorNivel,
     ) {}
 
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso "infraestructura" aún no es alcanzable. */
     public function ejecutar(int $plantelId, int $escuelaNivelId, DatosInfraestructuraNivel $datos): void
     {
         $escuelaNivel = EscuelaNivel::with('nivelEducativo')->findOrFail($escuelaNivelId);
+        $this->verificarPrecondicion($escuelaNivel);
         $this->validar($plantelId, $escuelaNivel, $datos);
 
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
@@ -49,6 +56,19 @@ class RegistrarInfraestructuraNivel
 
             $this->marcarPasoCompletado->ejecutar($escuelaNivelId, 'infraestructura');
         });
+    }
+
+    /** WS-2.4b: un adaptador que llame este caso de uso sin pasar por CompuertaPaso3 no debe poder saltarse el orden del wizard. */
+    private function verificarPrecondicion(EscuelaNivel $escuelaNivel): void
+    {
+        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de continuar.');
+        }
+
+        if (! $this->estadoPaso3->puedeAcceder($escuelaNivel->id, 'infraestructura')) {
+            throw new PrecondicionIncumplida('infraestructura', 'Completa los pasos anteriores de Paso 3 antes de continuar.');
+        }
     }
 
     private function escribirEspacios(int $plantelId, DatosInfraestructuraNivel $datos): void

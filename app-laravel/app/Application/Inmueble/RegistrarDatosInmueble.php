@@ -4,7 +4,11 @@ namespace App\Application\Inmueble;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DTO\DatosInmueble;
+use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\EstadoPaso3;
+use App\Models\EscuelaNivel;
 use App\Models\InmuebleEstudioActual;
 use App\Models\Plantel;
 use App\Models\ServicioCercano;
@@ -24,11 +28,15 @@ class RegistrarDatosInmueble
     public function __construct(
         private readonly DatosInmuebleYaCapturados $yaCapturados,
         private readonly MarcarPasoCompletado $marcarPasoCompletado,
+        private readonly EstadoPaso2 $estadoPaso2,
+        private readonly EstadoPaso3 $estadoPaso3,
     ) {}
 
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso "inmueble" aún no es alcanzable. */
     public function ejecutar(int $plantelId, int $escuelaNivelId, DatosInmueble $datos): void
     {
         $this->validar($datos);
+        $this->verificarPrecondicion($escuelaNivelId);
 
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
             if (! $this->yaCapturados->ejecutar($plantelId)) {
@@ -69,6 +77,20 @@ class RegistrarDatosInmueble
 
             $this->marcarPasoCompletado->ejecutar($escuelaNivelId, 'inmueble');
         });
+    }
+
+    /** WS-2.4b: un adaptador que llame este caso de uso sin pasar por CompuertaPaso3 no debe poder saltarse el orden del wizard. */
+    private function verificarPrecondicion(int $escuelaNivelId): void
+    {
+        $escuelaId = EscuelaNivel::where('id', $escuelaNivelId)->value('escuela_id');
+        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de continuar.');
+        }
+
+        if (! $this->estadoPaso3->puedeAcceder($escuelaNivelId, 'inmueble')) {
+            throw new PrecondicionIncumplida('inmueble', 'Completa los pasos anteriores de Paso 3 antes de continuar.');
+        }
     }
 
     /**

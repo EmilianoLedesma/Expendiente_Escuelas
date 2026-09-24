@@ -3,6 +3,7 @@
 namespace Tests\Feature\Application\EscuelaNiveles;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
@@ -63,6 +64,8 @@ class MarcarPasoCompletadoTest extends TestCase
     public function test_actualiza_la_fila_cuando_ya_estaba_pendiente(): void
     {
         $escuelaNivel = $this->crearEscuelaNivel();
+        // WS-2.4b: infraestructura solo es alcanzable con inmueble completado.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
         $pasoId = DB::table('pasos_captura')->where('clave', 'infraestructura')->value('id');
         DB::table('escuela_nivel_pasos')->insert([
             'escuela_nivel_id' => $escuelaNivel->id,
@@ -73,17 +76,20 @@ class MarcarPasoCompletadoTest extends TestCase
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
 
         $this->assertSame('completado', $this->fila($escuelaNivel->id, 'infraestructura')->estado);
-        $this->assertSame(1, DB::table('escuela_nivel_pasos')->where('escuela_nivel_id', $escuelaNivel->id)->count());
+        $this->assertSame(2, DB::table('escuela_nivel_pasos')->where('escuela_nivel_id', $escuelaNivel->id)->count());
     }
 
     public function test_llamarlo_dos_veces_no_duplica_la_fila(): void
     {
         $escuelaNivel = $this->crearEscuelaNivel();
+        // WS-2.4b: mobiliario solo es alcanzable con inmueble e infraestructura completados.
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
 
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'mobiliario');
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'mobiliario');
 
-        $this->assertSame(1, DB::table('escuela_nivel_pasos')->where('escuela_nivel_id', $escuelaNivel->id)->count());
+        $this->assertSame(3, DB::table('escuela_nivel_pasos')->where('escuela_nivel_id', $escuelaNivel->id)->count());
     }
 
     public function test_rechaza_una_clave_de_paso_desconocida(): void
@@ -93,5 +99,16 @@ class MarcarPasoCompletadoTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'paso_inexistente');
+    }
+
+    // WS-2.4b — un caller que no pase por CompuertaPaso3 no debe poder marcar
+    // un sub-paso completado si su predecesor aún no lo está.
+    public function test_rechaza_marcar_un_paso_cuyo_predecesor_no_esta_completado(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
     }
 }

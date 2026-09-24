@@ -8,11 +8,14 @@ use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso2Responsable;
+use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use App\Models\TipoDocumento;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -40,6 +43,38 @@ class Paso2ResponsableTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
 
         return Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+    }
+
+    /**
+     * WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado
+     * antes de escribir. Algunos escenarios de este archivo necesitan
+     * documentos ya en disco SIN responsable capturado todavía (simulando
+     * back-navigation/datos legacy) — se insertan directo, mismo patrón que
+     * DocumentoDownloadTest para los casos "documento legacy".
+     */
+    private function registrarDocumentoLegacy(Escuela $escuela, string $clave, ?string $fechaEmision = null): void
+    {
+        $tipo = TipoDocumento::where('clave', $clave)->firstOrFail();
+        $ownerId = $tipo->ambito === 'plantel' ? $escuela->plantel_id : $escuela->id;
+        $ruta = ($tipo->ambito === 'plantel' ? 'plantel/' : 'escuela/')."{$ownerId}/{$clave}-legacy.pdf";
+        $fechaVigencia = $fechaEmision !== null && $tipo->vigencia_max_dias !== null
+            ? date('Y-m-d', strtotime("{$fechaEmision} +{$tipo->vigencia_max_dias} days"))
+            : null;
+        $atributos = [
+            'tipo_documento_id' => $tipo->id,
+            'archivo_path' => $ruta,
+            'fecha_emision' => $fechaEmision,
+            'fecha_vigencia' => $fechaVigencia,
+            'estado_validacion' => 'pendiente',
+        ];
+
+        if ($tipo->ambito === 'plantel') {
+            DocumentoPlantel::create(['plantel_id' => $ownerId, ...$atributos]);
+        } else {
+            DocumentoEscuela::create(['escuela_id' => $ownerId, ...$atributos]);
+        }
+
+        Storage::disk('documentos')->put($ruta, 'CONTENIDO');
     }
 
     public function test_arranca_en_fase_responsable_cuando_no_hay_responsable_legal(): void
@@ -177,9 +212,13 @@ class Paso2ResponsableTest extends TestCase
         (new TiposDocumentosSeeder)->run();
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
-        $registrar = new RegistrarDocumento;
+        // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado
+        // antes de escribir, pero este escenario depende de que mount() vea
+        // AÚN sin responsable (fase arranca en 'responsable') con los
+        // documentos ya en disco (back-navigation) — se insertan directo,
+        // como datos preexistentes/legacy, igual que en DocumentoDownloadTest.
         foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
-            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+            $this->registrarDocumentoLegacy($escuela, $clave);
         }
         $this->actingAs($solicitante->user);
 
@@ -203,13 +242,12 @@ class Paso2ResponsableTest extends TestCase
         Storage::fake('documentos');
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
-        $registrar = new RegistrarDocumento;
+        // WS-2.4b: ver comentario equivalente arriba — documentos insertados
+        // directo para que mount() siga viendo la escuela sin responsable.
         foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
-            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+            $this->registrarDocumentoLegacy($escuela, $clave);
         }
-        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $this->registrarDocumentoLegacy($escuela, 'dictamen_uso_suelo', now()->subDays(60)->toDateString());
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])

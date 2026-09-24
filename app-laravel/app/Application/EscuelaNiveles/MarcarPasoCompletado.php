@@ -2,6 +2,8 @@
 
 namespace App\Application\EscuelaNiveles;
 
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso3;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -14,12 +16,20 @@ use InvalidArgumentException;
  */
 class MarcarPasoCompletado
 {
+    public function __construct(private readonly ?EstadoPaso3 $estadoPaso3 = null) {}
+
+    /** @throws PrecondicionIncumplida si el sub-paso $pasoClave aún no es alcanzable (WS-2.4b). Idempotente: re-marcar un paso ya completado siempre pasa, porque su predecesor ya lo estaba. */
     public function ejecutar(int $escuelaNivelId, string $pasoClave): void
     {
         $pasoCapturaId = DB::table('pasos_captura')->where('clave', $pasoClave)->value('id');
 
         if ($pasoCapturaId === null) {
             throw new InvalidArgumentException("paso_captura desconocido: {$pasoClave}");
+        }
+
+        $estadoPaso3 = $this->estadoPaso3 ?? app(EstadoPaso3::class);
+        if (! $estadoPaso3->puedeAcceder($escuelaNivelId, $pasoClave)) {
+            throw new PrecondicionIncumplida($pasoClave, "El paso \"{$pasoClave}\" no es alcanzable todavía.");
         }
 
         DB::transaction(function () use ($escuelaNivelId, $pasoCapturaId) {

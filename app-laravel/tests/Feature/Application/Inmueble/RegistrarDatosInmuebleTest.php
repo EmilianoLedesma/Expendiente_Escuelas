@@ -3,6 +3,7 @@
 namespace Tests\Feature\Application\Inmueble;
 
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble;
 use App\Application\Inmueble\RegistrarDatosInmueble;
@@ -15,10 +16,12 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class RegistrarDatosInmuebleTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Plantel $plantel;
@@ -35,6 +38,8 @@ class RegistrarDatosInmuebleTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $this->plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $this->plantel->id, 'solicitante_id' => $solicitante->id]);
+        // WS-2.4b: RegistrarDatosInmueble ahora exige Paso 2 completo antes de escribir.
+        $this->completarPaso2($this->escuela->id);
     }
 
     private function escuelaNivel(string $claveNivel): EscuelaNivel
@@ -254,6 +259,27 @@ class RegistrarDatosInmuebleTest extends TestCase
         } catch (DatosInvalidos $e) {
             $this->assertArrayHasKey('estudiosActuales.0.nivelEducativoId', $e->errores);
         }
+    }
+
+    // WS-2.4b — un caller que se salte CompuertaPaso3 no debe poder escribir
+    // datos del inmueble si Paso 2 (responsable + documentos) no está completo.
+    public function test_rechaza_registrar_sin_paso_2_completo(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 2', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $nivel = NivelEducativo::where('clave', 'primaria')->first();
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => $nivel->id,
+            'estado_id' => $estadoId,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarDatosInmueble::class)->ejecutar($plantel->id, $escuelaNivel->id, $this->datos());
     }
 
     public function test_rechaza_estudio_actual_con_nivel_y_texto_otro_a_la_vez(): void

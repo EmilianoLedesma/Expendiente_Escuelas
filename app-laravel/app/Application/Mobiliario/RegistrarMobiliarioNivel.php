@@ -3,6 +3,9 @@
 namespace App\Application\Mobiliario;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\EstadoPaso3;
 use App\Models\EscuelaNivel;
 use App\Models\MobiliarioConcepto;
 use App\Models\MobiliarioNivel;
@@ -21,10 +24,16 @@ use InvalidArgumentException;
  */
 class RegistrarMobiliarioNivel
 {
-    public function __construct(private readonly MarcarPasoCompletado $marcarPasoCompletado) {}
+    public function __construct(
+        private readonly MarcarPasoCompletado $marcarPasoCompletado,
+        private readonly EstadoPaso2 $estadoPaso2,
+        private readonly EstadoPaso3 $estadoPaso3,
+    ) {}
 
     /**
      * @param  array<int, int>  $cantidadesPorConcepto  concepto_id => cantidad_declarada
+     *
+     * @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso "mobiliario" aún no es alcanzable.
      */
     public function ejecutar(int $escuelaNivelId, array $cantidadesPorConcepto): void
     {
@@ -33,6 +42,7 @@ class RegistrarMobiliarioNivel
         }
 
         $escuelaNivel = EscuelaNivel::with('nivelEducativo')->findOrFail($escuelaNivelId);
+        $this->verificarPrecondicion($escuelaNivel);
 
         if ($escuelaNivel->nivelEducativo->clave !== 'inicial') {
             throw new InvalidArgumentException('La captura de mobiliario aplica únicamente a Educación Inicial en este MVP.');
@@ -63,5 +73,18 @@ class RegistrarMobiliarioNivel
 
             $this->marcarPasoCompletado->ejecutar($escuelaNivelId, 'mobiliario');
         });
+    }
+
+    /** WS-2.4b: un adaptador que llame este caso de uso sin pasar por CompuertaPaso3 no debe poder saltarse el orden del wizard. */
+    private function verificarPrecondicion(EscuelaNivel $escuelaNivel): void
+    {
+        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de continuar.');
+        }
+
+        if (! $this->estadoPaso3->puedeAcceder($escuelaNivel->id, 'mobiliario')) {
+            throw new PrecondicionIncumplida('mobiliario', 'Completa los pasos anteriores de Paso 3 antes de continuar.');
+        }
     }
 }

@@ -5,6 +5,8 @@ namespace Tests\Feature\Application\Documentos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso2;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
@@ -142,6 +144,44 @@ class RegistrarDocumentoTest extends TestCase
             $this->fail('Se esperaba DatosInvalidos.');
         } catch (DatosInvalidos $e) {
             $this->assertArrayHasKey('clave', $e->errores);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    // WS-2.4b — sin responsable legal no hay tipo_persona con qué verificar
+    // aplicabilidad; antes esto se toleraba (bypass conocido), ahora se
+    // rechaza antes de cualquier escritura, para cualquier clave.
+    public function test_rechaza_registrar_documento_sin_responsable_legal_capturado(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
+    }
+
+    // WS-2.4b — cierra el hueco de WS-2.4a: sin responsable, una clave no
+    // aplicable a NINGÚN tipo_persona (o a ninguno todavía verificable) debe
+    // rechazarse por la precondición de orden, no colarse por ausencia de
+    // tipo_persona.
+    public function test_rechaza_clave_no_aplicable_cuando_tampoco_hay_responsable(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+
+        try {
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'acta_nacimiento', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(EstadoPaso2::RESPONSABLE, $e->etapaFaltante);
         }
 
         $this->assertDatabaseCount('documentos_escuela', 0);

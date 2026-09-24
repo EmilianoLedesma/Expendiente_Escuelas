@@ -3,6 +3,7 @@
 namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
@@ -121,6 +122,11 @@ class InfraestructuraNivel extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+
+            return;
+        } catch (PrecondicionIncumplida) {
+            // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
+            $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'infraestructura');
 
             return;
         }

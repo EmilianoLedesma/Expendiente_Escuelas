@@ -7,6 +7,7 @@ use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
@@ -182,7 +183,9 @@ class Paso2Documentos extends Component
      * Envuelve RegistrarDocumento::ejecutar() para que un DatosInvalidos
      * (invariante de entrada violado — clave no aplicable, archivo no PDF)
      * se convierta en errores de campo en vez de un 500, incluso si el
-     * caller llega a saltarse la validación de Livewire de arriba.
+     * caller llega a saltarse la validación de Livewire de arriba. Un
+     * PrecondicionIncumplida (WS-2.4b: sin responsable legal) redirige a
+     * Paso 2 en vez de 500 — mount() ya lo evita en el flujo normal.
      */
     private function intentarRegistrar(RegistrarDocumento $registrarDocumento, string $clave, DatosDocumento $datos): bool
     {
@@ -192,6 +195,10 @@ class Paso2Documentos extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+
+            return false;
+        } catch (PrecondicionIncumplida) {
+            $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
 
             return false;
         }

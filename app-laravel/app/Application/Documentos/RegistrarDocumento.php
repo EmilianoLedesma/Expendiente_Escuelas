@@ -4,6 +4,8 @@ namespace App\Application\Documentos;
 
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso2;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
@@ -27,8 +29,10 @@ class RegistrarDocumento
     public function __construct(
         private readonly ?AlmacenDocumentos $almacen = null,
         private readonly ?DocumentosCompletos $documentosCompletos = null,
+        private readonly ?EstadoPaso2 $estadoPaso2 = null,
     ) {}
 
+    /** @throws PrecondicionIncumplida si no hay responsable legal capturado para la escuela. */
     public function ejecutar(int $escuelaId, string $tipoDocumentoClave, UploadedFile $archivo, DatosDocumento $datos): void
     {
         $tipo = TipoDocumento::where('clave', $tipoDocumentoClave)->first();
@@ -37,14 +41,18 @@ class RegistrarDocumento
             throw new InvalidArgumentException("tipo_documento desconocido: {$tipoDocumentoClave}");
         }
 
-        // Sin responsable legal aún no hay tipo_persona con qué verificar
-        // aplicabilidad (WS-2.4b cubre la precondición de orden de pasos) —
-        // aquí solo se rechaza cuando SÍ se conoce el tipo_persona y la clave
-        // no le corresponde (p. ej. acta_nacimiento para una persona moral).
+        // WS-2.4b: sin responsable legal no hay tipo_persona con qué verificar
+        // aplicabilidad — antes esto se toleraba (bypass conocido), ahora se
+        // rechaza antes de cualquier escritura.
+        $estadoPaso2 = $this->estadoPaso2 ?? app(EstadoPaso2::class);
+        if (! $estadoPaso2->responsableCapturado($escuelaId)) {
+            throw new PrecondicionIncumplida(EstadoPaso2::RESPONSABLE, 'Captura el responsable legal (Paso 2) antes de subir documentos.');
+        }
+
         $tipoPersona = ResponsableLegal::where('escuela_id', $escuelaId)->value('tipo_persona');
         $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);
 
-        if ($tipoPersona !== null && ! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
+        if (! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
             throw new DatosInvalidos(['clave' => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
         }
 

@@ -4,6 +4,7 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
@@ -154,6 +155,11 @@ class DatosInmueble extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+
+            return;
+        } catch (PrecondicionIncumplida) {
+            // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
+            $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'inmueble');
 
             return;
         }

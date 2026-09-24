@@ -5,8 +5,10 @@ namespace Tests\Feature\Livewire\Tramite;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
+use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Models\DocumentoEscuela;
 use App\Models\Escuela;
@@ -458,6 +460,30 @@ class Paso2DocumentosTest extends TestCase
             ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))
             ->call('guardarDocumentoSimple', 'ine')
             ->assertHasErrors('archivos.ine');
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    // WS-2.4b — un PrecondicionIncumplida lanzado por el caso de uso (p. ej. un
+    // caller que llegue a este punto sin responsable legal) debe redirigir a
+    // Paso 2, no producir un 500.
+    public function test_precondicion_incumplida_del_caso_de_uso_redirige_a_paso_2(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        $this->mock(RegistrarDocumento::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')->andThrow(new PrecondicionIncumplida(
+                EstadoPaso2::RESPONSABLE,
+                'Captura el responsable legal (Paso 2) antes de subir documentos.',
+            ));
+        });
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'ine')
+            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
 
         $this->assertDatabaseCount('documentos_escuela', 0);
     }

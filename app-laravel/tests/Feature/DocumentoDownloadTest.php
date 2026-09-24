@@ -116,7 +116,17 @@ class DocumentoDownloadTest extends TestCase
         $this->solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $this->solicitante->id]);
-        $this->capturar('ine');
+        // WS-2.4b: RegistrarDocumento ya rechaza esta escritura sin responsable,
+        // así que la fila se inserta directo (simulando datos preexistentes/legacy)
+        // para probar que la lectura (ObtenerDocumentoCapturado) igual la rechaza.
+        $tipo = TipoDocumento::where('clave', 'ine')->firstOrFail();
+        DocumentoEscuela::create([
+            'escuela_id' => $this->escuela->id,
+            'tipo_documento_id' => $tipo->id,
+            'archivo_path' => 'escuela/'.$this->escuela->id.'/ine-legacy.pdf',
+            'estado_validacion' => 'pendiente',
+        ]);
+        Storage::disk('documentos')->put('escuela/'.$this->escuela->id.'/ine-legacy.pdf', 'CONTENIDO');
         $this->actingAs($this->solicitante->user);
 
         $this->descargar('ine')->assertNotFound();
