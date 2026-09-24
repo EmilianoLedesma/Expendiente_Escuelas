@@ -54,6 +54,10 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
+            if (! $this->tieneDatosSignificativos($espacio)) {
+                continue;
+            }
+
             $fila = InstalacionEspacio::create([
                 'plantel_id' => $plantelId,
                 'tipo_espacio_id' => $espacio['tipoEspacioId'],
@@ -82,6 +86,25 @@ class RegistrarInfraestructuraNivel
                 ]);
             }
         }
+    }
+
+    /**
+     * Misma regla que el formulario (WS-2.1): un booleano solo cuenta como
+     * dato cuando es `true` — de lo contrario un caller de API podría crear
+     * filas vacías, y por ADR-005 ese tipo quedaría "capturado" para
+     * siempre sin que el solicitante haya declarado nada.
+     *
+     * @param  array{cantidad: int|null, superficieM2: float|null, capacidadPromedio: int|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, destinadoA: string|null, materialesBiblioteca: list<array<string, mixed>>}  $espacio
+     */
+    private function tieneDatosSignificativos(array $espacio): bool
+    {
+        return $espacio['cantidad'] !== null
+            || $espacio['superficieM2'] !== null
+            || $espacio['capacidadPromedio'] !== null
+            || $espacio['destinadoA'] !== null
+            || $espacio['ventilacionNatural'] === true
+            || $espacio['iluminacionNatural'] === true
+            || $espacio['materialesBiblioteca'] !== [];
     }
 
     private function escribirSanitarios(int $plantelId, DatosInfraestructuraNivel $datos): void

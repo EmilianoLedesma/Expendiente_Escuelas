@@ -189,9 +189,14 @@ class InfraestructuraNivel extends Component
             // cantidad puede legítimamente faltar (instalaciones_espacios.cantidad es
             // nullable). Se persiste el espacio si trae cualquier dato, o si trae
             // materiales de biblioteca (biblioteca_materiales.instalacion_espacio_id
-            // es NOT NULL, así que los materiales exigen esta fila).
+            // es NOT NULL, así que los materiales exigen esta fila). Un checkbox sin
+            // marcar (o des-marcado tras enfocarlo) envía `false`, no ausencia — eso
+            // no cuenta como dato o un tipo nunca tocado por el usuario quedaría
+            // "capturado" para siempre (ADR-005).
             $tieneAlgo = $materiales !== []
-                || collect($entrada)->contains(fn ($valor) => $valor !== null && $valor !== '');
+                || collect($entrada)->contains(fn ($valor, $campo) => in_array($campo, ['ventilacionNatural', 'iluminacionNatural'], true)
+                    ? $valor === true
+                    : $valor !== null && $valor !== '');
 
             if (! $tieneAlgo) {
                 continue;

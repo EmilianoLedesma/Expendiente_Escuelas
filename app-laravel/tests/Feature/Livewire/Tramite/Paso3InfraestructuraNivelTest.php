@@ -289,6 +289,28 @@ class Paso3InfraestructuraNivelTest extends TestCase
         ]);
     }
 
+    // WS-2.1 fix round 1 — an unchecked/blurred checkbox commits boolean false,
+    // which must NOT count as "content"; otherwise a tipo the user never
+    // touched gets a junk row and (per ADR-005) is permanently marked
+    // capturado for the plantel.
+    public function test_checkboxes_sin_marcar_no_crean_un_espacio_fantasma(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $direccionId = $this->idTipo('direccion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$direccionId}.ventilacionNatural", false)
+            ->set("espacios.{$direccionId}.iluminacionNatural", false)
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $this->assertDatabaseMissing('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $direccionId,
+        ]);
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $primaria = $this->escuelaNivel('primaria');

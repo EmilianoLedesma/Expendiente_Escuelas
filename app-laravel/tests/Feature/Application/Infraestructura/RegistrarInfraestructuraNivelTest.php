@@ -324,4 +324,36 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             'superficie_m2' => 120.0,
         ]);
     }
+
+    // WS-2.1 fix round 1 — the use case must independently refuse to write an
+    // espacio with no meaningful data, so an API caller can't create empty rows.
+    public function test_espacio_sin_datos_significativos_no_escribe_fila(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [
+                [
+                    'tipoEspacioId' => $this->idTipo('areas_verdes'),
+                    'cantidad' => null,
+                    'superficieM2' => null,
+                    'capacidadPromedio' => null,
+                    'ventilacionNatural' => false,
+                    'iluminacionNatural' => false,
+                    'destinadoA' => null,
+                    'campoFutbol' => null,
+                    'materialesBiblioteca' => [],
+                ],
+            ],
+            sanitarios: [],
+            numeroAulas: 6,
+        );
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+
+        $this->assertDatabaseMissing('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $this->idTipo('areas_verdes'),
+        ]);
+    }
 }
