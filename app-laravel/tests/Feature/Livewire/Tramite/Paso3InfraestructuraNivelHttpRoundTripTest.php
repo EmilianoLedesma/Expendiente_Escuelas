@@ -150,6 +150,8 @@ class Paso3InfraestructuraNivelHttpRoundTripTest extends TestCase
         ]);
 
         $response->assertOk();
+        // guardar() really ran (not a silent validation failure or early return).
+        $this->assertDatabaseHas('aulas_nivel', ['escuela_nivel_id' => $escuelaNivel->id]);
         $this->assertDatabaseMissing('instalaciones_espacios', [
             'plantel_id' => $this->plantel->id,
             'tipo_espacio_id' => $direccionId,

@@ -195,7 +195,8 @@ class RegistrarDocumento
                 // La fila previa nunca se tocó (updateOrCreate corrió dentro de
                 // la transacción que acaba de hacer rollback): solo el archivo
                 // nuevo, huérfano, necesita limpieza.
-                $almacen->eliminar($ruta);
+                // rescue: un fallo al limpiar no debe ocultar la excepción original.
+                rescue(fn () => $almacen->eliminar($ruta), report: true);
             }
 
             throw $e;
