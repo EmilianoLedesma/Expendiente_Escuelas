@@ -7,9 +7,11 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
+use App\Models\DocumentoEscuela;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use App\Models\TipoDocumento;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -84,7 +86,18 @@ class DocumentoDownloadTest extends TestCase
     public function test_404_si_la_clave_no_aplica_al_tipo_persona_aunque_exista_el_archivo(): void
     {
         $this->crearEscuela('moral');
-        $this->capturar('acta_nacimiento', 'NO-APLICA');
+        // WS-2.4a: RegistrarDocumento ya rechaza esta escritura, así que la
+        // fila se inserta directo (simulando datos preexistentes/legacy) para
+        // probar que la lectura (ObtenerDocumentoCapturado) igual la filtra,
+        // como defensa en profundidad.
+        $tipo = TipoDocumento::where('clave', 'acta_nacimiento')->firstOrFail();
+        DocumentoEscuela::create([
+            'escuela_id' => $this->escuela->id,
+            'tipo_documento_id' => $tipo->id,
+            'archivo_path' => 'escuela/'.$this->escuela->id.'/acta_nacimiento-legacy.pdf',
+            'estado_validacion' => 'pendiente',
+        ]);
+        Storage::disk('documentos')->put('escuela/'.$this->escuela->id.'/acta_nacimiento-legacy.pdf', 'NO-APLICA');
         $this->actingAs($this->solicitante->user);
 
         $this->descargar('acta_nacimiento')->assertNotFound();

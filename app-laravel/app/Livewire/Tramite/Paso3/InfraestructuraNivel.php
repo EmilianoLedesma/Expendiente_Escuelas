@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
@@ -41,10 +43,6 @@ use Livewire\Component;
 class InfraestructuraNivel extends Component
 {
     use CompuertaPaso3;
-
-    private const SANITARIOS_INICIAL = ['alumnado_maternal', 'personal'];
-
-    private const SANITARIOS_BASICA = ['alumnado_masculino', 'alumnado_femenino', 'personal_masculino', 'personal_femenino'];
 
     public EscuelaNivel $escuelaNivel;
 
@@ -108,16 +106,24 @@ class InfraestructuraNivel extends Component
             'materialesBiblioteca.*.numeroVolumenes' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $registrarInfraestructura->ejecutar(
-            $this->plantelId(),
-            $this->escuelaNivel->id,
-            new DatosInfraestructuraNivel(
-                espacios: $this->espaciosDeclarados(),
-                sanitarios: $this->sanitariosDeclarados(),
-                numeroAulas: (int) $this->numeroAulas,
-                superficieAulasM2: $this->superficieAulasM2 === null || $this->superficieAulasM2 === '' ? null : (float) $this->superficieAulasM2,
-            ),
-        );
+        try {
+            $registrarInfraestructura->ejecutar(
+                $this->plantelId(),
+                $this->escuelaNivel->id,
+                new DatosInfraestructuraNivel(
+                    espacios: $this->espaciosDeclarados(),
+                    sanitarios: $this->sanitariosDeclarados(),
+                    numeroAulas: (int) $this->numeroAulas,
+                    superficieAulasM2: $this->superficieAulasM2 === null || $this->superficieAulasM2 === '' ? null : (float) $this->superficieAulasM2,
+                ),
+            );
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+
+            return;
+        }
 
         $this->redirectRoute('tramite.paso3-mobiliario', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
@@ -139,9 +145,7 @@ class InfraestructuraNivel extends Component
     /** @return list<string> */
     public function categoriasSanitarios(): array
     {
-        $aplicables = $this->escuelaNivel->nivelEducativo->clave === 'inicial'
-            ? self::SANITARIOS_INICIAL
-            : self::SANITARIOS_BASICA;
+        $aplicables = app(CategoriasSanitariosPorNivel::class)->paraNivel($this->escuelaNivel->nivelEducativo->clave);
 
         return array_values(array_diff($aplicables, $this->categoriasCapturadas));
     }

@@ -6,6 +6,7 @@ use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
@@ -88,7 +89,9 @@ class Paso2Documentos extends Component
 
         $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
-        $registrarDocumento->ejecutar($this->escuela->id, $clave, $this->archivos[$clave], new DatosDocumento);
+        if (! $this->intentarRegistrar($registrarDocumento, $clave, new DatosDocumento)) {
+            return;
+        }
         $this->archivos[$clave] = null;
         $this->reemplazando[$clave] = false;
 
@@ -100,9 +103,11 @@ class Paso2Documentos extends Component
         $this->validate(['archivos.dictamen_uso_suelo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->dictamenForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'dictamen_uso_suelo', $this->archivos['dictamen_uso_suelo'], new DatosDocumento(
+        if (! $this->intentarRegistrar($registrarDocumento, 'dictamen_uso_suelo', new DatosDocumento(
             fechaEmision: $this->dictamenForm->fechaEmision,
-        ));
+        ))) {
+            return;
+        }
         $this->archivos['dictamen_uso_suelo'] = null;
         $this->reemplazando['dictamen_uso_suelo'] = false;
 
@@ -114,14 +119,16 @@ class Paso2Documentos extends Component
         $this->validate(['archivos.constancia_seguridad_estructural' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->constanciaForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'constancia_seguridad_estructural', $this->archivos['constancia_seguridad_estructural'], new DatosDocumento(
+        if (! $this->intentarRegistrar($registrarDocumento, 'constancia_seguridad_estructural', new DatosDocumento(
             fechaEmision: $this->constanciaForm->fechaEmision,
             peritoNombre: $this->constanciaForm->peritoNombre,
             peritoCedulaProfesional: $this->constanciaForm->peritoCedulaProfesional !== '' ? $this->constanciaForm->peritoCedulaProfesional : null,
             peritoRegistroDro: $this->constanciaForm->peritoRegistroDro,
             peritoRegistroAutoridad: $this->constanciaForm->peritoRegistroAutoridad !== '' ? $this->constanciaForm->peritoRegistroAutoridad : null,
             peritoRegistroVigencia: $this->constanciaForm->peritoRegistroVigencia !== '' ? $this->constanciaForm->peritoRegistroVigencia : null,
-        ));
+        ))) {
+            return;
+        }
         $this->archivos['constancia_seguridad_estructural'] = null;
         $this->reemplazando['constancia_seguridad_estructural'] = false;
 
@@ -133,7 +140,7 @@ class Paso2Documentos extends Component
         $this->validate(['archivos.escritura_inmueble' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
         $this->acreditacionForm->validate();
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'escritura_inmueble', $this->archivos['escritura_inmueble'], new DatosDocumento(
+        if (! $this->intentarRegistrar($registrarDocumento, 'escritura_inmueble', new DatosDocumento(
             tipoAcreditacion: $this->acreditacionForm->tipo,
             numeroEscritura: $this->acreditacionForm->numeroEscritura !== '' ? $this->acreditacionForm->numeroEscritura : null,
             notarioNombre: $this->acreditacionForm->notarioNombre !== '' ? $this->acreditacionForm->notarioNombre : null,
@@ -149,7 +156,9 @@ class Paso2Documentos extends Component
             ratificadoNotario: $this->acreditacionForm->ratificadoNotario,
             otroEspecifique: $this->acreditacionForm->otroEspecifique !== '' ? $this->acreditacionForm->otroEspecifique : null,
             observaciones: $this->acreditacionForm->observaciones !== '' ? $this->acreditacionForm->observaciones : null,
-        ));
+        ))) {
+            return;
+        }
         $this->archivos['escritura_inmueble'] = null;
         $this->reemplazando['escritura_inmueble'] = false;
 
@@ -160,11 +169,34 @@ class Paso2Documentos extends Component
     {
         $this->validate(['archivos.formato_solicitud' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
 
-        $registrarDocumento->ejecutar($this->escuela->id, 'formato_solicitud', $this->archivos['formato_solicitud'], new DatosDocumento);
+        if (! $this->intentarRegistrar($registrarDocumento, 'formato_solicitud', new DatosDocumento)) {
+            return;
+        }
         $this->archivos['formato_solicitud'] = null;
         $this->reemplazando['formato_solicitud'] = false;
 
         $this->avanzar($documentosCompletos);
+    }
+
+    /**
+     * Envuelve RegistrarDocumento::ejecutar() para que un DatosInvalidos
+     * (invariante de entrada violado — clave no aplicable, archivo no PDF)
+     * se convierta en errores de campo en vez de un 500, incluso si el
+     * caller llega a saltarse la validación de Livewire de arriba.
+     */
+    private function intentarRegistrar(RegistrarDocumento $registrarDocumento, string $clave, DatosDocumento $datos): bool
+    {
+        try {
+            $registrarDocumento->ejecutar($this->escuela->id, $clave, $this->archivos[$clave], $datos);
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     public function toggleReemplazar(string $clave): void

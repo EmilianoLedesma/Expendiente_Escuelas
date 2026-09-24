@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Infraestructura;
 
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
@@ -56,58 +57,81 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         return (int) DB::table('tipos_espacios')->where('clave', $clave)->value('id');
     }
 
-    private function datos(int $numeroAulas = 6): DatosInfraestructuraNivel
+    // WS-2.4a: el caso de uso ahora valida que cada tipo_espacio/categoría
+    // aplique al nivel en niveles_tipos_espacios / CategoriasSanitariosPorNivel,
+    // así que el fixture ya no puede mezclar espacios/categorías exclusivos de
+    // Inicial (filtro_recepcion, alumnado_maternal) con los de Básica (bodega,
+    // biblioteca, alumnado_masculino/femenino) — $nivelClave elige el set.
+    private function datos(int $numeroAulas = 6, string $nivelClave = 'primaria'): DatosInfraestructuraNivel
     {
-        return new DatosInfraestructuraNivel(
-            espacios: [
-                [
-                    'tipoEspacioId' => $this->idTipo('direccion'),
-                    'cantidad' => 1,
-                    'superficieM2' => 18.5,
-                    'capacidadPromedio' => 3,
-                    'ventilacionNatural' => true,
-                    'iluminacionNatural' => true,
-                    'destinadoA' => null,
-                    'campoFutbol' => null,
-                    'materialesBiblioteca' => [],
-                ],
-                [
-                    'tipoEspacioId' => $this->idTipo('bodega'),
-                    'cantidad' => 2,
-                    'superficieM2' => 9.0,
-                    'capacidadPromedio' => null,
-                    'ventilacionNatural' => false,
-                    'iluminacionNatural' => false,
-                    'destinadoA' => 'limpieza',
-                    'campoFutbol' => null,
-                    'materialesBiblioteca' => [],
-                ],
-                [
-                    'tipoEspacioId' => $this->idTipo('campo_futbol'),
-                    'cantidad' => 1,
-                    'superficieM2' => 800.0,
-                    'capacidadPromedio' => null,
-                    'ventilacionNatural' => null,
-                    'iluminacionNatural' => null,
-                    'destinadoA' => null,
-                    'campoFutbol' => ['tipoSuperficie' => 'pasto sintético', 'formato' => '7'],
-                    'materialesBiblioteca' => [],
-                ],
-                [
-                    'tipoEspacioId' => $this->idTipo('biblioteca'),
-                    'cantidad' => 1,
-                    'superficieM2' => 45.0,
-                    'capacidadPromedio' => 20,
-                    'ventilacionNatural' => true,
-                    'iluminacionNatural' => true,
-                    'destinadoA' => null,
-                    'campoFutbol' => null,
-                    'materialesBiblioteca' => [
-                        ['tipoMaterialId' => (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id'), 'numeroTitulos' => 300, 'numeroVolumenes' => 450],
-                    ],
-                ],
+        $esInicial = $nivelClave === 'inicial';
+
+        $espacios = [
+            [
+                'tipoEspacioId' => $this->idTipo('direccion'),
+                'cantidad' => 1,
+                'superficieM2' => 18.5,
+                'capacidadPromedio' => 3,
+                'ventilacionNatural' => true,
+                'iluminacionNatural' => true,
+                'destinadoA' => null,
+                'campoFutbol' => null,
+                'materialesBiblioteca' => [],
             ],
-            sanitarios: [
+            [
+                'tipoEspacioId' => $this->idTipo($esInicial ? 'filtro_recepcion' : 'bodega'),
+                'cantidad' => 2,
+                'superficieM2' => 9.0,
+                'capacidadPromedio' => null,
+                'ventilacionNatural' => false,
+                'iluminacionNatural' => false,
+                'destinadoA' => $esInicial ? null : 'limpieza',
+                'campoFutbol' => null,
+                'materialesBiblioteca' => [],
+            ],
+            [
+                'tipoEspacioId' => $this->idTipo('campo_futbol'),
+                'cantidad' => 1,
+                'superficieM2' => 800.0,
+                'capacidadPromedio' => null,
+                'ventilacionNatural' => null,
+                'iluminacionNatural' => null,
+                'destinadoA' => null,
+                'campoFutbol' => ['tipoSuperficie' => 'pasto sintético', 'formato' => '7'],
+                'materialesBiblioteca' => [],
+            ],
+        ];
+
+        if (! $esInicial) {
+            $espacios[] = [
+                'tipoEspacioId' => $this->idTipo('biblioteca'),
+                'cantidad' => 1,
+                'superficieM2' => 45.0,
+                'capacidadPromedio' => 20,
+                'ventilacionNatural' => true,
+                'iluminacionNatural' => true,
+                'destinadoA' => null,
+                'campoFutbol' => null,
+                'materialesBiblioteca' => [
+                    ['tipoMaterialId' => (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id'), 'numeroTitulos' => 300, 'numeroVolumenes' => 450],
+                ],
+            ];
+        }
+
+        $sanitarios = $esInicial
+            ? [
+                [
+                    'categoria' => 'alumnado_maternal',
+                    'cantidadRetretes' => 2,
+                    'cantidadMingitorios' => 0,
+                    'cantidadLavabos' => 2,
+                    'superficieM2' => 8.0,
+                    'ventilacionNatural' => true,
+                    'iluminacionNatural' => true,
+                    'cantidadBacinicas' => 5,
+                ],
+            ]
+            : [
                 [
                     'categoria' => 'alumnado_masculino',
                     'cantidadRetretes' => 4,
@@ -119,16 +143,20 @@ class RegistrarInfraestructuraNivelTest extends TestCase
                     'cantidadBacinicas' => null,
                 ],
                 [
-                    'categoria' => 'alumnado_maternal',
-                    'cantidadRetretes' => 2,
+                    'categoria' => 'alumnado_femenino',
+                    'cantidadRetretes' => 4,
                     'cantidadMingitorios' => 0,
-                    'cantidadLavabos' => 2,
-                    'superficieM2' => 8.0,
+                    'cantidadLavabos' => 4,
+                    'superficieM2' => 12.0,
                     'ventilacionNatural' => true,
                     'iluminacionNatural' => true,
-                    'cantidadBacinicas' => 5,
+                    'cantidadBacinicas' => null,
                 ],
-            ],
+            ];
+
+        return new DatosInfraestructuraNivel(
+            espacios: $espacios,
+            sanitarios: $sanitarios,
             numeroAulas: $numeroAulas,
             superficieAulasM2: 240.0,
         );
@@ -192,7 +220,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
     {
         $escuelaNivel = $this->escuelaNivel('inicial');
 
-        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos(nivelClave: 'inicial'));
 
         $this->assertSame(1, DB::table('sanitarios_bacinicas')->count());
         $maternalId = DB::table('sanitarios')
@@ -355,5 +383,99 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             'plantel_id' => $this->plantel->id,
             'tipo_espacio_id' => $this->idTipo('areas_verdes'),
         ]);
+    }
+
+    // WS-2.4a — el caso de uso no debe confiar en que el formulario ya filtró
+    // por niveles_tipos_espacios: filtro_recepcion solo aplica a 'inicial'.
+    public function test_rechaza_un_tipo_de_espacio_no_aplicable_al_nivel(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [[
+                'tipoEspacioId' => $this->idTipo('filtro_recepcion'),
+                'cantidad' => 1,
+                'superficieM2' => null,
+                'capacidadPromedio' => null,
+                'ventilacionNatural' => null,
+                'iluminacionNatural' => null,
+                'destinadoA' => null,
+                'campoFutbol' => null,
+                'materialesBiblioteca' => [],
+            ]],
+            sanitarios: [],
+            numeroAulas: 6,
+        );
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('espacios.'.$this->idTipo('filtro_recepcion').'.tipoEspacioId', $e->errores);
+        }
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+    }
+
+    public function test_rechaza_una_categoria_de_sanitario_no_aplicable_al_nivel(): void
+    {
+        // Primaria (Básica) no admite alumnado_maternal — es exclusivo de Inicial.
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [],
+            sanitarios: [[
+                'categoria' => 'alumnado_maternal',
+                'cantidadRetretes' => 2,
+                'cantidadMingitorios' => 0,
+                'cantidadLavabos' => 2,
+                'superficieM2' => null,
+                'ventilacionNatural' => null,
+                'iluminacionNatural' => null,
+                'cantidadBacinicas' => 5,
+            ]],
+            numeroAulas: 6,
+        );
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('sanitarios.alumnado_maternal.categoria', $e->errores);
+        }
+
+        $this->assertDatabaseCount('sanitarios', 0);
+    }
+
+    public function test_rechaza_numeros_negativos(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [[
+                'tipoEspacioId' => $this->idTipo('direccion'),
+                'cantidad' => -1,
+                'superficieM2' => null,
+                'capacidadPromedio' => null,
+                'ventilacionNatural' => null,
+                'iluminacionNatural' => null,
+                'destinadoA' => null,
+                'campoFutbol' => null,
+                'materialesBiblioteca' => [],
+            ]],
+            sanitarios: [],
+            numeroAulas: -3,
+        );
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('numeroAulas', $e->errores);
+            $this->assertArrayHasKey('espacios.'.$this->idTipo('direccion').'.cantidad', $e->errores);
+        }
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+        $this->assertDatabaseCount('aulas_nivel', 0);
     }
 }

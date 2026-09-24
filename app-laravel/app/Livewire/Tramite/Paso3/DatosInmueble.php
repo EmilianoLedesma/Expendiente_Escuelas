@@ -3,6 +3,7 @@
 namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
@@ -130,24 +131,32 @@ class DatosInmueble extends Component
             'estudiosActuales.*.numeroAlumnos' => ['required', 'integer', 'min:0', 'max:32767'],
         ]);
 
-        $registrarDatosInmueble->ejecutar(
-            $this->plantelId(),
-            $this->escuelaNivel->id,
-            new DatosInmuebleDTO(
-                metrosTotales: (float) $this->metrosTotales,
-                metrosConstruidos: $this->numeroONull($this->metrosConstruidos),
-                colindanciaNorte: $this->textoONull($this->colindanciaNorte),
-                colindanciaSur: $this->textoONull($this->colindanciaSur),
-                colindanciaEste: $this->textoONull($this->colindanciaEste),
-                colindanciaOeste: $this->textoONull($this->colindanciaOeste),
-                latitud: $this->numeroONull($this->latitud),
-                longitud: $this->numeroONull($this->longitud),
-                areaCivicaM2: $this->numeroONull($this->areaCivicaM2),
-                tieneAstaBandera: $this->tieneAstaBandera,
-                serviciosCercanos: $this->serviciosDeclarados(),
-                estudiosActuales: $this->estudiosDeclarados(),
-            ),
-        );
+        try {
+            $registrarDatosInmueble->ejecutar(
+                $this->plantelId(),
+                $this->escuelaNivel->id,
+                new DatosInmuebleDTO(
+                    metrosTotales: (float) $this->metrosTotales,
+                    metrosConstruidos: $this->numeroONull($this->metrosConstruidos),
+                    colindanciaNorte: $this->textoONull($this->colindanciaNorte),
+                    colindanciaSur: $this->textoONull($this->colindanciaSur),
+                    colindanciaEste: $this->textoONull($this->colindanciaEste),
+                    colindanciaOeste: $this->textoONull($this->colindanciaOeste),
+                    latitud: $this->numeroONull($this->latitud),
+                    longitud: $this->numeroONull($this->longitud),
+                    areaCivicaM2: $this->numeroONull($this->areaCivicaM2),
+                    tieneAstaBandera: $this->tieneAstaBandera,
+                    serviciosCercanos: $this->serviciosDeclarados(),
+                    estudiosActuales: $this->estudiosDeclarados(),
+                ),
+            );
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+
+            return;
+        }
 
         $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $this->escuelaNivel->id]);
     }

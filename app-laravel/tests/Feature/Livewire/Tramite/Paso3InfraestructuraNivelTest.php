@@ -3,6 +3,8 @@
 namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -320,5 +322,28 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $primaria->id]));
 
         $response->assertForbidden();
+    }
+
+    // WS-2.4a — un DatosInvalidos lanzado por el caso de uso debe convertirse
+    // en errores de campo, no en un 500.
+    public function test_datos_invalidos_del_caso_de_uso_se_convierte_en_errores_de_campo(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $direccionId = $this->idTipo('direccion');
+
+        $this->mock(RegistrarInfraestructuraNivel::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')->andThrow(new DatosInvalidos([
+                'numeroAulas' => 'El número de aulas no puede ser negativo.',
+            ]));
+        });
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$direccionId}.cantidad", 1)
+            ->set('numeroAulas', 6)
+            ->call('guardar')
+            ->assertHasErrors('numeroAulas');
+
+        $this->assertDatabaseCount('aulas_nivel', 0);
     }
 }

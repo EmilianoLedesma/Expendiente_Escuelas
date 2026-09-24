@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso2Documentos;
@@ -438,5 +439,26 @@ class Paso2DocumentosTest extends TestCase
             'tipo' => 'otro',
             'otro_especifique' => 'Posesión por resolución judicial',
         ]);
+    }
+
+    // WS-2.4a — un DatosInvalidos lanzado por el caso de uso (p. ej. un caller
+    // que se salte la validación de Livewire) debe convertirse en un error de
+    // campo, no en un 500.
+    public function test_datos_invalidos_del_caso_de_uso_se_convierte_en_error_de_campo(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        $this->mock(RegistrarDocumento::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')->andThrow(new DatosInvalidos(['archivos.ine' => 'El archivo debe ser un PDF.']));
+        });
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'ine')
+            ->assertHasErrors('archivos.ine');
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
     }
 }

@@ -3,12 +3,14 @@
 namespace App\Application\Documentos;
 
 use App\Application\Documentos\DTO\DatosDocumento;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
+use App\Models\ResponsableLegal;
 use App\Models\TipoDocumento;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +24,10 @@ use Throwable;
  */
 class RegistrarDocumento
 {
-    public function __construct(private readonly ?AlmacenDocumentos $almacen = null) {}
+    public function __construct(
+        private readonly ?AlmacenDocumentos $almacen = null,
+        private readonly ?DocumentosCompletos $documentosCompletos = null,
+    ) {}
 
     public function ejecutar(int $escuelaId, string $tipoDocumentoClave, UploadedFile $archivo, DatosDocumento $datos): void
     {
@@ -30,6 +35,21 @@ class RegistrarDocumento
 
         if ($tipo === null) {
             throw new InvalidArgumentException("tipo_documento desconocido: {$tipoDocumentoClave}");
+        }
+
+        // Sin responsable legal aún no hay tipo_persona con qué verificar
+        // aplicabilidad (WS-2.4b cubre la precondición de orden de pasos) —
+        // aquí solo se rechaza cuando SÍ se conoce el tipo_persona y la clave
+        // no le corresponde (p. ej. acta_nacimiento para una persona moral).
+        $tipoPersona = ResponsableLegal::where('escuela_id', $escuelaId)->value('tipo_persona');
+        $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);
+
+        if ($tipoPersona !== null && ! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
+            throw new DatosInvalidos(['clave' => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
+        }
+
+        if ($archivo->getMimeType() !== 'application/pdf') {
+            throw new DatosInvalidos(["archivos.{$tipoDocumentoClave}" => 'El archivo debe ser un PDF.']);
         }
 
         $almacen = $this->almacen ?? app(AlmacenDocumentos::class);

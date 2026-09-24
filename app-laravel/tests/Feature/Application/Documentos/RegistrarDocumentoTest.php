@@ -4,10 +4,12 @@ namespace Tests\Feature\Application\Documentos;
 
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\Plantel;
+use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,12 +24,14 @@ class RegistrarDocumentoTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function crearEscuela(): Escuela
+    private function crearEscuela(string $tipoPersona = 'fisica'): Escuela
     {
         $solicitante = Solicitante::factory()->create();
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => $tipoPersona]);
 
-        return Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        return $escuela;
     }
 
     public function test_registra_documento_de_ambito_escuela(): void
@@ -122,6 +126,42 @@ class RegistrarDocumentoTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         (new RegistrarDocumento)->ejecutar($escuela->id, 'clave_inventada', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
+    }
+
+    // WS-2.4a — un caller que se salte la UI no debe poder subir el documento de
+    // identidad que no corresponde al tipo_persona real de la escuela (mismo
+    // caso que rechazaría DocumentosCompletos::clavesAplicables en la UI).
+    public function test_rechaza_clave_no_aplicable_al_tipo_persona_de_la_escuela(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela('moral'); // identidad aplicable es escritura_poder_facultades, no acta_nacimiento
+
+        try {
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'acta_nacimiento', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('clave', $e->errores);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    public function test_rechaza_un_archivo_que_no_es_pdf(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+
+        try {
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'ine', UploadedFile::fake()->create('x.png', 10, 'image/png'), new DatosDocumento);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('archivos.ine', $e->errores);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+        Storage::disk('documentos')->assertDirectoryEmpty('escuela');
     }
 
     public function test_primera_carga_guarda_en_ruta_unica_registrada_en_la_fila(): void
