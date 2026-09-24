@@ -14,13 +14,19 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class MarcarPasoCompletadoTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
-    private function crearEscuelaNivel(string $claveNivel = 'primaria'): EscuelaNivel
+    // Minor 7 — MarcarPasoCompletado ahora exige Paso 2 completo (mismo
+    // gate que los casos de uso Registrar* de Paso 3), así que el fixture
+    // por defecto lo deja completo; test_rechaza_marcar_un_paso_sin_paso_2_completo
+    // es la única prueba que deliberadamente lo deja incompleto.
+    private function crearEscuelaNivel(string $claveNivel = 'primaria', bool $conPaso2Completo = true): EscuelaNivel
     {
         (new CatalogoMinimoSeeder)->run();
         (new PasosCapturaSeeder)->run();
@@ -30,6 +36,10 @@ class MarcarPasoCompletadoTest extends TestCase
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+
+        if ($conPaso2Completo) {
+            $this->completarPaso2($escuela->id);
+        }
 
         return EscuelaNivel::create([
             'escuela_id' => $escuela->id,
@@ -110,5 +120,18 @@ class MarcarPasoCompletadoTest extends TestCase
         $this->expectException(PrecondicionIncumplida::class);
 
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
+    }
+
+    // Minor 7 — al igual que los casos de uso Registrar* de Paso 3, un caller
+    // que se salte CompuertaPaso3 no debe poder marcar ningún sub-paso de
+    // Paso 3 completado si Paso 2 (responsable + documentos) no lo está.
+    public function test_rechaza_marcar_un_paso_sin_paso_2_completo(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel(conPaso2Completo: false);
+        // Deliberadamente sin ResponsableLegal ni documentos: Paso 2 incompleto.
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
     }
 }

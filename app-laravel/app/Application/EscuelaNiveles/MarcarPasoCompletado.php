@@ -3,7 +3,9 @@
 namespace App\Application\EscuelaNiveles;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -16,15 +18,29 @@ use InvalidArgumentException;
  */
 class MarcarPasoCompletado
 {
-    public function __construct(private readonly ?EstadoPaso3 $estadoPaso3 = null) {}
+    public function __construct(
+        private readonly ?EstadoPaso3 $estadoPaso3 = null,
+        private readonly ?EstadoPaso2 $estadoPaso2 = null,
+    ) {}
 
-    /** @throws PrecondicionIncumplida si el sub-paso $pasoClave aún no es alcanzable (WS-2.4b). Idempotente: re-marcar un paso ya completado siempre pasa, porque su predecesor ya lo estaba. */
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso $pasoClave aún no es alcanzable (WS-2.4b, Minor 7). Idempotente: re-marcar un paso ya completado siempre pasa, porque su predecesor ya lo estaba. */
     public function ejecutar(int $escuelaNivelId, string $pasoClave): void
     {
         $pasoCapturaId = DB::table('pasos_captura')->where('clave', $pasoClave)->value('id');
 
         if ($pasoCapturaId === null) {
             throw new InvalidArgumentException("paso_captura desconocido: {$pasoClave}");
+        }
+
+        // Minor 7 — misma compuerta que verificarPrecondicion() en los casos
+        // de uso Registrar* de Paso 3: un caller que se salte CompuertaPaso3
+        // no debe poder marcar ningún sub-paso completado si Paso 2 no lo
+        // está.
+        $escuelaId = EscuelaNivel::where('id', $escuelaNivelId)->value('escuela_id');
+        $estadoPaso2 = $this->estadoPaso2 ?? app(EstadoPaso2::class);
+        $etapaFaltante = $escuelaId !== null ? $estadoPaso2->etapaFaltante($escuelaId) : null;
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de continuar.');
         }
 
         $estadoPaso3 = $this->estadoPaso3 ?? app(EstadoPaso3::class);
