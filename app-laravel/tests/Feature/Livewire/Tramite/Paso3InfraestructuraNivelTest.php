@@ -313,6 +313,26 @@ class Paso3InfraestructuraNivelTest extends TestCase
         ]);
     }
 
+    // WS-2 item 1 — un espacio con solo el formato de campo_futbol capturado
+    // no debe perderse: el componente lo construía pero el caso de uso no lo
+    // contaba como "dato significativo".
+    public function test_campo_futbol_con_solo_formato_se_guarda(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $campoFutbolId = $this->idTipo('campo_futbol');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$campoFutbolId}.campoFutbolFormato", '7')
+            ->set('numeroAulas', 6)
+            ->call('guardar');
+
+        $this->assertDatabaseHas('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $campoFutbolId,
+        ]);
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $primaria = $this->escuelaNivel('primaria');

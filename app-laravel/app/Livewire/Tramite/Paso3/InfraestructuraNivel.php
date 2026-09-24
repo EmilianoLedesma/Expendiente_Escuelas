@@ -195,23 +195,12 @@ class InfraestructuraNivel extends Component
             $materiales = $tipo->permite_material_biblioteca ? $this->materialesDeclarados() : [];
             $cantidad = $entrada['cantidad'] ?? null;
 
-            // Anexo 2 pide SI/NO + descripción/superficie para espacios recreativos:
-            // cantidad puede legítimamente faltar (instalaciones_espacios.cantidad es
-            // nullable). Se persiste el espacio si trae cualquier dato, o si trae
-            // materiales de biblioteca (biblioteca_materiales.instalacion_espacio_id
-            // es NOT NULL, así que los materiales exigen esta fila). Un checkbox sin
-            // marcar (o des-marcado tras enfocarlo) envía `false`, no ausencia — eso
-            // no cuenta como dato o un tipo nunca tocado por el usuario quedaría
-            // "capturado" para siempre (ADR-005).
-            $tieneAlgo = $materiales !== []
-                || collect($entrada)->contains(fn ($valor, $campo) => in_array($campo, ['ventilacionNatural', 'iluminacionNatural'], true)
-                    ? $valor === true
-                    : $valor !== null && $valor !== '');
-
-            if (! $tieneAlgo) {
-                continue;
-            }
-
+            // WS-2 item 1: si el "¿trae dato?" se decidiera aquí Y en
+            // RegistrarInfraestructuraNivel::tieneDatosSignificativos(), las
+            // dos copias podían divergir (como pasó con campoFutbol, que
+            // esta regla contaba pero la del caso de uso ignoraba). Ahora se
+            // construye la entrada para todo tipo aplicable y el caso de uso
+            // decide solo, con una única regla.
             $declarados[] = [
                 'tipoEspacioId' => (int) $tipo->id,
                 'cantidad' => ($cantidad === null || $cantidad === '') ? null : (int) $cantidad,
@@ -269,11 +258,9 @@ class InfraestructuraNivel extends Component
         foreach ($this->categoriasSanitarios() as $categoria) {
             $entrada = $this->sanitarios[$categoria] ?? [];
 
-            $tieneAlgo = collect($entrada)->contains(fn ($valor) => $valor !== null && $valor !== '');
-            if (! $tieneAlgo) {
-                continue;
-            }
-
+            // WS-2 item 1 / Minor 8: misma razón que espaciosDeclarados() —
+            // RegistrarInfraestructuraNivel::tieneDatosSignificativosSanitario()
+            // es la única fuente de "¿trae dato?".
             $declarados[] = [
                 'categoria' => $categoria,
                 'cantidadRetretes' => ($entrada['cantidadRetretes'] ?? '') === '' ? null : (int) $entrada['cantidadRetretes'],

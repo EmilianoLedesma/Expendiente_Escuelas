@@ -115,12 +115,16 @@ class RegistrarInfraestructuraNivel
     }
 
     /**
-     * Misma regla que el formulario (WS-2.1): un booleano solo cuenta como
-     * dato cuando es `true` — de lo contrario un caller de API podría crear
-     * filas vacías, y por ADR-005 ese tipo quedaría "capturado" para
-     * siempre sin que el solicitante haya declarado nada.
+     * Única fuente de verdad de "¿este espacio trae dato?" (WS-2 item 1): el
+     * componente Livewire ya no pre-filtra por su cuenta — construye la
+     * entrada para todo tipo aplicable y delega la decisión de persistir
+     * aquí, para que no puedan divergir dos copias de la misma regla. Un
+     * booleano solo cuenta como dato cuando es `true`, y campoFutbol solo
+     * cuenta si trae tipoSuperficie o formato — de lo contrario un caller de
+     * API podría crear filas vacías, y por ADR-005 ese tipo quedaría
+     * "capturado" para siempre sin que el solicitante haya declarado nada.
      *
-     * @param  array{cantidad: int|null, superficieM2: float|null, capacidadPromedio: int|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, destinadoA: string|null, materialesBiblioteca: list<array<string, mixed>>}  $espacio
+     * @param  array{cantidad: int|null, superficieM2: float|null, capacidadPromedio: int|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, destinadoA: string|null, campoFutbol: array{tipoSuperficie: string|null, formato: string|null}|null, materialesBiblioteca: list<array<string, mixed>>}  $espacio
      */
     private function tieneDatosSignificativos(array $espacio): bool
     {
@@ -130,7 +134,29 @@ class RegistrarInfraestructuraNivel
             || $espacio['destinadoA'] !== null
             || $espacio['ventilacionNatural'] === true
             || $espacio['iluminacionNatural'] === true
-            || $espacio['materialesBiblioteca'] !== [];
+            || $espacio['materialesBiblioteca'] !== []
+            || ($espacio['campoFutbol'] !== null
+                && ($espacio['campoFutbol']['tipoSuperficie'] !== null || $espacio['campoFutbol']['formato'] !== null));
+    }
+
+    /**
+     * Minor 8 — mismo espíritu que tieneDatosSignificativos() para espacios:
+     * un sanitario todo-null (booleanos solo cuentan si son `true`) no debe
+     * crear fila, para que un caller de API que no filtre como el
+     * componente no marque una categoría como "capturada" (ADR-005) sin
+     * datos reales.
+     *
+     * @param  array{cantidadRetretes: int|null, cantidadMingitorios: int|null, cantidadLavabos: int|null, superficieM2: float|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, cantidadBacinicas: int|null}  $sanitario
+     */
+    private function tieneDatosSignificativosSanitario(array $sanitario): bool
+    {
+        return $sanitario['cantidadRetretes'] !== null
+            || $sanitario['cantidadMingitorios'] !== null
+            || $sanitario['cantidadLavabos'] !== null
+            || $sanitario['superficieM2'] !== null
+            || $sanitario['cantidadBacinicas'] !== null
+            || $sanitario['ventilacionNatural'] === true
+            || $sanitario['iluminacionNatural'] === true;
     }
 
     private function escribirSanitarios(int $plantelId, DatosInfraestructuraNivel $datos): void
@@ -139,6 +165,10 @@ class RegistrarInfraestructuraNivel
 
         foreach ($datos->sanitarios as $sanitario) {
             if (in_array($sanitario['categoria'], $yaCapturadas, true)) {
+                continue;
+            }
+
+            if (! $this->tieneDatosSignificativosSanitario($sanitario)) {
                 continue;
             }
 

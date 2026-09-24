@@ -395,6 +395,79 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         ]);
     }
 
+    // WS-2 item 1 — un espacio cuyo único dato es campo_futbol (tipoSuperficie
+    // o formato) debe escribirse: tieneDatosSignificativos() ignoraba
+    // campoFutbol y el espacio se perdía en silencio aunque el formulario ya
+    // lo hubiera construido.
+    public function test_espacio_con_solo_campo_futbol_declarado_se_escribe(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [
+                [
+                    'tipoEspacioId' => $this->idTipo('campo_futbol'),
+                    'cantidad' => null,
+                    'superficieM2' => null,
+                    'capacidadPromedio' => null,
+                    'ventilacionNatural' => null,
+                    'iluminacionNatural' => null,
+                    'destinadoA' => null,
+                    'campoFutbol' => ['tipoSuperficie' => null, 'formato' => '7'],
+                    'materialesBiblioteca' => [],
+                ],
+            ],
+            sanitarios: [],
+            numeroAulas: 6,
+        );
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+
+        $this->assertDatabaseHas('instalaciones_espacios', [
+            'plantel_id' => $this->plantel->id,
+            'tipo_espacio_id' => $this->idTipo('campo_futbol'),
+        ]);
+        $campoId = DB::table('instalaciones_espacios')
+            ->where('plantel_id', $this->plantel->id)
+            ->where('tipo_espacio_id', $this->idTipo('campo_futbol'))
+            ->value('id');
+        $this->assertDatabaseHas('campos_futbol', [
+            'instalacion_espacio_id' => $campoId,
+            'formato' => '7',
+        ]);
+    }
+
+    // Minor 8 — un sanitario totalmente vacío (todo null) no debe crear fila,
+    // aunque venga de un caller de API que no filtre como lo hace el componente.
+    public function test_sanitario_sin_datos_significativos_no_escribe_fila(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        $datos = new DatosInfraestructuraNivel(
+            espacios: [],
+            sanitarios: [
+                [
+                    'categoria' => 'alumnado_masculino',
+                    'cantidadRetretes' => null,
+                    'cantidadMingitorios' => null,
+                    'cantidadLavabos' => null,
+                    'superficieM2' => null,
+                    'ventilacionNatural' => false,
+                    'iluminacionNatural' => false,
+                    'cantidadBacinicas' => null,
+                ],
+            ],
+            numeroAulas: 6,
+        );
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
+
+        $this->assertDatabaseMissing('sanitarios', [
+            'plantel_id' => $this->plantel->id,
+            'categoria' => 'alumnado_masculino',
+        ]);
+    }
+
     // WS-2.4a — el caso de uso no debe confiar en que el formulario ya filtró
     // por niveles_tipos_espacios: filtro_recepcion solo aplica a 'inicial'.
     public function test_rechaza_un_tipo_de_espacio_no_aplicable_al_nivel(): void
