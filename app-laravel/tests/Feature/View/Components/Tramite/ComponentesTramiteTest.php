@@ -85,6 +85,19 @@ class ComponentesTramiteTest extends TestCase
             ->assertDontSee('<a ', false);
     }
 
+    public function test_un_nombre_de_archivo_largo_se_parte(): void
+    {
+        $nombre = str_repeat('a', 120).'.pdf';
+
+        $this->blade(
+            '<ul><x-tramite.documento-row clave="ine" titulo="INE" :escuela-id="1" :capturado="$c" :editable="false" accion="guardarDocumentoSimple(\'ine\')" /></ul>',
+            ['c' => ['nombreArchivo' => $nombre, 'subidoEn' => now()]]
+        )
+            ->assertSee($nombre)
+            ->assertSee('break-all', false)
+            ->assertSee('Reemplazar');
+    }
+
     public function test_nivel_como_punto_y_como_franja(): void
     {
         $this->blade('<x-tramite.nivel clave="primaria">Primaria</x-tramite.nivel>')
