@@ -71,7 +71,8 @@ eligió la **Dirección B** (`B-recorrido.html`), que reemplazó la spec §3 e i
 |---|---|---|
 | B1 | `9c2afa3` | Identidad del trámite: nombre de la escuela, fecha de inicio, "Trámite Nº…", barra de avance en el eyebrow/encabezado. |
 | B2 | `0f6436f`/`4101b9c` | Shell de dos columnas, barra lateral "Recorrido" (identidad + navegación de secciones, `<details>` en móvil), tabla "Mis trámites" rediseñada, workspace del hub; se retira el widget "Progreso" antiguo antes de lo previsto (Tarea 9 original). |
-| B3 | `f8ec914` | Pulido pedido tras revisar la vista previa de B2: etiqueta de estado más discreta, tabla más silenciosa, `h1` del hub = nombre de la escuela, se retira el recuadro verde, se recorta el domicilio (arreglo de un bug de `', '` colgante que también existía en el código postal — corregido en la misma tarea). |
+| B3 | `f8ec914` | Pulido pedido tras revisar la vista previa de B2: etiqueta de estado más discreta, tabla más silenciosa, `h1` del hub = nombre de la escuela, se retira el recuadro verde, se recorta el domicilio (arreglo de un bug de `', '` colgante en `calle`/`colonia`/`municipio`). El código postal quedó con el mismo bug sin corregir en B3 (`Task B3: minor (deferred)` en el ledger) —
+corregido en esta misma tarea, ver §8. |
 
 Ruling registrado en el ledger para B2: los dos fallos de `Paso3ProximosPasosTest` que surgieron con B2 se
 corrigieron en la misma ronda de B2 (no se esperó a la Tarea 7), para mantener la suite verde en las
@@ -148,9 +149,12 @@ como "no usar como texto" — se usan como anillo de foco / barra decorativa (no
 cumplen), y el eyebrow de "Aquí estás" usa `primary` (12.56:1) en vez de `accent`, tal como predijo la
 nota del plan.
 
-Los 5 pares nuevos de la enmienda coinciden con lo esperado: `on-dark/80` ≈9.20 (esperado ≈10:1, la
-aproximación del plan era sobre el valor sin mezclar con la opacidad real del token; el valor medido
-sigue siendo AA-aa para texto pequeño de apoyo, que es su único uso — fecha de inicio, "Trámite Nº"),
+Los 5 pares nuevos de la enmienda coinciden con lo esperado: `on-dark/80` ≈9.20 (esperado ≈10:1; la
+aproximación del plan tomaba el blanco sin la opacidad real. `on-dark` se define como `#ffffff` en
+`tailwind.config.js:32`, y el `/80` es el modificador de opacidad de Tailwind aplicado en la propia
+vista, p. ej. `text-on-dark/80` en `resources/views/components/tramite/recorrido.blade.php:11` — de ahí
+el valor medido de 9.20 en vez del 13.48 de un blanco sólido. Sigue siendo AA para texto pequeño de
+apoyo, que es su único uso: fecha de inicio, "Trámite Nº"),
 `accent` sobre `surface-dark` ≈4.13 (esperado ≈4.1, es la barra de avance, no texto), `primary` sobre
 `surface-card` = 12.56 (muy por encima de 4.5), `success-ink` en el círculo del paso completado = 6.55
 (no-texto, muy por encima de 3:1), y la confirmación de que `accent` como texto (3.26) queda por debajo
@@ -170,7 +174,7 @@ requirió app corriendo. ✓ = cumple, — = no aplica a esa pantalla.
 | Niveles | ✓ | ✓ (`fieldset`+`legend`, checkboxes) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Documentos | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Inmueble | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Infraestructura | ✓ | ✓ (labels `md:sr-only` en tabla responsive) | ⚠ ver §6.1 (inputs sueltos fuera de `x-ui.field`) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Infraestructura | ✓ | ✓ (labels `md:sr-only` en tabla responsive) | ⚠ ver §6.2 (inputs sueltos fuera de `x-ui.field`) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Mobiliario | ✓ | ✓ (`<label for>` por fila) | ✓ **corregido en esta tarea** (ver §6.1/§7) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Login | ✓ | ✓ | ✓ | ✓ | ✓ (`autofocus` en el primer campo) | ✓ | ✓ | ✓ |
 | Registro | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -244,11 +248,21 @@ Verificaciones transversales (grep sobre `resources/views`, todas las vistas red
    señal, el nombre del nivel siempre está en texto) — es una mejora visual pendiente, no un defecto.
 8. **N+1 preexistente en `ListarTramitesDelSolicitante`** (detectado en B1, comentado con `ponytail:` en
    el propio código, no empeorado por esta rama).
-9. **Deuda menor documentada en el ledger de ejecución, sin impacto de comportamiento:** duplicación
-   plan-mandada de bloques `@error` en `field`/`radio-group` (Tarea 2); `tests/TestCase.php` comparte un
-   `$errors` bag vacío entre pruebas (Tarea 2, fuera de la lista de archivos del brief pero necesario
-   para el helper `blade()`); redundancia de una consulta de `Escuela` (route binding + refetch en
-   `ResumenTramite::paraEscuela`, Tarea 3, plan-mandada); `ShellTest` de "Mis trámites" solo cubre el
+9. **Deuda menor documentada en el ledger de ejecución, sin impacto de comportamiento:** la prueba
+   `ShellTest` sobre "sin Livewire antes del contenido" ya pasaba en verde antes del cambio de la Tarea 1
+   (era una prueba mandada por el plan que resultó ser redundante con el comportamiento previo, no una
+   regresión nueva); el token `info-ink` quedó sin usar en la Tarea 1 hasta que tareas posteriores lo
+   consumieron (Documentos, Infraestructura) — hoy ya está en uso, ese pendiente quedó resuelto de
+   camino; el docblock de `Paso3ProximosPasos` que mencionaba el componente `Progreso` quedó obsoleto
+   solo brevemente: la Tarea 7 eliminó el archivo completo (`app/Livewire/Tramite/Paso3ProximosPasos.php`
+   ya no existe, solo su prueba de ruta/redirect sigue viva), así que ese pendiente también quedó
+   resuelto; duplicación plan-mandada de bloques `@error` en `field`/`radio-group` (Tarea 2); el mismo
+   patrón de duplicación aparece también en el `<fieldset>` de niveles educativos de
+   `paso2-responsable.blade.php` (bloque `nivelesSeleccionados`, Tarea 5, plan-mandado — la línea exacta
+   se movió con ediciones posteriores de otras tareas, el patrón es el mismo); `tests/TestCase.php`
+   comparte un `$errors` bag vacío entre pruebas (Tarea 2, fuera de la lista de archivos del brief pero
+   necesario para el helper `blade()`); redundancia de una consulta de `Escuela` (route binding + refetch
+   en `ResumenTramite::paraEscuela`, Tarea 3, plan-mandada); `ShellTest` de "Mis trámites" solo cubre el
    estado vacío (B2); la prueba de renderizado del Recorrido no afirma que una fila completada
    no-revisable carezca de enlace (B2); el bloque móvil `tr/td` de la tabla de "Mis trámites" pierde
    semántica de tabla nativa a favor de las clases responsivas (`block`/`table-row`), decisión del
@@ -304,3 +318,69 @@ npm run build
   línea por concepto (`id="cantidades.{id}-error"`), corrige el `aria-describedby` colgante.
 - `app-laravel/tests/Feature/Livewire/Tramite/Paso3MobiliarioNivelTest.php` — prueba nueva que fija el fix.
 - `docs/reports/2026-09-25-rediseno-ui.md` — este reporte.
+
+## 8. Ronda de corrección 1 (hallazgos del revisor)
+
+La revisión de esta tarea encontró dos hallazgos "Important":
+
+1. **§3.2 afirmaba incorrectamente que el bug de código postal sin recortar ya estaba corregido en B3.**
+   El ledger (`Task B3: minor (deferred): domicilio() codigo_postal not trimmed`) y el propio código
+   (`ResumenTramite::domicilio()`) decían lo contrario: `calle`/`colonia`/`municipio` sí se recortan
+   desde B3, pero `codigo_postal` seguía interpolado sin `trim()`. Ruling del controlador: corregirlo en
+   código (no solo en el texto del reporte), con TDD.
+2. **§6/§9 omitían cuatro líneas `minor (deferred)` del ledger** que la instrucción original pedía
+   reflejar explícitamente: la prueba de `ShellTest` sobre "sin Livewire antes del contenido" (Tarea 1,
+   ya verde antes del cambio), el token `info-ink` sin usar en la Tarea 1 (Tarea 1), el docblock de
+   `Paso3ProximosPasos` que mencionaba `Progreso` (B2), y la duplicación del bloque `@error` en
+   `paso2-responsable.blade.php` (Tarea 5). Ya corregido en §6.9 (traducidas, con su estado actual —
+   dos de las cuatro quedaron resueltas de camino por tareas posteriores, no solo "mencionadas").
+
+Además, dos nits menores: la nota de contraste de `on-dark/80` ahora cita dónde se define el token
+(§5.1) y la fila de Infraestructura en la tabla de accesibilidad ahora referencia §6.2 en vez de §6.1
+(§5.2).
+
+### 8.1 TDD del fix de código postal
+
+**RED** — `$env:DB_DATABASE='sedeq_incorporacion_testing_ui'; php artisan test --filter=test_domicilio_recorta_espacios_en_el_codigo_postal`:
+
+```
+Failed asserting that two strings are identical.
+--- Expected
++++ Actual
+@@ @@
+-'Calle 1 #10, Centro, Querétaro, C.P. 76908'
++'Calle 1 #10, Centro, Querétaro, C.P. 76908 '
+```
+
+(falla por la razón correcta: el código postal `' 76908 '` llega sin recortar al string final).
+
+**GREEN** — mismo comando tras cambiar `ResumenTramite::domicilio()` de
+`", C.P. {$plantel->codigo_postal}"` a `', C.P. '.trim($plantel->codigo_postal)`:
+
+```json
+{"tool":"phpunit","result":"passed","tests":28,"passed":28,"assertions":96,"duration_ms":6168}
+```
+
+(las 28 pruebas de `ResumenTramiteTest`, incluida la nueva).
+
+### 8.2 Verificación final (fix round 1)
+
+```
+$env:DB_DATABASE='sedeq_incorporacion_testing_ui'; php artisan test
+{"tool":"phpunit","result":"passed","tests":516,"passed":516,"assertions":1373,"duration_ms":106513}
+
+vendor\bin\pint --test
+{"tool":"pint","result":"passed"}
+
+vendor\bin\phpstan analyse --memory-limit=512M
+{"tool":"phpstan","result":"passed","errors":0}
+```
+
+516/516 (515 al cierre de la primera pasada de la Tarea 10 + 1 prueba nueva de este fix round).
+
+### 8.3 Archivos modificados en este fix round
+
+- `app-laravel/app/Application/Tramite/ResumenTramite.php` — `domicilio()` ahora recorta `codigo_postal`.
+- `app-laravel/tests/Feature/Application/Tramite/ResumenTramiteTest.php` — prueba nueva
+  (`test_domicilio_recorta_espacios_en_el_codigo_postal`).
+- `docs/reports/2026-09-25-rediseno-ui.md` — correcciones de §3.2, §5.1, §5.2, §6.9 y esta sección.
