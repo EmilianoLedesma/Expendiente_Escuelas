@@ -1,66 +1,71 @@
-<div>
-        <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Preregistro</h1>
-        <p class="font-sans text-body-sm text-body mb-lg">
-            Indica si este trámite es para un plantel/escuela nuevo o uno ya existente.
-        </p>
+<div class="max-w-3xl">
+    <x-ui.page-header :back-href="route('tramite.index')" back-label="Mis trámites" :eyebrow="$encabezado" title="Datos del plantel">
+        <x-slot:intro>Indica si este trámite es para un plantel nuevo o para uno que ya registraste en el sistema.</x-slot:intro>
+    </x-ui.page-header>
 
-        @if ($errors->has('bifurcacion') && !$errors->has('plantelId'))
-            <div class="mb-lg">
-                <x-ui.alert tipo="error" titulo="No se pudo iniciar el trámite">
-                    {{ $errors->first('bifurcacion') }}
-                </x-ui.alert>
-            </div>
-        @endif
+    <form wire:submit="guardar">
+        <x-ui.error-summary />
 
-        <form wire:submit="guardar" class="space-y-lg">
-            <fieldset class="space-y-xs">
-                <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                    <input type="radio" wire:model.live="bifurcacion" value="nuevo">
-                    Plantel/escuela nuevo (primer trámite)
-                </label>
-                <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                    <input type="radio" wire:model.live="bifurcacion" value="existente">
-                    Plantel ya registrado en el sistema
-                </label>
-            </fieldset>
+        <x-ui.radio-group
+            id="bifurcacion"
+            legend="¿Para qué plantel es este trámite?"
+            wire:model.live="bifurcacion"
+            :opciones="[
+                'nuevo' => ['etiqueta' => 'Plantel/escuela nuevo (primer trámite)', 'descripcion' => 'Capturarás el domicilio y los datos de contacto del plantel.'],
+                'existente' => ['etiqueta' => 'Plantel ya registrado en el sistema', 'descripcion' => 'Elige uno de los planteles que ya registraste en otro trámite.'],
+            ]"
+        />
 
-            @if ($bifurcacion === 'existente')
-                <div>
-                    <label for="plantelId" class="block font-sans text-body-sm font-medium text-ink mb-xxs">
-                        Plantel registrado <span class="text-error">*</span>
-                    </label>
-                    <select
-                        id="plantelId"
-                        wire:model.blur="plantelId"
-                        class="w-full h-[38px] px-[13px] rounded-md border-[0.5px] font-sans text-body-sm text-ink bg-canvas {{ $errors->has('plantelId') ? 'border-error' : 'border-hairline' }}"
-                    >
+        @if ($bifurcacion === 'existente')
+            <x-ui.section title="Plantel registrado">
+                <x-ui.field id="plantelId" label="Plantel registrado">
+                    <x-ui.select wire:model.blur="plantelId">
                         <option value="">Selecciona un plantel…</option>
                         @foreach ($planteles as $plantel)
                             <option value="{{ $plantel['id'] }}">{{ $plantel['etiqueta'] }}</option>
                         @endforeach
-                    </select>
-                    @error('plantelId')
-                        <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p>
-                    @enderror
+                    </x-ui.select>
+                </x-ui.field>
+            </x-ui.section>
+        @else
+            <x-ui.section title="Domicilio del plantel">
+                <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                    <x-ui.field id="calle" label="Calle y número" class="sm:col-span-2">
+                        <x-ui.input wire:model.blur="calle" autocomplete="address-line1" />
+                    </x-ui.field>
+                    <x-ui.field id="numeroExt" label="Número exterior" optional>
+                        <x-ui.input wire:model.blur="numeroExt" />
+                    </x-ui.field>
+                    <x-ui.field id="numeroInt" label="Número interior" optional>
+                        <x-ui.input wire:model.blur="numeroInt" />
+                    </x-ui.field>
+                    <x-ui.field id="colonia" label="Colonia">
+                        <x-ui.input wire:model.blur="colonia" />
+                    </x-ui.field>
+                    <x-ui.field id="localidad" label="Localidad" optional>
+                        <x-ui.input wire:model.blur="localidad" />
+                    </x-ui.field>
+                    <x-ui.field id="municipio" label="Municipio">
+                        <x-ui.input wire:model.blur="municipio" />
+                    </x-ui.field>
+                    <x-ui.field id="codigoPostal" label="Código postal">
+                        <x-ui.input wire:model.blur="codigoPostal" inputmode="numeric" autocomplete="postal-code" />
+                    </x-ui.field>
                 </div>
-            @else
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
-                    <div class="sm:col-span-2">
-                        <x-ui.text-input name="calle" label="Calle y número" wire:model.blur="calle" required />
-                    </div>
-                    <x-ui.text-input name="numeroExt" label="Número exterior" wire:model.blur="numeroExt" />
-                    <x-ui.text-input name="numeroInt" label="Número interior" wire:model.blur="numeroInt" />
-                    <x-ui.text-input name="colonia" label="Colonia" wire:model.blur="colonia" required />
-                    <x-ui.text-input name="localidad" label="Localidad" wire:model.blur="localidad" />
-                    <x-ui.text-input name="municipio" label="Municipio" wire:model.blur="municipio" required />
-                    <x-ui.text-input name="codigoPostal" label="Código postal" wire:model.blur="codigoPostal" required />
-                    <x-ui.text-input name="telefono" label="Teléfono" wire:model.blur="telefono" />
-                    <x-ui.text-input name="correoElectronico" label="Correo electrónico" type="email" wire:model.blur="correoElectronico" />
-                </div>
-            @endif
+            </x-ui.section>
 
-            <div class="flex justify-end gap-sm pt-md border-t-[0.5px] border-hairline">
-                <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
-            </div>
-        </form>
-    </div>
+            <x-ui.section title="Datos de contacto">
+                <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                    <x-ui.field id="telefono" label="Teléfono" optional>
+                        <x-ui.input type="tel" inputmode="tel" wire:model.blur="telefono" autocomplete="tel" />
+                    </x-ui.field>
+                    <x-ui.field id="correoElectronico" label="Correo electrónico" optional>
+                        <x-ui.input type="email" wire:model.blur="correoElectronico" autocomplete="email" />
+                    </x-ui.field>
+                </div>
+            </x-ui.section>
+        @endif
+
+        <x-ui.action-bar accion="guardar" :back-href="route('tramite.index')" back-label="Volver a Mis trámites" />
+    </form>
+</div>
