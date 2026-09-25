@@ -15,6 +15,7 @@ use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use App\Models\TernaNombre;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
@@ -318,8 +319,66 @@ class ResumenTramiteTest extends TestCase
 
     public function test_encabezado(): void
     {
-        $this->assertSame('Paso 2 de 4 · Responsable legal', ResumenTramite::encabezado('responsable'));
-        $this->assertSame('Paso 6 de 6 · Infraestructura', ResumenTramite::encabezado('infraestructura', 'primaria'));
-        $this->assertNull(ResumenTramite::encabezado('mobiliario', 'primaria'));
+        $primaria = (new NivelEducativo)->forceFill(['clave' => 'primaria', 'nombre' => 'Primaria']);
+
+        $this->assertSame('Datos generales · Paso 2 de 4', ResumenTramite::encabezado('responsable'));
+        $this->assertSame('Primaria · Paso 6 de 6', ResumenTramite::encabezado('infraestructura', $primaria));
+        $this->assertNull(ResumenTramite::encabezado('mobiliario', $primaria));
+    }
+
+    public function test_el_nombre_es_la_primera_propuesta_de_la_terna(): void
+    {
+        $escuela = $this->escuela();
+        TernaNombre::create(['escuela_id' => $escuela->id, 'numero_propuesta' => 2, 'nombre_propuesto' => 'Colegio Segundo']);
+        TernaNombre::create(['escuela_id' => $escuela->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Primero']);
+
+        $this->assertSame('Colegio Primero', $this->resumen($escuela)->nombre);
+    }
+
+    public function test_el_nombre_aprobado_gana_sobre_la_terna(): void
+    {
+        $escuela = $this->escuela();
+        TernaNombre::create(['escuela_id' => $escuela->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Propuesto']);
+        $escuela->update(['nombre_aprobado' => 'Colegio Aprobado']);
+
+        $this->assertSame('Colegio Aprobado', $this->resumen($escuela)->nombre);
+    }
+
+    public function test_sin_terna_no_hay_nombre(): void
+    {
+        $this->assertNull($this->resumen($this->escuela())->nombre);
+    }
+
+    public function test_iniciado_el_es_la_creacion_de_la_escuela(): void
+    {
+        $escuela = $this->escuela();
+        $escuela->forceFill(['created_at' => '2026-09-20 10:00:00'])->save();
+
+        $this->assertSame('2026-09-20', $this->resumen($escuela)->iniciadoEl->format('Y-m-d'));
+    }
+
+    public function test_numero_es_el_id_a_cuatro_digitos(): void
+    {
+        $dto = fn (int $id) => new ResumenTramiteDTO($id, '', [], [], [], false, null, now());
+
+        $this->assertSame('0021', $dto(21)->numero());
+        $this->assertSame('12345', $dto(12345)->numero());
+    }
+
+    public function test_avance_y_siguiente_seccion(): void
+    {
+        $escuela = $this->escuela();
+
+        $nuevo = $this->resumen($escuela);
+        $this->assertSame(['hechas' => 1, 'total' => 4, 'porcentaje' => 25], $nuevo->avance());
+        $this->assertSame('responsable', $nuevo->siguiente()?->clave);
+
+        $this->completarPaso2($escuela->id);
+        $this->nivel($escuela, 'inicial', 'inmueble');
+
+        $conNivel = $this->resumen($escuela);
+        // 4 generales + inmueble completos; total 4 + inmueble/infraestructura/mobiliario (Inicial).
+        $this->assertSame(['hechas' => 5, 'total' => 7, 'porcentaje' => 71], $conNivel->avance());
+        $this->assertSame('infraestructura', $conNivel->siguiente()?->clave);
     }
 }

@@ -8,8 +8,10 @@ use App\Application\Tramite\DTO\ResumenTramiteDTO;
 use App\Application\Tramite\DTO\SeccionTramite;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
+use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -65,7 +67,7 @@ class ResumenTramite
 
     public function paraEscuela(int $escuelaId): ResumenTramiteDTO
     {
-        $escuela = Escuela::with(['plantel', 'escuelaNiveles.nivelEducativo'])->findOrFail($escuelaId);
+        $escuela = Escuela::with(['plantel', 'escuelaNiveles.nivelEducativo', 'ternasNombres'])->findOrFail($escuelaId);
         $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
 
         $generales = $this->generales($escuela, $etapaFaltante);
@@ -86,6 +88,9 @@ class ResumenTramite
         /** @var Plantel $plantel */
         $plantel = $escuela->plantel;
 
+        /** @var Collection<int, TernaNombre> $ternasNombres */
+        $ternasNombres = $escuela->ternasNombres;
+
         return new ResumenTramiteDTO(
             escuelaId: $escuela->id,
             domicilio: self::domicilio($plantel),
@@ -95,6 +100,8 @@ class ResumenTramite
             completo: $niveles !== [] && collect($todas)->every(
                 fn (SeccionTramite $s) => in_array($s->estado, ['completado', 'no_disponible', 'no_aplica'], true)
             ),
+            nombre: $escuela->nombre_aprobado ?? $ternasNombres->sortBy('numero_propuesta')->first()?->nombre_propuesto,
+            iniciadoEl: $escuela->created_at,
         );
     }
 
@@ -119,18 +126,14 @@ class ResumenTramite
             : ['paso' => count($generales) + $indice + 1, 'total' => count($generales) + count($disponibles)];
     }
 
-    /** "Paso X de N · Sección" para el encabezado de cada página, o null si la sección no cuenta. */
-    public static function encabezado(string $clave, ?string $nivelClave = null): ?string
+    /** "{Nivel | Datos generales} · Paso X de N" para el eyebrow de cada página, o null si la sección no cuenta. */
+    public static function encabezado(string $clave, ?NivelEducativo $nivel = null): ?string
     {
-        $posicion = self::posicion($clave, $nivelClave);
+        $posicion = self::posicion($clave, $nivel?->clave);
 
-        if ($posicion === null) {
-            return null;
-        }
-
-        $nombre = (self::GENERALES[$clave] ?? self::PASO3[$clave])[0];
-
-        return "Paso {$posicion['paso']} de {$posicion['total']} · {$nombre}";
+        return $posicion === null
+            ? null
+            : ($nivel === null ? 'Datos generales' : $nivel->nombre)." · Paso {$posicion['paso']} de {$posicion['total']}";
     }
 
     public static function domicilio(Plantel $plantel): string
