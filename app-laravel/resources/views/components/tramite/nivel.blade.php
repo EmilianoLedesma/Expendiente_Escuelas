@@ -18,8 +18,8 @@
 @elseif ($como === 'marca')
     <span {{ $attributes->merge(['class' => "inline-block h-2 w-2 shrink-0 rounded-full $fondo"]) }} aria-hidden="true"></span>
 @else
-    <span {{ $attributes->merge(['class' => 'inline-flex items-center gap-xs rounded-pill border border-hairline bg-canvas px-sm py-xxs text-body-sm text-ink']) }}>
-        <span class="h-2.5 w-2.5 rounded-full {{ $fondo }}" aria-hidden="true"></span>
+    <span {{ $attributes->merge(['class' => 'inline-flex items-center gap-xs text-body-sm text-ink']) }}>
+        <span class="h-2.5 w-2.5 shrink-0 rounded-full {{ $fondo }}" aria-hidden="true"></span>
         {{ $slot }}
     </span>
 @endif

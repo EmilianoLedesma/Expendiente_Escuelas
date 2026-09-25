@@ -25,7 +25,7 @@
                         <th scope="col" class="px-lg py-sm font-semibold">Niveles</th>
                         <th scope="col" class="w-56 px-lg py-sm font-semibold">Avance</th>
                         <th scope="col" class="px-lg py-sm font-semibold">Estado</th>
-                        <th scope="col" class="px-lg py-sm"><span class="sr-only">Acción</span></th>
+                        <th scope="col" class="w-px whitespace-nowrap px-lg py-sm"><span class="sr-only">Acción</span></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-hairline">
@@ -38,8 +38,8 @@
                         <tr class="block p-md md:table-row md:p-0">
                             <td class="block md:table-cell md:px-lg md:py-md">
                                 <p @class(['break-words font-semibold', 'text-ink' => $tramite->nombre !== null, 'italic text-muted' => $tramite->nombre === null])>{{ $nombre }}</p>
-                                <p class="mt-xxs break-words text-caption text-muted"><span class="font-mono">Nº {{ $tramite->numero() }}</span> · {{ $tramite->domicilio }}</p>
-                                <p class="text-caption text-muted">Iniciado el {{ $tramite->iniciadoEl->format('d/m/Y') }}</p>
+                                <p class="mt-xxs break-words text-caption text-muted">{{ $tramite->domicilio }}</p>
+                                <p class="text-caption tabular-nums text-muted">Nº {{ $tramite->numero() }} · Iniciado el {{ $tramite->iniciadoEl->format('d/m/Y') }}</p>
                             </td>
                             <td class="mt-sm block md:mt-0 md:table-cell md:px-lg md:py-md">
                                 <ul class="flex flex-wrap gap-xs" aria-label="Niveles educativos">
@@ -52,8 +52,8 @@
                             </td>
                             <td class="mt-sm block md:mt-0 md:table-cell md:px-lg md:py-md">
                                 <div class="flex items-center gap-sm">
-                                    <div class="h-1.5 flex-1 rounded-pill bg-surface-card" aria-hidden="true">
-                                        <div @class(['h-full rounded-pill', 'bg-success-ink' => $tramite->completo, 'bg-primary' => ! $tramite->completo]) style="width: {{ $avance['porcentaje'] }}%"></div>
+                                    <div class="h-1 flex-1 rounded-pill bg-surface-card" aria-hidden="true">
+                                        <div class="h-full rounded-pill bg-primary" style="width: {{ $avance['porcentaje'] }}%"></div>
                                     </div>
                                     <span class="text-caption tabular-nums text-muted">{{ $avance['hechas'] }} de {{ $avance['total'] }}</span>
                                 </div>
@@ -71,13 +71,13 @@
                                     :texto="$tramite->completo ? 'Captura inicial completa' : 'En captura'"
                                 />
                             </td>
-                            <td class="mt-sm block md:mt-0 md:table-cell md:px-lg md:py-md md:text-right">
+                            <td class="mt-sm block whitespace-nowrap md:mt-0 md:table-cell md:px-lg md:py-md md:text-right">
                                 @if ($tramite->completo)
-                                    <x-ui.button-secondary :href="route('tramite.resumen', ['escuela' => $tramite->escuelaId])">
+                                    <x-ui.button-secondary :href="route('tramite.resumen', ['escuela' => $tramite->escuelaId])" class="whitespace-nowrap">
                                         Ver trámite<span class="sr-only">: {{ $nombre }}, Nº {{ $tramite->numero() }}</span>
                                     </x-ui.button-secondary>
                                 @else
-                                    <x-ui.button-primary :href="route('tramite.resumen', ['escuela' => $tramite->escuelaId])">
+                                    <x-ui.button-primary :href="route('tramite.resumen', ['escuela' => $tramite->escuelaId])" class="whitespace-nowrap">
                                         Continuar<span class="sr-only">: {{ $nombre }}, Nº {{ $tramite->numero() }}</span>
                                     </x-ui.button-primary>
                                 @endif

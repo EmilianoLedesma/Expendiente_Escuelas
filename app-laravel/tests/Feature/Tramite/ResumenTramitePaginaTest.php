@@ -114,7 +114,7 @@ class ResumenTramitePaginaTest extends TestCase
             ->get(route('tramite.resumen', ['escuela' => $escuela->id]))
             ->assertOk()
             ->assertSee('Colegio Alfa')
-            ->assertSee('Trámite Nº '.str_pad((string) $escuela->id, 4, '0', STR_PAD_LEFT))
+            ->assertSee('Resumen del trámite · Nº '.str_pad((string) $escuela->id, 4, '0', STR_PAD_LEFT))
             ->assertSee('Secciones del trámite')
             ->assertSee('Siguiente paso')
             ->assertSee('aria-current="page"', false);

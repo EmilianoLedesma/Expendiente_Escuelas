@@ -1,6 +1,6 @@
 <x-tramite-layout title="Resumen del trámite" :resumen="$resumen" seccion-actual="resumen">
     <div class="max-w-3xl">
-        <x-ui.page-header :eyebrow="'Trámite Nº '.$resumen->numero()" title="Resumen del trámite">
+        <x-ui.page-header :eyebrow="'Resumen del trámite · Nº '.$resumen->numero()" :title="$resumen->nombre ?? 'Sin nombre propuesto'">
             <x-slot:intro><span class="break-words">{{ $resumen->domicilio }}</span></x-slot:intro>
         </x-ui.page-header>
 
@@ -15,7 +15,10 @@
                 </x-ui.button-primary>
             </div>
         @elseif ($resumen->completo)
-            <x-ui.alert tipo="success" titulo="Captura inicial completa" class="mb-lg">Todas las secciones disponibles están capturadas.</x-ui.alert>
+            <p class="mb-lg flex items-center gap-sm">
+                <x-ui.status-tag estado="completado" />
+                <span class="text-body-sm text-muted">Todas las secciones disponibles están capturadas.</span>
+            </p>
         @endif
 
         <x-ui.section title="Información general">

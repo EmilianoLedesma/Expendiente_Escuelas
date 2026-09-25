@@ -139,10 +139,18 @@ class ResumenTramite
 
     public static function domicilio(Plantel $plantel): string
     {
-        return $plantel->calle
-            .($plantel->numero_ext ? ' #'.$plantel->numero_ext : '')
-            .($plantel->numero_int ? ' Int. '.$plantel->numero_int : '')
-            .", {$plantel->colonia}, {$plantel->municipio}, C.P. {$plantel->codigo_postal}";
+        $numeroExt = $plantel->numero_ext !== null ? trim($plantel->numero_ext) : '';
+        $numeroInt = $plantel->numero_int !== null ? trim($plantel->numero_int) : '';
+
+        $partes = array_filter([
+            trim($plantel->calle)
+                .($numeroExt !== '' ? ' #'.$numeroExt : '')
+                .($numeroInt !== '' ? ' Int. '.$numeroInt : ''),
+            trim($plantel->colonia),
+            trim($plantel->municipio),
+        ], fn (string $p) => $p !== '');
+
+        return implode(', ', $partes).", C.P. {$plantel->codigo_postal}";
     }
 
     /** @return array<string, string|null> */

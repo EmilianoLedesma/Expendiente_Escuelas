@@ -365,6 +365,20 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame('12345', $dto(12345)->numero());
     }
 
+    /** Owner feedback 2026-09-25: dev data trae colonia/calle con espacios de sobra. */
+    public function test_domicilio_recorta_espacios_en_los_campos_del_plantel(): void
+    {
+        $plantel = Plantel::create([
+            'calle' => 'Calle 1',
+            'numero_ext' => '10',
+            'colonia' => 'Fraccionamiento Piramides ',
+            'municipio' => 'El Pueblito',
+            'codigo_postal' => '76000',
+        ]);
+
+        $this->assertSame('Calle 1 #10, Fraccionamiento Piramides, El Pueblito, C.P. 76000', ResumenTramite::domicilio($plantel));
+    }
+
     public function test_avance_y_siguiente_seccion(): void
     {
         $escuela = $this->escuela();
