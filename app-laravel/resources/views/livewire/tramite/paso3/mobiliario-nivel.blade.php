@@ -26,6 +26,9 @@
                                     </th>
                                     <td class="px-lg py-xs">
                                         <x-ui.input id="cantidades.{{ $concepto->id }}" type="number" inputmode="numeric" min="0" class="text-right tabular-nums" wire:model.blur="cantidades.{{ $concepto->id }}" />
+                                        @error("cantidades.{$concepto->id}")
+                                            <p id="cantidades.{{ $concepto->id }}-error" class="mt-xxs text-body-sm font-semibold text-error-ink">{{ $message }}</p>
+                                        @enderror
                                     </td>
                                 </tr>
                             @endforeach
