@@ -1,0 +1,278 @@
+<?php
+
+namespace App\Application\Tramite;
+
+use App\Application\Documentos\DocumentosCompletos;
+use App\Application\Tramite\DTO\NivelDelTramite;
+use App\Application\Tramite\DTO\ResumenTramiteDTO;
+use App\Application\Tramite\DTO\SeccionTramite;
+use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\Plantel;
+use App\Models\ResponsableLegal;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Estado de todo el trámite para el hub ("Resumen del trámite"), "Mis trámites"
+ * y el "Paso X de N" de cada página. No decide nada nuevo: compone EstadoPaso2
+ * (Paso 2 completo y vigente), EstadoPaso3 (orden de sub-pasos),
+ * DocumentosCompletos (cuántos faltan) y escuela_nivel_pasos. Reemplaza al
+ * componente de vista Progreso: la lectura de flujo pasa por Application (ADR-001).
+ */
+class ResumenTramite
+{
+    /** clave de pasos_captura => ruta, solo sub-pasos con página. CompuertaPaso3 lo reutiliza: un solo mapa. */
+    public const RUTAS_PASO3 = [
+        'inmueble' => 'tramite.paso3-inmueble',
+        'infraestructura' => 'tramite.paso3-infraestructura',
+        'mobiliario' => 'tramite.paso3-mobiliario',
+    ];
+
+    /** Mobiliario solo aplica a este nivel; MobiliarioNivel::mount() auto-completa los demás. */
+    public const NIVEL_CON_MOBILIARIO = 'inicial';
+
+    /**
+     * Secciones completadas cuya página se puede volver a abrir hoy. Responsable,
+     * Documentos, Niveles e Inmueble redirigen hacia adelante al estar completas;
+     * revisarlas llega con WS-7 (docs/decisions/PENDIENTE-edicion-hasta-envio.md).
+     */
+    private const REVISABLES = ['infraestructura', 'mobiliario'];
+
+    /** @var array<string, array{string, string}> */
+    private const GENERALES = [
+        'plantel' => ['Datos del plantel', 'Domicilio y datos de contacto del plantel.'],
+        'responsable' => ['Responsable legal', 'Persona física o moral que solicita la incorporación y terna de nombres.'],
+        'documentos' => ['Documentos', 'Identificación, documentos del inmueble y Formato de Solicitud, en PDF.'],
+        'niveles' => ['Niveles educativos', 'Niveles que se solicita incorporar.'],
+    ];
+
+    /** @var array<string, array{string, string}> */
+    private const PASO3 = [
+        'inmueble' => ['Datos del inmueble', 'Dimensiones, colindancias y servicios cercanos.'],
+        'infraestructura' => ['Infraestructura', 'Espacios del plantel, sanitarios y aulas del nivel.'],
+        'mobiliario' => ['Mobiliario', 'Mobiliario y equipo de cada sala.'],
+        'plan_estudios' => ['Plan de estudios', 'Plan de estudios del nivel.'],
+        'plantilla_docente' => ['Plantilla docente', 'Personal docente del nivel.'],
+        'matricula' => ['Matrícula', 'Alumnos inscritos en el nivel.'],
+    ];
+
+    public function __construct(
+        private readonly EstadoPaso2 $estadoPaso2,
+        private readonly EstadoPaso3 $estadoPaso3,
+        private readonly DocumentosCompletos $documentosCompletos,
+    ) {}
+
+    public function paraEscuela(int $escuelaId): ResumenTramiteDTO
+    {
+        $escuela = Escuela::with(['plantel', 'escuelaNiveles.nivelEducativo'])->findOrFail($escuelaId);
+        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
+
+        $generales = $this->generales($escuela, $etapaFaltante);
+
+        /** @var Collection<int, EscuelaNivel> $escuelaNiveles */
+        $escuelaNiveles = $escuela->escuelaNiveles->sortBy('id')->values();
+        $niveles = $escuelaNiveles
+            ->map(fn (EscuelaNivel $escuelaNivel) => new NivelDelTramite(
+                escuelaNivelId: $escuelaNivel->id,
+                clave: $escuelaNivel->nivelEducativo->clave,
+                nombre: $escuelaNivel->nivelEducativo->nombre,
+                secciones: $this->seccionesDeNivel($escuelaNivel, $etapaFaltante),
+            ))
+            ->all();
+
+        $todas = array_merge($generales, ...array_map(fn (NivelDelTramite $nivel) => $nivel->secciones, $niveles));
+
+        /** @var Plantel $plantel */
+        $plantel = $escuela->plantel;
+
+        return new ResumenTramiteDTO(
+            escuelaId: $escuela->id,
+            domicilio: self::domicilio($plantel),
+            plantel: self::datosPlantel($plantel),
+            generales: $generales,
+            niveles: $niveles,
+            completo: $niveles !== [] && collect($todas)->every(
+                fn (SeccionTramite $s) => in_array($s->estado, ['completado', 'no_disponible', 'no_aplica'], true)
+            ),
+        );
+    }
+
+    /** @return array{paso: int, total: int}|null null si la sección no cuenta (no aplica / no disponible / desconocida). */
+    public static function posicion(string $clave, ?string $nivelClave = null): ?array
+    {
+        $generales = array_keys(self::GENERALES);
+        $indice = array_search($clave, $generales, true);
+
+        if ($indice !== false) {
+            return ['paso' => $indice + 1, 'total' => count($generales)];
+        }
+
+        $disponibles = array_filter(
+            array_keys(self::RUTAS_PASO3),
+            fn (string $c) => $c !== 'mobiliario' || $nivelClave === self::NIVEL_CON_MOBILIARIO,
+        );
+        $indice = array_search($clave, $disponibles, true);
+
+        return $indice === false
+            ? null
+            : ['paso' => count($generales) + $indice + 1, 'total' => count($generales) + count($disponibles)];
+    }
+
+    /** "Paso X de N · Sección" para el encabezado de cada página, o null si la sección no cuenta. */
+    public static function encabezado(string $clave, ?string $nivelClave = null): ?string
+    {
+        $posicion = self::posicion($clave, $nivelClave);
+
+        if ($posicion === null) {
+            return null;
+        }
+
+        $nombre = (self::GENERALES[$clave] ?? self::PASO3[$clave])[0];
+
+        return "Paso {$posicion['paso']} de {$posicion['total']} · {$nombre}";
+    }
+
+    public static function domicilio(Plantel $plantel): string
+    {
+        return $plantel->calle
+            .($plantel->numero_ext ? ' #'.$plantel->numero_ext : '')
+            .($plantel->numero_int ? ' Int. '.$plantel->numero_int : '')
+            .", {$plantel->colonia}, {$plantel->municipio}, C.P. {$plantel->codigo_postal}";
+    }
+
+    /** @return array<string, string|null> */
+    private static function datosPlantel(Plantel $plantel): array
+    {
+        return [
+            'Calle y número' => $plantel->calle,
+            'Número exterior' => $plantel->numero_ext,
+            'Número interior' => $plantel->numero_int,
+            'Colonia' => $plantel->colonia,
+            'Localidad' => $plantel->localidad,
+            'Municipio' => $plantel->municipio,
+            'Código postal' => $plantel->codigo_postal,
+            'Teléfono' => $plantel->telefono,
+            'Correo electrónico' => $plantel->correo_electronico,
+        ];
+    }
+
+    /** @return array<int, SeccionTramite> */
+    private function generales(Escuela $escuela, ?string $etapaFaltante): array
+    {
+        $tipoPersona = ResponsableLegal::where('escuela_id', $escuela->id)->value('tipo_persona');
+        $rutaPaso2 = route('tramite.paso2', ['escuela' => $escuela->id]);
+
+        return [
+            $this->seccion('plantel', 'completado', null, null),
+            $this->seccion('responsable', $tipoPersona !== null ? 'completado' : 'pendiente', $rutaPaso2, null),
+            $this->seccion(
+                'documentos',
+                $this->estadoDocumentos($escuela->id, $tipoPersona, $etapaFaltante),
+                route('tramite.paso2-documentos', ['escuela' => $escuela->id]),
+                $tipoPersona === null ? self::completaPrimero('responsable') : null,
+            ),
+            $escuela->escuelaNiveles->isNotEmpty()
+                ? $this->seccion('niveles', 'completado', $rutaPaso2, null)
+                : $this->seccion('niveles', 'pendiente', $rutaPaso2, $etapaFaltante === null ? null : self::completaPrimero($etapaFaltante)),
+        ];
+    }
+
+    /** en_curso = algunos documentos pero no todos, o todos con una vigencia vencida (EstadoPaso2 decide qué es completo). */
+    private function estadoDocumentos(int $escuelaId, ?string $tipoPersona, ?string $etapaFaltante): string
+    {
+        if ($tipoPersona === null) {
+            return 'pendiente';
+        }
+
+        if ($etapaFaltante === null) {
+            return 'completado';
+        }
+
+        $faltan = count($this->documentosCompletos->clavesPendientes($escuelaId, $tipoPersona));
+
+        return $faltan < count($this->documentosCompletos->clavesAplicables($tipoPersona)) ? 'en_curso' : 'pendiente';
+    }
+
+    /** @return array<int, SeccionTramite> */
+    private function seccionesDeNivel(EscuelaNivel $escuelaNivel, ?string $etapaFaltante): array
+    {
+        $nivelClave = $escuelaNivel->nivelEducativo->clave;
+        $estados = DB::table('escuela_nivel_pasos')
+            ->join('pasos_captura', 'pasos_captura.id', '=', 'escuela_nivel_pasos.paso_captura_id')
+            ->where('escuela_nivel_pasos.escuela_nivel_id', $escuelaNivel->id)
+            ->pluck('escuela_nivel_pasos.estado', 'pasos_captura.clave');
+
+        $secciones = [];
+        $anterior = null;
+
+        foreach (DB::table('pasos_captura')->orderBy('orden')->pluck('nombre', 'clave') as $clave => $nombreCatalogo) {
+            $clave = (string) $clave;
+
+            if (! isset(self::RUTAS_PASO3[$clave])) {
+                $secciones[] = $this->seccion($clave, 'no_disponible', null, null, $nivelClave, (string) $nombreCatalogo);
+
+                continue;
+            }
+
+            if ($clave === 'mobiliario' && $nivelClave !== self::NIVEL_CON_MOBILIARIO) {
+                $secciones[] = $this->seccion($clave, 'no_aplica', null, null, $nivelClave);
+
+                continue;
+            }
+
+            $motivo = match (true) {
+                $etapaFaltante !== null => self::completaPrimero($etapaFaltante),
+                ! $this->estadoPaso3->puedeAcceder($escuelaNivel->id, $clave) => 'Completa primero: '.$anterior,
+                default => null,
+            };
+
+            $secciones[] = $this->seccion(
+                $clave,
+                match ($estados->get($clave)) {
+                    'completado' => 'completado',
+                    'en_progreso' => 'en_curso',
+                    default => 'pendiente',
+                },
+                route(self::RUTAS_PASO3[$clave], ['escuelaNivel' => $escuelaNivel->id]),
+                $motivo,
+                $nivelClave,
+            );
+            $anterior = self::PASO3[$clave][0];
+        }
+
+        return $secciones;
+    }
+
+    private function seccion(string $clave, string $estado, ?string $href, ?string $motivoBloqueo, ?string $nivelClave = null, string $nombreCatalogo = ''): SeccionTramite
+    {
+        [$nombre, $descripcion] = self::GENERALES[$clave] ?? self::PASO3[$clave] ?? [$nombreCatalogo, ''];
+
+        $accion = match (true) {
+            $href === null || $motivoBloqueo !== null => null,
+            $estado === 'completado' => in_array($clave, self::REVISABLES, true) ? 'revisar' : null,
+            $estado === 'en_curso' => 'continuar',
+            $estado === 'pendiente' => 'comenzar',
+            default => null,
+        };
+        $posicion = self::posicion($clave, $nivelClave);
+
+        return new SeccionTramite(
+            clave: $clave,
+            nombre: $nombre,
+            descripcion: $descripcion,
+            estado: $estado,
+            accion: $accion,
+            href: $accion === null ? null : $href,
+            motivoBloqueo: $motivoBloqueo,
+            paso: $posicion['paso'] ?? null,
+            totalPasos: $posicion['total'] ?? null,
+        );
+    }
+
+    /** @param string $etapa EstadoPaso2::RESPONSABLE|EstadoPaso2::DOCUMENTOS — coinciden con claves de GENERALES. */
+    private static function completaPrimero(string $etapa): string
+    {
+        return 'Completa primero: '.self::GENERALES[$etapa][0];
+    }
+}

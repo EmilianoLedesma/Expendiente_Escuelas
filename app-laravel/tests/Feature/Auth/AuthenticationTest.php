@@ -33,7 +33,7 @@ class AuthenticationTest extends TestCase
 
         $component
             ->assertHasNoErrors()
-            ->assertRedirect(route('tramite.preregistro', absolute: false));
+            ->assertRedirect(route('tramite.index', absolute: false));
 
         $this->assertAuthenticated();
     }
@@ -130,7 +130,7 @@ class AuthenticationTest extends TestCase
     {
         $this->actingAs(User::factory()->create())
             ->get('/dashboard')
-            ->assertRedirect(route('tramite.preregistro'));
+            ->assertRedirect(route('tramite.index'));
     }
 
     public function test_dashboard_redirects_sedeq_users_to_the_admin_panel(): void

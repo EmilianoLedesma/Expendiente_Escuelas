@@ -42,7 +42,7 @@ class EmailVerificationTest extends TestCase
 
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect(route('tramite.preregistro', absolute: false).'?verified=1');
+        $response->assertRedirect(route('tramite.index', absolute: false).'?verified=1');
     }
 
     public function test_email_is_not_verified_with_invalid_hash(): void
@@ -93,6 +93,6 @@ class EmailVerificationTest extends TestCase
 
         Volt::test('pages.auth.verify-email')
             ->call('sendVerification')
-            ->assertRedirect(route('tramite.preregistro', absolute: false));
+            ->assertRedirect(route('tramite.index', absolute: false));
     }
 }

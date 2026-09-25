@@ -3,6 +3,7 @@
 namespace App\View\Components\Tramite;
 
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\ResumenTramite;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,11 +29,7 @@ class Progreso extends Component
      *
      * @var array<string, string>
      */
-    public const RUTAS_PASO3 = [
-        'inmueble' => 'tramite.paso3-inmueble',
-        'infraestructura' => 'tramite.paso3-infraestructura',
-        'mobiliario' => 'tramite.paso3-mobiliario',
-    ];
+    public const RUTAS_PASO3 = ResumenTramite::RUTAS_PASO3;
 
     /** @var Collection<int, object{nombre: string, estado: string, href: string|null}&\stdClass> */
     public readonly Collection $pasos;

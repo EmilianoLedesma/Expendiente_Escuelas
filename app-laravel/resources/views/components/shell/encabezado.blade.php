@@ -18,6 +18,7 @@
             @auth
                 <nav aria-label="Cuenta" class="flex flex-wrap items-center gap-x-md gap-y-xxs text-body-sm">
                     <span class="text-muted">{{ auth()->user()->name }}</span>
+                    <a href="{{ route('tramite.index') }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">Mis trámites</a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">

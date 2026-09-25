@@ -4,8 +4,8 @@ namespace App\Livewire\Tramite\Paso3\Concerns;
 
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\ResumenTramite;
 use App\Models\EscuelaNivel;
-use App\View\Components\Tramite\Progreso;
 
 /**
  * Compuerta de entrada de cada página de Paso 3. Solo presentación: las
@@ -33,7 +33,7 @@ trait CompuertaPaso3
         }
 
         $estadoPaso3 = app(EstadoPaso3::class);
-        $destino = Progreso::RUTAS_PASO3[$estadoPaso3->primerPendiente($escuelaNivel->id) ?? ''] ?? self::RUTA_PROXIMOS_PASOS;
+        $destino = ResumenTramite::RUTAS_PASO3[$estadoPaso3->primerPendiente($escuelaNivel->id) ?? ''] ?? self::RUTA_PROXIMOS_PASOS;
 
         $alcanzable = $clave === null
             ? $destino === self::RUTA_PROXIMOS_PASOS

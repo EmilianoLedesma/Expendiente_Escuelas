@@ -5,6 +5,7 @@ namespace App\Livewire\Tramite\Paso3;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
+use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use App\Models\MobiliarioConcepto;
@@ -43,7 +44,7 @@ class MobiliarioNivel extends Component
             return;
         }
 
-        if ($escuelaNivel->nivelEducativo->clave !== 'inicial') {
+        if ($escuelaNivel->nivelEducativo->clave !== ResumenTramite::NIVEL_CON_MOBILIARIO) {
             // Un paso que no aplica al nivel no está pendiente: está
             // trivialmente satisfecho (spec §4).
             $marcarPasoCompletado->ejecutar($escuelaNivel->id, 'mobiliario');

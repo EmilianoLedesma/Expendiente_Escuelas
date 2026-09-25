@@ -23,7 +23,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         $default = Auth::user()->hasRole('sedeq')
             ? '/admin'
-            : route('tramite.preregistro', absolute: false);
+            : route('tramite.index', absolute: false);
 
         $this->redirectIntended(default: $default, navigate: true);
     }

@@ -32,7 +32,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('tramite.preregistro', absolute: false), navigate: true);
+        $this->redirect(route('tramite.index', absolute: false), navigate: true);
     }
 }; ?>
 
