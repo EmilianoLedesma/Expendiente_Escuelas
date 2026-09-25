@@ -4,8 +4,8 @@ namespace App\Livewire\Tramite\Paso3\Concerns;
 
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\ResumenTramite;
 use App\Models\EscuelaNivel;
-use App\View\Components\Tramite\Progreso;
 
 /**
  * Compuerta de entrada de cada página de Paso 3. Solo presentación: las
@@ -19,12 +19,10 @@ trait CompuertaPaso3
     private const RUTA_PROXIMOS_PASOS = 'tramite.paso3-proximos-pasos';
 
     /**
-     * @param  string|null  $clave  clave de pasos_captura de esta página; null para
-     *                              Paso3ProximosPasos, alcanzable cuando el primer pendiente ya no
-     *                              tiene página construida (o no queda ninguno).
+     * @param  string  $clave  clave de pasos_captura de esta página.
      * @return bool true si redirigió (el mount() que llama debe hacer return).
      */
-    protected function redirigirSiNoAlcanzable(EscuelaNivel $escuelaNivel, ?string $clave): bool
+    protected function redirigirSiNoAlcanzable(EscuelaNivel $escuelaNivel, string $clave): bool
     {
         if (! app(EstadoPaso2::class)->puedeSeleccionarNiveles($escuelaNivel->escuela_id)) {
             $this->redirectRoute('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]);
@@ -33,11 +31,9 @@ trait CompuertaPaso3
         }
 
         $estadoPaso3 = app(EstadoPaso3::class);
-        $destino = Progreso::RUTAS_PASO3[$estadoPaso3->primerPendiente($escuelaNivel->id) ?? ''] ?? self::RUTA_PROXIMOS_PASOS;
+        $destino = ResumenTramite::RUTAS_PASO3[$estadoPaso3->primerPendiente($escuelaNivel->id) ?? ''] ?? self::RUTA_PROXIMOS_PASOS;
 
-        $alcanzable = $clave === null
-            ? $destino === self::RUTA_PROXIMOS_PASOS
-            : $estadoPaso3->puedeAcceder($escuelaNivel->id, $clave);
+        $alcanzable = $estadoPaso3->puedeAcceder($escuelaNivel->id, $clave);
 
         if ($alcanzable) {
             return false;

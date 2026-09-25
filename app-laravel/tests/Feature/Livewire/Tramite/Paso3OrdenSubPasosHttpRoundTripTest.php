@@ -122,21 +122,20 @@ class Paso3OrdenSubPasosHttpRoundTripTest extends TestCase
         ]);
     }
 
-    public function test_proximos_pasos_con_mobiliario_pendiente_redirige_a_mobiliario(): void
+    public function test_proximos_pasos_con_mobiliario_pendiente_redirige_al_resumen(): void
     {
         $escuelaNivel = $this->escuelaNivel('inicial', 'inmueble', 'infraestructura');
 
         $this->get3('proximos-pasos', $escuelaNivel)
-            ->assertRedirect(route('tramite.paso3-mobiliario', ['escuelaNivel' => $escuelaNivel->id]));
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]));
     }
 
-    public function test_proximos_pasos_con_los_sub_pasos_construidos_completos_se_muestra(): void
+    public function test_proximos_pasos_con_los_sub_pasos_construidos_completos_redirige_al_resumen(): void
     {
         $escuelaNivel = $this->escuelaNivel('inicial', 'inmueble', 'infraestructura', 'mobiliario');
 
         $this->get3('proximos-pasos', $escuelaNivel)
-            ->assertOk()
-            ->assertSeeLivewire('tramite.paso3-proximos-pasos');
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]));
     }
 
     /** Volver atrás a un sub-paso ya completado sigue permitido. */

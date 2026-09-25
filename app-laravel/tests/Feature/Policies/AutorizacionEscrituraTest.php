@@ -62,6 +62,7 @@ class AutorizacionEscrituraTest extends TestCase
             'paso3 proximos pasos (solo lectura)' => ['tramite.paso3-proximos-pasos', 'can:view,escuelaNivel'],
             'descarga documento (solo lectura)' => ['tramite.paso2-documentos.descargar', 'can:view,escuela'],
             'formato solicitud pdf (solo lectura)' => ['tramite.paso2-documentos.formato-solicitud', 'can:view,escuela'],
+            'resumen del trámite (solo lectura)' => ['tramite.resumen', 'can:view,escuela'],
         ];
     }
 

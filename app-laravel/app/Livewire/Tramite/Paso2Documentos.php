@@ -9,6 +9,7 @@ use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
@@ -272,7 +273,7 @@ class Paso2Documentos extends Component
         return ResponsableLegal::where('escuela_id', $this->escuela->id)->firstOrFail()->tipo_persona;
     }
 
-    public function render(DocumentosCompletos $documentosCompletos)
+    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia)
     {
         $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
         $capturados = $this->documentosCapturados($documentosCompletos);
@@ -282,6 +283,9 @@ class Paso2Documentos extends Component
             'capturados' => $capturados,
             'totalAplicables' => count($clavesAplicables),
             'totalCompletos' => $capturados->count(),
-        ])->layoutData(['escuelaId' => $this->escuela->id]);
+            'encabezado' => ResumenTramite::encabezado('documentos'),
+            // Solo para marcar la fila vencida; la regla sigue en ValidarVigenciaDocumentos.
+            'vencidos' => $this->getErrorBag()->has('vigencia') ? $validarVigencia->ejecutar($this->escuela->id) : [],
+        ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => 'documentos']);
     }
 }

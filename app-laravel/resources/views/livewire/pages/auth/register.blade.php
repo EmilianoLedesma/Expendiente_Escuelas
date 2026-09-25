@@ -32,31 +32,26 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('tramite.preregistro', absolute: false), navigate: true);
+        $this->redirect(route('tramite.index', absolute: false), navigate: true);
     }
 }; ?>
 
 <div>
-    <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Crear cuenta</h1>
-    <p class="font-sans text-body-sm text-body mb-lg">
-        Regístrate para iniciar y dar seguimiento a tus trámites de incorporación.
-    </p>
+    <x-ui.page-header title="Crear cuenta">
+        <x-slot:intro>Regístrate para iniciar y dar seguimiento a tus trámites de incorporación.</x-slot:intro>
+    </x-ui.page-header>
 
     <form wire:submit="register" class="space-y-md">
-        <x-ui.text-input name="name" label="Nombre completo" wire:model="name" required autofocus autocomplete="name" />
+        <x-ui.error-summary />
 
-        <x-ui.text-input name="email" label="Correo electrónico" type="email" wire:model="email" required autocomplete="username" />
+        <x-ui.field id="name" label="Nombre completo"><x-ui.input wire:model="name" autofocus autocomplete="name" /></x-ui.field>
+        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model="email" autocomplete="username" /></x-ui.field>
+        <x-ui.field id="password" label="Contraseña"><x-ui.input type="password" wire:model="password" autocomplete="new-password" /></x-ui.field>
+        <x-ui.field id="password_confirmation" label="Confirmar contraseña"><x-ui.input type="password" wire:model="password_confirmation" autocomplete="new-password" /></x-ui.field>
 
-        <x-ui.text-input name="password" label="Contraseña" type="password" wire:model="password" required autocomplete="new-password" />
-
-        <x-ui.text-input name="password_confirmation" label="Confirmar contraseña" type="password" wire:model="password_confirmation" required autocomplete="new-password" />
-
-        <div class="flex items-center justify-between gap-sm pt-md border-t-[0.5px] border-hairline">
-            <a class="font-sans text-body-sm text-primary hover:underline" href="{{ route('login') }}" wire:navigate>
-                ¿Ya tienes cuenta?
-            </a>
-
-            <x-ui.button-primary type="submit">Crear cuenta</x-ui.button-primary>
+        <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
+            <a class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline" href="{{ route('login') }}" wire:navigate>¿Ya tienes cuenta?</a>
+            <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="register">Crear cuenta</x-ui.button-primary>
         </div>
     </form>
 </div>

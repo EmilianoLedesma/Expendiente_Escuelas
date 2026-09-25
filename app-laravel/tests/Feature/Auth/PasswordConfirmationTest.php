@@ -34,7 +34,7 @@ class PasswordConfirmationTest extends TestCase
         $component->call('confirmPassword');
 
         $component
-            ->assertRedirect(route('tramite.preregistro', absolute: false))
+            ->assertRedirect(route('tramite.index', absolute: false))
             ->assertHasNoErrors();
     }
 

@@ -105,6 +105,6 @@ class ProfileTest extends TestCase
 
         Volt::test('profile.update-profile-information-form')
             ->call('sendVerification')
-            ->assertRedirect(route('tramite.preregistro', absolute: false));
+            ->assertRedirect(route('tramite.index', absolute: false));
     }
 }

@@ -1,14 +1,12 @@
-@props(['disabled' => false])
+@props(['disabled' => false, 'href' => null])
 
-<button
-    @disabled($disabled)
-    {{ $attributes->merge([
-        'type' => 'button',
-        'class' => 'inline-flex items-center justify-center h-[38px] px-[18px] py-[9px] rounded-md border-[0.5px] border-hairline font-sans text-button font-semibold '
-            . ($disabled
-                ? 'bg-surface-soft text-muted cursor-not-allowed'
-                : 'bg-canvas text-ink hover:bg-surface-soft focus:outline-none focus:ring-[3px] focus:ring-primary/10'),
-    ]) }}
->
-    {{ $slot }}
-</button>
+@php
+    $clases = 'inline-flex min-h-11 items-center justify-center gap-xs rounded-md border border-primary bg-canvas px-lg font-sans text-body-md font-semibold text-primary transition-colors duration-150 hover:bg-surface-soft '
+        .($disabled ? 'cursor-not-allowed opacity-60' : '');
+@endphp
+
+@if ($href)
+    <a href="{{ $href }}" {{ $attributes->merge(['class' => $clases]) }}>{{ $slot }}</a>
+@else
+    <button @disabled($disabled) {{ $attributes->merge(['type' => 'button', 'class' => $clases]) }}>{{ $slot }}</button>
+@endif

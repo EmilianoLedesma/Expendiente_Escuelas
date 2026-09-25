@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $numero_propuesta
+ * @property string $nombre_propuesto
+ */
 class TernaNombre extends Model
 {
     const UPDATED_AT = null;

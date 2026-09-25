@@ -45,7 +45,7 @@ class Paso3ProximosPasosTest extends TestCase
         return $escuelaNivel;
     }
 
-    public function test_el_dueno_ve_el_aterrizaje(): void
+    public function test_proximos_pasos_redirige_al_resumen_del_tramite(): void
     {
         $solicitante = Solicitante::factory()->create();
         $escuelaNivel = $this->crearEscuelaNivelPara($solicitante);
@@ -53,8 +53,7 @@ class Paso3ProximosPasosTest extends TestCase
         $response = $this->actingAs($solicitante->user)
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
 
-        $response->assertOk();
-        $response->assertSee('el resto de la captura está pendiente', false);
+        $response->assertRedirect(route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]));
     }
 
     public function test_un_no_dueno_recibe_403(): void
@@ -67,36 +66,6 @@ class Paso3ProximosPasosTest extends TestCase
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
 
         $response->assertForbidden();
-    }
-
-    /**
-     * Defecto vivo que este trabajo cierra: ningún componente pasaba
-     * escuelaNivelId al layout, así que el widget de progreso mostraba los 6
-     * sub-pasos como "pendiente" incondicionalmente.
-     */
-    public function test_el_widget_de_progreso_refleja_los_pasos_completados(): void
-    {
-        $solicitante = Solicitante::factory()->create();
-        $escuelaNivel = $this->crearEscuelaNivelPara($solicitante);
-
-        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
-        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');
-        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'mobiliario');
-
-        $response = $this->actingAs($solicitante->user)
-            ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
-
-        $response->assertOk();
-        $html = $response->getContent();
-
-        // 9 etapas en total ahora (Preregistro/Responsable/Documentos + los 6 de
-        // Paso 3): Preregistro y Documentos también leen "completado" aquí —
-        // ambos se derivan por existencia (escuela y escuela_niveles), y esta
-        // escuela ya tiene ambos — y desde WS-1.2 el fixture también captura
-        // el Responsable legal (precondición para entrar a Paso 3), así que las
-        // 3 etapas de Paso 1-2 más los 3 sub-pasos de Paso 3 leen completado.
-        $this->assertSame(6, substr_count($html, 'data-estado="completado"'));
-        $this->assertSame(3, substr_count($html, 'data-estado="pendiente"'));
     }
 
     public function test_muestra_enlace_a_un_segundo_nivel_de_la_misma_escuela_que_aun_no_termina(): void
@@ -128,10 +97,11 @@ class Paso3ProximosPasosTest extends TestCase
         (new MarcarPasoCompletado)->ejecutar($primaria->id, 'mobiliario');
 
         $response = $this->actingAs($solicitante->user)
+            ->followingRedirects()
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $primaria->id]));
 
         $response->assertOk();
-        $response->assertSee(route('tramite.paso3-inmueble', ['escuelaNivel' => $inicial->id]), false);
+        $response->assertSee('href="'.route('tramite.paso3-inmueble', ['escuelaNivel' => $inicial->id]).'"', false);
     }
 
     public function test_un_segundo_nivel_ya_completo_no_muestra_enlace_de_captura(): void
@@ -164,9 +134,10 @@ class Paso3ProximosPasosTest extends TestCase
         }
 
         $response = $this->actingAs($solicitante->user)
+            ->followingRedirects()
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $primaria->id]));
 
         $response->assertOk();
-        $response->assertDontSee(route('tramite.paso3-inmueble', ['escuelaNivel' => $inicial->id]), false);
+        $response->assertDontSee('href="'.route('tramite.paso3-inmueble', ['escuelaNivel' => $inicial->id]).'"', false);
     }
 }

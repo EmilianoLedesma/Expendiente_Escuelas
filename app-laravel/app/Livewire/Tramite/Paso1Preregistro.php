@@ -6,6 +6,7 @@ use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
 use App\Application\Preregistro\ListarPlantelesDisponibles;
 use App\Application\Preregistro\PlantelNoDisponible;
+use App\Application\Tramite\ResumenTramite;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -102,6 +103,7 @@ class Paso1Preregistro extends Component
             'planteles' => $this->bifurcacion === 'existente'
                 ? $listarPlantelesDisponibles->ejecutar(auth()->user()->solicitante->getKey())
                 : collect(),
+            'encabezado' => ResumenTramite::encabezado('plantel'),
         ]);
     }
 }

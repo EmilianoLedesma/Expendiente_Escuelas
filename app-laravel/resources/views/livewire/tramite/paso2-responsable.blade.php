@@ -1,88 +1,149 @@
-<div class="rounded-lg border-[0.5px] border-hairline bg-canvas p-lg">
+<div class="max-w-3xl">
     @if ($fase === 'responsable')
-        <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Responsable legal</h1>
+        <x-ui.page-header :eyebrow="$encabezado" title="Responsable legal">
+            <x-slot:intro>Persona física o moral que solicita la incorporación, su domicilio para notificaciones y la terna de nombres propuestos para la escuela.</x-slot:intro>
+        </x-ui.page-header>
 
-        <fieldset class="space-y-xs mb-lg">
-            <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                <input type="radio" wire:model.live="tipoPersona" value="fisica"> Persona física
-            </label>
-            <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                <input type="radio" wire:model.live="tipoPersona" value="fisica_con_gestor"> Persona física con gestor
-            </label>
-            <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                <input type="radio" wire:model.live="tipoPersona" value="moral"> Persona moral
-            </label>
-        </fieldset>
+        <form wire:submit="guardarResponsable">
+            <x-ui.error-summary />
 
-        <form wire:submit="guardarResponsable" class="space-y-md">
-            <x-ui.text-input name="domicilioNotificaciones" label="Domicilio para notificaciones" wire:model="domicilioNotificaciones" required />
-            <x-ui.text-input name="personaAutorizadaRecoger" label="Persona autorizada para recoger notificaciones" wire:model="personaAutorizadaRecoger" />
-
-            <x-ui.text-input name="nombrePropuesto1" label="Propuesta de nombre 1" wire:model="nombrePropuesto1" required />
-            <x-ui.text-input name="nombrePropuesto2" label="Propuesta de nombre 2" wire:model="nombrePropuesto2" required />
-            <x-ui.text-input name="nombrePropuesto3" label="Propuesta de nombre 3" wire:model="nombrePropuesto3" required />
+            <x-ui.radio-group
+                id="tipoPersona"
+                legend="Tipo de persona"
+                wire:model.live="tipoPersona"
+                :opciones="['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral']"
+            />
 
             @if ($tipoPersona !== 'moral')
-                <x-ui.text-input name="personaFisicaForm.nombre" label="Nombre completo" wire:model="personaFisicaForm.nombre" required />
-                <x-ui.text-input name="personaFisicaForm.fechaNacimiento" label="Fecha de nacimiento" type="date" wire:model="personaFisicaForm.fechaNacimiento" />
-                <x-ui.text-input name="personaFisicaForm.rfc" label="RFC" wire:model="personaFisicaForm.rfc" class="uppercase" />
-                <x-ui.text-input name="personaFisicaForm.curp" label="CURP" wire:model="personaFisicaForm.curp" class="uppercase" />
+                <x-ui.section title="Datos personales">
+                    <x-ui.field id="personaFisicaForm.nombre" label="Nombre completo">
+                        <x-ui.input wire:model="personaFisicaForm.nombre" autocomplete="name" />
+                    </x-ui.field>
+                    <x-ui.field id="personaFisicaForm.fechaNacimiento" label="Fecha de nacimiento" optional>
+                        <x-ui.input type="date" wire:model="personaFisicaForm.fechaNacimiento" />
+                    </x-ui.field>
+                    <x-ui.field id="personaFisicaForm.rfc" label="RFC" optional>
+                        <x-ui.input wire:model="personaFisicaForm.rfc" class="uppercase" />
+                    </x-ui.field>
+                    <x-ui.field id="personaFisicaForm.curp" label="CURP" optional>
+                        <x-ui.input wire:model="personaFisicaForm.curp" class="uppercase" />
+                    </x-ui.field>
+                </x-ui.section>
 
                 @if ($tipoPersona === 'fisica_con_gestor')
-                    <x-ui.text-input name="gestorForm.nombre" label="Nombre del gestor" wire:model="gestorForm.nombre" required />
-                    <x-ui.text-input name="gestorForm.numeroPoder" label="Número de poder" wire:model="gestorForm.numeroPoder" />
-                    <x-ui.text-input name="gestorForm.notarioNombre" label="Nombre del notario" wire:model="gestorForm.notarioNombre" />
-                    <x-ui.text-input name="gestorForm.notarioNumero" label="Número de notaría" wire:model="gestorForm.notarioNumero" />
-                    <x-ui.text-input name="gestorForm.fechaPoder" label="Fecha del poder" type="date" wire:model="gestorForm.fechaPoder" />
+                    <x-ui.section title="Datos del gestor">
+                        <x-ui.field id="gestorForm.nombre" label="Nombre del gestor">
+                            <x-ui.input wire:model="gestorForm.nombre" />
+                        </x-ui.field>
+                        <x-ui.field id="gestorForm.numeroPoder" label="Número de poder" optional>
+                            <x-ui.input wire:model="gestorForm.numeroPoder" />
+                        </x-ui.field>
+                        <x-ui.field id="gestorForm.notarioNombre" label="Nombre del notario" optional>
+                            <x-ui.input wire:model="gestorForm.notarioNombre" />
+                        </x-ui.field>
+                        <x-ui.field id="gestorForm.notarioNumero" label="Número de notaría" optional>
+                            <x-ui.input wire:model="gestorForm.notarioNumero" />
+                        </x-ui.field>
+                        <x-ui.field id="gestorForm.fechaPoder" label="Fecha del poder" optional>
+                            <x-ui.input type="date" wire:model="gestorForm.fechaPoder" />
+                        </x-ui.field>
+                    </x-ui.section>
                 @endif
             @else
-                <x-ui.text-input name="personaMoralForm.razonSocial" label="Razón social" wire:model="personaMoralForm.razonSocial" required />
-                <x-ui.text-input name="personaMoralForm.nombreRepresentanteLegal" label="Representante legal" wire:model="personaMoralForm.nombreRepresentanteLegal" required />
-                <x-ui.text-input name="personaMoralForm.numeroEscrituraConstitutiva" label="Número de escritura constitutiva" wire:model="personaMoralForm.numeroEscrituraConstitutiva" />
-                <x-ui.text-input name="personaMoralForm.fechaEscrituraConstitutiva" label="Fecha de escritura constitutiva" type="date" wire:model="personaMoralForm.fechaEscrituraConstitutiva" />
-                <x-ui.text-input name="personaMoralForm.notarioNombre" label="Nombre del notario" wire:model="personaMoralForm.notarioNombre" />
-                <x-ui.text-input name="personaMoralForm.notarioNumero" label="Número de notaría" wire:model="personaMoralForm.notarioNumero" />
-                <x-ui.text-input name="personaMoralForm.notarioCiudad" label="Ciudad de la notaría" wire:model="personaMoralForm.notarioCiudad" />
-                <x-ui.text-input name="personaMoralForm.folioRegistroPublico" label="Folio del Registro Público" wire:model="personaMoralForm.folioRegistroPublico" />
-                <x-ui.text-input name="personaMoralForm.fechaInscripcionRpp" label="Fecha de inscripción en el Registro Público" type="date" wire:model="personaMoralForm.fechaInscripcionRpp" />
+                <x-ui.section title="Datos de la persona moral">
+                    <x-ui.field id="personaMoralForm.razonSocial" label="Razón social">
+                        <x-ui.input wire:model="personaMoralForm.razonSocial" autocomplete="organization" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.nombreRepresentanteLegal" label="Representante legal">
+                        <x-ui.input wire:model="personaMoralForm.nombreRepresentanteLegal" />
+                    </x-ui.field>
+                </x-ui.section>
+
+                <x-ui.section title="Datos notariales">
+                    <x-ui.field id="personaMoralForm.numeroEscrituraConstitutiva" label="Número de escritura constitutiva" optional>
+                        <x-ui.input wire:model="personaMoralForm.numeroEscrituraConstitutiva" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.fechaEscrituraConstitutiva" label="Fecha de escritura constitutiva" optional>
+                        <x-ui.input type="date" wire:model="personaMoralForm.fechaEscrituraConstitutiva" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.notarioNombre" label="Nombre del notario" optional>
+                        <x-ui.input wire:model="personaMoralForm.notarioNombre" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.notarioNumero" label="Número de notaría" optional>
+                        <x-ui.input wire:model="personaMoralForm.notarioNumero" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.notarioCiudad" label="Ciudad de la notaría" optional>
+                        <x-ui.input wire:model="personaMoralForm.notarioCiudad" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.folioRegistroPublico" label="Folio del Registro Público" optional>
+                        <x-ui.input wire:model="personaMoralForm.folioRegistroPublico" />
+                    </x-ui.field>
+                    <x-ui.field id="personaMoralForm.fechaInscripcionRpp" label="Fecha de inscripción en el Registro Público" optional>
+                        <x-ui.input type="date" wire:model="personaMoralForm.fechaInscripcionRpp" />
+                    </x-ui.field>
+                </x-ui.section>
             @endif
 
-            <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
+            <x-ui.section title="Domicilio para notificaciones">
+                <x-ui.field id="domicilioNotificaciones" label="Domicilio para notificaciones">
+                    <x-ui.input wire:model="domicilioNotificaciones" autocomplete="street-address" />
+                </x-ui.field>
+                <x-ui.field id="personaAutorizadaRecoger" label="Persona autorizada para recoger notificaciones" optional>
+                    <x-ui.input wire:model="personaAutorizadaRecoger" />
+                </x-ui.field>
+            </x-ui.section>
+
+            <x-ui.section title="Terna de nombres">
+                @foreach ([1, 2, 3] as $n)
+                    <x-ui.field id="nombrePropuesto{{ $n }}" label="Propuesta de nombre {{ $n }}">
+                        <x-ui.input wire:model="nombrePropuesto{{ $n }}" />
+                    </x-ui.field>
+                @endforeach
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardarResponsable" :back-href="route('tramite.resumen', ['escuela' => $escuela->id])" />
         </form>
     @endif
 
     @if ($fase === 'niveles')
+        <x-ui.page-header :eyebrow="$encabezado" title="Niveles educativos">
+            <x-slot:intro>Selecciona los niveles de Educación Básica que solicitas incorporar en este plantel.</x-slot:intro>
+        </x-ui.page-header>
+
         @if ($responsableCapturado !== [])
-            <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md space-y-xs mb-lg">
-                <p class="font-sans text-body-sm font-medium text-ink">Responsable legal (ya registrado)</p>
-                <p class="font-sans text-[11px] text-muted">
-                    Estos datos ya se capturaron. Cambiarlos requiere autorización previa de la Dirección de Educación.
-                </p>
-                <ul class="font-sans text-body-sm text-body space-y-xxs">
-                    <li>Tipo: {{ ['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral'][$responsableCapturado['tipo']] ?? $responsableCapturado['tipo'] }}</li>
-                    <li>Nombre: {{ $responsableCapturado['nombre'] ?? '—' }}</li>
-                    <li>Domicilio para notificaciones: {{ $responsableCapturado['domicilio'] ?? '—' }}</li>
-                </ul>
-            </div>
+            <x-ui.section title="Responsable legal (ya registrado)">
+                <p class="text-body-sm text-muted">Estos datos ya se capturaron. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
+                <x-ui.summary-list :filas="[
+                    'Tipo' => ['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral'][$responsableCapturado['tipo']] ?? $responsableCapturado['tipo'],
+                    'Nombre' => $responsableCapturado['nombre'],
+                    'Domicilio para notificaciones' => $responsableCapturado['domicilio'],
+                ]" />
+            </x-ui.section>
         @endif
 
-        <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Selección de niveles</h1>
+        <form wire:submit="guardarNiveles" class="mt-xl">
+            <x-ui.error-summary />
 
-        @error('nivelesSeleccionados')
-            <div class="mb-lg"><x-ui.alert variant="error">{{ $message }}</x-ui.alert></div>
-        @enderror
+            <fieldset id="nivelesSeleccionados" @error('nivelesSeleccionados') aria-describedby="nivelesSeleccionados-error" @enderror>
+                <legend class="text-body-md font-semibold text-ink">Niveles educativos</legend>
 
-        <form wire:submit="guardarNiveles" class="space-y-md">
-            <fieldset class="space-y-xs">
-                @foreach ($nivelesDisponibles as $nivel)
-                    <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                        <input type="checkbox" wire:model="nivelesSeleccionados" value="{{ $nivel->id }}">
-                        {{ $nivel->nombre }}
-                    </label>
-                @endforeach
+                @error('nivelesSeleccionados')
+                    <p id="nivelesSeleccionados-error" class="mt-xxs flex items-start gap-xxs text-body-sm font-semibold text-error-ink">
+                        <x-ui.icon nombre="exclamation-circle" class="mt-px h-5 w-5" />
+                        <span><span class="sr-only">Error:</span> {{ $message }}</span>
+                    </p>
+                @enderror
+
+                <div class="mt-xs space-y-xxs">
+                    @foreach ($nivelesDisponibles as $nivel)
+                        <x-ui.checkbox id="nivel-{{ $nivel->id }}" wire:model="nivelesSeleccionados" value="{{ $nivel->id }}">
+                            <x-tramite.nivel :clave="$nivel->clave" como="franja">{{ $nivel->nombre }}</x-tramite.nivel>
+                        </x-ui.checkbox>
+                    @endforeach
+                </div>
             </fieldset>
 
-            <x-ui.button-primary type="submit">Continuar</x-ui.button-primary>
+            <x-ui.action-bar accion="guardarNiveles" :back-href="route('tramite.resumen', ['escuela' => $escuela->id])" />
         </form>
     @endif
 </div>

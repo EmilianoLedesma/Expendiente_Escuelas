@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $plantel_id
  * @property int $solicitante_id
  * @property string|null $nombre_aprobado
+ * @property Carbon $created_at
  */
 class Escuela extends Model
 {

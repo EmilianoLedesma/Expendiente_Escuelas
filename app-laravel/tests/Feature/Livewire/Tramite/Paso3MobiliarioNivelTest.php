@@ -114,6 +114,19 @@ class Paso3MobiliarioNivelTest extends TestCase
         $this->assertDatabaseCount('mobiliario_nivel', 0);
     }
 
+    public function test_el_error_de_una_cantidad_se_muestra_junto_al_campo(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuelaNivel = $this->crearEscuelaNivel($solicitante, 'inicial');
+        $conceptoId = (int) DB::table('mobiliario_conceptos')->orderBy('id')->value('id');
+
+        Livewire::actingAs($solicitante->user)
+            ->test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->set("cantidades.{$conceptoId}", -3)
+            ->call('guardar')
+            ->assertSeeHtml('id="cantidades.'.$conceptoId.'-error"');
+    }
+
     public function test_precarga_las_cantidades_ya_capturadas(): void
     {
         $solicitante = Solicitante::factory()->create();

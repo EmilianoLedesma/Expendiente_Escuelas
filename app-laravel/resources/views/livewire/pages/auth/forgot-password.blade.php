@@ -37,22 +37,19 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Recuperar contraseña</h1>
-    <p class="font-sans text-body-sm text-body mb-lg">
-        Indica tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
-    </p>
+    <x-ui.page-header title="Recuperar contraseña">
+        <x-slot:intro>Indica tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</x-slot:intro>
+    </x-ui.page-header>
 
     @if (session('status'))
-        <div class="mb-lg">
-            <x-ui.alert variant="success">{{ session('status') }}</x-ui.alert>
-        </div>
+        <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
     @endif
 
     <form wire:submit="sendPasswordResetLink" class="space-y-md">
-        <x-ui.text-input name="email" label="Correo electrónico" type="email" wire:model="email" required autofocus />
-
-        <div class="flex justify-end pt-md border-t-[0.5px] border-hairline">
-            <x-ui.button-primary type="submit">Enviar enlace</x-ui.button-primary>
+        <x-ui.error-summary />
+        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model="email" autofocus autocomplete="username" /></x-ui.field>
+        <div class="flex justify-end border-t border-hairline pt-lg">
+            <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="sendPasswordResetLink">Enviar enlace</x-ui.button-primary>
         </div>
     </form>
 </div>
