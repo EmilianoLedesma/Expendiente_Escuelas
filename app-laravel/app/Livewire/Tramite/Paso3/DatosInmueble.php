@@ -250,6 +250,6 @@ class DatosInmueble extends Component
             'acreditacion' => $this->acreditacion(),
             'constancia' => $this->constancia(),
             'niveles' => $this->nivelesDisponibles(),
-        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id]);
+        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => 'inmueble']);
     }
 }

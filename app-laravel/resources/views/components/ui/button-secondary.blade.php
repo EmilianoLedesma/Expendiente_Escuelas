@@ -1,7 +1,7 @@
 @props(['disabled' => false, 'href' => null])
 
 @php
-    $clases = 'inline-flex min-h-11 items-center justify-center gap-xs rounded-sm border border-primary bg-canvas px-lg font-sans text-body-md font-semibold text-primary transition-colors duration-150 hover:bg-surface-soft '
+    $clases = 'inline-flex min-h-11 items-center justify-center gap-xs rounded-md border border-primary bg-canvas px-lg font-sans text-body-md font-semibold text-primary transition-colors duration-150 hover:bg-surface-soft '
         .($disabled ? 'cursor-not-allowed opacity-60' : '');
 @endphp
 

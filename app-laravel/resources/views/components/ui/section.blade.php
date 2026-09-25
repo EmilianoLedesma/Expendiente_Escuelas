@@ -1,6 +1,6 @@
 @props(['title'])
 
-<section {{ $attributes->merge(['class' => 'mt-xl border-t border-hairline pt-lg first:mt-0 first:border-t-0 first:pt-0']) }}>
-    <h2 class="mb-md text-section-eyebrow font-semibold uppercase text-muted">{{ $title }}</h2>
-    <div class="space-y-md">{{ $slot }}</div>
+<section {{ $attributes->merge(['class' => 'mt-lg rounded-lg border border-hairline bg-canvas first:mt-0']) }}>
+    <h2 class="rounded-t-lg border-b border-hairline bg-surface-soft px-md py-sm text-title-sm font-semibold text-ink sm:px-lg">{{ $title }}</h2>
+    <div class="space-y-md p-md sm:p-lg">{{ $slot }}</div>
 </section>

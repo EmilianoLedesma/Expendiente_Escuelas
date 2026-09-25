@@ -5,6 +5,7 @@ namespace Tests\Feature\Tramite;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use App\Models\TernaNombre;
 use App\Models\User;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
@@ -36,7 +37,7 @@ class MisTramitesTest extends TestCase
             ->assertSee('Calle Propia')
             ->assertDontSee('Calle Ajena')
             ->assertSee('href="'.route('tramite.resumen', ['escuela' => $mia->id]).'"', false)
-            ->assertSee('Ver trámite');
+            ->assertSee('Continuar');
     }
 
     public function test_estado_vacio_explica_el_tramite_y_ofrece_iniciar(): void
@@ -87,5 +88,25 @@ class MisTramitesTest extends TestCase
         $this->actingAs(Solicitante::factory()->create()->user)
             ->get(route('tramite.preregistro'))
             ->assertSee('href="'.route('tramite.index').'"', false);
+    }
+
+    public function test_la_tabla_identifica_cada_escuela_y_su_avance(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->escuelaDe($solicitante, 'Calle 1');
+        TernaNombre::create(['escuela_id' => $escuela->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Alfa']);
+        $this->escuelaDe($solicitante, 'Calle 2');
+
+        $this->actingAs($solicitante->user)
+            ->get(route('tramite.index'))
+            ->assertOk()
+            ->assertSee('<table', false)
+            ->assertSee('scope="col"', false)
+            ->assertSee('Colegio Alfa')
+            ->assertSee('Sin nombre propuesto')
+            ->assertSee('Nº '.str_pad((string) $escuela->id, 4, '0', STR_PAD_LEFT))
+            ->assertSee('1 de 4')
+            ->assertSee('Sigue: Responsable legal')
+            ->assertSee('Continuar');
     }
 }

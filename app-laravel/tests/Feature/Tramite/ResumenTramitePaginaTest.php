@@ -7,6 +7,7 @@ use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use App\Models\TernaNombre;
 use App\Models\User;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
@@ -101,5 +102,38 @@ class ResumenTramitePaginaTest extends TestCase
             ->assertSee('Completa primero: Datos del inmueble')
             ->assertSee('No aplica para este nivel')
             ->assertSee('No disponible aún');
+    }
+
+    public function test_el_resumen_muestra_el_recorrido_y_el_siguiente_paso(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->escuelaDe($solicitante);
+        TernaNombre::create(['escuela_id' => $escuela->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Alfa']);
+
+        $this->actingAs($solicitante->user)
+            ->get(route('tramite.resumen', ['escuela' => $escuela->id]))
+            ->assertOk()
+            ->assertSee('Colegio Alfa')
+            ->assertSee('Trámite Nº '.str_pad((string) $escuela->id, 4, '0', STR_PAD_LEFT))
+            ->assertSee('Secciones del trámite')
+            ->assertSee('Siguiente paso')
+            ->assertSee('aria-current="page"', false);
+    }
+
+    public function test_una_pagina_de_paso_muestra_el_recorrido_sin_livewire_antes_del_contenido(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->escuelaDe($solicitante);
+
+        $html = $this->actingAs($solicitante->user)
+            ->get(route('tramite.paso2', ['escuela' => $escuela->id]))
+            ->assertOk()
+            ->assertSee('Secciones del trámite')
+            ->assertSee('aria-current="step"', false)
+            ->assertSee('Aquí estás')
+            ->getContent();
+
+        $this->assertLessThan(strpos($html, 'wire:snapshot'), strpos($html, 'Secciones del trámite'));
+        $this->assertLessThan(strpos($html, 'wire:snapshot'), strpos($html, 'id="contenido"'));
     }
 }

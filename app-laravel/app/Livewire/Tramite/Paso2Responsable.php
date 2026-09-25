@@ -213,6 +213,6 @@ class Paso2Responsable extends Component
     {
         return view('livewire.tramite.paso2-responsable', [
             'nivelesDisponibles' => $this->fase === 'niveles' ? NivelEducativo::educacionBasica()->get() : collect(),
-        ])->layoutData(['escuelaId' => $this->escuela->id]);
+        ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => $this->fase === 'niveles' ? 'niveles' : 'responsable']);
     }
 }

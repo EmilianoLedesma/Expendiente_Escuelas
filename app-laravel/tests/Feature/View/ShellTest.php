@@ -55,4 +55,15 @@ class ShellTest extends TestCase
         $this->assertStringContainsString(':focus-visible', $css);
         $this->assertStringContainsString('prefers-reduced-motion: reduce', $css);
     }
+
+    /** Queja del dueño (2026-09-25): los puntos del asistente aparecían en Mis trámites. */
+    public function test_mis_tramites_no_muestra_recorrido_ni_puntos_del_asistente(): void
+    {
+        $this->actingAs(Solicitante::factory()->create()->user)
+            ->get(route('tramite.index'))
+            ->assertOk()
+            ->assertSee('aria-current="page"', false)
+            ->assertDontSee('data-estado=', false)
+            ->assertDontSee('Secciones del trámite');
+    }
 }

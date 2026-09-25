@@ -19,8 +19,9 @@ use Illuminate\Support\Facades\DB;
  * Estado de todo el trámite para el hub ("Resumen del trámite"), "Mis trámites"
  * y el "Paso X de N" de cada página. No decide nada nuevo: compone EstadoPaso2
  * (Paso 2 completo y vigente), EstadoPaso3 (orden de sub-pasos),
- * DocumentosCompletos (cuántos faltan) y escuela_nivel_pasos. Reemplaza al
- * componente de vista Progreso: la lectura de flujo pasa por Application (ADR-001).
+ * DocumentosCompletos (cuántos faltan) y escuela_nivel_pasos. Reemplazó al
+ * componente de vista Progreso (retirado en el rediseño UI): la lectura de
+ * flujo pasa por Application (ADR-001).
  */
 class ResumenTramite
 {

@@ -9,12 +9,12 @@
     @endif
 
     @if ($eyebrow)
-        <p class="mt-xs text-section-eyebrow font-semibold uppercase text-muted">{{ $eyebrow }}</p>
+        <p class="mt-xs text-caption font-semibold uppercase tracking-[0.18em] text-primary">{{ $eyebrow }}</p>
     @endif
 
-    <h1 class="mt-xxs font-display text-display-md text-ink">{{ $title }}</h1>
+    <h1 class="mt-xs font-display text-display-md text-ink sm:text-display-lg">{{ $title }}</h1>
 
     @isset($intro)
-        <p class="mt-xs text-body-md text-body">{{ $intro }}</p>
+        <p class="mt-xs max-w-2xl text-body-md text-muted">{{ $intro }}</p>
     @endisset
 </header>

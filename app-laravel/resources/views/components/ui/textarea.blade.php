@@ -12,7 +12,7 @@
     @if ($invalido) aria-invalid="true" @endif
     {{ $attributes->except('id')->merge([
         'rows' => 4,
-        'class' => 'block w-full rounded-sm border bg-canvas px-sm py-xs text-body-md text-ink transition-colors duration-150 '
+        'class' => 'block w-full rounded-md border bg-canvas px-sm py-xs text-body-md text-ink transition-colors duration-150 '
             .($invalido ? 'border-2 border-error-ink' : 'border-control'),
     ]) }}
 ></textarea>

@@ -282,6 +282,6 @@ class Paso2Documentos extends Component
             'capturados' => $capturados,
             'totalAplicables' => count($clavesAplicables),
             'totalCompletos' => $capturados->count(),
-        ])->layoutData(['escuelaId' => $this->escuela->id]);
+        ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => 'documentos']);
     }
 }

@@ -13,7 +13,7 @@
         <x-shell.encabezado />
 
         <main id="contenido" tabindex="-1" class="mx-auto w-full max-w-[440px] flex-1 px-md py-xl">
-            <div class="rounded-sm border border-hairline bg-canvas p-md sm:p-lg">
+            <div class="rounded-lg border border-hairline bg-canvas p-md sm:p-lg">
                 {{ $slot }}
             </div>
         </main>

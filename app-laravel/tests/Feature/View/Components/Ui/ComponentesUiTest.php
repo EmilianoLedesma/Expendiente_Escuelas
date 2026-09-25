@@ -184,4 +184,11 @@ class ComponentesUiTest extends TestCase
             ->assertSee('aria-hidden="true"', false)
             ->assertSee('<path', false);
     }
+
+    public function test_action_bar_queda_fija_desde_sm(): void
+    {
+        $this->blade('<x-ui.action-bar accion="guardar" />')
+            ->assertSee('sm:sticky', false)
+            ->assertSee('sm:bottom-0', false);
+    }
 }
