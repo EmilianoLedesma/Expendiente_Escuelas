@@ -379,6 +379,20 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame('Calle 1 #10, Fraccionamiento Piramides, El Pueblito, C.P. 76000', ResumenTramite::domicilio($plantel));
     }
 
+    /** Same bug class as the trim above (B3), but codigo_postal was missed — Task 10 fix round 1. */
+    public function test_domicilio_recorta_espacios_en_el_codigo_postal(): void
+    {
+        $plantel = Plantel::create([
+            'calle' => 'Calle 1',
+            'numero_ext' => '10',
+            'colonia' => 'Centro',
+            'municipio' => 'Querétaro',
+            'codigo_postal' => ' 76908 ',
+        ]);
+
+        $this->assertSame('Calle 1 #10, Centro, Querétaro, C.P. 76908', ResumenTramite::domicilio($plantel));
+    }
+
     public function test_avance_y_siguiente_seccion(): void
     {
         $escuela = $this->escuela();

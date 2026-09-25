@@ -150,7 +150,7 @@ class ResumenTramite
             trim($plantel->municipio),
         ], fn (string $p) => $p !== '');
 
-        return implode(', ', $partes).", C.P. {$plantel->codigo_postal}";
+        return implode(', ', $partes).', C.P. '.trim($plantel->codigo_postal);
     }
 
     /** @return array<string, string|null> */
