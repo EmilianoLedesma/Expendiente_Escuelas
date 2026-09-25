@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
 use App\Livewire\Forms\PersonaMoralForm;
@@ -213,6 +214,7 @@ class Paso2Responsable extends Component
     {
         return view('livewire.tramite.paso2-responsable', [
             'nivelesDisponibles' => $this->fase === 'niveles' ? NivelEducativo::educacionBasica()->get() : collect(),
+            'encabezado' => ResumenTramite::encabezado($this->fase === 'niveles' ? 'niveles' : 'responsable'),
         ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => $this->fase === 'niveles' ? 'niveles' : 'responsable']);
     }
 }
