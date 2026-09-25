@@ -94,13 +94,17 @@ app/
 │   └── Tramite/       # wizard page components: Paso1Preregistro, Paso2Documentos,
 │                      # Paso2Responsable, Paso3/{DatosInmueble,
 │                      # InfraestructuraNivel,MobiliarioNivel,PlanEstudios,
-│                      # PlantillaDocente,Matricula}, Paso3ProximosPasos
+│                      # PlantillaDocente,Matricula}
+│                      # (próximos-pasos is now a redirect to the hub, no component)
 ├── Filament/
 │   └── Resources/     # SEDEQ admin panel (id: 'admin', path: /admin)
 ├── Models/            # Eloquent persistence layer (25 models)
 ├── Policies/          # authorization policies (2 policies)
 ├── View/
-│   └── Components/    # reusable Blade components (3)
+│   └── Components/    # class-based layouts (App/Guest/TramiteLayout) and
+│                      # Tramite/Recorrido (journey sidebar fed by
+│                      # Application\Tramite\ResumenTramite); anonymous
+│                      # x-ui.* / x-tramite.* components live in resources/views
 └── Providers/
 ```
 

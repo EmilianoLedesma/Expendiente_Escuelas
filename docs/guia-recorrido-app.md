@@ -1,6 +1,6 @@
 # Guía de recorrido de la aplicación
 
-**Estado descrito:** `master` en `284db92` (2026-09-25), después de WS-0, WS-1, WS-2 y WS-3 de la remediación de la auditoría. El rediseño de la interfaz va en una rama aparte (`feat/rediseno-ui`) y **no** está en `master`: lo que ves hoy es la interfaz actual.
+**Estado descrito:** `master` en `8d1a6bb` (2026-09-25), después de WS-0, WS-1, WS-2 y WS-3 de la remediación de la auditoría **y del rediseño de la interfaz** (dirección B, "recorrido guiado"; reporte `docs/reports/2026-09-25-rediseno-ui.md`).
 
 Esta guía explica qué puedes probar hoy en la aplicación, qué deberías ver en cada pantalla y qué sigue bloqueado hasta que se completen los siguientes bloques de trabajo (WS-4 a WS-9). No sustituye al PRD ni al COMPENDIO: describe lo que **existe en el código**, no lo que debería existir.
 
@@ -22,14 +22,20 @@ npm run build          # o `npm run dev`; sin esto los estilos nuevos no aparece
 
 ### Cuentas y roles
 - **Solicitante:** cualquier cuenta registrada en `/register`. Al registrarse se crea su registro de solicitante automáticamente.
-- **SEDEQ:** una cuenta con el rol `sedeq` (en desarrollo, `test@example.com` lo tiene). Esa cuenta entra a `/admin`.
-- **`/dashboard`:** ya no es una página; redirige según el rol (SEDEQ → `/admin`, solicitante → `/tramite/preregistro`).
+- **SEDEQ:** una cuenta con el rol `sedeq` entra a `/admin`. Desde la limpieza de la base de desarrollo (2026-09-25) **no existe ninguna**: registra una cuenta y asígnale el rol `sedeq` (o vuelve a correr la parte de `test@example.com` de `DatabaseSeeder`).
+- **`/dashboard`:** ya no es una página; redirige según el rol (SEDEQ → `/admin`, solicitante → **Mis trámites** `/tramite`). Al iniciar sesión, registrarte o verificar el correo también llegas a Mis trámites.
 
 ---
 
 ## 2. Recorrido del solicitante
 
-La barra de progreso de la parte superior muestra: Preregistro → Responsable legal → Documentos → los sub-pasos de Paso 3. Un punto es enlace solo cuando ya puedes entrar a esa pantalla. Si escribes a mano la URL de un paso que aún no te corresponde, la aplicación te redirige al primer paso pendiente.
+### Mis trámites (`/tramite`)
+Tabla con cada escuela que has iniciado: nombre propuesto (o "Sin nombre propuesto"), `Nº` de trámite, domicilio y fecha de inicio, niveles, avance ("Sigue: …") y estado ("En captura" / "Captura inicial completa"), con **Continuar** o **Ver trámite**. "Iniciar nuevo trámite" lleva a Paso 1. Solo ves tus escuelas.
+
+### Resumen del trámite (`/tramite/{escuela}`)
+El título es el nombre de la escuela. A la izquierda (arriba, plegable como "Secciones del trámite", en pantallas chicas) está el **recorrido**: tarjeta con el avance y la lista de secciones agrupadas en "Datos generales" y una por nivel, con su estado. Ese mismo recorrido aparece en **cada página de paso**, marcando dónde estás. Las secciones completas de Responsable, Documentos, Niveles y Datos del inmueble se muestran como "Completado" **sin enlace** (su edición llega con WS-7); Infraestructura y Mobiliario completos ofrecen "Revisar". Plan de estudios, Plantilla docente y Matrícula aparecen como "No disponible aún".
+
+Cada página de paso muestra arriba "{Grupo} · Paso X de N" y abajo una barra de acciones fija con "Guardar y continuar". Si escribes a mano la URL de un paso que aún no te corresponde, la aplicación te redirige al primer paso pendiente.
 
 ### Paso 1 — Preregistro (`/tramite/preregistro`)
 **Qué capturas:** eliges entre **plantel nuevo** (calle, número exterior/interior, colonia, localidad, municipio, código postal, teléfono, correo) o **plantel existente**.
@@ -92,10 +98,10 @@ La barra de progreso de la parte superior muestra: Preregistro → Responsable l
 
 ### Paso 3.3 — Mobiliario (`/tramite/paso3/{escuelaNivel}/mobiliario`)
 - **Educación Inicial:** capturas el mobiliario por sala según el catálogo.
-- **Otros niveles:** no aplica; el sub-paso se marca completo solo y te pasa a Próximos pasos.
+- **Otros niveles:** no aplica; el sub-paso se marca completo solo y te devuelve al Resumen del trámite.
 
-### Próximos pasos (`/tramite/paso3/{escuelaNivel}/proximos-pasos`)
-Pantalla "Captura inicial completa". Si la escuela tiene otros niveles con Paso 3 pendiente, aparece un enlace "Continuar con {nivel}" para cada uno.
+### Al terminar Paso 3 de un nivel
+La antigua pantalla "Próximos pasos" ya no existe: su URL redirige al **Resumen del trámite**, donde ves qué niveles siguen pendientes y continúas desde el recorrido.
 
 **Aquí termina hoy el recorrido del solicitante.** No hay envío formal, folio, validación automática ni cambio de estado del expediente.
 
@@ -109,7 +115,7 @@ Pantalla "Captura inicial completa". Si la escuela tiene otros niveles con Paso 
 | **WS-5** Documentos completos y Formato | Documentos faltantes del checklist real: acta constitutiva y documentos del representante de persona moral, poder del gestor, Visto Bueno de Protección Civil, plano, certificado de número oficial. Nuevo **Paso 2.4 "Documentos por nivel"**: turno, tipo de alumnado, Formato de Solicitud por nivel (generar → firmar → subir), recibo de pago de derechos, acervo bibliográfico (Primaria/Secundaria), inventario de laboratorio (Secundaria). **Formato de Solicitud rehecho** con la estructura oficial. Paso 3 quedará detrás de Paso 2.4 para cada nivel. | Plan escrito y tu aprobación (decisiones D1–D3 ya tomadas). |
 | **WS-6** Aulas por sala en Inicial | En Inicial, el sub-paso 3.2 pedirá una fila por sala (capacidad, superficie, altura, ventilación, iluminación) en lugar de solo totales. Primaria/Secundaria/Preescolar no cambian. Incluye una **tabla nueva** (migración). | Plan escrito y tu aprobación (D4). |
 | **WS-7** Edición hasta el envío | Podrás regresar a **cualquier** paso anterior (Preregistro, Responsable legal, niveles, Datos del inmueble, Infraestructura, etc.) y editar lo capturado en formularios precargados mientras el expediente siga en captura. El domicilio del plantel sigue siendo de solo lectura; los datos del inmueble se editan solo mientras el plantel lo usen únicamente tus niveles en captura (D8). Una edición que invalide pasos posteriores los vuelve a marcar como pendientes. Ver `docs/decisions/PENDIENTE-edicion-hasta-envio.md`. | Plan con las reglas de detalle y tu autorización (alcance decidido el 2026-09-24). |
-| **WS-8** Plan de estudios (Paso 3.4) | Nuevo sub-paso después de Mobiliario: modalidad (escolarizada, no escolarizada, mixta), referencia del plan de estudios y, si es mixta, tipo de plataforma. Aparece en la barra de progreso y en Próximos pasos. | Tu autorización (D9 ya decidida). |
+| **WS-8** Plan de estudios (Paso 3.4) | Nuevo sub-paso después de Mobiliario: modalidad (escolarizada, no escolarizada, mixta), referencia del plan de estudios y, si es mixta, tipo de plataforma. Aparece en el recorrido y en el Resumen del trámite. | Tu autorización (D9 ya decidida). |
 | **WS-9** Cierre documental | Nada visible. PRD/COMPENDIO actualizados, reporte consolidado y lista única de preguntas para SEDEQ. | Tu autorización. |
 
 ### Ya terminado
@@ -118,8 +124,7 @@ Pantalla "Captura inicial completa". Si la escuela tiene otros niveles con Paso 
   - **Existe pero sin pantalla que lo muestre:** perfiles Enfermera y Profesor en Educación Preescolar (Inicial); cargos Trabajador Social y Prefecto (Secundaria); reglas de Director Técnico (Preescolar, Primaria, Secundaria) y Responsable de filtro (Inicial); 12 reglas de personal ligadas a su cargo. Quedan listos para Plantilla docente y el Motor de Validación, que aún no existen. Solo se comprueban con una consulta a la base (desarrollo: 32 reglas, 18 cargos, 89 perfiles).
   - Preguntas abiertas para SEDEQ que dejó: perfiles de Trabajador Social/Prefecto, personal condicionado por grado (Inglés/Computación) y el umbral de Educación Física (≥60 o >60).
 
-### En paralelo, fuera de la remediación
-- **Rediseño de la interfaz** (rama `feat/rediseno-ui`): página central "Mis trámites" → "Resumen del trámite" con una lista de tareas, formularios accesibles y pantallas de acceso renovadas. Sin cambios de reglas ni de datos. Se incorporará a esta guía cuando se integre a `master`.
+- **Rediseño de la interfaz** (fuera de la remediación, integrado el 2026-09-25 en `8d1a6bb`): Mis trámites, Resumen del trámite con recorrido lateral, formularios accesibles y pantallas de acceso renovadas. Sin cambios de reglas ni de datos. Pendiente: la revisión manual de accesibilidad (teclado, 375 px, Lighthouse) que dispensaste para la integración, y una función de **eliminar trámite** que pediste (tarea aparte).
 
 ### No está en ningún bloque de esta remediación
 - **Paso 3.5 Plantilla docente** y **Paso 3.6 Matrícula:** siguen siendo esqueletos; faltan definiciones de SEDEQ. Los catálogos de cargos y perfiles que usarán ya están completos tras WS-3.
@@ -131,8 +136,7 @@ Pantalla "Captura inicial completa". Si la escuela tiene otros niveles con Paso 
 
 ## 5. Cosas que pueden sorprenderte al probar
 
-- **Plantel compartido en desarrollo:** hay un plantel con escuelas de dos solicitantes distintos, creado antes de WS-1. Ambos dueños aún pueden ver los documentos de ese plantel. No se tocó; falta tu decisión (`PENDIENTE-plantel-solicitante-cardinalidad.md`).
-- **Escuelas viejas en desarrollo** con niveles seleccionados pero sin documentos completos ahora son enviadas de vuelta a Documentos en lugar de a Paso 3. Es el comportamiento correcto, no una regresión.
+- **Base de desarrollo limpia (2026-09-25):** se vaciaron todas las tablas de captura (cuentas, planteles, escuelas, documentos, Paso 3) y los PDF subidos; solo quedan los catálogos. El plantel compartido entre dos solicitantes que existía antes de WS-1 ya no está, pero la pregunta de fondo sigue abierta (`PENDIENTE-plantel-solicitante-cardinalidad.md`).
 - **El responsable legal no se puede editar** una vez guardado (y en general, los pasos anteriores se ven en solo lectura). Poder regresar y editar cualquier paso llega con WS-7.
 - **El nombre original del archivo** subido no se conserva.
 - **El Formato de Solicitud actual** es provisional: se genera antes de elegir niveles y no tiene la estructura oficial (WS-5 lo rehace).
@@ -142,13 +146,13 @@ Pantalla "Captura inicial completa". Si la escuela tiene otros niveles con Paso 
 
 ## 6. Lista rápida de prueba
 
-1. Registra una cuenta, verifica el correo con el enlace del log y confirma que llegas a Preregistro.
+1. Registra una cuenta, verifica el correo con el enlace del log y confirma que llegas a **Mis trámites** (vacío); inicia un trámite nuevo.
 2. Crea un plantel nuevo; en otra cuenta, comprueba que ese plantel **no** aparece como "existente".
 3. Captura el responsable (prueba los tres tipos de persona en escuelas distintas) y la terna.
 4. Sube los 6 documentos en desorden; intenta un archivo que no sea PDF; reemplaza uno. Con un dictamen de fecha antigua, confirma que no puedes avanzar.
 5. Selecciona dos niveles (por ejemplo, Primaria e Inicial).
 6. Paso 3 de Primaria: comprueba el domicilio en solo lectura; en Infraestructura declara áreas verdes solo con superficie y comprueba que se guardan; toca una casilla sin llenar nada y comprueba que ese espacio sigue disponible.
-7. Desde Próximos pasos, continúa con Inicial: Datos del inmueble debe completarse solo; en Infraestructura debe aparecer lo de Primaria como "ya capturado" y quedar disponible lo propio de Inicial, incluidos Salón de usos múltiples, Cocina y Comedor (declara uno y comprueba que se guarda); captura Mobiliario.
+7. Desde el Resumen del trámite (o el recorrido lateral), continúa con Inicial: Datos del inmueble debe completarse solo; en Infraestructura debe aparecer lo de Primaria como "ya capturado" y quedar disponible lo propio de Inicial, incluidos Salón de usos múltiples, Cocina y Comedor (declara uno y comprueba que se guarda); captura Mobiliario.
    - En Infraestructura de Primaria (u otro nivel que no sea Inicial), confirma que esos tres espacios **no** aparecen.
 8. Escribe a mano la URL de Mobiliario de un nivel nuevo: debe redirigirte al primer sub-paso pendiente.
-9. Entra con la cuenta SEDEQ a `/dashboard`: debe llevarte a `/admin`.
+9. Con una cuenta a la que asignaste el rol `sedeq`, entra a `/dashboard`: debe llevarte a `/admin`.
