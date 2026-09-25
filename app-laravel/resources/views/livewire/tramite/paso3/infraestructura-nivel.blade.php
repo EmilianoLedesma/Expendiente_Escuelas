@@ -1,129 +1,144 @@
-<div>
-    <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Infraestructura del nivel</h1>
-    <p class="font-sans text-body-sm text-body mb-lg">
-        Declara los espacios del plantel y las aulas del nivel que se pretende incorporar.
-    </p>
+@php
+    $nombresCategoria = ['administrativo' => 'Espacios administrativos', 'cubiculo' => 'Cubículos', 'recreativo_deportivo' => 'Actividades físicas y recreativas', 'especial' => 'Instalaciones especiales'];
+    $yaCapturado = $espaciosCapturados
+        ->mapWithKeys(fn ($e) => [$e->tipoEspacio->nombre => ($e->cantidad ?? '—').' · '.($e->superficie_m2 ?? '—').' m²'])
+        ->merge($sanitariosCapturados->mapWithKeys(fn ($s) => ['Sanitarios '.str_replace('_', ' ', $s->categoria) => ($s->cantidad_retretes ?? '—').' retretes · '.($s->cantidad_lavabos ?? '—').' lavabos']))
+        ->all();
+    $columnas = 'md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]';
+    $etiqueta = 'block text-body-sm font-semibold text-ink';
+@endphp
 
-    <form wire:submit="guardar" class="space-y-lg">
-        @if ($espaciosCapturados->isNotEmpty() || $sanitariosCapturados->isNotEmpty())
-            <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md space-y-xs">
-                <p class="font-sans text-body-sm font-medium text-ink">Infraestructura del plantel (ya registrada)</p>
-                <p class="font-sans text-[11px] text-muted">
-                    Estos datos son del plantel y ya fueron capturados. Cambiarlos requiere autorización previa de la Dirección de Educación.
-                </p>
-                <ul class="font-sans text-body-sm text-body space-y-xxs">
-                    @foreach ($espaciosCapturados as $espacio)
-                        <li>{{ $espacio->tipoEspacio->nombre }} — {{ $espacio->cantidad ?? '—' }} · {{ $espacio->superficie_m2 ?? '—' }} m²</li>
-                    @endforeach
-                    @foreach ($sanitariosCapturados as $sanitario)
-                        <li>Sanitarios {{ str_replace('_', ' ', $sanitario->categoria) }} — {{ $sanitario->cantidad_retretes ?? '—' }} retretes · {{ $sanitario->cantidad_lavabos ?? '—' }} lavabos</li>
-                    @endforeach
-                </ul>
-            </div>
+<div class="max-w-3xl">
+    <x-ui.page-header :eyebrow="$encabezado" title="Infraestructura">
+        <x-slot:intro>Declara los espacios del plantel y las aulas del nivel que se pretende incorporar.</x-slot:intro>
+    </x-ui.page-header>
+
+    <form wire:submit="guardar">
+        <x-ui.error-summary />
+
+        @if ($yaCapturado !== [])
+            <x-ui.section title="Infraestructura del plantel (ya registrada)">
+                <p class="text-body-sm text-muted">Estos datos son del plantel y ya fueron capturados. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
+                <x-ui.summary-list :filas="$yaCapturado" />
+            </x-ui.section>
         @endif
 
-        @if ($tipos->isNotEmpty())
-            @foreach ($tipos->groupBy('categoria') as $categoria => $tiposCategoria)
-                <fieldset class="space-y-sm">
-                    <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">
-                        {{ ['administrativo' => 'Espacios administrativos', 'cubiculo' => 'Cubículos', 'recreativo_deportivo' => 'Actividades físicas y recreativas', 'especial' => 'Instalaciones especiales'][$categoria] ?? $categoria }}
-                    </legend>
+        @foreach ($tipos->groupBy('categoria') as $categoria => $tiposCategoria)
+            <x-ui.section :title="$nombresCategoria[$categoria] ?? $categoria">
+                <div class="hidden gap-sm text-body-sm font-semibold text-muted md:grid {{ $columnas }}" aria-hidden="true">
+                    <span>Espacio</span><span>Cantidad</span><span>Superficie (m²)</span><span>Capacidad</span>
+                </div>
 
-                    @foreach ($tiposCategoria as $tipo)
-                        <div class="space-y-xxs">
-                            <p class="font-sans text-body-sm text-ink">{{ $tipo->nombre }}</p>
-                            <div class="flex flex-wrap gap-xs">
-                                <input type="number" min="0" placeholder="Cantidad" wire:model.blur="espacios.{{ $tipo->id }}.cantidad" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                                <input type="number" step="0.01" min="0" placeholder="Superficie m²" wire:model.blur="espacios.{{ $tipo->id }}.superficieM2" class="w-[130px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                                <input type="number" min="0" placeholder="Capacidad" wire:model.blur="espacios.{{ $tipo->id }}.capacidadPromedio" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
+                @foreach ($tiposCategoria as $tipo)
+                    <div wire:key="tipo-{{ $tipo->id }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                        <div class="grid grid-cols-1 gap-sm md:items-start {{ $columnas }}">
+                            <p class="text-body-md font-semibold text-ink">{{ $tipo->nombre }}</p>
+                            @foreach (['cantidad' => ['Cantidad', 'numeric', null], 'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'], 'capacidadPromedio' => ['Capacidad', 'numeric', null]] as $campo => [$texto, $modo, $paso])
+                                <div>
+                                    <label for="espacios.{{ $tipo->id }}.{{ $campo }}" class="{{ $etiqueta }} md:sr-only">{{ $texto }}<span class="sr-only"> — {{ $tipo->nombre }}</span></label>
+                                    <x-ui.input id="espacios.{{ $tipo->id }}.{{ $campo }}" type="number" inputmode="{{ $modo }}" min="0" :step="$paso" wire:model.blur="espacios.{{ $tipo->id }}.{{ $campo }}" />
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
+                            <div>
+                                <label for="espacios.{{ $tipo->id }}.destinadoA" class="{{ $etiqueta }}">Destinado a<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
                                 @if ($tipo->clave === 'bodega')
-                                    <select wire:model.blur="espacios.{{ $tipo->id }}.destinadoA" class="flex-1 min-w-[160px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                                        <option value="">Destinado a…</option>
+                                    <x-ui.select id="espacios.{{ $tipo->id }}.destinadoA" wire:model.blur="espacios.{{ $tipo->id }}.destinadoA">
+                                        <option value="">Selecciona…</option>
                                         <option value="limpieza">Limpieza</option>
                                         <option value="general">General</option>
                                         <option value="otro">Otro</option>
-                                    </select>
+                                    </x-ui.select>
                                 @else
-                                    <input type="text" placeholder="Destinado a" wire:model.blur="espacios.{{ $tipo->id }}.destinadoA" class="flex-1 min-w-[160px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
+                                    <x-ui.input id="espacios.{{ $tipo->id }}.destinadoA" wire:model.blur="espacios.{{ $tipo->id }}.destinadoA" />
                                 @endif
                             </div>
-                            <div class="flex flex-wrap gap-sm">
-                                <label class="flex items-center gap-xxs font-sans text-[11px] text-body">
-                                    <input type="checkbox" wire:model.blur="espacios.{{ $tipo->id }}.ventilacionNatural"> Ventilación natural
-                                </label>
-                                <label class="flex items-center gap-xxs font-sans text-[11px] text-body">
-                                    <input type="checkbox" wire:model.blur="espacios.{{ $tipo->id }}.iluminacionNatural"> Iluminación natural
-                                </label>
+                            <div class="flex flex-wrap gap-x-md">
+                                <x-ui.checkbox id="espacios.{{ $tipo->id }}.ventilacionNatural" wire:model.blur="espacios.{{ $tipo->id }}.ventilacionNatural">Ventilación natural<span class="sr-only"> — {{ $tipo->nombre }}</span></x-ui.checkbox>
+                                <x-ui.checkbox id="espacios.{{ $tipo->id }}.iluminacionNatural" wire:model.blur="espacios.{{ $tipo->id }}.iluminacionNatural">Iluminación natural<span class="sr-only"> — {{ $tipo->nombre }}</span></x-ui.checkbox>
                             </div>
+                        </div>
 
-                            @if ($tipo->permite_campo_futbol)
-                                <div class="flex flex-wrap gap-xs">
-                                    <input type="text" placeholder="Tipo de superficie" wire:model.blur="espacios.{{ $tipo->id }}.campoFutbolTipoSuperficie" class="w-[180px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                                    <select wire:model.blur="espacios.{{ $tipo->id }}.campoFutbolFormato" class="w-[140px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                                        <option value="">Formato…</option>
+                        @if ($tipo->permite_campo_futbol)
+                            <div class="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
+                                <div>
+                                    <label for="espacios.{{ $tipo->id }}.campoFutbolTipoSuperficie" class="{{ $etiqueta }}">Tipo de superficie <span class="font-normal text-muted">(opcional)</span></label>
+                                    <x-ui.input id="espacios.{{ $tipo->id }}.campoFutbolTipoSuperficie" wire:model.blur="espacios.{{ $tipo->id }}.campoFutbolTipoSuperficie" />
+                                </div>
+                                <div>
+                                    <label for="espacios.{{ $tipo->id }}.campoFutbolFormato" class="{{ $etiqueta }}">Formato <span class="font-normal text-muted">(opcional)</span></label>
+                                    <x-ui.select id="espacios.{{ $tipo->id }}.campoFutbolFormato" wire:model.blur="espacios.{{ $tipo->id }}.campoFutbolFormato">
+                                        <option value="">Selecciona…</option>
                                         <option value="11">11</option>
                                         <option value="7">7</option>
                                         <option value="5">5</option>
                                         <option value="baby_fut">Baby fut</option>
-                                    </select>
+                                    </x-ui.select>
                                 </div>
-                            @endif
+                            </div>
+                        @endif
 
-                            @if ($tipo->permite_material_biblioteca)
-                                <div class="space-y-xxs pl-md">
-                                    <p class="font-sans text-[11px] text-muted">Material de la biblioteca</p>
-                                    @foreach ($materiales as $material)
-                                        <div class="flex items-center gap-xs">
-                                            <span class="font-sans text-[11px] text-body w-[160px]">{{ $material->nombre }}</span>
-                                            <input type="number" min="0" placeholder="Títulos" wire:model.blur="materialesBiblioteca.{{ $material->id }}.numeroTitulos" class="w-[100px] h-[32px] px-[10px] rounded-md border-[0.5px] border-hairline font-sans text-[11px] text-ink bg-canvas">
-                                            <input type="number" min="0" placeholder="Volúmenes" wire:model.blur="materialesBiblioteca.{{ $material->id }}.numeroVolumenes" class="w-[110px] h-[32px] px-[10px] rounded-md border-[0.5px] border-hairline font-sans text-[11px] text-ink bg-canvas">
-                                        </div>
-                                    @endforeach
+                        @if ($tipo->permite_material_biblioteca)
+                            <fieldset class="mt-md border-l-4 border-hairline pl-md">
+                                <legend class="text-body-sm font-semibold text-ink">Material de la biblioteca</legend>
+                                <div class="hidden gap-sm text-body-sm font-semibold text-muted md:grid md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]" aria-hidden="true">
+                                    <span>Material</span><span>Títulos</span><span>Volúmenes</span>
                                 </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </fieldset>
-            @endforeach
-        @endif
+                                @foreach ($materiales as $material)
+                                    <div wire:key="material-{{ $material->id }}" class="grid grid-cols-2 gap-sm py-xs md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:items-center">
+                                        <p class="col-span-2 text-body-md text-ink md:col-span-1">{{ $material->nombre }}</p>
+                                        @foreach (['numeroTitulos' => 'Títulos', 'numeroVolumenes' => 'Volúmenes'] as $campo => $texto)
+                                            <div>
+                                                <label for="materialesBiblioteca.{{ $material->id }}.{{ $campo }}" class="{{ $etiqueta }} md:sr-only">{{ $texto }}<span class="sr-only"> — {{ $material->nombre }}</span></label>
+                                                <x-ui.input id="materialesBiblioteca.{{ $material->id }}.{{ $campo }}" type="number" inputmode="numeric" min="0" wire:model.blur="materialesBiblioteca.{{ $material->id }}.{{ $campo }}" />
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            </fieldset>
+                        @endif
+                    </div>
+                @endforeach
+            </x-ui.section>
+        @endforeach
 
         @if (count($categorias) > 0)
-            <fieldset class="space-y-sm">
-                <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Sanitarios</legend>
+            <x-ui.section title="Sanitarios">
                 @foreach ($categorias as $categoria)
-                    <div class="space-y-xxs">
-                        <p class="font-sans text-body-sm text-ink">{{ ucfirst(str_replace('_', ' ', $categoria)) }}</p>
-                        <div class="flex flex-wrap gap-xs">
-                            <input type="number" min="0" placeholder="Retretes" wire:model.blur="sanitarios.{{ $categoria }}.cantidadRetretes" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                            <input type="number" min="0" placeholder="Mingitorios" wire:model.blur="sanitarios.{{ $categoria }}.cantidadMingitorios" class="w-[120px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                            <input type="number" min="0" placeholder="Lavabos" wire:model.blur="sanitarios.{{ $categoria }}.cantidadLavabos" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                            <input type="number" step="0.01" min="0" placeholder="Superficie m²" wire:model.blur="sanitarios.{{ $categoria }}.superficieM2" class="w-[130px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                            @if ($categoria === 'alumnado_maternal')
-                                <input type="number" min="0" placeholder="Bacinicas" wire:model.blur="sanitarios.{{ $categoria }}.cantidadBacinicas" class="w-[110px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                            @endif
+                    <div wire:key="sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                        <p class="text-body-md font-semibold text-ink">{{ ucfirst(str_replace('_', ' ', $categoria)) }}</p>
+                        <div class="mt-sm grid grid-cols-2 gap-sm md:grid-cols-4">
+                            @foreach (array_filter([
+                                'cantidadRetretes' => ['Retretes', 'numeric', null],
+                                'cantidadMingitorios' => ['Mingitorios', 'numeric', null],
+                                'cantidadLavabos' => ['Lavabos', 'numeric', null],
+                                'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'],
+                                'cantidadBacinicas' => $categoria === 'alumnado_maternal' ? ['Bacinicas', 'numeric', null] : null,
+                            ]) as $campo => [$texto, $modo, $paso])
+                                <div>
+                                    <label for="sanitarios.{{ $categoria }}.{{ $campo }}" class="{{ $etiqueta }}">{{ $texto }}<span class="sr-only"> — {{ str_replace('_', ' ', $categoria) }}</span></label>
+                                    <x-ui.input id="sanitarios.{{ $categoria }}.{{ $campo }}" type="number" inputmode="{{ $modo }}" min="0" :step="$paso" wire:model.blur="sanitarios.{{ $categoria }}.{{ $campo }}" />
+                                </div>
+                            @endforeach
                         </div>
                     </div>
                 @endforeach
-            </fieldset>
+            </x-ui.section>
         @endif
 
-        <fieldset class="space-y-xs">
-            <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Aulas del nivel</legend>
-            <div class="flex flex-wrap gap-xs">
-                <div>
-                    <label for="numeroAulas" class="block font-sans text-[11px] text-body mb-xxs">Número de aulas <span class="text-error">*</span></label>
-                    <input id="numeroAulas" type="number" min="1" wire:model.blur="numeroAulas" class="w-[130px] h-[38px] px-[13px] rounded-md border-[0.5px] font-sans text-body-sm text-ink bg-canvas {{ $errors->has('numeroAulas') ? 'border-error' : 'border-hairline' }}">
-                    @error('numeroAulas')
-                        <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="superficieAulasM2" class="block font-sans text-[11px] text-body mb-xxs">Superficie total m²</label>
-                    <input id="superficieAulasM2" type="number" step="0.01" min="0" wire:model.blur="superficieAulasM2" class="w-[150px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                </div>
+        <x-ui.section title="Aulas del nivel">
+            <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                <x-ui.field id="numeroAulas" label="Número de aulas">
+                    <x-ui.input type="number" inputmode="numeric" min="1" wire:model.blur="numeroAulas" />
+                </x-ui.field>
+                <x-ui.field id="superficieAulasM2" label="Superficie total (m²)" optional>
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="superficieAulasM2" />
+                </x-ui.field>
             </div>
-        </fieldset>
+        </x-ui.section>
 
-        <x-ui.button-primary type="submit">Guardar y continuar</x-ui.button-primary>
+        <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
     </form>
 </div>

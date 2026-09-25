@@ -45,7 +45,7 @@ class Paso3ProximosPasosTest extends TestCase
         return $escuelaNivel;
     }
 
-    public function test_el_dueno_ve_el_aterrizaje(): void
+    public function test_proximos_pasos_redirige_al_resumen_del_tramite(): void
     {
         $solicitante = Solicitante::factory()->create();
         $escuelaNivel = $this->crearEscuelaNivelPara($solicitante);
@@ -53,8 +53,7 @@ class Paso3ProximosPasosTest extends TestCase
         $response = $this->actingAs($solicitante->user)
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
 
-        $response->assertOk();
-        $response->assertSee('el resto de la captura está pendiente', false);
+        $response->assertRedirect(route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]));
     }
 
     public function test_un_no_dueno_recibe_403(): void
@@ -98,6 +97,7 @@ class Paso3ProximosPasosTest extends TestCase
         (new MarcarPasoCompletado)->ejecutar($primaria->id, 'mobiliario');
 
         $response = $this->actingAs($solicitante->user)
+            ->followingRedirects()
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $primaria->id]));
 
         $response->assertOk();
@@ -134,6 +134,7 @@ class Paso3ProximosPasosTest extends TestCase
         }
 
         $response = $this->actingAs($solicitante->user)
+            ->followingRedirects()
             ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $primaria->id]));
 
         $response->assertOk();

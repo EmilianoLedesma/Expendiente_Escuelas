@@ -10,7 +10,7 @@ use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
-use App\Livewire\Tramite\Paso3ProximosPasos;
+use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
@@ -53,7 +53,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:update,escuelaNivel')
         ->name('tramite.paso3-mobiliario');
 
-    Route::get('/tramite/paso3/{escuelaNivel}/proximos-pasos', Paso3ProximosPasos::class)
+    // Ya no es una página: el hub muestra el estado de cada nivel (rediseño UI, D12). Se conserva el nombre de ruta.
+    Route::get('/tramite/paso3/{escuelaNivel}/proximos-pasos', fn (EscuelaNivel $escuelaNivel) => redirect()->route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]))
         ->middleware('can:view,escuelaNivel')
         ->name('tramite.paso3-proximos-pasos');
 });

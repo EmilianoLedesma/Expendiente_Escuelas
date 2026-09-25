@@ -8,6 +8,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
+use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
@@ -245,6 +246,8 @@ class DatosInmueble extends Component
     public function render()
     {
         return view('livewire.tramite.paso3.datos-inmueble', [
+            'encabezado' => ResumenTramite::encabezado('inmueble', $this->escuelaNivel->nivelEducativo),
+            'domicilio' => ResumenTramite::domicilio($this->plantel()),
             'plantel' => $this->plantel(),
             'terna' => $this->terna(),
             'acreditacion' => $this->acreditacion(),

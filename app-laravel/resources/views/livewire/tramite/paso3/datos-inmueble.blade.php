@@ -1,139 +1,126 @@
-<div>
-    <h1 class="font-display text-display-sm font-semibold text-ink mb-xs">Datos del inmueble</h1>
-    <p class="font-sans text-body-sm text-body mb-lg">
-        Dimensiones, colindancias y servicios del inmueble donde operará la escuela.
-    </p>
+<div class="max-w-3xl">
+    <x-ui.page-header :eyebrow="$encabezado" title="Datos del inmueble">
+        <x-slot:intro>Dimensiones, colindancias y servicios del inmueble donde operará la escuela.</x-slot:intro>
+    </x-ui.page-header>
 
-    {{-- Domicilio del plantel, capturado en Paso 1 — solo lectura siempre
-         (primera captura y reuso). Texto plano a propósito, igual que el
-         resto de este bloque de contexto: no es un formulario editable. --}}
-    <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md mb-lg space-y-xxs">
-        <p class="font-sans text-[11px] text-muted">Domicilio del plantel</p>
-        <p class="font-sans text-body-sm text-body">
-            {{ $plantel->calle }}{{ $plantel->numero_ext ? ' #'.$plantel->numero_ext : '' }}{{ $plantel->numero_int ? ' Int. '.$plantel->numero_int : '' }},
-            {{ $plantel->colonia }}, {{ $plantel->municipio }}, C.P. {{ $plantel->codigo_postal }}
-        </p>
-    </div>
+    {{-- Contexto de solo lectura (Paso 1 y Paso 2): nunca inputs sobre el domicilio. --}}
+    <x-ui.section title="Ya capturado en pasos anteriores">
+        <x-ui.summary-list :filas="array_filter([
+            'Domicilio del plantel' => $domicilio,
+            'Terna de nombres' => $terna->isNotEmpty() ? $terna->pluck('nombre_propuesto')->implode(' · ') : null,
+            'Acreditación de ocupación legal' => $acreditacion ? str_replace('_', ' ', $acreditacion->tipo) : null,
+            'Constancia de seguridad estructural' => $constancia ? 'Perito: '.$constancia->perito_nombre : null,
+        ], fn ($valor) => $valor !== null)" />
+    </x-ui.section>
 
-    {{-- Contexto de solo lectura, ya capturado en Paso 2.1 / 2.2. Texto plano
-         a propósito: no es una pantalla de revisión de documentos. --}}
-    <div class="rounded-md border-[0.5px] border-hairline bg-surface-soft p-md mb-lg space-y-xxs">
-        <p class="font-sans text-[11px] text-muted">Ya capturado en pasos anteriores</p>
-        @if ($terna->isNotEmpty())
-            <p class="font-sans text-body-sm text-body">
-                Terna de nombres: {{ $terna->pluck('nombre_propuesto')->implode(' · ') }}
-            </p>
-        @endif
-        @if ($acreditacion !== null)
-            <p class="font-sans text-body-sm text-body">
-                Acreditación de ocupación legal: {{ str_replace('_', ' ', $acreditacion->tipo) }}
-            </p>
-        @endif
-        @if ($constancia !== null)
-            <p class="font-sans text-body-sm text-body">
-                Constancia de seguridad estructural: perito {{ $constancia->perito_nombre }}
-            </p>
-        @endif
-    </div>
+    <form wire:submit="guardar" class="mt-xl">
+        <x-ui.error-summary />
 
-    <form wire:submit="guardar" class="space-y-lg">
-        <fieldset class="space-y-xs">
-            <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Dimensiones</legend>
-            <div class="flex flex-wrap gap-xs">
-                <div>
-                    <label for="metrosTotales" class="block font-sans text-[11px] text-body mb-xxs">Superficie del predio m² <span class="text-error">*</span></label>
-                    <input id="metrosTotales" type="number" step="0.01" min="0" wire:model.blur="metrosTotales" class="w-[170px] h-[38px] px-[13px] rounded-md border-[0.5px] font-sans text-body-sm text-ink bg-canvas {{ $errors->has('metrosTotales') ? 'border-error' : 'border-hairline' }}">
-                    @error('metrosTotales')
-                        <p class="mt-xxs font-sans text-[11px] text-error">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="metrosConstruidos" class="block font-sans text-[11px] text-body mb-xxs">Superficie construida m²</label>
-                    <input id="metrosConstruidos" type="number" step="0.01" min="0" wire:model.blur="metrosConstruidos" class="w-[170px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                </div>
-                <div>
-                    <label for="areaCivicaM2" class="block font-sans text-[11px] text-body mb-xxs">Área cívica m²</label>
-                    <input id="areaCivicaM2" type="number" step="0.01" min="0" wire:model.blur="areaCivicaM2" class="w-[150px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                </div>
+        <x-ui.section title="Dimensiones">
+            <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                <x-ui.field id="metrosTotales" label="Superficie del predio (m²)">
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosTotales" />
+                </x-ui.field>
+                <x-ui.field id="metrosConstruidos" label="Superficie construida (m²)" optional>
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosConstruidos" />
+                </x-ui.field>
+                <x-ui.field id="areaCivicaM2" label="Área cívica (m²)" optional>
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="areaCivicaM2" />
+                </x-ui.field>
             </div>
-            <label class="flex items-center gap-xs font-sans text-body-sm text-ink">
-                <input type="checkbox" wire:model.blur="tieneAstaBandera"> Cuenta con asta bandera
-            </label>
-        </fieldset>
+            <x-ui.checkbox id="tieneAstaBandera" wire:model.blur="tieneAstaBandera">Cuenta con asta bandera</x-ui.checkbox>
+        </x-ui.section>
 
-        <fieldset class="space-y-xs">
-            <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Colindancias</legend>
-            <div class="flex flex-wrap gap-xs">
+        <x-ui.section title="Colindancias">
+            <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 @foreach (['Norte' => 'colindanciaNorte', 'Sur' => 'colindanciaSur', 'Este' => 'colindanciaEste', 'Oeste' => 'colindanciaOeste'] as $etiqueta => $propiedad)
-                    <div>
-                        <label for="{{ $propiedad }}" class="block font-sans text-[11px] text-body mb-xxs">{{ $etiqueta }}</label>
-                        <input id="{{ $propiedad }}" type="text" wire:model.blur="{{ $propiedad }}" class="w-[200px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                    </div>
+                    <x-ui.field :id="$propiedad" :label="$etiqueta" optional>
+                        <x-ui.input wire:model.blur="{{ $propiedad }}" />
+                    </x-ui.field>
                 @endforeach
             </div>
-        </fieldset>
+        </x-ui.section>
 
-        <fieldset class="space-y-xs">
-            <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Ubicación geográfica</legend>
-            <div class="flex flex-wrap gap-xs">
-                <div>
-                    <label for="latitud" class="block font-sans text-[11px] text-body mb-xxs">Latitud</label>
-                    <input id="latitud" type="number" step="0.0000001" wire:model.blur="latitud" class="w-[170px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                </div>
-                <div>
-                    <label for="longitud" class="block font-sans text-[11px] text-body mb-xxs">Longitud</label>
-                    <input id="longitud" type="number" step="0.0000001" wire:model.blur="longitud" class="w-[170px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                </div>
+        <x-ui.section title="Ubicación geográfica">
+            <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                <x-ui.field id="latitud" label="Latitud" hint="En grados decimales." optional>
+                    <x-ui.input type="number" inputmode="decimal" step="0.0000001" wire:model.blur="latitud" />
+                </x-ui.field>
+                <x-ui.field id="longitud" label="Longitud" hint="En grados decimales." optional>
+                    <x-ui.input type="number" inputmode="decimal" step="0.0000001" wire:model.blur="longitud" />
+                </x-ui.field>
             </div>
-        </fieldset>
+        </x-ui.section>
 
-        <fieldset class="space-y-sm">
-            <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Instituciones de salud y emergencia cercanas</legend>
+        <x-ui.section title="Instituciones de salud y emergencia cercanas">
             @foreach ($serviciosCercanos as $indice => $servicio)
-                <div class="flex flex-wrap items-end gap-xs">
-                    <input type="text" placeholder="Nombre" wire:model.blur="serviciosCercanos.{{ $indice }}.nombre" class="flex-1 min-w-[180px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                    <select wire:model.blur="serviciosCercanos.{{ $indice }}.tipo" class="w-[140px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                        <option value="salud">Salud</option>
-                        <option value="emergencia">Emergencia</option>
-                    </select>
-                    <label class="flex items-center gap-xxs font-sans text-[11px] text-body">
-                        <input type="checkbox" wire:model.blur="serviciosCercanos.{{ $indice }}.esPublico"> Público
-                    </label>
-                    <input type="number" step="0.01" min="0" placeholder="Distancia" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaValor" class="w-[120px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                    <select wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaUnidad" class="w-[90px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                        <option value="m">m</option>
-                        <option value="km">km</option>
-                    </select>
-                    <button type="button" wire:click="quitarServicio({{ $indice }})" class="font-sans text-[11px] text-error underline">Quitar</button>
-                </div>
-                @error('serviciosCercanos.'.$indice.'.nombre')
-                    <p class="font-sans text-[11px] text-error">{{ $message }}</p>
-                @enderror
+                <fieldset wire:key="servicio-{{ $indice }}" class="rounded-md border border-hairline p-md">
+                    <legend class="px-xxs text-body-sm font-semibold text-ink">Institución {{ $indice + 1 }}</legend>
+                    <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                        <x-ui.field id="serviciosCercanos.{{ $indice }}.nombre" label="Nombre" class="sm:col-span-2">
+                            <x-ui.input wire:model.blur="serviciosCercanos.{{ $indice }}.nombre" />
+                        </x-ui.field>
+                        <x-ui.field id="serviciosCercanos.{{ $indice }}.tipo" label="Tipo">
+                            <x-ui.select wire:model.blur="serviciosCercanos.{{ $indice }}.tipo">
+                                <option value="salud">Salud</option>
+                                <option value="emergencia">Emergencia</option>
+                            </x-ui.select>
+                        </x-ui.field>
+                        <x-ui.field id="serviciosCercanos.{{ $indice }}.distanciaValor" label="Distancia" optional>
+                            <div class="flex gap-xs">
+                                <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaValor" />
+                                <x-ui.select id="serviciosCercanos.{{ $indice }}.distanciaUnidad" aria-label="Unidad de distancia" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaUnidad" class="w-24">
+                                    <option value="m">m</option>
+                                    <option value="km">km</option>
+                                </x-ui.select>
+                            </div>
+                        </x-ui.field>
+                        <x-ui.checkbox id="serviciosCercanos.{{ $indice }}.esPublico" wire:model.blur="serviciosCercanos.{{ $indice }}.esPublico">Institución pública</x-ui.checkbox>
+                    </div>
+                    <button type="button" wire:click="quitarServicio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink underline underline-offset-4 hover:no-underline">
+                        <x-ui.icon nombre="x-mark" class="h-5 w-5" />
+                        Quitar<span class="sr-only"> institución {{ $indice + 1 }}</span>
+                    </button>
+                </fieldset>
             @endforeach
-            <button type="button" wire:click="agregarServicio" class="font-sans text-[11px] text-primary underline">Agregar institución</button>
-        </fieldset>
+            <x-ui.button-secondary type="button" wire:click="agregarServicio">
+                <x-ui.icon nombre="plus" class="h-5 w-5" />
+                Agregar institución
+            </x-ui.button-secondary>
+        </x-ui.section>
 
-        <fieldset class="space-y-sm">
-            <legend class="font-sans text-body-sm font-medium text-ink mb-xxs">Estudios que el inmueble ya imparte</legend>
+        <x-ui.section title="Estudios que el inmueble ya imparte">
             @foreach ($estudiosActuales as $indice => $estudio)
-                <div class="flex flex-wrap items-end gap-xs">
-                    <select wire:model.blur="estudiosActuales.{{ $indice }}.nivelEducativoId" class="w-[190px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                        <option value="">Otro (especificar)</option>
-                        @foreach ($niveles as $nivel)
-                            <option value="{{ $nivel->id }}">{{ $nivel->nombre }}</option>
-                        @endforeach
-                    </select>
-                    <input type="text" placeholder="Especificar otro" wire:model.blur="estudiosActuales.{{ $indice }}.otroNivelTexto" class="flex-1 min-w-[180px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                    <input type="number" min="0" placeholder="Alumnos" wire:model.blur="estudiosActuales.{{ $indice }}.numeroAlumnos" class="w-[120px] h-[38px] px-[13px] rounded-md border-[0.5px] border-hairline font-sans text-body-sm text-ink bg-canvas">
-                    <button type="button" wire:click="quitarEstudio({{ $indice }})" class="font-sans text-[11px] text-error underline">Quitar</button>
-                </div>
-                @error('estudiosActuales.'.$indice.'.numeroAlumnos')
-                    <p class="font-sans text-[11px] text-error">{{ $message }}</p>
-                @enderror
+                <fieldset wire:key="estudio-{{ $indice }}" class="rounded-md border border-hairline p-md">
+                    <legend class="px-xxs text-body-sm font-semibold text-ink">Estudio {{ $indice + 1 }}</legend>
+                    <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                        <x-ui.field id="estudiosActuales.{{ $indice }}.nivelEducativoId" label="Nivel">
+                            <x-ui.select wire:model.blur="estudiosActuales.{{ $indice }}.nivelEducativoId">
+                                <option value="">Otro (especificar)</option>
+                                @foreach ($niveles as $nivel)
+                                    <option value="{{ $nivel->id }}">{{ $nivel->nombre }}</option>
+                                @endforeach
+                            </x-ui.select>
+                        </x-ui.field>
+                        <x-ui.field id="estudiosActuales.{{ $indice }}.otroNivelTexto" label="Otro nivel" optional>
+                            <x-ui.input wire:model.blur="estudiosActuales.{{ $indice }}.otroNivelTexto" />
+                        </x-ui.field>
+                        <x-ui.field id="estudiosActuales.{{ $indice }}.numeroAlumnos" label="Número de alumnos">
+                            <x-ui.input type="number" inputmode="numeric" min="0" wire:model.blur="estudiosActuales.{{ $indice }}.numeroAlumnos" />
+                        </x-ui.field>
+                    </div>
+                    <button type="button" wire:click="quitarEstudio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink underline underline-offset-4 hover:no-underline">
+                        <x-ui.icon nombre="x-mark" class="h-5 w-5" />
+                        Quitar<span class="sr-only"> estudio {{ $indice + 1 }}</span>
+                    </button>
+                </fieldset>
             @endforeach
-            <button type="button" wire:click="agregarEstudio" class="font-sans text-[11px] text-primary underline">Agregar estudio</button>
-        </fieldset>
+            <x-ui.button-secondary type="button" wire:click="agregarEstudio">
+                <x-ui.icon nombre="plus" class="h-5 w-5" />
+                Agregar estudio
+            </x-ui.button-secondary>
+        </x-ui.section>
 
-        <x-ui.button-primary type="submit">Guardar y continuar</x-ui.button-primary>
+        <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
     </form>
 </div>

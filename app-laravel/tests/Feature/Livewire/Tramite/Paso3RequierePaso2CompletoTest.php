@@ -36,9 +36,11 @@ class Paso3RequierePaso2CompletoTest extends TestCase
      *
      * @return array<string, array{string}>
      */
-    public static function rutasPaso3(): array
+    public static function rutasConCompuerta(): array
     {
-        return array_combine(self::RUTAS_PASO3, array_map(fn ($r) => [$r], self::RUTAS_PASO3));
+        $rutas = array_values(array_diff(self::RUTAS_PASO3, ['tramite.paso3-proximos-pasos']));
+
+        return array_combine($rutas, array_map(fn ($r) => [$r], $rutas));
     }
 
     /** Una página nueva de Paso 3 que no se agregue a la lista (y a la compuerta) hace fallar este test. */
@@ -52,7 +54,7 @@ class Paso3RequierePaso2CompletoTest extends TestCase
         $this->assertEqualsCanonicalizing($delRouter, self::RUTAS_PASO3);
     }
 
-    #[DataProvider('rutasPaso3')]
+    #[DataProvider('rutasConCompuerta')]
     public function test_paso3_redirige_a_paso2_si_paso2_esta_incompleto(string $ruta): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -69,6 +71,26 @@ class Paso3RequierePaso2CompletoTest extends TestCase
         $response = $this->actingAs($solicitante->user)->get(route($ruta, ['escuelaNivel' => $escuelaNivel->id]));
 
         $response->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+        $this->assertDatabaseCount('escuela_nivel_pasos', 0);
+    }
+
+    /** Próximos pasos ya no es una página: lleva al resumen, que muestra por qué está bloqueado (D12). */
+    public function test_proximos_pasos_redirige_al_resumen_aun_con_paso2_incompleto(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'preescolar')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        $this->actingAs($solicitante->user)
+            ->get(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]))
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
         $this->assertDatabaseCount('escuela_nivel_pasos', 0);
     }
 }

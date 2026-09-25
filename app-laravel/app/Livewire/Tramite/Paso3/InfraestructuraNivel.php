@@ -8,6 +8,7 @@ use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
+use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
@@ -286,6 +287,7 @@ class InfraestructuraNivel extends Component
     public function render()
     {
         return view('livewire.tramite.paso3.infraestructura-nivel', [
+            'encabezado' => ResumenTramite::encabezado('infraestructura', $this->escuelaNivel->nivelEducativo),
             'tipos' => $this->tiposAplicables(),
             'categorias' => $this->categoriasSanitarios(),
             'materiales' => $this->materialesDisponibles(),

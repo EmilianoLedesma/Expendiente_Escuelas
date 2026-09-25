@@ -122,7 +122,9 @@ class MobiliarioNivel extends Component
 
     public function render()
     {
-        return view('livewire.tramite.paso3.mobiliario-nivel', ['grupos' => $this->grupos()])
-            ->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => 'mobiliario']);
+        return view('livewire.tramite.paso3.mobiliario-nivel', [
+            'encabezado' => ResumenTramite::encabezado('mobiliario', $this->escuelaNivel->nivelEducativo),
+            'grupos' => $this->grupos(),
+        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => 'mobiliario']);
     }
 }
