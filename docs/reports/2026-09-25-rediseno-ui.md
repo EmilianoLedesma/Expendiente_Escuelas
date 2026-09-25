@@ -37,8 +37,8 @@ hace falta para el punto 4 (aserciones que cambiaron) y el punto 6 (pendientes).
 | 7 — Paso 3 (Inmueble, Infraestructura, Mobiliario, próximos pasos) | `bce150b..9d9b7bf` |
 | B3 — Pulido de tono (status-tag, tabla, h1, domicilio) | `9d9b7bf..f8ec914` |
 | 8 — Páginas de autenticación sobre el shell de invitado | `f8ec914..a6fd485` |
-| 9 — Eliminación de `<x-tramite.progreso>` (reemplazado por Recorrido) | `a6fd485..c6ad59b` |
-| 10 — Este reporte + corrección de accesibilidad en Mobiliario | *pendiente de commit* (ver §7) |
+| 9 — Eliminación de `x-ui.text-input` (componente muerto) | `a6fd485..c6ad59b` |
+| 10 — Este reporte + corrección de accesibilidad en Mobiliario | `d55a327`, `a2aa55c`; ronda de corrección `4caab11`, `b01da7c` |
 
 Base de la rama: `a1e2df3` (429 tests). Estado al cierre de la Tarea 9: `c6ad59b`, 514/514.
 
@@ -69,7 +69,7 @@ eligió la **Dirección B** (`B-recorrido.html`), que reemplazó la spec §3 e i
 
 | Ítem | Resuelto en | Descripción |
 |---|---|---|
-| B1 | `9c2afa3` | Identidad del trámite: nombre de la escuela, fecha de inicio, "Trámite Nº…", barra de avance en el eyebrow/encabezado. |
+| B1 | `9c2afa3` | Identidad del trámite: nombre de la escuela, fecha de inicio, "Trámite Nº…" y barra de avance, todo en la tarjeta de identidad de la barra lateral (y en la tabla de "Mis trámites"); el eyebrow de los pasos solo cambia su formato ("{Grupo} · Paso X de N"). |
 | B2 | `0f6436f`/`4101b9c` | Shell de dos columnas, barra lateral "Recorrido" (identidad + navegación de secciones, `<details>` en móvil), tabla "Mis trámites" rediseñada, workspace del hub; se retira el widget "Progreso" antiguo antes de lo previsto (Tarea 9 original). |
 | B3 | `f8ec914` | Pulido pedido tras revisar la vista previa de B2: etiqueta de estado más discreta, tabla más silenciosa, `h1` del hub = nombre de la escuela, se retira el recuadro verde, se recorta el domicilio (arreglo de un bug de `', '` colgante en `calle`/`colonia`/`municipio`). El código postal quedó con el mismo bug sin corregir en B3 (`Task B3: minor (deferred)` en el ledger) —
 corregido en esta misma tarea, ver §8. |
@@ -103,8 +103,10 @@ widget de progreso (cubierto ahora por `ResumenTramiteTest`); `Paso3OrdenSubPaso
 
 El componente `<x-tramite.progreso>` fue reemplazado por `<x-tramite.recorrido>` (barra lateral con
 identidad + lista de secciones). Cada una de las 8 aserciones de `ProgresoTest` sobre el widget de
-puntos de progreso queda cubierta por `ComponentesTramiteTest`/`RecorridoTest` (estados
-completado/actual/bloqueado/no-disponible) y por `ResumenTramiteTest` (origen de los datos).
+puntos de progreso queda cubierta por `ComponentesTramiteTest` (estados
+completado/actual/bloqueado/no-disponible del Recorrido), `ResumenTramitePaginaTest` (el Recorrido se
+muestra sin Livewire antes del contenido) y `ShellTest` (no se muestra en "Mis trámites"); el origen de
+los datos queda en `ResumenTramiteTest`.
 
 ### 4.4 Corrección de la Tarea 10 (este pase)
 
@@ -226,7 +228,12 @@ Verificaciones transversales (grep sobre `resources/views`, todas las vistas red
    estándar de Windows, y esta máquina no tiene Chrome instalado (solo Microsoft Edge, que las
    herramientas no aceptan como destino). El servidor se detuvo y `.env.browsercheck` se eliminó sin
    dejar rastro (nunca estuvo en `git status` como *tracked*; solo apareció como `??` y se borró antes
-   de cualquier commit). Queda pendiente repetir este paso desde una máquina con Chrome disponible.
+   de cualquier commit). La revisión final de la rama (I2) señaló que RF8/RF9 no tienen otra cobertura
+   automatizada. **Dispensa del propietario (2026-09-25):** el pase manual de accesibilidad (recorrido
+   solo con teclado, verificación a 375 px, foco no obstruido por la barra de acciones fija = RF8,
+   navegación única expuesta = RF9, y auditoría Lighthouse) queda **explícitamente dispensado para esta
+   fusión**; no se ejecutó. Sigue como pendiente de seguimiento: repetirlo desde una máquina con Chrome, o
+   apuntando `chrome-devtools-mcp` a Edge con `--executablePath`.
 4. **Mensajes de validación en inglés (`APP_LOCALE=en`).** El `.env` del proyecto (y el `.env.example`)
    configura `APP_LOCALE=en`, así que los mensajes de validación de Laravel que no están sobrescritos
    explícitamente en español (la mayoría de textos de la UI sí lo están, a mano, en cada Blade) salen en
