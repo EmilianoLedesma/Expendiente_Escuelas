@@ -10,3 +10,13 @@ parameters:
 		- app
 		- tests/Architecture
 	tmpDir: storage/phpstan
+
+services:
+	-
+		class: Tests\Architecture\DomainBoundaryTest
+		tags:
+			- phpat.test
+	-
+		class: Tests\Architecture\PresentationBoundaryTest
+		tags:
+			- phpat.test

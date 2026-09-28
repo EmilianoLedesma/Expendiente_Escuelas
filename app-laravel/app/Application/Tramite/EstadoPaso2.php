@@ -4,7 +4,7 @@ namespace App\Application\Tramite;
 
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
-use App\Models\ResponsableLegal;
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 
 /**
  * Única fuente de verdad para "¿Paso 2 está completo?" (responsable legal +
@@ -22,6 +22,7 @@ class EstadoPaso2
     public function __construct(
         private readonly DocumentosCompletos $documentosCompletos,
         private readonly ValidarVigenciaDocumentos $validarVigencia,
+        private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
     ) {}
 
     public function responsableCapturado(int $escuelaId): bool
@@ -62,6 +63,6 @@ class EstadoPaso2
 
     private function tipoPersona(int $escuelaId): ?string
     {
-        return ResponsableLegal::where('escuela_id', $escuelaId)->value('tipo_persona');
+        return $this->tipoPersonaDeEscuela->ejecutar($escuelaId);
     }
 }

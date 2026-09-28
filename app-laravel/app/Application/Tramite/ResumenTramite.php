@@ -3,6 +3,7 @@
 namespace App\Application\Tramite;
 
 use App\Application\Documentos\DocumentosCompletos;
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\DTO\NivelDelTramite;
 use App\Application\Tramite\DTO\ResumenTramiteDTO;
 use App\Application\Tramite\DTO\SeccionTramite;
@@ -10,7 +11,6 @@ use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
-use App\Models\ResponsableLegal;
 use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +64,7 @@ class ResumenTramite
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
         private readonly DocumentosCompletos $documentosCompletos,
+        private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
     ) {}
 
     public function paraEscuela(int $escuelaId): ResumenTramiteDTO
@@ -172,7 +173,7 @@ class ResumenTramite
     /** @return array<int, SeccionTramite> */
     private function generales(Escuela $escuela, ?string $etapaFaltante): array
     {
-        $tipoPersona = ResponsableLegal::where('escuela_id', $escuela->id)->value('tipo_persona');
+        $tipoPersona = $this->tipoPersonaDeEscuela->ejecutar($escuela->id);
         $rutaPaso2 = route('tramite.paso2', ['escuela' => $escuela->id]);
 
         return [

@@ -2,39 +2,34 @@
 
 namespace App\Application\Documentos;
 
-use App\Models\DocumentoEscuela;
-use App\Models\DocumentoPlantel;
-use App\Models\Escuela;
-use App\Models\ResponsableLegal;
-use App\Models\TipoDocumento;
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 
 /**
  * Consulta de lectura para la descarga de un documento de Paso 2.2: devuelve
- * la ruta del archivo capturado, o null si la clave no aplica al tipo_persona
- * de la escuela (lista de DocumentosCompletos::clavesAplicables, única fuente),
- * si aún no hay responsable legal, o si el documento no está capturado.
- * La propiedad de la escuela ya la decidió la Policy antes de llegar aquí.
+ * la ruta del archivo capturado, o null si no hay responsable legal, si la
+ * clave no aplica al tipo_persona de la escuela, o si el documento no está
+ * capturado. La propiedad de la escuela ya la decidió la Policy antes de
+ * llegar aquí. Delega la resolución de tipo_persona y la búsqueda del
+ * documento en TipoPersonaDeEscuela/DocumentosCapturados — única fuente de
+ * cada pregunta, compartida con Paso2Documentos (ADR-006).
  */
 class ObtenerDocumentoCapturado
 {
-    public function __construct(private readonly DocumentosCompletos $documentosCompletos) {}
+    public function __construct(
+        private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
+        private readonly DocumentosCapturados $documentosCapturados,
+    ) {}
 
     public function ejecutar(int $escuelaId, string $clave): ?string
     {
-        $tipoPersona = ResponsableLegal::where('escuela_id', $escuelaId)->value('tipo_persona');
+        $tipoPersona = $this->tipoPersonaDeEscuela->ejecutar($escuelaId);
 
-        if ($tipoPersona === null || ! in_array($clave, $this->documentosCompletos->clavesAplicables($tipoPersona), true)) {
+        if ($tipoPersona === null) {
             return null;
         }
 
-        $tipo = TipoDocumento::where('clave', $clave)->first();
+        $capturados = $this->documentosCapturados->paraEscuela($escuelaId, $tipoPersona);
 
-        if ($tipo === null) {
-            return null;
-        }
-
-        return $tipo->ambito === 'plantel'
-            ? DocumentoPlantel::where('plantel_id', Escuela::whereKey($escuelaId)->value('plantel_id'))->where('tipo_documento_id', $tipo->id)->value('archivo_path')
-            : DocumentoEscuela::where('escuela_id', $escuelaId)->where('tipo_documento_id', $tipo->id)->value('archivo_path');
+        return $capturados[$clave]['archivoPath'] ?? null;
     }
 }
