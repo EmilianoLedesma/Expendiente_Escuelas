@@ -2,22 +2,20 @@
 
 namespace App\Livewire\Tramite;
 
+use App\Application\Documentos\DocumentosCapturados as DocumentosCapturadosQuery;
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
-use App\Models\DocumentoEscuela;
-use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
-use App\Models\ResponsableLegal;
-use App\Models\TipoDocumento;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -219,33 +217,11 @@ class Paso2Documentos extends Component
      * dispatch por ambito igual que RegistrarDocumento::ejecutar() en la
      * escritura.
      *
-     * @return Collection<string, array{nombreArchivo: string, subidoEn: Carbon}>
+     * @return Collection<string, array{archivoPath: string, nombreArchivo: string, subidoEn: Carbon}>
      */
-    public function documentosCapturados(DocumentosCompletos $documentosCompletos): Collection
+    public function documentosCapturados(DocumentosCapturadosQuery $documentosCapturados): Collection
     {
-        $claves = $documentosCompletos->clavesAplicables($this->tipoPersona());
-        $tipos = TipoDocumento::whereIn('clave', $claves)->get()->keyBy('clave');
-
-        $capturados = collect();
-
-        foreach ($claves as $clave) {
-            $tipo = $tipos[$clave];
-
-            $documento = $tipo->ambito === 'plantel'
-                ? DocumentoPlantel::where('plantel_id', $this->escuela->plantel_id)->where('tipo_documento_id', $tipo->id)->first()
-                : DocumentoEscuela::where('escuela_id', $this->escuela->id)->where('tipo_documento_id', $tipo->id)->first();
-
-            if ($documento === null) {
-                continue;
-            }
-
-            $capturados[$clave] = [
-                'nombreArchivo' => basename((string) $documento->archivo_path),
-                'subidoEn' => $documento->updated_at,
-            ];
-        }
-
-        return $capturados;
+        return $documentosCapturados->paraEscuela($this->escuela->id, $this->tipoPersona());
     }
 
     private function avanzar(DocumentosCompletos $documentosCompletos): void
@@ -270,13 +246,14 @@ class Paso2Documentos extends Component
 
     private function tipoPersona(): string
     {
-        return ResponsableLegal::where('escuela_id', $this->escuela->id)->firstOrFail()->tipo_persona;
+        return app(TipoPersonaDeEscuela::class)->ejecutar($this->escuela->id)
+            ?? throw new \RuntimeException("Escuela {$this->escuela->id} no tiene responsable legal — mount() debió redirigir antes de llegar aquí.");
     }
 
-    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia)
+    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, DocumentosCapturadosQuery $documentosCapturados)
     {
         $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
-        $capturados = $this->documentosCapturados($documentosCompletos);
+        $capturados = $this->documentosCapturados($documentosCapturados);
 
         return view('livewire.tramite.paso2-documentos', [
             'clavesAplicables' => $clavesAplicables,
