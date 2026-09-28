@@ -27,7 +27,7 @@ class DocumentosCompletosTest extends TestCase
         return Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
     }
 
-    public function test_claves_aplicables_para_fisica_incluye_acta_nacimiento_no_escritura_poder(): void
+    public function test_claves_aplicables_para_fisica_incluye_las_de_ambas_y_fisica(): void
     {
         (new TiposDocumentosSeeder)->run();
 
@@ -35,17 +35,52 @@ class DocumentosCompletosTest extends TestCase
 
         $this->assertContains('acta_nacimiento', $claves);
         $this->assertNotContains('escritura_poder_facultades', $claves);
-        $this->assertCount(6, $claves);
+        $this->assertNotContains('acta_constitutiva', $claves);
+        $this->assertNotContains('poder_gestor', $claves);
+        // 13 filas totales: 10 son aplica_persona='ambas' (aplican siempre),
+        // 2 son 'moral' (no aplican a fisica), 1 es 'fisica_con_gestor' (no
+        // aplica a fisica). 10 + 0 + 0 = 10.
+        $this->assertCount(10, $claves);
     }
 
-    public function test_claves_aplicables_para_moral_incluye_escritura_poder_no_acta_nacimiento(): void
+    public function test_claves_aplicables_para_moral_incluye_acta_constitutiva_y_escritura_poder(): void
     {
         (new TiposDocumentosSeeder)->run();
 
         $claves = (new DocumentosCompletos)->clavesAplicables('moral');
 
+        $this->assertContains('acta_constitutiva', $claves);
         $this->assertContains('escritura_poder_facultades', $claves);
-        $this->assertNotContains('acta_nacimiento', $claves);
+        $this->assertContains('acta_nacimiento', $claves);
+        $this->assertNotContains('poder_gestor', $claves);
+        // 10 'ambas' + 2 'moral' propias (escritura_poder_facultades, acta_constitutiva) = 12.
+        $this->assertCount(12, $claves);
+    }
+
+    public function test_claves_aplicables_para_fisica_con_gestor_incluye_poder_gestor(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+
+        $claves = (new DocumentosCompletos)->clavesAplicables('fisica_con_gestor');
+
+        $this->assertContains('poder_gestor', $claves);
+        $this->assertNotContains('escritura_poder_facultades', $claves);
+        $this->assertNotContains('acta_constitutiva', $claves);
+        // 10 'ambas' + 1 'fisica_con_gestor' propia (poder_gestor) = 11.
+        $this->assertCount(11, $claves);
+    }
+
+    public function test_el_orden_de_los_7_documentos_originales_no_cambia(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+
+        $claves = (new DocumentosCompletos)->clavesAplicables('fisica');
+        $primerosSiete = array_slice($claves, 0, 6);
+
+        $this->assertSame(
+            ['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'],
+            $primerosSiete,
+        );
     }
 
     public function test_para_escuela_falso_sin_ningun_documento(): void
@@ -54,10 +89,10 @@ class DocumentosCompletosTest extends TestCase
         $escuela = $this->crearEscuela();
 
         $this->assertFalse((new DocumentosCompletos)->paraEscuela($escuela->id, 'fisica'));
-        $this->assertCount(6, (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
+        $this->assertCount(10, (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
     }
 
-    public function test_para_escuela_verdadero_cuando_los_6_estan_registrados(): void
+    public function test_para_escuela_verdadero_cuando_los_10_estan_registrados(): void
     {
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
@@ -66,7 +101,7 @@ class DocumentosCompletosTest extends TestCase
         ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
         $registrar = new RegistrarDocumento;
 
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach ((new DocumentosCompletos)->clavesAplicables('fisica') as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
 
@@ -75,19 +110,17 @@ class DocumentosCompletosTest extends TestCase
     }
 
     /**
-     * Defecto real encontrado en dev: tipos_documentos vacío (seeder nunca
-     * corrido ahí) producía "Undefined array key" — un crash opaco en vez de
-     * un error diagnosticable. clavesPendientes() no debe asumir que el
-     * catálogo está completo.
+     * WS-5a: clavesAplicables() ahora deriva de tipos_documentos, así que ya
+     * no puede devolver una clave ausente del catálogo (antes era un array
+     * fijo que sí podía desincronizarse de un catálogo vacío/parcial). Con
+     * catálogo vacío, clavesAplicables() devuelve [] y clavesPendientes() no
+     * tiene nada que revisar — ya no hay "Undefined array key" que evitar.
      */
-    public function test_clave_sin_fila_en_el_catalogo_lanza_un_error_diagnosticable_en_vez_de_undefined_array_key(): void
+    public function test_catalogo_vacio_no_produce_pendientes_ni_error(): void
     {
         // Deliberadamente sin TiposDocumentosSeeder: catálogo vacío.
         $escuela = $this->crearEscuela();
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('ine');
-
-        (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica');
+        $this->assertSame([], (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
     }
 }

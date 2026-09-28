@@ -17,19 +17,27 @@ use RuntimeException;
  */
 class DocumentosCompletos
 {
-    /** @return list<string> */
+    /**
+     * Catálogo-driven desde WS-5a: antes de esto era un array fijo de 6
+     * claves; ahora es tipos_documentos, filtrado por aplica_persona y
+     * limitado a los ámbitos de Paso 2.2 (plantel/escuela — los ámbitos
+     * escuela_nivel de Paso 2.4 llegan en un sub-plan futuro y tienen su
+     * propio método). Ordenado por id = orden de inserción del seeder, para
+     * no reordenar el checklist que ya renderiza en un orden dado.
+     *
+     * @return list<string>
+     */
     public function clavesAplicables(string $tipoPersona): array
     {
-        $identidad = $tipoPersona === 'moral' ? 'escritura_poder_facultades' : 'acta_nacimiento';
-
-        return [
-            'ine',
-            $identidad,
-            'escritura_inmueble',
-            'dictamen_uso_suelo',
-            'constancia_seguridad_estructural',
-            'formato_solicitud',
-        ];
+        return TipoDocumento::query()
+            ->whereIn('ambito', ['plantel', 'escuela'])
+            ->where(function ($query) use ($tipoPersona) {
+                $query->where('aplica_persona', 'ambas')
+                    ->orWhere('aplica_persona', $tipoPersona);
+            })
+            ->orderBy('id')
+            ->pluck('clave')
+            ->all();
     }
 
     /** @return list<string> */
