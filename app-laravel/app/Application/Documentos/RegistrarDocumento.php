@@ -5,6 +5,7 @@ namespace App\Application\Documentos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
@@ -12,7 +13,6 @@ use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
-use App\Models\ResponsableLegal;
 use App\Models\TipoDocumento;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +30,7 @@ class RegistrarDocumento
         private readonly ?AlmacenDocumentos $almacen = null,
         private readonly ?DocumentosCompletos $documentosCompletos = null,
         private readonly ?EstadoPaso2 $estadoPaso2 = null,
+        private readonly ?TipoPersonaDeEscuela $tipoPersonaDeEscuela = null,
     ) {}
 
     /** @throws PrecondicionIncumplida si no hay responsable legal capturado para la escuela. */
@@ -49,7 +50,8 @@ class RegistrarDocumento
             throw new PrecondicionIncumplida(EstadoPaso2::RESPONSABLE, 'Captura el responsable legal (Paso 2) antes de subir documentos.');
         }
 
-        $tipoPersona = ResponsableLegal::where('escuela_id', $escuelaId)->value('tipo_persona');
+        $tipoPersonaDeEscuela = $this->tipoPersonaDeEscuela ?? app(TipoPersonaDeEscuela::class);
+        $tipoPersona = $tipoPersonaDeEscuela->ejecutar($escuelaId);
         $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);
 
         if (! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {

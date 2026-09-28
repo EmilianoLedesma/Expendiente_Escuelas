@@ -10,8 +10,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Única fuente de "¿qué documentos de Paso 2.2 ya capturó esta escuela?".
- * Antes había dos implementaciones independientes de la misma pregunta:
+ * Fuente de qué documentos ya capturó una escuela para las pantallas de
+ * Paso 2.2 (checklist y descarga). No reemplaza
+ * DocumentosCompletos::clavesPendientes(), que es la que realmente decide
+ * si el paso está completo (usada por avanzar()) — las dos consultas
+ * divergen hoy en cómo tratan el ambito y una fila de catálogo faltante;
+ * ver docs/reports/2026-09-28-ws4-frontera-lecturas.md.
+ *
+ * Antes había dos implementaciones independientes de esta pregunta:
  * Paso2Documentos::documentosCapturados() (para la pantalla) y
  * ObtenerDocumentoCapturado::ejecutar() (para la descarga), cada una con
  * su propia consulta escuela-vs-plantel por ambito — exactamente el

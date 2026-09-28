@@ -10,8 +10,10 @@ use PHPat\Test\PHPat;
 /**
  * Mechanical check for ADR-006 (docs/decisions/ADR-006-frontera-lecturas.md):
  * flow/permission/completeness reads live in app/Application, not in
- * presentation. Analyzed by PHPStan/PHPat, not run by PHPUnit — see
- * phpstan.neon's `paths`, same mechanism as DomainBoundaryTest.php.
+ * presentation. Analyzed by PHPStan/PHPat, not run by PHPUnit — discovered
+ * via the `services:`/`phpat.test` tag registration in phpstan.neon (not
+ * merely by being in `paths`, which only puts the file in PHPStan's
+ * analysis scope), same mechanism as DomainBoundaryTest.php.
  *
  * Deliberately narrow: this does NOT ban Eloquent model reads in Livewire/
  * View — ADR-006 keeps "purely display reads may stay in components"

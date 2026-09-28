@@ -38,9 +38,12 @@ avanzar?" vivía en un método de un componente Livewire, no en Application.
    sean de presentación pura, no porque violen el punto 1, sino porque el
    facade `DB` en un componente es la señal más barata de detectar
    mecánicamente de que "alguien está a punto de escribir una regla de
-   negocio directo en la vista" (ver `docs/reports/2026-09-28-ws4-frontera-lecturas.md`
-   para el historial: fue exactamente así como se coló la duplicación entre
-   `Paso2Documentos::documentosCapturados()` y `ObtenerDocumentoCapturado`).
+   negocio directo en la vista". (El ejemplo de duplicación consolidado en
+   la Tarea 3 —`Paso2Documentos`/`ObtenerDocumentoCapturado`— fue una
+   duplicación de Eloquent contra Eloquent, no un caso que esta regla del
+   facade `DB` hubiera detectado; se corrigió por revisión manual, no
+   mecánicamente. Ver `docs/reports/2026-09-28-ws4-frontera-lecturas.md`
+   para el historial completo.)
 
 4. **Ninguna lógica de persistencia vive en un closure de `routes/web.php`.**
    Ya aplicado en WS-1.5 (`DescargarDocumentoController`,
@@ -66,8 +69,12 @@ avanzar?" vivía en un método de un componente Livewire, no en Application.
   `App\Application\Infraestructura\CatalogosInfraestructura`.
 - `Paso2Documentos::documentosCapturados()` y `ObtenerDocumentoCapturado`
   —dos implementaciones independientes de "¿qué documentos ya capturó esta
-  escuela?"— se consolidaron en `App\Application\Documentos\DocumentosCapturados`.
-  El lookup de `tipo_persona`, duplicado en tres sitios, se consolidó en
+  escuela para el checklist/descarga de Paso 2.2?"— se consolidaron en
+  `App\Application\Documentos\DocumentosCapturados`. Esto no reemplaza
+  `DocumentosCompletos::clavesPendientes()`, que decide si Paso 2 está
+  completo (`avanzar()`) con una lógica distinta (ambito, fila de catálogo
+  faltante) — ver `docs/reports/2026-09-28-ws4-frontera-lecturas.md`.
+  El lookup de `tipo_persona`, duplicado en cinco sitios, se consolidó en
   `App\Application\ResponsableLegal\TipoPersonaDeEscuela`.
 - La regla NO prohíbe leer modelos Eloquent desde un componente Livewire
   para mostrar datos — solo prohíbe que esa lectura decida flujo/permiso, y

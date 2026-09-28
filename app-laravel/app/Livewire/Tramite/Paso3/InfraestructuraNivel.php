@@ -4,8 +4,8 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
-use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
 use App\Application\Infraestructura\CatalogosInfraestructura;
+use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
