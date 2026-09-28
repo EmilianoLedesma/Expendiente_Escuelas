@@ -5,6 +5,7 @@ namespace App\Livewire\Tramite\Paso3;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
+use App\Application\Infraestructura\CatalogosInfraestructura;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
@@ -15,7 +16,6 @@ use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
 use App\Models\TipoEspacio;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -167,12 +167,12 @@ class InfraestructuraNivel extends Component
 
     public function sanitariosCapturados(): Collection
     {
-        return DB::table('sanitarios')->where('plantel_id', $this->plantelId())->orderBy('categoria')->get();
+        return app(CatalogosInfraestructura::class)->sanitariosCapturados($this->plantelId());
     }
 
     public function materialesDisponibles(): Collection
     {
-        return DB::table('tipos_material_biblioteca')->orderBy('id')->get();
+        return app(CatalogosInfraestructura::class)->materialesBibliotecaDisponibles();
     }
 
     private function plantelId(): int
