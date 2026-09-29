@@ -139,16 +139,16 @@ class RegistrarDocumentoTest extends TestCase
     {
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
-        $escuela = $this->crearEscuela('moral'); // identidad aplicable es escritura_poder_facultades, no acta_nacimiento
+        $escuela = $this->crearEscuela('moral'); // poder_gestor solo aplica a fisica_con_gestor
 
         try {
-            (new RegistrarDocumento)->ejecutar($escuela->id, 'acta_nacimiento', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'poder_gestor', UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), new DatosDocumento);
             $this->fail('Se esperaba DatosInvalidos.');
         } catch (DatosInvalidos $e) {
             // Minor 5 — la clave 'clave' no corresponde a ningún campo Livewire;
             // "archivos.{clave}" es la misma ruta que usa el rechazo de PDF y sí
             // resuelve a un campo real del formulario.
-            $this->assertArrayHasKey('archivos.acta_nacimiento', $e->errores);
+            $this->assertArrayHasKey('archivos.poder_gestor', $e->errores);
         }
 
         $this->assertDatabaseCount('documentos_escuela', 0);

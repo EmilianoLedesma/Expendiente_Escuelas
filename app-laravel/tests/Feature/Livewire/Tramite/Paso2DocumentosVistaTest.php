@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
@@ -47,7 +48,7 @@ class Paso2DocumentosVistaTest extends TestCase
             ->assertOk()
             ->assertSee('Datos generales · Paso 3 de 4')
             ->assertSee('href="'.route('tramite.resumen', ['escuela' => $escuela->id]).'"', false)
-            ->assertSee('0 de 6 documentos completos')
+            ->assertSee('0 de '.count(app(DocumentosCompletos::class)->clavesAplicables('fisica')).' documentos completos')
             ->assertSee('for="archivos.ine"', false)
             ->assertSee('id="archivos.ine"', false)
             ->assertSee('wire:target="archivos.ine"', false)
@@ -71,7 +72,7 @@ class Paso2DocumentosVistaTest extends TestCase
     public function test_un_dictamen_vencido_se_marca_en_su_fila_y_en_una_alerta(): void
     {
         $escuela = $this->escuelaConResponsable();
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $this->subir($escuela, $clave);
         }
         $this->subir($escuela, 'dictamen_uso_suelo', new DatosDocumento(fechaEmision: now()->subDays(60)->toDateString()));

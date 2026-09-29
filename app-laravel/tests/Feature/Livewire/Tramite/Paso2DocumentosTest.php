@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
@@ -48,8 +49,10 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
 
+        $total = count(app(DocumentosCompletos::class)->clavesAplicables('fisica'));
+
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSee('0 de 6 documentos completos');
+            ->assertSee("0 de {$total} documentos completos");
 
         $registrar = new RegistrarDocumento;
         foreach (['ine', 'acta_nacimiento', 'escritura_inmueble'] as $clave) {
@@ -57,7 +60,7 @@ class Paso2DocumentosTest extends TestCase
         }
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSee('3 de 6 documentos completos');
+            ->assertSee("3 de {$total} documentos completos");
     }
 
     public function test_una_seccion_ya_subida_se_muestra_de_solo_lectura_con_boton_reemplazar(): void
@@ -311,7 +314,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural'] as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['formato_solicitud']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
 
@@ -346,7 +349,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
@@ -365,7 +368,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
 
@@ -379,7 +382,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural'] as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'formato_solicitud']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
