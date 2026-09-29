@@ -39,8 +39,8 @@ class TiposDocumentosAplicaPersonaCheckTest extends TestCase
         ]);
     }
 
-    // D2: el seeder usa insertOrIgnore por clave, así que una BD ya sembrada
-    // conserva acta_nacimiento como 'fisica'; la migración la corrige.
+    // D2: el seeder usa insertOrIgnore por clave, asÃ­ que una BD ya sembrada
+    // conserva acta_nacimiento como 'fisica'; la migraciÃ³n la corrige.
     public function test_la_migracion_corrige_acta_nacimiento_a_ambas_en_una_bd_ya_sembrada(): void
     {
         DB::table('tipos_documentos')->insert([

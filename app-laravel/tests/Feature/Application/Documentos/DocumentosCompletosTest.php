@@ -111,13 +111,13 @@ class DocumentosCompletosTest extends TestCase
     }
 
     /**
-     * WS-5a: clavesAplicables() deriva de tipos_documentos. Un catálogo vacío
+     * WS-5a: clavesAplicables() deriva de tipos_documentos. Un catÃ¡logo vacÃ­o
      * (seeder sin correr) no debe dejar pasar la compuerta de Paso 2 con
-     * "cero documentos aplicables = completo": falla con un diagnóstico.
+     * "cero documentos aplicables = completo": falla con un diagnÃ³stico.
      */
     public function test_catalogo_vacio_lanza_runtime_exception_con_diagnostico(): void
     {
-        // Deliberadamente sin TiposDocumentosSeeder: catálogo vacío.
+        // Deliberadamente sin TiposDocumentosSeeder: catÃ¡logo vacÃ­o.
         $escuela = $this->crearEscuela();
 
         $this->expectException(RuntimeException::class);
