@@ -13,6 +13,7 @@ use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class DocumentosCompletosTest extends TestCase
@@ -110,17 +111,18 @@ class DocumentosCompletosTest extends TestCase
     }
 
     /**
-     * WS-5a: clavesAplicables() ahora deriva de tipos_documentos, así que ya
-     * no puede devolver una clave ausente del catálogo (antes era un array
-     * fijo que sí podía desincronizarse de un catálogo vacío/parcial). Con
-     * catálogo vacío, clavesAplicables() devuelve [] y clavesPendientes() no
-     * tiene nada que revisar — ya no hay "Undefined array key" que evitar.
+     * WS-5a: clavesAplicables() deriva de tipos_documentos. Un cat�logo vac�o
+     * (seeder sin correr) no debe dejar pasar la compuerta de Paso 2 con
+     * "cero documentos aplicables = completo": falla con un diagn�stico.
      */
-    public function test_catalogo_vacio_no_produce_pendientes_ni_error(): void
+    public function test_catalogo_vacio_lanza_runtime_exception_con_diagnostico(): void
     {
-        // Deliberadamente sin TiposDocumentosSeeder: catálogo vacío.
+        // Deliberadamente sin TiposDocumentosSeeder: cat�logo vac�o.
         $escuela = $this->crearEscuela();
 
-        $this->assertSame([], (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('TiposDocumentosSeeder');
+
+        (new DocumentosCompletos)->paraEscuela($escuela->id, 'fisica');
     }
 }

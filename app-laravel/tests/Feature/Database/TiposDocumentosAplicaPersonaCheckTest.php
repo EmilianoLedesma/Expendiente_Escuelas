@@ -38,4 +38,22 @@ class TiposDocumentosAplicaPersonaCheckTest extends TestCase
             'updated_at' => now(),
         ]);
     }
+
+    // D2: el seeder usa insertOrIgnore por clave, así que una BD ya sembrada
+    // conserva acta_nacimiento como 'fisica'; la migración la corrige.
+    public function test_la_migracion_corrige_acta_nacimiento_a_ambas_en_una_bd_ya_sembrada(): void
+    {
+        DB::table('tipos_documentos')->insert([
+            'clave' => 'acta_nacimiento',
+            'nombre' => 'Acta de nacimiento',
+            'aplica_persona' => 'fisica',
+            'ambito' => 'escuela',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        (require database_path('migrations/2026_01_02_000002_add_fisica_con_gestor_to_tipos_documentos_check.php'))->up();
+
+        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'acta_nacimiento', 'aplica_persona' => 'ambas']);
+    }
 }

@@ -15,10 +15,16 @@ return new class extends Migration
     {
         DB::statement('ALTER TABLE tipos_documentos DROP CONSTRAINT IF EXISTS tipos_documentos_aplica_persona_check');
         DB::statement("ALTER TABLE tipos_documentos ADD CONSTRAINT tipos_documentos_aplica_persona_check CHECK (aplica_persona IN ('fisica', 'moral', 'ambas', 'fisica_con_gestor'))");
+
+        // D2: TiposDocumentosSeeder usa insertOrIgnore por clave, así que una BD ya
+        // sembrada conservaría acta_nacimiento como 'fisica'. No-op en BD nueva.
+        DB::table('tipos_documentos')->where('clave', 'acta_nacimiento')->update(['aplica_persona' => 'ambas']);
     }
 
     public function down(): void
     {
+        // Falla si ya existe alguna fila 'fisica_con_gestor' (Postgres revalida el
+        // CHECK viejo): para revertir, borra esas filas primero.
         DB::statement('ALTER TABLE tipos_documentos DROP CONSTRAINT IF EXISTS tipos_documentos_aplica_persona_check');
         DB::statement("ALTER TABLE tipos_documentos ADD CONSTRAINT tipos_documentos_aplica_persona_check CHECK (aplica_persona IN ('fisica', 'moral', 'ambas'))");
     }

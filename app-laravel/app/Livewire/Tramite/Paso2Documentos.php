@@ -66,7 +66,7 @@ class Paso2Documentos extends Component
             return;
         }
 
-        // Los 6 documentos existen: o una vigencia venció (se vuelve a pedir
+        // Los documentos aplicables existen: o una vigencia venció (se vuelve a pedir
         // ese documento) o el paso ya terminó y esto es back-navigation.
         $violaciones = $validarVigencia->ejecutar($escuela->id);
 
