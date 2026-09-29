@@ -66,7 +66,7 @@ class Paso2Documentos extends Component
             return;
         }
 
-        // Los 6 documentos existen: o una vigencia venció (se vuelve a pedir
+        // Los documentos aplicables existen: o una vigencia venció (se vuelve a pedir
         // ese documento) o el paso ya terminó y esto es back-navigation.
         $violaciones = $validarVigencia->ejecutar($escuela->id);
 
@@ -83,7 +83,11 @@ class Paso2Documentos extends Component
     {
         $simples = array_intersect(
             $documentosCompletos->clavesAplicables($this->tipoPersona()),
-            ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud'],
+            [
+                'ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud',
+                'acta_constitutiva', 'poder_gestor', 'visto_bueno_proteccion_civil',
+                'plano_inmueble', 'certificado_numero_oficial', 'recibo_pago_derechos_plantel',
+            ],
         );
         abort_unless(in_array($clave, $simples, true), 403);
 

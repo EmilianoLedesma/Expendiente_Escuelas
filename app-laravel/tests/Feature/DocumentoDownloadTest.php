@@ -90,17 +90,17 @@ class DocumentoDownloadTest extends TestCase
         // fila se inserta directo (simulando datos preexistentes/legacy) para
         // probar que la lectura (ObtenerDocumentoCapturado) igual la filtra,
         // como defensa en profundidad.
-        $tipo = TipoDocumento::where('clave', 'acta_nacimiento')->firstOrFail();
+        $tipo = TipoDocumento::where('clave', 'poder_gestor')->firstOrFail();
         DocumentoEscuela::create([
             'escuela_id' => $this->escuela->id,
             'tipo_documento_id' => $tipo->id,
-            'archivo_path' => 'escuela/'.$this->escuela->id.'/acta_nacimiento-legacy.pdf',
+            'archivo_path' => 'escuela/'.$this->escuela->id.'/poder_gestor-legacy.pdf',
             'estado_validacion' => 'pendiente',
         ]);
-        Storage::disk('documentos')->put('escuela/'.$this->escuela->id.'/acta_nacimiento-legacy.pdf', 'NO-APLICA');
+        Storage::disk('documentos')->put('escuela/'.$this->escuela->id.'/poder_gestor-legacy.pdf', 'NO-APLICA');
         $this->actingAs($this->solicitante->user);
 
-        $this->descargar('acta_nacimiento')->assertNotFound();
+        $this->descargar('poder_gestor')->assertNotFound();
     }
 
     public function test_404_si_la_clave_no_existe_en_el_catalogo(): void

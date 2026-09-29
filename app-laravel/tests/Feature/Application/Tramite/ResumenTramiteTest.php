@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Tramite;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
@@ -143,7 +144,7 @@ class ResumenTramiteTest extends TestCase
     {
         $escuela = $this->escuela();
         $this->responsable($escuela);
-        $this->documentos($escuela, 'ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud');
+        $this->documentos($escuela, ...array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']));
         app(RegistrarDocumento::class)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
             fechaEmision: now()->subDays(60)->toDateString(),
         ));

@@ -9,7 +9,7 @@ use App\Models\TipoDocumento;
 use RuntimeException;
 
 /**
- * Única fuente de verdad para "¿ya se completaron los 6 documentos de
+ * Única fuente de verdad para "¿ya se completaron los documentos aplicables de
  * Paso 2.2?" — Paso2Responsable::mount() y Paso2Documentos::mount() la
  * llaman, ninguno de los dos recalcula la lista de claves aplicables por
  * su cuenta (docs/superpowers/specs/2026-09-10-paso2-documentos-design.md
@@ -17,19 +17,36 @@ use RuntimeException;
  */
 class DocumentosCompletos
 {
-    /** @return list<string> */
+    /**
+     * Catálogo-driven desde WS-5a: antes de esto era un array fijo de 6
+     * claves; ahora es tipos_documentos, filtrado por aplica_persona y
+     * limitado a los ámbitos de Paso 2.2 (plantel/escuela — los ámbitos
+     * escuela_nivel de Paso 2.4 llegan en un sub-plan futuro y tienen su
+     * propio método). Ordenado por id = orden de inserción del seeder, para
+     * no reordenar el checklist que ya renderiza en un orden dado.
+     *
+     * @return list<string>
+     */
     public function clavesAplicables(string $tipoPersona): array
     {
-        $identidad = $tipoPersona === 'moral' ? 'escritura_poder_facultades' : 'acta_nacimiento';
+        $claves = TipoDocumento::query()
+            ->whereIn('ambito', ['plantel', 'escuela'])
+            ->where(function ($query) use ($tipoPersona) {
+                $query->where('aplica_persona', 'ambas')
+                    ->orWhere('aplica_persona', $tipoPersona);
+            })
+            ->orderBy('id')
+            ->pluck('clave')
+            ->all();
 
-        return [
-            'ine',
-            $identidad,
-            'escritura_inmueble',
-            'dictamen_uso_suelo',
-            'constancia_seguridad_estructural',
-            'formato_solicitud',
-        ];
+        // Toda persona recibe al menos las filas 'ambas': vacío solo puede
+        // significar catálogo sin sembrar; devolver [] dejaría pasar la
+        // compuerta de Paso 2 (paraEscuela() sería true).
+        if ($claves === []) {
+            throw new RuntimeException('tipos_documentos está vacío — corre TiposDocumentosSeeder.');
+        }
+
+        return $claves;
     }
 
     /** @return list<string> */
@@ -53,13 +70,7 @@ class DocumentosCompletos
 
         return array_values(array_filter(
             $aplicables,
-            function (string $clave) use ($idsAplicables, $idsCompletados) {
-                if (! $idsAplicables->has($clave)) {
-                    throw new RuntimeException("tipos_documentos no tiene una fila con clave \"{$clave}\" — corre TiposDocumentosSeeder.");
-                }
-
-                return ! in_array($idsAplicables[$clave], $idsCompletados, true);
-            },
+            fn (string $clave) => ! in_array($idsAplicables[$clave], $idsCompletados, true),
         ));
     }
 

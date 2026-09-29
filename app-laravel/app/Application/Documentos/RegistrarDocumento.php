@@ -20,7 +20,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Caso de uso genérico para los 6 documentos de Paso 2.2 — despacha por
+ * Caso de uso genérico para los documentos aplicables de Paso 2.2 — despacha por
  * tipos_documentos.ambito/clave, no tiene una clase por documento (mismo
  * patrón que RegistrarResponsableLegal despachando por tipo_persona).
  */

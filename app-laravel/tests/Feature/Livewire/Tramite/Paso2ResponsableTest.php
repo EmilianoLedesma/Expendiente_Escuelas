@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Tramite;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
@@ -95,7 +96,7 @@ class Paso2ResponsableTest extends TestCase
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $this->actingAs($solicitante->user);
@@ -121,7 +122,7 @@ class Paso2ResponsableTest extends TestCase
             nombre: 'Juana Pérez',
         ));
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $this->actingAs($solicitante->user);
@@ -152,7 +153,7 @@ class Paso2ResponsableTest extends TestCase
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
@@ -217,7 +218,7 @@ class Paso2ResponsableTest extends TestCase
         // AÚN sin responsable (fase arranca en 'responsable') con los
         // documentos ya en disco (back-navigation) — se insertan directo,
         // como datos preexistentes/legacy, igual que en DocumentoDownloadTest.
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
             $this->registrarDocumentoLegacy($escuela, $clave);
         }
         $this->actingAs($solicitante->user);
@@ -244,7 +245,7 @@ class Paso2ResponsableTest extends TestCase
         $escuela = $this->crearEscuelaPara($solicitante);
         // WS-2.4b: ver comentario equivalente arriba — documentos insertados
         // directo para que mount() siga viendo la escuela sin responsable.
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $this->registrarDocumentoLegacy($escuela, $clave);
         }
         $this->registrarDocumentoLegacy($escuela, 'dictamen_uso_suelo', now()->subDays(60)->toDateString());
@@ -449,13 +450,13 @@ class Paso2ResponsableTest extends TestCase
         $this->assertDatabaseCount('ternas_nombres', 0);
     }
 
-    /** Registra los 6 documentos requeridos para que mount() no redirija a paso2-documentos. */
+    /** Registra todos los documentos aplicables para que mount() no redirija a paso2-documentos. */
     private function registrarDocumentosCompletos(Escuela $escuela): void
     {
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
         $registrar = new RegistrarDocumento;
-        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'formato_solicitud'] as $clave) {
+        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
     }
