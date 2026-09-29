@@ -83,7 +83,11 @@ class Paso2Documentos extends Component
     {
         $simples = array_intersect(
             $documentosCompletos->clavesAplicables($this->tipoPersona()),
-            ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud'],
+            [
+                'ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud',
+                'acta_constitutiva', 'poder_gestor', 'visto_bueno_proteccion_civil',
+                'plano_inmueble', 'certificado_numero_oficial', 'recibo_pago_derechos_plantel',
+            ],
         );
         abort_unless(in_array($clave, $simples, true), 403);
 

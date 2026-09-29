@@ -22,6 +22,12 @@
             'dictamen_uso_suelo' => 'Dictamen de Uso de Suelo',
             'constancia_seguridad_estructural' => 'Constancia de Seguridad Estructural',
             'formato_solicitud' => 'Formato de Solicitud',
+            'acta_constitutiva' => 'Acta constitutiva',
+            'poder_gestor' => 'Poder general para actos de administración (gestor)',
+            'visto_bueno_proteccion_civil' => 'Visto Bueno / Dictamen de Protección Civil',
+            'plano_inmueble' => 'Plano o croquis del inmueble',
+            'certificado_numero_oficial' => 'Certificado de número oficial',
+            'recibo_pago_derechos_plantel' => 'Recibo de pago de derechos',
         ];
     @endphp
 
@@ -38,7 +44,7 @@
                 ];
             @endphp
 
-            @if (in_array($clave, ['ine', 'acta_nacimiento', 'escritura_poder_facultades']))
+            @if (in_array($clave, ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'acta_constitutiva', 'poder_gestor', 'visto_bueno_proteccion_civil', 'plano_inmueble', 'certificado_numero_oficial', 'recibo_pago_derechos_plantel']))
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarDocumentoSimple('{{ $clave }}')" />
             @elseif ($clave === 'escritura_inmueble')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarAcreditacion">

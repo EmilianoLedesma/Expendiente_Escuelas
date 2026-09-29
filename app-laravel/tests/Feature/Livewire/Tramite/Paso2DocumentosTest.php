@@ -36,6 +36,7 @@ class Paso2DocumentosTest extends TestCase
             nombre: $tipoPersona === 'moral' ? null : 'Juana Pérez',
             razonSocial: $tipoPersona === 'moral' ? 'Colegio Ejemplo S.C.' : null,
             nombreRepresentanteLegal: $tipoPersona === 'moral' ? 'Miguel Torres' : null,
+            gestorNombre: $tipoPersona === 'fisica_con_gestor' ? 'Gestor Uno' : null,
         ));
 
         return $escuela;
@@ -122,15 +123,79 @@ class Paso2DocumentosTest extends TestCase
 
     public function test_guardar_documento_simple_rechaza_clave_no_aplicable_al_tipo_persona(): void
     {
+        $escuela = $this->crearEscuelaConResponsable('fisica');
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.escritura_poder_facultades', UploadedFile::fake()->create('poder.pdf', 50, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'escritura_poder_facultades')
+            ->assertStatus(403);
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    public function test_moral_sube_acta_constitutiva_como_documento_de_escuela(): void
+    {
+        Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable('moral');
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 50, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'acta_nacimiento')
+            ->assertSee('Acta constitutiva')
+            ->set('archivos.acta_constitutiva', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'acta_constitutiva')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('documentos_escuela', 1);
+    }
+
+    public function test_fisica_con_gestor_sube_poder_gestor(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable('fisica_con_gestor');
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('Poder general para actos de administración (gestor)')
+            ->set('archivos.poder_gestor', UploadedFile::fake()->create('poder.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'poder_gestor')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('documentos_escuela', 1);
+    }
+
+    public function test_sube_documento_de_plantel_nuevo_y_queda_en_documentos_plantel(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('Visto Bueno / Dictamen de Protección Civil')
+            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'visto_bueno_proteccion_civil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('documentos_plantel', 1);
+        $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    public function test_poder_gestor_y_acta_constitutiva_no_aplican_a_otros_tipos_de_persona(): void
+    {
+        $moral = $this->crearEscuelaConResponsable('moral');
+        $this->actingAs($moral->solicitante->user);
+        Livewire::test(Paso2Documentos::class, ['escuela' => $moral])
+            ->set('archivos.poder_gestor', UploadedFile::fake()->create('p.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'poder_gestor')
             ->assertStatus(403);
 
-        $this->assertDatabaseCount('documentos_escuela', 0);
+        $fisica = $this->crearEscuelaConResponsable('fisica');
+        $this->actingAs($fisica->solicitante->user);
+        Livewire::test(Paso2Documentos::class, ['escuela' => $fisica])
+            ->assertDontSee('Acta constitutiva')
+            ->set('archivos.acta_constitutiva', UploadedFile::fake()->create('a.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'acta_constitutiva')
+            ->assertStatus(403);
     }
 
     public function test_rechaza_archivo_que_no_es_pdf(): void
