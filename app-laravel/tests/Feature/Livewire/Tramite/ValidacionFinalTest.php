@@ -5,7 +5,9 @@ namespace Tests\Feature\Livewire\Tramite;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Livewire\Tramite\ValidacionFinal;
 use App\Models\AulaNivel;
+use App\Models\EscuelaNivel;
 use App\Models\EvaluacionValidacion;
+use App\Models\ReciboPagoDerechos;
 use App\Models\Solicitante;
 use Database\Seeders\ReglasValidacionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,6 +61,28 @@ class ValidacionFinalTest extends TestCase
             ->assertSee('Debe corregirse')
             ->assertSee('Credencial de elector (INE): PEGJ800101HQTRML08 — no coincide')
             ->assertSee(route('tramite.paso2-documentos', ['escuela' => $escuela->id, 'corregir' => 'ine']), false);
+    }
+
+    /** WS-5b: each level's Paso 2.4 documents get their own section, linked to that level's page. */
+    public function test_un_folio_reutilizado_se_senala_en_la_seccion_del_nivel_con_enlace_a_sus_documentos(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $otra = $this->crearEscuelaConPlantel();
+        $this->completarTramite($otra);
+        $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->sole();
+        $folioAjeno = ReciboPagoDerechos::where('folio', '!=', "F-{$escuelaNivel->id}")->value('folio');
+        ReciboPagoDerechos::where('folio', "F-{$escuelaNivel->id}")->update(['folio' => $folioAjeno]);
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
+            ->assertSee('Hay errores que debes corregir antes de enviar')
+            ->assertSee('1 revisión no se cumple')
+            ->assertSee('Documentos del nivel: Primaria')
+            ->assertSee('Recibo de pago no usado en otro nivel')
+            ->assertSee("Folio del recibo: {$folioAjeno}")
+            ->assertSee(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $escuelaNivel->id]), false)
+            ->assertSee('Corregir: Recibo de pago de derechos');
     }
 
     public function test_las_alertas_se_muestran_sin_bloquear(): void

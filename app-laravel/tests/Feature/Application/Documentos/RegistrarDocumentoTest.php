@@ -426,6 +426,47 @@ class RegistrarDocumentoTest extends TestCase
         Storage::disk('documentos')->assertExists($documento->archivo_path);
     }
 
+    /** ADR-007 + WS-5b: the title count the per-level acervo check reads. */
+    public function test_guarda_el_numero_de_titulos_de_la_relacion_de_acervo(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento(acervoTitulos: 320), $escuelaNivel->id);
+
+        $this->assertDatabaseHas('relaciones_acervo_bibliografico', [
+            'documento_escuela_nivel_id' => DocumentoEscuelaNivel::sole()->id,
+            'numero_titulos' => 320,
+        ]);
+    }
+
+    public function test_resubir_la_relacion_sin_titulos_borra_los_del_archivo_anterior(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel('secundaria');
+        $subir = fn (DatosDocumento $datos) => app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_secundaria', $this->pdf(), $datos, $escuelaNivel->id);
+
+        $subir(new DatosDocumento(acervoTitulos: 320));
+        $subir(new DatosDocumento(acervoTitulos: 310));
+        $this->assertDatabaseHas('relaciones_acervo_bibliografico', ['numero_titulos' => 310]);
+        $this->assertDatabaseCount('relaciones_acervo_bibliografico', 1);
+
+        $subir(new DatosDocumento);
+        $this->assertDatabaseCount('relaciones_acervo_bibliografico', 0);
+    }
+
+    public function test_rechaza_un_numero_de_titulos_negativo_sin_escribir_nada(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento(acervoTitulos: -1), $escuelaNivel->id);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('acervo.titulos', $e->errores);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+    }
+
     public function test_registra_el_recibo_con_su_extension(): void
     {
         $escuelaNivel = $this->crearEscuelaNivel();

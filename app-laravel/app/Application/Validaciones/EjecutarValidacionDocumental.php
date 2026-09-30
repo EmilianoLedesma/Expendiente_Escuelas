@@ -8,9 +8,8 @@ use App\Domain\Validaciones\Resultado\ReporteValidacion;
 
 /**
  * Thin use case: build the context, run the rules, return the report.
- * Blocks nothing — whether any result gates the flow is an open owner
- * decision (PENDIENTE-motor-validacion-hechos P1). Not wired into the
- * wizard yet.
+ * Blocks nothing itself; EjecutarValidacionFinal decides what gates
+ * sending (ADR-007).
  */
 class EjecutarValidacionDocumental
 {
@@ -21,5 +20,13 @@ class EjecutarValidacionDocumental
         $motor = new MotorValidacionDocumental(CatalogoReglasDocumentales::reglas());
 
         return $motor->ejecutar($this->construirContexto->ejecutar($escuelaId));
+    }
+
+    /** Paso 2.4 documents of one escuela_nivel, with only the rules that apply to its level. */
+    public function paraNivel(int $escuelaNivelId): ReporteValidacion
+    {
+        $contexto = $this->construirContexto->paraNivel($escuelaNivelId);
+
+        return (new MotorValidacionDocumental(CatalogoReglasDocumentales::reglasDeNivel($contexto->clavesRequeridas)))->ejecutar($contexto);
     }
 }

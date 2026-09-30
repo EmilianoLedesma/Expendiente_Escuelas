@@ -21,6 +21,7 @@ use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\ReciboPagoDerechos;
+use App\Models\RelacionAcervoBibliografico;
 use App\Models\TipoDocumento;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
@@ -89,6 +90,10 @@ class RegistrarDocumento
 
         if ($tipoDocumentoClave === 'recibo_pago_derechos') {
             $this->validarRecibo($datos);
+        }
+
+        if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
+            throw new DatosInvalidos(['acervo.titulos' => 'El número de títulos no puede ser negativo.']);
         }
 
         $almacen = $this->almacen ?? app(AlmacenDocumentos::class);
@@ -280,6 +285,7 @@ class RegistrarDocumento
                 'municipio' => $datos->domicilioMunicipio,
                 'codigo_postal' => $datos->domicilioCodigoPostal,
             ]],
+            'acervo_bibliografico_primaria', 'acervo_bibliografico_secundaria' => [RelacionAcervoBibliografico::class, 'documento_escuela_nivel_id', ['numero_titulos' => $datos->acervoTitulos]],
             default => [null, null, []],
         };
 

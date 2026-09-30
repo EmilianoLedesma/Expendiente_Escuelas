@@ -170,3 +170,13 @@ Se mezcló `master` (WS-5b, Paso 2.4 "Documentos por nivel") en esta rama, a tra
 - **Conflicto semántico corregido:** WS-5b hizo del turno y el tipo de alumnado un dato de Paso 2.4, donde cambiarlos descarta el Formato de Solicitud ya cargado. `RegistrarPlanEstudios` también los escribía, lo que se saltaba esa regla. Ahora Plan de estudios solo guarda la modalidad, el plan y la plataforma, y muestra turno y tipo como referencia. Hay una prueba y una mutación que lo cubren.
 - **Fixtures:** los de Paso 3 completan Paso 2.4 antes, porque Paso 3 queda bloqueado sin él.
 - **Resultado:** suite 854/854, Pint y PHPStan limpios.
+
+### Mezcla de las revisiones por nivel de PR #1 (2026-09-30)
+
+- Se mezcló otra vez `spike/validation-engine-eval`. Trae las revisiones documentales por nivel de Paso 2.4: recibo no reutilizado, acervo vs. biblioteca, inventario vs. laboratorio y documentos del nivel. El detalle está en `2026-09-30-motor-validacion-integracion.md` §7.
+- **Página y PDF:** la validación final muestra tres bloques:
+  - documentos del trámite;
+  - una sección documental por nivel, que sí bloquea el envío;
+  - una sección de capacidad instalada por nivel, que solo da observaciones y nunca bloquea.
+- **Almacenamiento:** `evaluaciones_validacion.resultados` es `{documental, capacidad, niveles}`. Las filas planas anteriores se siguen leyendo.
+- **Verificación tras la mezcla:** suite 880/880, Pint limpio, PHPStan limpio.

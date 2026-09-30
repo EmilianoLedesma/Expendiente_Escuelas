@@ -94,6 +94,21 @@ Las respuestas del owner (2026-09-30) van literales. Donde el owner delegó ("to
 
 La tabla vive en código en `App\Application\Validaciones\ConstruirContextoValidacion`. Las reglas de Domain no conocen `tipo_persona`.
 
+## Adenda 2026-09-30 — revisiones por nivel (Paso 2.4, WS-5b)
+
+- **El motor corre también por `escuela_nivel`.** `ContextoValidacion` gana `foliosAjenos`. `TipoHecho` gana `FolioRecibo`, `TitulosAcervo` y `LaboratoriosDeclarados`. El conjunto de reglas del nivel lo elige `CatalogoReglasDocumentales::reglasDeNivel(clavesRequeridas)` según los documentos que aplican.
+- **Qué bloquea:** P1 no cambia. Cualquier `no_cumple`, en la sección de la escuela o en la de cualquier nivel, impide el envío. El folio de recibo repetido en otro nivel o trámite es `no_cumple`. Las diferencias de cantidad (acervo, laboratorio) son `advertencia`, como los nombres en P2.
+- **Hechos nuevos persistidos:**
+  - número de títulos de la relación del acervo en `relaciones_acervo_bibliografico`, con la regla de P3 y P4;
+  - el folio ya vivía en `recibos_pago_derechos` (WS-5b).
+- **Lo declarado por nivel:**
+  - títulos de "libros" de la biblioteca del plantel;
+  - suma de laboratorios polifuncionales del plantel;
+  - ambos capturados en Paso 3 y compartidos entre niveles (ADR-005).
+- **Resultado guardado:** `{documental, niveles}`.
+
+Detalle, supuestos y evidencia: `docs/reports/2026-09-30-motor-validacion-integracion.md` §7.
+
 ## Pendiente, fuera de este ADR
 
 - **Envío y candado de edición:** WS-7 (`PENDIENTE-edicion-hasta-envio.md`).

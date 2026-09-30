@@ -4,6 +4,7 @@ namespace App\Application\Validaciones;
 
 use App\Application\Validaciones\DTO\FilaValidacion;
 use App\Application\Validaciones\DTO\SeccionCapacidad;
+use App\Application\Validaciones\DTO\SeccionNivel;
 use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Models\EvaluacionValidacion;
 
@@ -19,11 +20,17 @@ class UltimaValidacionFinal
         }
 
         $resultados = $evaluacion->resultados;
-        // Rows stored before the capacity section existed are a flat list of documental rows.
+        // Rows stored before the capacity and per-level sections are a flat list of documental rows.
+        if (array_is_list($resultados)) {
+            $resultados = ['documental' => $resultados];
+        }
+
         /** @var list<array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>, pasoCorreccion?: string|null}> $documental */
-        $documental = array_is_list($resultados) ? $resultados : ($resultados['documental'] ?? []);
+        $documental = $resultados['documental'] ?? [];
         /** @var list<array{escuelaNivelId: int, nivel: string, filas: list<array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>, pasoCorreccion?: string|null}>}> $capacidad */
-        $capacidad = array_is_list($resultados) ? [] : ($resultados['capacidad'] ?? []);
+        $capacidad = $resultados['capacidad'] ?? [];
+        /** @var list<array{escuelaNivelId: int, nivel: string, filas: list<array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>, pasoCorreccion?: string|null}>}> $niveles */
+        $niveles = $resultados['niveles'] ?? [];
 
         return new ValidacionFinal(
             $evaluacion->id,
@@ -31,6 +38,7 @@ class UltimaValidacionFinal
             $evaluacion->lista_para_envio,
             array_map(fn (array $fila) => FilaValidacion::desdeArreglo($fila), $documental),
             array_map(fn (array $seccion) => SeccionCapacidad::desdeArreglo($seccion), $capacidad),
+            array_map(fn (array $seccion) => SeccionNivel::desdeArreglo($seccion), $niveles),
         );
     }
 }

@@ -51,6 +51,10 @@
                         @endif
                     </x-slot:extra>
                 </x-tramite.documento-row>
+            @elseif (in_array($clave, \App\Livewire\Tramite\Paso24DocumentosNivel::CON_TITULOS, true))
+                <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$clave" :titulo="$fila['titulo']" :escuela-id="$escuelaNivel->escuela_id" :capturado="$fila['capturado']" :editable="$fila['editable']" :descargar-href="$fila['descargarHref']" :vencido="$fila['vencido']" accion="guardarDocumento('{{ $clave }}')">
+                    <x-ui.field id="acervoTitulos.{{ $clave }}" label="Número de títulos de la relación"><x-ui.input type="number" step="1" min="0" inputmode="numeric" wire:model="acervoTitulos.{{ $clave }}" /></x-ui.field>
+                </x-tramite.documento-row>
             @else
                 {{-- WS-5a M1: toda clave aplicable sin bloque propio se sube como documento simple. --}}
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$clave" :titulo="$fila['titulo']" :escuela-id="$escuelaNivel->escuela_id" :capturado="$fila['capturado']" :editable="$fila['editable']" :descargar-href="$fila['descargarHref']" :vencido="$fila['vencido']" accion="guardarDocumento('{{ $clave }}')" />
