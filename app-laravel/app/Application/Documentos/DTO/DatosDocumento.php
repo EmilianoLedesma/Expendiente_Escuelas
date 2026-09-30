@@ -52,5 +52,7 @@ final readonly class DatosDocumento
         public ?string $monto = null,
         public ?string $fechaPago = null,
         public ?string $portalReferencia = null,
+        // acervo_bibliografico_primaria / _secundaria (relaciones_acervo_bibliografico)
+        public ?int $acervoTitulos = null,
     ) {}
 }
