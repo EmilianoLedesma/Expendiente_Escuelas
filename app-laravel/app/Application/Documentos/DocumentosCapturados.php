@@ -3,6 +3,7 @@
 namespace App\Application\Documentos;
 
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\TipoDocumento;
@@ -26,7 +27,10 @@ use Illuminate\Support\Collection;
  */
 class DocumentosCapturados
 {
-    public function __construct(private readonly DocumentosCompletos $documentosCompletos) {}
+    public function __construct(
+        private readonly DocumentosCompletos $documentosCompletos,
+        private readonly DocumentosNivelCompletos $documentosNivelCompletos,
+    ) {}
 
     /** @return Collection<string, array{archivoPath: string, nombreArchivo: string, subidoEn: Carbon}> */
     public function paraEscuela(int $escuelaId, string $tipoPersona): Collection
@@ -53,6 +57,28 @@ class DocumentosCapturados
             }
 
             $capturados[$clave] = [
+                'archivoPath' => (string) $documento->archivo_path,
+                'nombreArchivo' => basename((string) $documento->archivo_path),
+                'subidoEn' => $documento->updated_at,
+            ];
+        }
+
+        return $capturados;
+    }
+
+    /**
+     * Paso 2.4 (WS-5b): documentos ya capturados del nivel, solo de claves
+     * aplicables — mismo contrato que paraEscuela().
+     *
+     * @return Collection<string, array{archivoPath: string, nombreArchivo: string, subidoEn: Carbon}>
+     */
+    public function paraEscuelaNivel(int $escuelaNivelId): Collection
+    {
+        $clavesPorId = TipoDocumento::whereIn('clave', $this->documentosNivelCompletos->clavesAplicables($escuelaNivelId))->pluck('clave', 'id');
+        $capturados = collect();
+
+        foreach (DocumentoEscuelaNivel::where('escuela_nivel_id', $escuelaNivelId)->whereIn('tipo_documento_id', $clavesPorId->keys())->get() as $documento) {
+            $capturados[$clavesPorId[$documento->tipo_documento_id]] = [
                 'archivoPath' => (string) $documento->archivo_path,
                 'nombreArchivo' => basename((string) $documento->archivo_path),
                 'subidoEn' => $documento->updated_at,

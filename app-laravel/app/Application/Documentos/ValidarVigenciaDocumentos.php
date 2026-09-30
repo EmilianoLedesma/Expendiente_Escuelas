@@ -2,6 +2,7 @@
 
 namespace App\Application\Documentos;
 
+use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\TipoDocumento;
@@ -14,6 +15,8 @@ use App\Models\TipoDocumento;
  */
 class ValidarVigenciaDocumentos
 {
+    public function __construct(private readonly ?DocumentosNivelCompletos $documentosNivelCompletos = null) {}
+
     /** @return array<string, string> mensaje por clave de documento infractor */
     public function ejecutar(int $escuelaId): array
     {
@@ -46,5 +49,28 @@ class ValidarVigenciaDocumentos
         }
 
         return $violaciones;
+    }
+
+    /**
+     * Paso 2.4 (WS-5b), genérica por catálogo: todo documento aplicable al
+     * nivel cuya fecha_vigencia (calculada al subirlo desde vigencia_max_dias)
+     * ya pasó. Las filas de claves que no aplican se ignoran, igual que en la
+     * completitud. Hoy ningún documento por nivel sembrado tiene vigencia_max_dias.
+     *
+     * @return array<string, string> mensaje por clave de documento infractor
+     */
+    public function paraEscuelaNivel(int $escuelaNivelId): array
+    {
+        $aplicables = ($this->documentosNivelCompletos ?? app(DocumentosNivelCompletos::class))->clavesAplicables($escuelaNivelId);
+
+        return DocumentoEscuelaNivel::query()
+            ->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_escuela_nivel.tipo_documento_id')
+            ->where('documentos_escuela_nivel.escuela_nivel_id', $escuelaNivelId)
+            ->whereIn('tipos_documentos.clave', $aplicables)
+            ->whereNotNull('documentos_escuela_nivel.fecha_vigencia')
+            ->where('documentos_escuela_nivel.fecha_vigencia', '<', now()->toDateString())
+            ->pluck('tipos_documentos.nombre', 'tipos_documentos.clave')
+            ->map(fn ($nombre) => "{$nombre}: ha superado su vigencia máxima, debe resubirse.")
+            ->all();
     }
 }
