@@ -190,7 +190,7 @@ final class ValidacionCapacidadService
         return new ResultadoRegla(
             $regla->clave,
             $cumple ? EstadoResultado::Cumple : EstadoResultado::NoCumple,
-            sprintf('%s: se requieren %s %s, se declararon %s.', $regla->concepto, self::numero($requerido), $unidad, self::numero($declarado)),
+            sprintf('%s: requerido %s %s, declarado %s %s.', $regla->concepto, self::numero($requerido), $unidad, self::numero($declarado), $unidad),
             $detalles,
         );
     }

@@ -69,7 +69,7 @@ class PresentadorValidacion
             $lineas = [];
 
             if (isset($d['requerido'], $d['declarado'])) {
-                $lineas[] = sprintf('Requerido: %s %s · Declarado: %s %s', self::numero($d['requerido']), $d['unidad'], self::numero($d['declarado']), $d['unidad']);
+                $lineas[] = sprintf('Requerido: %s · Declarado: %s', self::cantidad($d['requerido'], $d['unidad']), self::cantidad($d['declarado'], $d['unidad']));
             }
             foreach ($d['faltantes'] ?? [] as $faltante) {
                 $lineas[] = sprintf('%s (%s): se requieren %d, se declararon %d', $faltante['concepto'], self::SALAS[$faltante['sala']] ?? $faltante['sala'], $faltante['requerido'], $faltante['declarado']);
@@ -103,6 +103,13 @@ class PresentadorValidacion
             str_ends_with($clave, '.predio_total') || str_ends_with($clave, '.construida_total') => 'inmueble',
             default => 'infraestructura',
         };
+    }
+
+    private static function cantidad(int|float $valor, string $unidad): string
+    {
+        $singular = ['personas' => 'persona', 'títulos' => 'título'];
+
+        return self::numero($valor).' '.((float) $valor === 1.0 ? ($singular[$unidad] ?? $unidad) : $unidad);
     }
 
     private static function numero(int|float $valor): string

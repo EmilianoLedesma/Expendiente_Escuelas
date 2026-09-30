@@ -22,7 +22,7 @@
     </style>
 </head>
 <body>
-    <h1>Reporte de validación documental</h1>
+    <h1>Reporte de validación del expediente</h1>
     <p class="meta">
         Trámite Nº {{ $escuela['numero'] }} · {{ $escuela['nombre'] ?? 'Sin nombre propuesto' }}<br>
         {{ $escuela['domicilio'] }}<br>
@@ -73,15 +73,14 @@
                 @foreach ($seccion->filas as $fila)
                     <tr>
                         <td>{{ $fila->titulo }}</td>
-                        <td class="estado {{ $fila->estado }}">{{ $etiquetas[$fila->estado] ?? $fila->estado }}</td>
+                        <td class="estado {{ $fila->estado === 'no_cumple' ? 'advertencia' : $fila->estado }}">{{ $fila->estado === 'no_cumple' ? 'Observación' : ($etiquetas[$fila->estado] ?? $fila->estado) }}</td>
                         <td>
-                            {{ $fila->mensaje }}
                             @if ($fila->lineas !== [])
-                                <ul>
-                                    @foreach ($fila->lineas as $linea)
-                                        <li>{{ $linea }}</li>
-                                    @endforeach
-                                </ul>
+                                @foreach ($fila->lineas as $linea)
+                                    <div>{{ $linea }}</div>
+                                @endforeach
+                            @else
+                                {{ $fila->mensaje }}
                             @endif
                         </td>
                     </tr>
