@@ -74,8 +74,9 @@ class RegistrarDocumento
                 // es la misma ruta que usa el rechazo de PDF más abajo.
                 throw new DatosInvalidos(["archivos.{$tipoDocumentoClave}" => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
             }
+            $datosNivelVerificados = null;
         } else {
-            $this->verificarNivel($escuelaId, $escuelaNivelId, $tipoDocumentoClave, $estadoPaso2);
+            $datosNivelVerificados = $this->verificarNivel($escuelaId, $escuelaNivelId, $tipoDocumentoClave, $estadoPaso2);
         }
 
         if ($archivo->getMimeType() !== 'application/pdf') {
@@ -124,7 +125,7 @@ class RegistrarDocumento
         $confirmado = false;
 
         try {
-            DB::transaction(function () use ($tipo, $modelo, $columna, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, &$confirmado) {
+            DB::transaction(function () use ($tipo, $modelo, $columna, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, $datosNivelVerificados, &$confirmado) {
                 $atributos = [
                     'archivo_path' => $ruta,
                     'fecha_emision' => $datos->fechaEmision,
@@ -137,7 +138,16 @@ class RegistrarDocumento
                 // RegistrarDatosNivel) serializa dos subidas concurrentes para
                 // que updateOrCreate nunca inserte una segunda fila.
                 if ($tipo->ambito === 'escuela_nivel') {
-                    EscuelaNivel::lockForUpdate()->findOrFail($ownerId);
+                    $escuelaNivel = EscuelaNivel::lockForUpdate()->findOrFail($ownerId);
+
+                    // Revisión Task 4 (I1): RegistrarDatosNivel pudo cambiar
+                    // turno/tipo de alumnado (y descartar el Formato) entre
+                    // verificarNivel() y este lock; un Formato subido contra
+                    // datos que ya no son los verificados sería obsoleto.
+                    $datosActuales = [$escuelaNivel->turno, $escuelaNivel->tipo_alumnado];
+                    if ($tipo->clave === 'formato_solicitud' && (in_array(null, $datosActuales, true) || $datosActuales !== $datosNivelVerificados)) {
+                        throw new PrecondicionIncumplida(EstadoPaso24::DATOS, 'El turno o el tipo de alumnado cambiaron; vuelve a descargar y firmar el Formato de Solicitud.');
+                    }
                 }
 
                 $documento = $modelo->newQuery()->updateOrCreate(
@@ -245,9 +255,11 @@ class RegistrarDocumento
     }
 
     /** WS-5b: el nivel debe ser de esta escuela, Paso 2 completo, la clave aplicable al nivel y, para el Formato, turno y tipo de alumnado ya capturados. */
-    private function verificarNivel(int $escuelaId, int $escuelaNivelId, string $clave, EstadoPaso2 $estadoPaso2): void
+    /** @return array{0: ?string, 1: ?string} turno y tipo de alumnado vistos al verificar (se vuelven a comparar bajo lock). */
+    private function verificarNivel(int $escuelaId, int $escuelaNivelId, string $clave, EstadoPaso2 $estadoPaso2): array
     {
-        if (! EscuelaNivel::where('id', $escuelaNivelId)->where('escuela_id', $escuelaId)->exists()) {
+        $escuelaNivel = EscuelaNivel::where('id', $escuelaNivelId)->where('escuela_id', $escuelaId)->first();
+        if ($escuelaNivel === null) {
             throw new DatosInvalidos(["archivos.{$clave}" => 'El nivel educativo no pertenece a esta escuela.']);
         }
 
@@ -265,6 +277,8 @@ class RegistrarDocumento
         if ($clave === 'formato_solicitud' && ! $estadoPaso24->datosNivelCapturados($escuelaNivelId)) {
             throw new PrecondicionIncumplida(EstadoPaso24::DATOS, 'Guarda el turno y el tipo de alumnado antes de subir el Formato de Solicitud firmado.');
         }
+
+        return [$escuelaNivel->turno, $escuelaNivel->tipo_alumnado];
     }
 
     /** Invariantes de recibos_pago_derechos (DDL: folio VARCHAR(50), monto NUMERIC(10,2), portal_referencia VARCHAR(200)); el dominio del portal no se exige (spec §5.3). */
@@ -276,7 +290,8 @@ class RegistrarDocumento
             $errores['recibo.folio'] = 'Captura el folio del recibo (máximo 50 caracteres).';
         }
 
-        if ($datos->monto === null || ! is_numeric($datos->monto) || (float) $datos->monto <= 0 || (float) $datos->monto > 99999999.99) {
+        // NUMERIC(10,2): solo dígitos, hasta 8 enteros y 2 decimales (rechaza "1e3", "0.004").
+        if ($datos->monto === null || preg_match('/^\d{1,8}(\.\d{1,2})?$/', $datos->monto) !== 1 || (float) $datos->monto <= 0) {
             $errores['recibo.monto'] = 'El monto pagado debe ser mayor a cero.';
         }
 
