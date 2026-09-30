@@ -17,11 +17,13 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class RegistrarDatosInmuebleTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private Plantel $plantel;
@@ -47,12 +49,15 @@ class RegistrarDatosInmuebleTest extends TestCase
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $this->escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
+
+        return $escuelaNivel;
     }
 
     private function datos(float $metrosTotales = 1200.5): DatosInmueble
@@ -296,5 +301,30 @@ class RegistrarDatosInmuebleTest extends TestCase
         } catch (DatosInvalidos $e) {
             $this->assertArrayHasKey('estudiosActuales.0.nivelEducativoId', $e->errores);
         }
+    }
+
+    /** WS-5b, con control: sin 2.4 del nivel no se escribe nada del plantel; con 2.4 el mismo llamado pasa. */
+    public function test_rechaza_registrar_sin_paso24_completo(): void
+    {
+        // Nivel armado aquí (sin el helper): el barrido del Paso 6 completa 2.4 en escuelaNivel().
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $this->escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            // esperado
+        }
+        $this->assertNull($this->plantel->fresh()->metros_totales);
+
+        $this->completarPaso24($escuelaNivel->id);
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+
+        $this->assertEquals(1200.5, (float) $this->plantel->fresh()->metros_totales);
     }
 }

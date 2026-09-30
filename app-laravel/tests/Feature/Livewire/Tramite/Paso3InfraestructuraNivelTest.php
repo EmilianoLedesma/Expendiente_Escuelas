@@ -18,11 +18,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class Paso3InfraestructuraNivelTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private Solicitante $solicitante;
@@ -56,6 +58,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
         // WS-1.3: Infraestructura solo es alcanzable con Inmueble completado.
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
 

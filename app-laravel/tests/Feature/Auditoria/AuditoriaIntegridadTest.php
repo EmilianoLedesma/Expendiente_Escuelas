@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 /**
@@ -26,6 +27,7 @@ use Tests\TestCase;
 class AuditoriaIntegridadTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -69,6 +71,7 @@ class AuditoriaIntegridadTest extends TestCase
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($en->id);
         (new MarcarPasoCompletado)->ejecutar($en->id, 'inmueble');
         $this->actingAs($s->user);
         $verdes = TipoEspacio::where('clave', 'areas_verdes')->value('id');

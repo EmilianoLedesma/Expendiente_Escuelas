@@ -481,4 +481,17 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame(['hechas' => 6, 'total' => 8, 'porcentaje' => 75], $conNivel->avance());
         $this->assertSame('infraestructura', $conNivel->siguiente()?->clave);
     }
+
+    public function test_sin_documentos_del_nivel_inmueble_queda_bloqueado(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $this->nivel($escuela, 'primaria');
+
+        $inmueble = $this->porClave($this->resumen($escuela)->niveles[0]->secciones)['inmueble'];
+
+        $this->assertSame('Completa primero: Documentos del nivel', $inmueble->motivoBloqueo);
+        $this->assertNull($inmueble->accion);
+        $this->assertNull($inmueble->href);
+    }
 }
