@@ -150,7 +150,7 @@ Se mezcló `master` en esta rama. Los conflictos se resolvieron conservando ambo
 - `DocumentosRequeridosPresentes` sigue cubriendo solo Paso 2.2, sin hueco real.
 - La regla de domicilio ya trata un certificado de número oficial ausente como `no_evaluable`. Eso cubre el caso de que el certificado se vuelva condicional (`PENDIENTE-dictamenes-por-nivel.md`).
 
-### Usos nuevos que WS-5b hace posibles (propuestos, no implementados)
+### Usos nuevos que WS-5b hace posibles (propuestos aquí; implementados en §7)
 
 Todos siguen el mismo patrón de ADR-007: hechos tipados, capturados con el documento, y reglas que solo leen hechos.
 
@@ -160,3 +160,68 @@ Todos siguen el mismo patrón de ADR-007: hechos tipados, capturados con el docu
 4. **Documentos requeridos por nivel.** Extender `DocumentosRequeridosPresentes` a los documentos de 2.4, con enlace "Corregir" a la página del nivel. Hoy no aporta nada, porque la compuerta ya lo asegura. Tendrá sentido cuando WS-7 permita editar y quitar documentos antes del envío.
 
 Sin cambio posible: el Formato de Solicitud firmado sigue sin poder cotejarse contra el PDF generado (limitación ya aceptada en el informe de WS-5b). El turno y el tipo que imprime salen de los mismos datos de 2.4, y cambiarlos descarta el Formato.
+
+## 7. Revisiones por nivel implementadas (petición del dueño: "implementa las revisiones que WS-5b hace posibles")
+
+Se implementaron los cuatro usos de §6. Cada `escuela_nivel` tiene su propia sección en la validación final, en la página y en el PDF.
+
+| Clave | Qué compara | Resultado si falla | Bloquea |
+| --- | --- | --- | --- |
+| `documentos_nivel_presentes` | Documentos aplicables del nivel (`DocumentosNivelCompletos`) vs. cargados | `no_cumple`, con "Corregir" en la página 2.4 del nivel | Sí |
+| `recibo_no_reutilizado` | Folio del recibo vs. folios de **cualquier otro** nivel, de este o de otro trámite (sin distinguir mayúsculas ni espacios) | `no_cumple`; recibo sin folio capturado también `no_cumple` | Sí |
+| `acervo_coincide` | Títulos capturados con la relación del acervo vs. títulos de **libros** declarados en la biblioteca del plantel (Paso 3) | `advertencia`; relación sin número de títulos `no_cumple`; sin biblioteca declarada `no_evaluable` | Solo si falta el dato |
+| `inventario_con_laboratorio` | Inventario de laboratorio cargado vs. laboratorios polifuncionales declarados | `advertencia` si hay inventario y 0 laboratorios | No |
+
+El catálogo por nivel (`CatalogoReglasDocumentales::reglasDeNivel`) solo incluye las reglas cuyos documentos aplican al nivel. Así, Primaria nunca muestra la revisión de inventario, y Preescolar no muestra la de acervo.
+
+### Cambios de esquema y justificación contra el DDL v3
+
+- **`relaciones_acervo_bibliografico`** (migración `2026_09_30_000003`): una tabla de extensión nueva, sin equivalente en el DDL v3.
+  - Tiene la misma forma que `recibos_pago_derechos`: PK = FK a `documentos_escuela_nivel` con `ON DELETE CASCADE`.
+  - `numero_titulos INTEGER NOT NULL CHECK (>= 0)`, que refleja `biblioteca_materiales.numero_titulos` (el lado declarado).
+  - No toca tablas existentes.
+  - Sigue la regla de ADR-007 P3 y P4: se sobrescribe al volver a subir el archivo y se borra si la nueva subida no trae dato.
+- **Sin otros cambios de esquema:** el folio ya existía (WS-5b), y la biblioteca y los laboratorios ya se capturan en Paso 3.
+
+### Captura
+
+- En Paso 2.4, las dos claves de acervo piden ahora "Número de títulos de la relación": entero, cero o mayor, con mensaje en español.
+- Siguen la vía genérica `guardarDocumento()`, con una lista `CON_TITULOS` en el componente. `CON_DATOS_ESTRUCTURADOS` no se tocó.
+- `RegistrarDocumento` rechaza un número negativo (`acervo.titulos`) antes de escribir.
+
+### Persistencia del resultado
+
+- `evaluaciones_validacion.resultados` pasa de una lista plana a `{documental, niveles}`.
+- `UltimaValidacionFinal` sigue leyendo las filas planas anteriores, con niveles vacíos. Ninguna base real las tiene, porque esta rama no se ha migrado en dev, pero la compatibilidad cuesta una línea y tiene prueba.
+
+### Supuestos provisionales
+
+1. **Acervo vs. biblioteca compartida.** La biblioteca es del plantel y la comparten sus niveles (ADR-005). La relación del acervo es por nivel. Si Primaria y Secundaria comparten biblioteca, sus relaciones pueden sumar títulos distintos del total declarado sin que haya error. Por eso la diferencia es `advertencia` y nunca bloquea. Si SEDEQ aclara que la relación debe cubrir toda la biblioteca, la regla no cambia; si aclara que es solo del nivel, habría que capturar la biblioteca por nivel (fuera de alcance).
+2. **Solo cuentan los "libros".** Revistas, videos y demás materiales no se suman a los títulos declarados. El mínimo normativo del COMPENDIO (300 títulos) se refiere al acervo bibliográfico.
+3. **Un laboratorio declarado sin cantidad cuenta como uno.**
+4. **El folio se compara contra todos los trámites**, no solo contra el propio: un pago ampara un solo nivel de un solo trámite.
+
+### Evidencia
+
+- **TDD, dominio:** `ReglasDeNivelTest` (13 pruebas) quedó en rojo por clases y constantes inexistentes, y luego en verde.
+- **TDD, captura:** 3 pruebas en `RegistrarDocumentoTest` y 2 en `Paso24DocumentosNivelTest`, en rojo por `acervoTitulos` inexistente y luego en verde.
+- **TDD, integración:** `ValidacionPorNivelTest` (7 pruebas) y 1 prueba en `ValidacionFinalTest` quedaron en rojo por `paraNivel` y `niveles` inexistentes, y luego en verde.
+- **Mutaciones:** 14 aplicadas y todas detectadas:
+  - dominio: mayúsculas del folio, nunca reutilizado, sin folio, laboratorio `>= 0`, acervo bloqueante, catálogo siempre con inventario, clave por defecto;
+  - integración: nivel que no bloquea, folios que incluyen el propio, todos los materiales, títulos siempre declarados, relectura sin niveles, sin compatibilidad con filas planas, conteo del aviso solo de la escuela.
+- **Pruebas existentes que cambiaron:**
+  - El fixture `CompletaPaso24` usa un folio por nivel (`F-{id}`) en vez de `F-0001`. Con el folio fijo, cualquier trámite de dos niveles se marcaría como recibo reutilizado.
+  - El fixture también sube el número de títulos con el acervo.
+  - La prueba de WS-5b que sube el acervo tras invalidar Paso 2 ahora captura el número de títulos. Sin él, la validación del formulario respondería antes que la redirección que la prueba verifica.
+
+### Resultados de verificación
+
+- Suite completa: 804/804.
+- Pint: limpio.
+- PHPStan nivel 5 (con la regla PHPat de ADR-001): limpio. Un error real se corrigió: el tipo de persona del contexto por nivel ahora se lee con `TipoPersonaDeEscuela` (ADR-006), no con una relación sin tipo.
+- No se verificó en navegador.
+
+### Paso del dueño (no ejecutado)
+
+En dev: `php artisan migrate` (tabla `relaciones_acervo_bibliografico`). No requiere sembrado.
+
