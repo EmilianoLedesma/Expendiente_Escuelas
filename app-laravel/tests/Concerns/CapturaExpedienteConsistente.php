@@ -3,9 +3,9 @@
 namespace Tests\Concerns;
 
 use App\Application\Documentos\DocumentosCompletos;
-use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Models\Escuela;

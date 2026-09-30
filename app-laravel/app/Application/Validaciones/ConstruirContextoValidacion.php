@@ -16,6 +16,9 @@ use App\Models\CredencialIne;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
+use App\Models\Gestor;
+use App\Models\PersonaFisica;
+use App\Models\PersonaMoral;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
 use App\Models\TipoDocumento;
@@ -68,8 +71,11 @@ class ConstruirContextoValidacion
     /** @return list<Hecho> */
     private function declarados(ResponsableLegal $responsable, Plantel $plantel): array
     {
+        /** @var PersonaFisica|null $fisica */
         $fisica = $responsable->personaFisica;
+        /** @var PersonaMoral|null $moral */
         $moral = $responsable->personaMoral;
+        /** @var Gestor|null $gestor */
         $gestor = $responsable->gestor;
 
         $valores = match ($responsable->tipo_persona) {

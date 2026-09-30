@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
+use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
@@ -10,6 +11,7 @@ use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
+use App\Livewire\Tramite\ValidacionFinal;
 use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +42,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', DescargarDocumentoController::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.descargar');
+
+    // Último paso (ADR-007): validación documental final.
+    Route::get('/tramite/{escuela}/validacion', ValidacionFinal::class)
+        ->whereNumber('escuela')
+        ->middleware('can:update,escuela')
+        ->name('tramite.validacion');
+
+    Route::get('/tramite/{escuela}/validacion/{evaluacion}/reporte.pdf', DescargarReporteValidacionController::class)
+        ->whereNumber(['escuela', 'evaluacion'])
+        ->middleware('can:view,escuela')
+        ->name('tramite.validacion.reporte');
 
     Route::get('/tramite/paso3/{escuelaNivel}', DatosInmueble::class)
         ->middleware('can:update,escuelaNivel')
