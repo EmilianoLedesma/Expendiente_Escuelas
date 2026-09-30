@@ -2,6 +2,7 @@
 
 namespace App\Application\Inmueble;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
@@ -111,6 +112,13 @@ class RegistrarDatosInmueble
             $errores['metrosTotales'] = 'Los metros totales deben ser mayores a cero.';
         }
 
+        // Precisión de la columna (NUMERIC(10,2)): fuera de rango sería un error de base de datos.
+        foreach (['metrosTotales' => $datos->metrosTotales, 'metrosConstruidos' => $datos->metrosConstruidos, 'areaCivicaM2' => $datos->areaCivicaM2] as $campo => $valor) {
+            if ($valor !== null && $valor > ReglasCaptura::MAX_NUMERIC_10_2) {
+                $errores[$campo] = 'El valor no debe ser mayor que '.ReglasCaptura::MAX_NUMERIC_10_2.'.';
+            }
+        }
+
         if ($datos->latitud !== null && ($datos->latitud < -90 || $datos->latitud > 90)) {
             $errores['latitud'] = 'La latitud debe estar entre -90 y 90.';
         }
@@ -127,6 +135,10 @@ class RegistrarDatosInmueble
             if ($servicio['distanciaUnidad'] !== null && ! in_array($servicio['distanciaUnidad'], ['m', 'km'], true)) {
                 $errores["serviciosCercanos.{$i}.distanciaUnidad"] = 'La unidad de distancia debe ser m o km.';
             }
+
+            if ($servicio['distanciaValor'] !== null && ($servicio['distanciaValor'] < 0 || $servicio['distanciaValor'] > ReglasCaptura::MAX_NUMERIC_6_2)) {
+                $errores["serviciosCercanos.{$i}.distanciaValor"] = 'La distancia debe estar entre 0 y '.ReglasCaptura::MAX_NUMERIC_6_2.'.';
+            }
         }
 
         foreach ($datos->estudiosActuales as $i => $estudio) {
@@ -135,6 +147,10 @@ class RegistrarDatosInmueble
 
             if ($tieneNivel === $tieneOtro) {
                 $errores["estudiosActuales.{$i}.nivelEducativoId"] = 'Debe indicar el nivel educativo o "otro", pero no ambos ni ninguno.';
+            }
+
+            if ($estudio['numeroAlumnos'] < 0 || $estudio['numeroAlumnos'] > ReglasCaptura::MAX_SMALLINT) {
+                $errores["estudiosActuales.{$i}.numeroAlumnos"] = 'El número de alumnos debe estar entre 0 y '.ReglasCaptura::MAX_SMALLINT.'.';
             }
         }
 

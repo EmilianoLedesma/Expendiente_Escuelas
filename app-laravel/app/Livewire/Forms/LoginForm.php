@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Forms;
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,6 +15,7 @@ use Livewire\Form;
 class LoginForm extends Form
 {
     #[Validate('required|string|email')]
+    #[Normalizar(Normalizacion::Correo)]
     public string $email = '';
 
     #[Validate('required|string')]

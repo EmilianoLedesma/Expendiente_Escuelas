@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
@@ -113,26 +114,40 @@ class DatosInmueble extends Component
         $this->estudiosActuales = array_values($this->estudiosActuales);
     }
 
-    public function guardar(RegistrarDatosInmueble $registrarDatosInmueble): void
+    /**
+     * Límites = tipo de la columna en el DDL (planteles NUMERIC(10,2) y
+     * NUMERIC(10,7), servicios_cercanos.distancia_valor NUMERIC(6,2),
+     * inmueble_estudio_actual.numero_alumnos SMALLINT): un valor fuera de
+     * rango es un mensaje en el campo, no un error de base de datos.
+     */
+    protected function rules(): array
     {
-        $this->validate([
-            'metrosTotales' => ['required', 'numeric', 'min:0.01'],
-            'metrosConstruidos' => ['nullable', 'numeric', 'min:0'],
-            'colindanciaNorte' => ['nullable', 'string', 'max:150'],
-            'colindanciaSur' => ['nullable', 'string', 'max:150'],
-            'colindanciaEste' => ['nullable', 'string', 'max:150'],
-            'colindanciaOeste' => ['nullable', 'string', 'max:150'],
-            'latitud' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitud' => ['nullable', 'numeric', 'between:-180,180'],
-            'areaCivicaM2' => ['nullable', 'numeric', 'min:0'],
-            'serviciosCercanos.*.nombre' => ['required', 'string', 'max:200'],
+        return [
+            'metrosTotales' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2, min: 0.01, requerido: true),
+            'metrosConstruidos' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
+            'colindanciaNorte' => ReglasCaptura::texto(max: 150),
+            'colindanciaSur' => ReglasCaptura::texto(max: 150),
+            'colindanciaEste' => ReglasCaptura::texto(max: 150),
+            'colindanciaOeste' => ReglasCaptura::texto(max: 150),
+            // Una ubicación es el par completo: una coordenada sola no ubica nada.
+            'latitud' => ReglasCaptura::decimal(90, decimales: 7, min: -90, requerido: 'required_with:longitud'),
+            'longitud' => ReglasCaptura::decimal(180, decimales: 7, min: -180, requerido: 'required_with:latitud'),
+            'areaCivicaM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
+            'tieneAstaBandera' => ['boolean'],
+            'serviciosCercanos.*.nombre' => ReglasCaptura::texto(requerido: true, max: 200),
             'serviciosCercanos.*.tipo' => ['required', 'in:salud,emergencia'],
-            'serviciosCercanos.*.distanciaValor' => ['nullable', 'numeric', 'min:0'],
+            'serviciosCercanos.*.esPublico' => ['nullable', 'boolean'],
+            'serviciosCercanos.*.distanciaValor' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_6_2),
             'serviciosCercanos.*.distanciaUnidad' => ['nullable', 'in:m,km'],
             'estudiosActuales.*.nivelEducativoId' => ['nullable', 'integer', 'exists:niveles_educativos,id'],
-            'estudiosActuales.*.otroNivelTexto' => ['nullable', 'string', 'max:150'],
-            'estudiosActuales.*.numeroAlumnos' => ['required', 'integer', 'min:0', 'max:32767'],
-        ]);
+            'estudiosActuales.*.otroNivelTexto' => ReglasCaptura::texto(max: 150),
+            'estudiosActuales.*.numeroAlumnos' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT, requerido: true),
+        ];
+    }
+
+    public function guardar(RegistrarDatosInmueble $registrarDatosInmueble): void
+    {
+        $this->validate();
 
         try {
             $registrarDatosInmueble->ejecutar(

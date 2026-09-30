@@ -2,12 +2,15 @@
 
 namespace App\Livewire\Tramite;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
 use App\Livewire\Forms\PersonaMoralForm;
@@ -16,6 +19,7 @@ use App\Models\NivelEducativo;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
 use App\Models\ResponsableLegal;
+use Closure;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
@@ -30,6 +34,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class Paso2Responsable extends Component
 {
+    use ValidaEnConjunto;
+
     public Escuela $escuela;
 
     /** Estado del servidor, no del cliente: un $set('fase') forjado saltaba a 'niveles' (WS-1.2). */
@@ -121,55 +127,101 @@ class Paso2Responsable extends Component
         ];
     }
 
+    /**
+     * Reglas de las dos fases juntas: el hook de captura
+     * (App\Livewire\Hooks\LimpiarYValidarAlCapturar) valida cada campo al
+     * salir de él con estas reglas; cada acción valida solo las de su fase.
+     */
+    protected function rules(): array
+    {
+        return [...$this->reglasResponsable(), ...$this->reglasNiveles()];
+    }
+
+    /** @return array<string, list<mixed>> */
+    private function reglasResponsable(): array
+    {
+        return [
+            'tipoPersona' => ['required', 'in:fisica,fisica_con_gestor,moral'],
+            'domicilioNotificaciones' => ReglasCaptura::texto(requerido: true, max: 250),
+            'personaAutorizadaRecoger' => ReglasCaptura::nombrePersona(max: 200),
+            'nombrePropuesto1' => ReglasCaptura::texto(requerido: true, max: 200),
+            'nombrePropuesto2' => [...ReglasCaptura::texto(requerido: true, max: 200), $this->propuestaDistintaDe(['nombrePropuesto1'])],
+            'nombrePropuesto3' => [...ReglasCaptura::texto(requerido: true, max: 200), $this->propuestaDistintaDe(['nombrePropuesto1', 'nombrePropuesto2'])],
+        ];
+    }
+
+    /** @return array<string, list<string>> */
+    private function reglasNiveles(): array
+    {
+        return [
+            'nivelesSeleccionados' => ['required', 'array', 'min:1'],
+            'nivelesSeleccionados.*' => ['integer', 'exists:niveles_educativos,id'],
+        ];
+    }
+
+    /**
+     * Una terna con dos nombres iguales (sin distinguir mayúsculas) no es
+     * una terna: se compara cada propuesta con las anteriores.
+     *
+     * @param  list<string>  $anteriores
+     */
+    private function propuestaDistintaDe(array $anteriores): Closure
+    {
+        return function (string $atributo, mixed $valor, Closure $fallar) use ($anteriores): void {
+            $propuesta = mb_strtolower((string) $valor);
+
+            foreach ($anteriores as $anterior) {
+                if ($propuesta !== '' && $propuesta === mb_strtolower($this->{$anterior})) {
+                    $fallar('Las tres propuestas de nombre deben ser distintas.');
+
+                    return;
+                }
+            }
+        };
+    }
+
     public function guardarResponsable(RegistrarResponsableLegal $registrarResponsableLegal, EstadoPaso2 $estadoPaso2): void
     {
-        $this->validate([
-            'tipoPersona' => ['required', 'in:fisica,fisica_con_gestor,moral'],
-            'domicilioNotificaciones' => ['required', 'string', 'max:250'],
-            'personaAutorizadaRecoger' => ['nullable', 'string', 'max:200'],
-            'nombrePropuesto1' => ['required', 'string', 'max:200'],
-            'nombrePropuesto2' => ['required', 'string', 'max:200'],
-            'nombrePropuesto3' => ['required', 'string', 'max:200'],
-        ]);
+        $this->validarEnConjunto(
+            fn () => $this->validate($this->reglasResponsable()),
+            fn () => $this->tipoPersona === 'moral' ? $this->personaMoralForm->validate() : $this->personaFisicaForm->validate(),
+            fn () => $this->tipoPersona === 'fisica_con_gestor' ? $this->gestorForm->validate() : null,
+        );
 
-        if ($this->tipoPersona === 'moral') {
-            $this->personaMoralForm->validate();
-        } else {
-            $this->personaFisicaForm->validate();
-            $this->personaFisicaForm->rfc = mb_strtoupper($this->personaFisicaForm->rfc);
-            $this->personaFisicaForm->curp = mb_strtoupper($this->personaFisicaForm->curp);
-
-            if ($this->tipoPersona === 'fisica_con_gestor') {
-                $this->gestorForm->validate();
+        try {
+            $registrarResponsableLegal->ejecutar($this->escuela->id, new DatosResponsableLegal(
+                tipoPersona: $this->tipoPersona,
+                domicilioNotificaciones: $this->domicilioNotificaciones !== '' ? $this->domicilioNotificaciones : null,
+                personaAutorizadaRecoger: $this->personaAutorizadaRecoger !== '' ? $this->personaAutorizadaRecoger : null,
+                nombrePropuesto1: $this->nombrePropuesto1 !== '' ? $this->nombrePropuesto1 : null,
+                nombrePropuesto2: $this->nombrePropuesto2 !== '' ? $this->nombrePropuesto2 : null,
+                nombrePropuesto3: $this->nombrePropuesto3 !== '' ? $this->nombrePropuesto3 : null,
+                nombre: $this->personaFisicaForm->nombre !== '' ? $this->personaFisicaForm->nombre : null,
+                fechaNacimiento: $this->personaFisicaForm->fechaNacimiento !== '' ? $this->personaFisicaForm->fechaNacimiento : null,
+                rfc: $this->personaFisicaForm->rfc !== '' ? $this->personaFisicaForm->rfc : null,
+                curp: $this->personaFisicaForm->curp !== '' ? $this->personaFisicaForm->curp : null,
+                razonSocial: $this->personaMoralForm->razonSocial !== '' ? $this->personaMoralForm->razonSocial : null,
+                numeroEscrituraConstitutiva: $this->personaMoralForm->numeroEscrituraConstitutiva !== '' ? $this->personaMoralForm->numeroEscrituraConstitutiva : null,
+                fechaEscrituraConstitutiva: $this->personaMoralForm->fechaEscrituraConstitutiva !== '' ? $this->personaMoralForm->fechaEscrituraConstitutiva : null,
+                notarioNombre: $this->personaMoralForm->notarioNombre !== '' ? $this->personaMoralForm->notarioNombre : null,
+                notarioNumero: $this->personaMoralForm->notarioNumero !== '' ? $this->personaMoralForm->notarioNumero : null,
+                notarioCiudad: $this->personaMoralForm->notarioCiudad !== '' ? $this->personaMoralForm->notarioCiudad : null,
+                folioRegistroPublico: $this->personaMoralForm->folioRegistroPublico !== '' ? $this->personaMoralForm->folioRegistroPublico : null,
+                fechaInscripcionRpp: $this->personaMoralForm->fechaInscripcionRpp !== '' ? $this->personaMoralForm->fechaInscripcionRpp : null,
+                nombreRepresentanteLegal: $this->personaMoralForm->nombreRepresentanteLegal !== '' ? $this->personaMoralForm->nombreRepresentanteLegal : null,
+                gestorNombre: $this->gestorForm->nombre !== '' ? $this->gestorForm->nombre : null,
+                gestorNumeroPoder: $this->gestorForm->numeroPoder !== '' ? $this->gestorForm->numeroPoder : null,
+                gestorNotarioNombre: $this->gestorForm->notarioNombre !== '' ? $this->gestorForm->notarioNombre : null,
+                gestorNotarioNumero: $this->gestorForm->notarioNumero !== '' ? $this->gestorForm->notarioNumero : null,
+                gestorFechaPoder: $this->gestorForm->fechaPoder !== '' ? $this->gestorForm->fechaPoder : null,
+            ));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
             }
-        }
 
-        $registrarResponsableLegal->ejecutar($this->escuela->id, new DatosResponsableLegal(
-            tipoPersona: $this->tipoPersona,
-            domicilioNotificaciones: $this->domicilioNotificaciones !== '' ? $this->domicilioNotificaciones : null,
-            personaAutorizadaRecoger: $this->personaAutorizadaRecoger !== '' ? $this->personaAutorizadaRecoger : null,
-            nombrePropuesto1: $this->nombrePropuesto1 !== '' ? $this->nombrePropuesto1 : null,
-            nombrePropuesto2: $this->nombrePropuesto2 !== '' ? $this->nombrePropuesto2 : null,
-            nombrePropuesto3: $this->nombrePropuesto3 !== '' ? $this->nombrePropuesto3 : null,
-            nombre: $this->personaFisicaForm->nombre !== '' ? $this->personaFisicaForm->nombre : null,
-            fechaNacimiento: $this->personaFisicaForm->fechaNacimiento !== '' ? $this->personaFisicaForm->fechaNacimiento : null,
-            rfc: $this->personaFisicaForm->rfc !== '' ? $this->personaFisicaForm->rfc : null,
-            curp: $this->personaFisicaForm->curp !== '' ? $this->personaFisicaForm->curp : null,
-            razonSocial: $this->personaMoralForm->razonSocial !== '' ? $this->personaMoralForm->razonSocial : null,
-            numeroEscrituraConstitutiva: $this->personaMoralForm->numeroEscrituraConstitutiva !== '' ? $this->personaMoralForm->numeroEscrituraConstitutiva : null,
-            fechaEscrituraConstitutiva: $this->personaMoralForm->fechaEscrituraConstitutiva !== '' ? $this->personaMoralForm->fechaEscrituraConstitutiva : null,
-            notarioNombre: $this->personaMoralForm->notarioNombre !== '' ? $this->personaMoralForm->notarioNombre : null,
-            notarioNumero: $this->personaMoralForm->notarioNumero !== '' ? $this->personaMoralForm->notarioNumero : null,
-            notarioCiudad: $this->personaMoralForm->notarioCiudad !== '' ? $this->personaMoralForm->notarioCiudad : null,
-            folioRegistroPublico: $this->personaMoralForm->folioRegistroPublico !== '' ? $this->personaMoralForm->folioRegistroPublico : null,
-            fechaInscripcionRpp: $this->personaMoralForm->fechaInscripcionRpp !== '' ? $this->personaMoralForm->fechaInscripcionRpp : null,
-            nombreRepresentanteLegal: $this->personaMoralForm->nombreRepresentanteLegal !== '' ? $this->personaMoralForm->nombreRepresentanteLegal : null,
-            gestorNombre: $this->gestorForm->nombre !== '' ? $this->gestorForm->nombre : null,
-            gestorNumeroPoder: $this->gestorForm->numeroPoder !== '' ? $this->gestorForm->numeroPoder : null,
-            gestorNotarioNombre: $this->gestorForm->notarioNombre !== '' ? $this->gestorForm->notarioNombre : null,
-            gestorNotarioNumero: $this->gestorForm->notarioNumero !== '' ? $this->gestorForm->notarioNumero : null,
-            gestorFechaPoder: $this->gestorForm->fechaPoder !== '' ? $this->gestorForm->fechaPoder : null,
-        ));
+            return;
+        }
 
         // Mismo gate que mount() (EstadoPaso2: completitud Y vigencia) — aplicado
         // aquí también, porque antes guardarResponsable() saltaba directo a
@@ -185,10 +237,7 @@ class Paso2Responsable extends Component
 
     public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados): void
     {
-        $this->validate([
-            'nivelesSeleccionados' => ['required', 'array', 'min:1'],
-            'nivelesSeleccionados.*' => ['integer', 'exists:niveles_educativos,id'],
-        ]);
+        $this->validate($this->reglasNiveles());
 
         try {
             $registrarNivelesSeleccionados->ejecutar($this->escuela->id, $this->nivelesSeleccionados);

@@ -12,6 +12,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
@@ -33,10 +34,14 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.tramite')]
 class Paso2Documentos extends Component
 {
+    use ValidaEnConjunto;
     use WithFileUploads;
 
     /** Claves con campos estructurados y método propio; toda otra clave aplicable va por guardarDocumentoSimple() (WS-5a M1). */
     public const CON_DATOS_ESTRUCTURADOS = ['escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural'];
+
+    /** PDF de hasta 10 MB (el texto de cada fila de la checklist lo anuncia así). */
+    private const REGLAS_ARCHIVO = ['required', 'file', 'mimes:pdf', 'max:10240'];
 
     public Escuela $escuela;
 
@@ -88,7 +93,7 @@ class Paso2Documentos extends Component
         $simples = array_diff($documentosCompletos->clavesAplicables($this->tipoPersona()), self::CON_DATOS_ESTRUCTURADOS);
         abort_unless(in_array($clave, $simples, true), 403);
 
-        $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->validate(["archivos.{$clave}" => self::REGLAS_ARCHIVO]);
 
         if (! $this->intentarRegistrar($registrarDocumento, $clave, new DatosDocumento)) {
             return;
@@ -101,8 +106,10 @@ class Paso2Documentos extends Component
 
     public function guardarDictamen(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivos.dictamen_uso_suelo' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $this->dictamenForm->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.dictamen_uso_suelo' => self::REGLAS_ARCHIVO]),
+            fn () => $this->dictamenForm->validate(),
+        );
 
         if (! $this->intentarRegistrar($registrarDocumento, 'dictamen_uso_suelo', new DatosDocumento(
             fechaEmision: $this->dictamenForm->fechaEmision,
@@ -117,8 +124,10 @@ class Paso2Documentos extends Component
 
     public function guardarConstancia(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivos.constancia_seguridad_estructural' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $this->constanciaForm->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.constancia_seguridad_estructural' => self::REGLAS_ARCHIVO]),
+            fn () => $this->constanciaForm->validate(),
+        );
 
         if (! $this->intentarRegistrar($registrarDocumento, 'constancia_seguridad_estructural', new DatosDocumento(
             fechaEmision: $this->constanciaForm->fechaEmision,
@@ -138,8 +147,10 @@ class Paso2Documentos extends Component
 
     public function guardarAcreditacion(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivos.escritura_inmueble' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $this->acreditacionForm->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.escritura_inmueble' => self::REGLAS_ARCHIVO]),
+            fn () => $this->acreditacionForm->validate(),
+        );
 
         if (! $this->intentarRegistrar($registrarDocumento, 'escritura_inmueble', new DatosDocumento(
             tipoAcreditacion: $this->acreditacionForm->tipo,

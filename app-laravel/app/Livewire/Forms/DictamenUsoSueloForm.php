@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Application\Captura\ReglasCaptura;
 use Livewire\Form;
 
 class DictamenUsoSueloForm extends Form
@@ -11,7 +12,12 @@ class DictamenUsoSueloForm extends Form
     public function rules(): array
     {
         return [
-            'fechaEmision' => ['required', 'date'],
+            'fechaEmision' => ReglasCaptura::fechaPasada(requerido: true),
         ];
+    }
+
+    public function validationAttributes(): array
+    {
+        return ['fechaEmision' => 'fecha de emisión'];
     }
 }

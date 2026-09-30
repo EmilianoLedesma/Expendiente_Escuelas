@@ -2,7 +2,9 @@
 
 namespace App\Application\ResponsableLegal;
 
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
+use App\Domain\Captura\Formatos;
 use App\Models\Gestor;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
@@ -24,6 +26,8 @@ class RegistrarResponsableLegal
         if (! in_array($datos->tipoPersona, ['fisica', 'fisica_con_gestor', 'moral'], true)) {
             throw new InvalidArgumentException("tipo_persona desconocido: {$datos->tipoPersona}");
         }
+
+        $this->validar($datos);
 
         // ponytail: idempotency guard — a repeated submit for an escuela that already
         // has a responsable_legal (escuela_id is NOT NULL UNIQUE) is treated as a no-op
@@ -88,5 +92,44 @@ class RegistrarResponsableLegal
                 ]);
             }
         });
+    }
+
+    /**
+     * Invariantes de entrada: los nombres que el DDL declara NOT NULL por
+     * subtipo (personas_fisicas.nombre, gestores.nombre, personas_morales.
+     * razon_social/nombre_representante_legal) y el formato de CURP/RFC. Las
+     * claves usan la ruta del Form object de Paso2Responsable para mapearse
+     * 1:1 con addError().
+     */
+    private function validar(DatosResponsableLegal $datos): void
+    {
+        $errores = [];
+        $vacio = fn (?string $valor): bool => $valor === null || trim($valor) === '';
+
+        if ($datos->tipoPersona === 'moral') {
+            if ($vacio($datos->razonSocial)) {
+                $errores['personaMoralForm.razonSocial'] = 'El campo razón social es obligatorio.';
+            }
+            if ($vacio($datos->nombreRepresentanteLegal)) {
+                $errores['personaMoralForm.nombreRepresentanteLegal'] = 'El campo representante legal es obligatorio.';
+            }
+        } else {
+            if ($vacio($datos->nombre)) {
+                $errores['personaFisicaForm.nombre'] = 'El campo nombre completo es obligatorio.';
+            }
+            if ($datos->rfc !== null && ! Formatos::esRfcPersonaFisica($datos->rfc)) {
+                $errores['personaFisicaForm.rfc'] = 'El RFC no tiene un formato válido: son 13 caracteres para persona física, por ejemplo GOMA800101AB1.';
+            }
+            if ($datos->curp !== null && ! Formatos::esCurp($datos->curp)) {
+                $errores['personaFisicaForm.curp'] = 'La CURP no tiene un formato válido: son 18 caracteres, por ejemplo GOMA800101HQTRRL09.';
+            }
+            if ($datos->tipoPersona === 'fisica_con_gestor' && $vacio($datos->gestorNombre)) {
+                $errores['gestorForm.nombre'] = 'El campo nombre del gestor es obligatorio.';
+            }
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
     }
 }

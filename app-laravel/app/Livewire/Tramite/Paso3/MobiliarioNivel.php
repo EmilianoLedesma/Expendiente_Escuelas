@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
@@ -61,7 +62,7 @@ class MobiliarioNivel extends Component
 
     public function guardar(RegistrarMobiliarioNivel $registrarMobiliarioNivel): void
     {
-        $this->validate($this->reglas());
+        $this->validate();
 
         $declaradas = [];
         foreach ($this->cantidades as $conceptoId => $cantidad) {
@@ -89,10 +90,10 @@ class MobiliarioNivel extends Component
         $this->redirectRoute('tramite.paso3-proximos-pasos', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 
-    /** @return array<string, array<int, string>> */
-    private function reglas(): array
+    /** mobiliario_nivel.cantidad_declarada es SMALLINT. */
+    protected function rules(): array
     {
-        return ['cantidades.*' => ['nullable', 'integer', 'min:0', 'max:32767']];
+        return ['cantidades.*' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT)];
     }
 
     /**

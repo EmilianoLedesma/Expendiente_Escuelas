@@ -2,8 +2,10 @@
 
 namespace App\Application\Preregistro;
 
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\DTO\ResultadoPreregistro;
+use App\Domain\Captura\Formatos;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +92,26 @@ class IniciarTramiteNuevo
             if ($valor === null || $valor === '') {
                 throw new InvalidArgumentException("bifurcacion \"nuevo\" requiere {$campo}.");
             }
+        }
+
+        // Formato (mismo criterio que el formulario, App\Domain\Captura\Formatos):
+        // un adaptador que se salte Livewire no guarda un plantel mal capturado.
+        $errores = [];
+
+        if (! Formatos::esCodigoPostal((string) $datos->codigoPostal)) {
+            $errores['codigoPostal'] = 'El código postal debe tener 5 dígitos, por ejemplo 76000.';
+        }
+
+        if ($datos->telefono !== null && ! Formatos::esTelefono($datos->telefono)) {
+            $errores['telefono'] = 'El teléfono debe tener 10 dígitos, por ejemplo 4421234567.';
+        }
+
+        if ($datos->correoElectronico !== null && ! Formatos::esCorreo($datos->correoElectronico)) {
+            $errores['correoElectronico'] = 'Ingresa un correo electrónico válido, por ejemplo: nombre@dominio.com.';
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
         }
     }
 }

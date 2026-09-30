@@ -13,6 +13,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\ReciboPagoForm;
 use App\Models\EscuelaNivel;
 use App\Models\TipoDocumento;
@@ -31,6 +32,7 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.tramite')]
 class Paso24DocumentosNivel extends Component
 {
+    use ValidaEnConjunto;
     use WithFileUploads;
 
     /** Claves con campos propios y método propio; toda otra clave aplicable va por guardarDocumento() (WS-5a M1). Pública: la lee la prueba guarda del catálogo. */
@@ -65,12 +67,28 @@ class Paso24DocumentosNivel extends Component
         $this->tipoAlumnado = (string) $escuelaNivel->tipo_alumnado;
     }
 
-    public function guardarDatos(RegistrarDatosNivel $registrarDatosNivel): void
+    /**
+     * En rules() (no en línea) para que el hook de captura valide cada
+     * opción al elegirla. guardarDatos() las pasa explícitas: un validate()
+     * sin argumentos validaría también el Form del recibo.
+     */
+    protected function rules(): array
     {
-        $this->validate([
+        return $this->reglasDatos();
+    }
+
+    /** @return array<string, list<string>> */
+    private function reglasDatos(): array
+    {
+        return [
             'turno' => ['required', 'in:'.implode(',', RegistrarDatosNivel::TURNOS)],
             'tipoAlumnado' => ['required', 'in:'.implode(',', RegistrarDatosNivel::TIPOS_ALUMNADO)],
-        ]);
+        ];
+    }
+
+    public function guardarDatos(RegistrarDatosNivel $registrarDatosNivel): void
+    {
+        $this->validate($this->reglasDatos());
 
         try {
             $registrarDatosNivel->ejecutar($this->escuelaNivel->id, $this->turno, $this->tipoAlumnado);
@@ -95,8 +113,10 @@ class Paso24DocumentosNivel extends Component
 
     public function guardarRecibo(RegistrarDocumento $registrarDocumento): void
     {
-        $this->validate(['archivos.recibo_pago_derechos' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $this->recibo->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.recibo_pago_derechos' => ['required', 'file', 'mimes:pdf', 'max:10240']]),
+            fn () => $this->recibo->validate(),
+        );
 
         if ($this->intentarRegistrar($registrarDocumento, 'recibo_pago_derechos', new DatosDocumento(
             folio: $this->recibo->folio,
