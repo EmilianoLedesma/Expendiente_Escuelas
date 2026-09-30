@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(RolesSeeder::class);
         $this->call(CatalogoMinimoSeeder::class);
+        $this->call(GradosSeeder::class);
         $this->call(TiposEspaciosSeeder::class);
         $this->call(MobiliarioConceptosSeeder::class);
         $this->call(TiposDocumentosSeeder::class);
