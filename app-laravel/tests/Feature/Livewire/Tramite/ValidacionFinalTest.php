@@ -4,8 +4,10 @@ namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Livewire\Tramite\ValidacionFinal;
+use App\Models\AulaNivel;
 use App\Models\EvaluacionValidacion;
 use App\Models\Solicitante;
+use Database\Seeders\ReglasValidacionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\Concerns\CapturaExpedienteConsistente;
@@ -121,5 +123,21 @@ class ValidacionFinalTest extends TestCase
             ->assertOk()
             ->assertSee('Validación final')
             ->assertSee(route('tramite.validacion', ['escuela' => $escuela->id]), false);
+    }
+
+    public function test_muestra_la_capacidad_instalada_por_nivel_con_enlace_para_corregir(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $escuelaNivel = $this->completarTramite($escuela);
+        (new ReglasValidacionSeeder)->run();
+        AulaNivel::create(['escuela_nivel_id' => $escuelaNivel->id, 'numero_aulas' => 1, 'superficie_m2' => 10]);
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
+            ->assertSee('Capacidad instalada · Primaria')
+            ->assertSee('Superficie de aulas')
+            ->assertSee('Requerido: 22.50 m² · Declarado: 10 m²')
+            ->assertSee(route('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]), false)
+            ->assertSee('Tu expediente no tiene errores que impidan enviarlo');
     }
 }

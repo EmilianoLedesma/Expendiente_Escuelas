@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
  * @property int $escuela_id
  * @property string $archivo_path
  * @property bool $lista_para_envio
- * @property array<int, array<string, mixed>> $resultados
+ * @property array<array-key, mixed> $resultados {documental: rows, capacidad: sections}; a flat list of documental rows in the earliest runs
  * @property Carbon $created_at
  */
 class EvaluacionValidacion extends Model

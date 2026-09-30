@@ -60,6 +60,41 @@
             @endforeach
         </ol>
 
+        @foreach ($validacion->capacidad as $seccion)
+            <section class="mt-xl" data-escuela-nivel="{{ $seccion->escuelaNivelId }}">
+                <h2 class="text-title-md font-semibold text-ink">Capacidad instalada · {{ $seccion->nivel }}</h2>
+                <p class="mt-xxs text-body-sm text-muted">Superficie, personal y mobiliario contra la norma, según la matrícula que capturaste. Estas observaciones no impiden enviar; SEDEQ las revisará.</p>
+                <ol class="mt-md divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
+                    @foreach (['no_cumple', 'no_evaluable', 'advertencia', 'cumple'] as $estado)
+                        @foreach ($seccion->conEstado($estado) as $fila)
+                            <li class="py-md" data-regla="{{ $fila->clave }}" data-estado="{{ $fila->estado }}">
+                                <div class="flex flex-wrap items-center justify-between gap-sm">
+                                    <h3 class="text-body-md font-semibold text-ink">{{ $fila->titulo }}</h3>
+                                    <x-ui.status-tag :estado="$fila->estado === 'no_cumple' ? 'en_curso' : $tags[$fila->estado]" :texto="$fila->estado === 'no_cumple' ? 'Observación' : $etiquetas[$fila->estado]" />
+                                </div>
+                                @if ($fila->estado !== 'cumple')
+                                    @if ($fila->lineas !== [])
+                                        <ul class="mt-xs list-disc space-y-xxs pl-lg text-body-sm text-muted">
+                                            @foreach ($fila->lineas as $linea)
+                                                <li>{{ $linea }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <p class="mt-xxs text-body-sm text-muted">{{ $fila->mensaje }}</p>
+                                    @endif
+                                    @if ($fila->estado === 'no_cumple' && isset(\App\Application\Tramite\ResumenTramite::RUTAS_PASO3[$fila->pasoCorreccion]))
+                                        <a href="{{ route(\App\Application\Tramite\ResumenTramite::RUTAS_PASO3[$fila->pasoCorreccion], ['escuelaNivel' => $seccion->escuelaNivelId]) }}" class="mt-sm inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                                            Revisar la captura
+                                        </a>
+                                    @endif
+                                @endif
+                            </li>
+                        @endforeach
+                    @endforeach
+                </ol>
+            </section>
+        @endforeach
+
         <div class="mt-lg flex flex-wrap items-center gap-md">
             <x-ui.button-primary type="button" wire:click="validarDeNuevo">Validar de nuevo</x-ui.button-primary>
             <a href="{{ route('tramite.validacion.reporte', ['escuela' => $escuela->id, 'evaluacion' => $validacion->evaluacionId]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">

@@ -9,6 +9,7 @@ use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\Personal;
 use App\Models\Plantel;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -105,7 +106,7 @@ class ConstruirDatosCapacidad
             ->count('grado_id');
     }
 
-    /** @param callable(\Illuminate\Database\Query\Builder): mixed $filtro */
+    /** @param callable(Builder): mixed $filtro */
     private function sumaEspacios(int $plantelId, callable $filtro): ?float
     {
         $consulta = DB::table('instalaciones_espacios')

@@ -62,6 +62,34 @@
         </tbody>
     </table>
 
-    <p class="pie">Validación automática de consistencia entre los datos capturados y los documentos cargados. No sustituye la revisión de SEDEQ ni el cotejo de originales en la visita de verificación.</p>
+    @foreach ($capacidad as $seccion)
+        <h2 style="font-size: 14px; margin: 18px 0 4px;">Capacidad instalada · {{ $seccion->nivel }}</h2>
+        <p class="meta">Observaciones para SEDEQ: no impiden enviar la solicitud.</p>
+        <table>
+            <thead>
+                <tr><th>Revisión</th><th>Resultado</th><th>Detalle</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($seccion->filas as $fila)
+                    <tr>
+                        <td>{{ $fila->titulo }}</td>
+                        <td class="estado {{ $fila->estado }}">{{ $etiquetas[$fila->estado] ?? $fila->estado }}</td>
+                        <td>
+                            {{ $fila->mensaje }}
+                            @if ($fila->lineas !== [])
+                                <ul>
+                                    @foreach ($fila->lineas as $linea)
+                                        <li>{{ $linea }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endforeach
+
+    <p class="pie">Validación automática de consistencia entre los datos capturados y los documentos cargados, y de capacidad instalada contra los Acuerdos 357, 254 y 255 y los requisitos de Educación Inicial. No sustituye la revisión de SEDEQ ni el cotejo de originales en la visita de verificación.</p>
 </body>
 </html>

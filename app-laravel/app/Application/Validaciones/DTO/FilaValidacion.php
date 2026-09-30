@@ -12,6 +12,7 @@ final readonly class FilaValidacion
      * @param  string  $estado  cumple|advertencia|no_cumple|no_evaluable
      * @param  array<string, string>  $documentos  tipos_documentos.clave => nombre, the uploads to fix
      * @param  list<string>  $lineas  what was compared, one line per value
+     * @param  string|null  $pasoCorreccion  Paso 3 sub-step (pasos_captura.clave) where a capacity result is fixed
      */
     public function __construct(
         public string $clave,
@@ -20,9 +21,10 @@ final readonly class FilaValidacion
         public string $mensaje,
         public array $documentos,
         public array $lineas,
+        public ?string $pasoCorreccion = null,
     ) {}
 
-    /** @return array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>} */
+    /** @return array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>, pasoCorreccion: string|null} */
     public function aArreglo(): array
     {
         return [
@@ -32,12 +34,13 @@ final readonly class FilaValidacion
             'mensaje' => $this->mensaje,
             'documentos' => $this->documentos,
             'lineas' => $this->lineas,
+            'pasoCorreccion' => $this->pasoCorreccion,
         ];
     }
 
-    /** @param array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>} $fila */
+    /** @param array{clave: string, titulo: string, estado: string, mensaje: string, documentos: array<string, string>, lineas: list<string>, pasoCorreccion?: string|null} $fila */
     public static function desdeArreglo(array $fila): self
     {
-        return new self($fila['clave'], $fila['titulo'], $fila['estado'], $fila['mensaje'], $fila['documentos'], $fila['lineas']);
+        return new self($fila['clave'], $fila['titulo'], $fila['estado'], $fila['mensaje'], $fila['documentos'], $fila['lineas'], $fila['pasoCorreccion'] ?? null);
     }
 }

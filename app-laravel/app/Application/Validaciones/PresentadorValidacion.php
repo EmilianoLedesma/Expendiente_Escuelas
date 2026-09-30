@@ -55,6 +55,62 @@ class PresentadorValidacion
     }
 
     /**
+     * Capacity engine rows. The title is the rule's concepto; the line says
+     * what was required against what was declared; pasoCorreccion points at
+     * the Paso 3 sub-step where the declared value lives.
+     *
+     * @param  array<string, string>  $conceptos  reglas_validacion clave => concepto
+     * @return list<FilaValidacion>
+     */
+    public function filasCapacidad(ReporteValidacion $reporte, array $conceptos): array
+    {
+        return array_map(function (ResultadoRegla $resultado) use ($conceptos) {
+            $d = $resultado->detalles;
+            $lineas = [];
+
+            if (isset($d['requerido'], $d['declarado'])) {
+                $lineas[] = sprintf('Requerido: %s %s · Declarado: %s %s', self::numero($d['requerido']), $d['unidad'], self::numero($d['declarado']), $d['unidad']);
+            }
+            foreach ($d['faltantes'] ?? [] as $faltante) {
+                $lineas[] = sprintf('%s (%s): se requieren %d, se declararon %d', $faltante['concepto'], self::SALAS[$faltante['sala']] ?? $faltante['sala'], $faltante['requerido'], $faltante['declarado']);
+            }
+            if (($d['no_evaluados'] ?? []) !== []) {
+                $lineas[] = 'No verificados (sala de usos múltiples): '.implode(', ', $d['no_evaluados']);
+            }
+
+            return new FilaValidacion(
+                clave: $resultado->clave,
+                titulo: $conceptos[$resultado->clave] ?? $resultado->clave,
+                estado: $resultado->estado->value,
+                mensaje: $resultado->mensaje,
+                documentos: [],
+                lineas: $lineas,
+                pasoCorreccion: self::pasoCorreccion($resultado->clave),
+            );
+        }, $reporte->resultados);
+    }
+
+    private const SALAS = [
+        'lactantes_a' => 'Lactantes A', 'lactantes_b' => 'Lactantes B', 'lactantes_c' => 'Lactantes C',
+        'maternal_a' => 'Maternal A', 'maternal_b' => 'Maternal B',
+    ];
+
+    private static function pasoCorreccion(string $clave): string
+    {
+        return match (true) {
+            str_contains($clave, '.personal.') => 'plantilla_docente',
+            str_ends_with($clave, '.mobiliario') => 'mobiliario',
+            str_ends_with($clave, '.predio_total') || str_ends_with($clave, '.construida_total') => 'inmueble',
+            default => 'infraestructura',
+        };
+    }
+
+    private static function numero(int|float $valor): string
+    {
+        return is_int($valor) || fmod((float) $valor, 1.0) === 0.0 ? (string) (int) round($valor) : number_format((float) $valor, 2, '.', '');
+    }
+
+    /**
      * @param  callable(string): string  $nombre
      * @return list<string>
      */
