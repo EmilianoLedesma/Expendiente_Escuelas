@@ -6,6 +6,7 @@ use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso24;
+use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -14,8 +15,10 @@ use App\Models\Plantel;
 use App\Models\Solicitante;
 use App\Models\TipoDocumento;
 use Database\Seeders\TiposDocumentosSeeder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\Concerns\CompletaPaso2;
@@ -165,5 +168,82 @@ class RegistrarDatosNivelTest extends TestCase
         app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'vespertino', 'mixto');
 
         $this->assertSame('vespertino', $escuelaNivel->fresh()->turno);
+    }
+
+    public function test_datos_invalidos_con_formato_subido_no_descartan_el_formato(): void
+    {
+        $escuelaNivel = $this->nivel();
+        app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'matutino', 'mixto');
+        $ruta = $this->subirFormato($escuelaNivel);
+
+        try {
+            app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'nocturno', 'mixto');
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos) {
+            // esperado
+        }
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 1);
+        Storage::disk('documentos')->assertExists($ruta);
+    }
+
+    public function test_paso2_incompleto_con_formato_subido_no_descarta_el_formato(): void
+    {
+        Storage::fake('documentos');
+        $escuelaNivel = $this->nivel(conPaso2: false);
+        $ruta = $this->subirFormato($escuelaNivel);
+
+        try {
+            app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'matutino', 'mixto');
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            // esperado
+        }
+
+        $this->assertNull($escuelaNivel->fresh()->turno);
+        $this->assertDatabaseCount('documentos_escuela_nivel', 1);
+        Storage::disk('documentos')->assertExists($ruta);
+    }
+
+    /** Fija el comportamiento actual: la primera captura (null a valor) también descarta un Formato ya subido. */
+    public function test_primera_captura_con_formato_ya_subido_descarta_el_formato(): void
+    {
+        $escuelaNivel = $this->nivel();
+        $ruta = $this->subirFormato($escuelaNivel);
+
+        app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'matutino', 'mixto');
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+        Storage::disk('documentos')->assertMissing($ruta);
+    }
+
+    public function test_fallo_al_borrar_el_archivo_se_reporta_sin_propagar_y_la_fila_queda_borrada(): void
+    {
+        $escuelaNivel = $this->nivel();
+        app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'matutino', 'mixto');
+        $this->subirFormato($escuelaNivel);
+        Exceptions::fake();
+        $this->mock(AlmacenDocumentos::class, fn ($mock) => $mock->shouldReceive('eliminar')->once()->andThrow(new RuntimeException('disco no disponible')));
+
+        app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'vespertino', 'mixto');
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+        Exceptions::assertReported(RuntimeException::class);
+    }
+
+    /** Catálogo sin formato_solicitud: falla ruidosamente en vez de saltarse el descarte. */
+    public function test_sin_tipo_formato_en_el_catalogo_falla_sin_guardar(): void
+    {
+        $escuelaNivel = $this->nivel();
+        DB::table('tipos_documentos')->where('clave', 'formato_solicitud')->delete();
+
+        try {
+            app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'matutino', 'mixto');
+            $this->fail('Se esperaba ModelNotFoundException.');
+        } catch (ModelNotFoundException) {
+            // esperado
+        }
+
+        $this->assertNull($escuelaNivel->fresh()->turno);
     }
 }

@@ -48,24 +48,24 @@ class RegistrarDatosNivel
             throw new DatosInvalidos($errores);
         }
 
-        $escuelaNivel = EscuelaNivel::findOrFail($escuelaNivelId);
+        DB::transaction(function () use ($escuelaNivelId, $turno, $tipoAlumnado) {
+            // Lock: la comparación "¿cambian los datos?" y el descarte del
+            // Formato deben ver la misma fila que se actualiza.
+            $escuelaNivel = EscuelaNivel::lockForUpdate()->findOrFail($escuelaNivelId);
 
-        $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
-        if ($etapaFaltante !== null) {
-            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de capturar los datos del nivel.');
-        }
+            $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
+            if ($etapaFaltante !== null) {
+                throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de capturar los datos del nivel.');
+            }
 
-        $cambia = $escuelaNivel->turno !== $turno || $escuelaNivel->tipo_alumnado !== $tipoAlumnado;
+            if ($escuelaNivel->turno === $turno && $escuelaNivel->tipo_alumnado === $tipoAlumnado) {
+                return;
+            }
 
-        if (! $cambia) {
-            return;
-        }
-
-        DB::transaction(function () use ($escuelaNivel, $turno, $tipoAlumnado) {
             $escuelaNivel->update(['turno' => $turno, 'tipo_alumnado' => $tipoAlumnado]);
 
             $formato = DocumentoEscuelaNivel::where('escuela_nivel_id', $escuelaNivel->id)
-                ->where('tipo_documento_id', TipoDocumento::where('clave', 'formato_solicitud')->value('id'))
+                ->where('tipo_documento_id', TipoDocumento::where('clave', 'formato_solicitud')->firstOrFail()->id)
                 ->first();
 
             if ($formato === null) {
