@@ -7,11 +7,15 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\EstadoPaso24;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
@@ -22,10 +26,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class RegistrarDocumentoTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuela(string $tipoPersona = 'fisica'): Escuela
@@ -359,5 +365,246 @@ class RegistrarDocumentoTest extends TestCase
         $documento = DocumentoEscuela::first();
         $this->assertNotSame($rutaAnterior, $documento->archivo_path);
         Storage::disk('documentos')->assertExists($documento->archivo_path);
+    }
+
+    /** Escuela con Paso 2 completo y un nivel; con turno/tipo de alumnado salvo que se pida lo contrario. */
+    private function crearEscuelaNivel(string $claveNivel = 'primaria', bool $conDatos = true): EscuelaNivel
+    {
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => Solicitante::factory()->create()->id]);
+        $this->completarPaso2($escuela->id);
+
+        return EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', $claveNivel)->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+            'turno' => $conDatos ? 'matutino' : null,
+            'tipo_alumnado' => $conDatos ? 'mixto' : null,
+        ]);
+    }
+
+    private function recibo(string $folio = 'F-123', string $monto = '1500.00', ?string $fechaPago = null): DatosDocumento
+    {
+        return new DatosDocumento(folio: $folio, monto: $monto, fechaPago: $fechaPago ?? now()->toDateString());
+    }
+
+    private function pdf(string $nombre = 'd.pdf'): UploadedFile
+    {
+        return UploadedFile::fake()->create($nombre, 10, 'application/pdf');
+    }
+
+    public function test_registra_documento_de_ambito_escuela_nivel_en_su_propia_ruta(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
+
+        $documento = DocumentoEscuelaNivel::first();
+        $this->assertNotNull($documento);
+        $this->assertSame($escuelaNivel->id, $documento->escuela_nivel_id);
+        $this->assertSame('pendiente', $documento->estado_validacion);
+        $this->assertMatchesRegularExpression('#^escuela_nivel/'.$escuelaNivel->id.'/acervo_bibliografico_primaria-[0-9A-Z]{26}\.pdf$#', $documento->archivo_path);
+        Storage::disk('documentos')->assertExists($documento->archivo_path);
+    }
+
+    public function test_registra_el_recibo_con_su_extension(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), new DatosDocumento(
+            folio: 'F-777', monto: '2500.50', fechaPago: '2026-09-01', portalReferencia: 'portal-tributario.queretaro.gob.mx',
+        ), $escuelaNivel->id);
+
+        $this->assertDatabaseHas('recibos_pago_derechos', [
+            'documento_escuela_nivel_id' => DocumentoEscuelaNivel::first()->id,
+            'folio' => 'F-777',
+            'monto' => '2500.50',
+            'fecha_pago' => '2026-09-01',
+            'portal_referencia' => 'portal-tributario.queretaro.gob.mx',
+        ]);
+    }
+
+    public function test_rechaza_un_recibo_sin_folio_monto_ni_fecha_sin_escribir_nada(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('recibo.folio', $e->errores);
+            $this->assertArrayHasKey('recibo.monto', $e->errores);
+            $this->assertArrayHasKey('recibo.fechaPago', $e->errores);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+        Storage::disk('documentos')->assertDirectoryEmpty('escuela_nivel');
+    }
+
+    public function test_rechaza_un_monto_cero(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(monto: '0'), $escuelaNivel->id);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('recibo.monto', $e->errores);
+        }
+    }
+
+    /** Con control: mañana se rechaza, hoy se acepta. */
+    public function test_rechaza_una_fecha_de_pago_futura_y_acepta_la_de_hoy(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(fechaPago: now()->addDay()->toDateString()), $escuelaNivel->id);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('recibo.fechaPago', $e->errores);
+        }
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(fechaPago: now()->toDateString()), $escuelaNivel->id);
+        $this->assertDatabaseCount('documentos_escuela_nivel', 1);
+    }
+
+    /** Review Focus 2. */
+    public function test_rechaza_un_nivel_de_otra_escuela(): void
+    {
+        $escuelaNivelDeA = $this->crearEscuelaNivel();
+        $escuelaNivelDeB = $this->crearEscuelaNivel();
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuelaNivelDeB->escuela_id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $escuelaNivelDeA->id);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('archivos.acervo_bibliografico_primaria', $e->errores);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+    }
+
+    public function test_rechaza_una_clave_que_no_aplica_al_nivel(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel('primaria');
+
+        $this->expectException(DatosInvalidos::class);
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'inventario_laboratorio', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
+    }
+
+    public function test_rechaza_una_clave_por_nivel_sin_escuela_nivel(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        $this->expectException(DatosInvalidos::class);
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'formato_solicitud', $this->pdf(), new DatosDocumento);
+    }
+
+    public function test_rechaza_una_clave_de_paso_2_2_con_escuela_nivel(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        $this->expectException(DatosInvalidos::class);
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'ine', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
+    }
+
+    public function test_rechaza_el_formato_antes_de_capturar_turno_y_tipo_de_alumnado(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel(conDatos: false);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'formato_solicitud', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(EstadoPaso24::DATOS, $e->etapaFaltante);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+    }
+
+    public function test_rechaza_documentos_del_nivel_con_paso2_incompleto(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        try {
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            // Revisión M7: la etapa es la de Paso 2 (documentos de 2.2), no la de 2.4.
+            $this->assertSame(EstadoPaso2::DOCUMENTOS, $e->etapaFaltante);
+        }
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+    }
+
+    public function test_rechaza_un_archivo_que_no_es_pdf_en_el_nivel(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        $this->expectException(DatosInvalidos::class);
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_primaria', UploadedFile::fake()->create('x.png', 10, 'image/png'), new DatosDocumento, $escuelaNivel->id);
+    }
+
+    public function test_reemplazo_en_el_nivel_apunta_a_ruta_nueva_y_borra_la_anterior(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'formato_solicitud', $this->pdf('v1.pdf'), new DatosDocumento, $escuelaNivel->id);
+        $rutaAnterior = DocumentoEscuelaNivel::first()->archivo_path;
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'formato_solicitud', $this->pdf('v2.pdf'), new DatosDocumento, $escuelaNivel->id);
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 1);
+        $documento = DocumentoEscuelaNivel::first();
+        $this->assertNotSame($rutaAnterior, $documento->archivo_path);
+        Storage::disk('documentos')->assertExists($documento->archivo_path);
+        Storage::disk('documentos')->assertMissing($rutaAnterior);
+    }
+
+    public function test_rollback_externo_en_el_nivel_conserva_el_archivo_previo_y_no_deja_huerfano_el_nuevo(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_primaria', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento, $escuelaNivel->id);
+        $rutaAnterior = DocumentoEscuelaNivel::first()->archivo_path;
+
+        try {
+            DB::transaction(function () use ($escuelaNivel) {
+                app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'acervo_bibliografico_primaria', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento, $escuelaNivel->id);
+
+                throw new RuntimeException('fuerza rollback de la transacción externa');
+            });
+            $this->fail('Se esperaba que la transacción externa fallara.');
+        } catch (RuntimeException) {
+            // esperado
+        }
+
+        $this->assertSame($rutaAnterior, DocumentoEscuelaNivel::first()->archivo_path);
+        $this->assertSame('contenido-version-1', Storage::disk('documentos')->get($rutaAnterior));
+        $this->assertCount(1, Storage::disk('documentos')->allFiles("escuela_nivel/{$escuelaNivel->id}"), 'el archivo nuevo (v2) quedó huérfano');
+    }
+
+    public function test_reemplazar_el_recibo_actualiza_su_extension_sin_duplicar(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel();
+
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(folio: 'F-1'), $escuelaNivel->id);
+        app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(folio: 'F-2'), $escuelaNivel->id);
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 1);
+        $this->assertDatabaseCount('recibos_pago_derechos', 1);
+        $this->assertDatabaseHas('recibos_pago_derechos', ['folio' => 'F-2']);
     }
 }

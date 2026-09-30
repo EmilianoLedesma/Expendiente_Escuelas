@@ -13,11 +13,13 @@ use App\Models\TipoDocumento;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class EstadoPaso24Test extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private function nivel(string $clave = 'primaria', ?string $turno = null, ?string $tipoAlumnado = null): EscuelaNivel
@@ -89,5 +91,17 @@ class EstadoPaso24Test extends TestCase
         $conVigencia->update(['fecha_vigencia' => now()->subDay()->toDateString()]);
 
         $this->assertSame(EstadoPaso24::DOCUMENTOS_NIVEL, app(EstadoPaso24::class)->etapaFaltante($escuelaNivel->id));
+    }
+
+    /** Guarda el fixture que usan las pruebas de Paso 3: deja 2.4 completo para cualquier nivel. */
+    public function test_el_fixture_completar_paso24_deja_el_nivel_completo(): void
+    {
+        foreach (['inicial', 'secundaria'] as $clave) {
+            $escuelaNivel = $this->nivel($clave);
+
+            $this->completarPaso24($escuelaNivel->id);
+
+            $this->assertNull(app(EstadoPaso24::class)->etapaFaltante($escuelaNivel->id), $clave);
+        }
     }
 }

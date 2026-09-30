@@ -4,7 +4,7 @@ namespace App\Application\Documentos\DTO;
 
 /**
  * Entrada de RegistrarDocumento. Plana, readonly, mismo patrón que
- * DatosResponsableLegal — los campos de las 2 tablas de extensión
+ * DatosResponsableLegal — los campos de las 3 tablas de extensión
  * conviven aquí; solo los que corresponden a la clave del documento se
  * usan. fechaEmision aplica a cualquier documento con vigencia
  * (dictamen_uso_suelo, constancia_seguridad_estructural).
@@ -35,5 +35,10 @@ final readonly class DatosDocumento
         public ?bool $ratificadoNotario = null,
         public ?string $otroEspecifique = null,
         public ?string $observaciones = null,
+        // recibo_pago_derechos (recibos_pago_derechos, Paso 2.4)
+        public ?string $folio = null,
+        public ?string $monto = null,
+        public ?string $fechaPago = null,
+        public ?string $portalReferencia = null,
     ) {}
 }
