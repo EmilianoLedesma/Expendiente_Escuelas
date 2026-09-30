@@ -11,10 +11,15 @@ use InvalidArgumentException;
  * escuela_nivel_pasos. El orden sale de pasos_captura.orden — no hay aquí
  * una segunda copia de la secuencia, así que añadir un sub-paso (WS-8) es
  * solo añadirlo al catálogo. Los componentes solo leen el resultado para
- * decidir a dónde redirigir (ADR-001).
+ * decidir a dónde redirigir (ADR-001). Desde WS-5b todo Paso 3 de un nivel
+ * exige además su Paso 2.4 completo (EstadoPaso24); vive aquí porque
+ * CompuertaPaso3, MarcarPasoCompletado, los casos de uso Registrar* de Paso 3
+ * y ResumenTramite ya pasan por puedeAcceder().
  */
 class EstadoPaso3
 {
+    public function __construct(private readonly EstadoPaso24 $estadoPaso24) {}
+
     /** Clave del primer sub-paso sin completar, o null si todos lo están. */
     public function primerPendiente(int $escuelaNivelId): ?string
     {
@@ -36,6 +41,10 @@ class EstadoPaso3
 
         if ($posicion === false) {
             throw new InvalidArgumentException("paso_captura desconocido: {$clave}");
+        }
+
+        if ($this->estadoPaso24->etapaFaltante($escuelaNivelId) !== null) {
+            return false;
         }
 
         return $posicion === 0 || in_array($catalogo[$posicion - 1], $this->completados($escuelaNivelId), true);

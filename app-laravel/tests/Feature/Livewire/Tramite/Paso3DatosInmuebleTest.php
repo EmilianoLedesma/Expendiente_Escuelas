@@ -17,11 +17,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class Paso3DatosInmuebleTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private Solicitante $solicitante;
@@ -48,12 +50,15 @@ class Paso3DatosInmuebleTest extends TestCase
         $nivel = NivelEducativo::where('clave', $claveNivel)->first();
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $this->escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
+
+        return $escuelaNivel;
     }
 
     public function test_la_ruta_de_paso3_ahora_muestra_el_sub_paso_1(): void

@@ -16,11 +16,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class Paso3MobiliarioNivelTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private function crearEscuelaNivel(Solicitante $solicitante, string $claveNivel): EscuelaNivel
@@ -41,6 +43,7 @@ class Paso3MobiliarioNivelTest extends TestCase
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
         // WS-1.3: Mobiliario solo es alcanzable con Infraestructura completada.
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'infraestructura');

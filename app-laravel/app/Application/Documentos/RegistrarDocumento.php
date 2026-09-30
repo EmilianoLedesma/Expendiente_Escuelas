@@ -7,20 +7,26 @@ use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\EstadoPaso24;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\ReciboPagoDerechos;
 use App\Models\TipoDocumento;
+use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Throwable;
 
 /**
- * Caso de uso genérico para los documentos aplicables de Paso 2.2 — despacha por
+ * Caso de uso genérico para los documentos aplicables de Paso 2.2 y, desde
+ * WS-5b, de Paso 2.4 (ámbito escuela_nivel) — despacha por
  * tipos_documentos.ambito/clave, no tiene una clase por documento (mismo
  * patrón que RegistrarResponsableLegal despachando por tipo_persona).
  */
@@ -31,10 +37,16 @@ class RegistrarDocumento
         private readonly ?DocumentosCompletos $documentosCompletos = null,
         private readonly ?EstadoPaso2 $estadoPaso2 = null,
         private readonly ?TipoPersonaDeEscuela $tipoPersonaDeEscuela = null,
+        private readonly ?DocumentosNivelCompletos $documentosNivelCompletos = null,
+        private readonly ?EstadoPaso24 $estadoPaso24 = null,
     ) {}
 
-    /** @throws PrecondicionIncumplida si no hay responsable legal capturado para la escuela. */
-    public function ejecutar(int $escuelaId, string $tipoDocumentoClave, UploadedFile $archivo, DatosDocumento $datos): void
+    /**
+     * @param  int|null  $escuelaNivelId  nivel dueño del documento en Paso 2.4 (ámbito escuela_nivel); null en Paso 2.2.
+     *
+     * @throws PrecondicionIncumplida si no hay responsable legal; en Paso 2.4 además si Paso 2 no está completo o si se sube el Formato antes de turno y tipo de alumnado.
+     */
+    public function ejecutar(int $escuelaId, string $tipoDocumentoClave, UploadedFile $archivo, DatosDocumento $datos, ?int $escuelaNivelId = null): void
     {
         $tipo = TipoDocumento::where('clave', $tipoDocumentoClave)->first();
 
@@ -50,27 +62,42 @@ class RegistrarDocumento
             throw new PrecondicionIncumplida(EstadoPaso2::RESPONSABLE, 'Captura el responsable legal (Paso 2) antes de subir documentos.');
         }
 
-        $tipoPersonaDeEscuela = $this->tipoPersonaDeEscuela ?? app(TipoPersonaDeEscuela::class);
-        $tipoPersona = $tipoPersonaDeEscuela->ejecutar($escuelaId);
-        $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);
+        // Paso 2.2 solo acepta claves plantel/escuela y Paso 2.4 solo
+        // escuela_nivel, así que tras esto el ámbito y $escuelaNivelId concuerdan.
+        if ($escuelaNivelId === null) {
+            $tipoPersonaDeEscuela = $this->tipoPersonaDeEscuela ?? app(TipoPersonaDeEscuela::class);
+            $tipoPersona = $tipoPersonaDeEscuela->ejecutar($escuelaId);
+            $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);
 
-        if (! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
-            // Minor 5 — 'clave' no mapea a ningún campo Livewire; "archivos.{clave}"
-            // es la misma ruta que usa el rechazo de PDF más abajo.
-            throw new DatosInvalidos(["archivos.{$tipoDocumentoClave}" => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
+            if (! in_array($tipoDocumentoClave, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
+                // Minor 5 — 'clave' no mapea a ningún campo Livewire; "archivos.{clave}"
+                // es la misma ruta que usa el rechazo de PDF más abajo.
+                throw new DatosInvalidos(["archivos.{$tipoDocumentoClave}" => "El documento \"{$tipoDocumentoClave}\" no aplica al tipo de persona de esta escuela."]);
+            }
+            $datosNivelVerificados = null;
+        } else {
+            $datosNivelVerificados = $this->verificarNivel($escuelaId, $escuelaNivelId, $tipoDocumentoClave, $estadoPaso2);
         }
 
         if ($archivo->getMimeType() !== 'application/pdf') {
             throw new DatosInvalidos(["archivos.{$tipoDocumentoClave}" => 'El archivo debe ser un PDF.']);
         }
 
+        if ($tipoDocumentoClave === 'recibo_pago_derechos') {
+            $this->validarRecibo($datos);
+        }
+
         $almacen = $this->almacen ?? app(AlmacenDocumentos::class);
         $escuela = Escuela::findOrFail($escuelaId);
-        $ownerId = $tipo->ambito === 'plantel' ? $escuela->plantel_id : $escuelaId;
 
-        $rutaAnterior = $tipo->ambito === 'plantel'
-            ? DocumentoPlantel::where('plantel_id', $ownerId)->where('tipo_documento_id', $tipo->id)->value('archivo_path')
-            : DocumentoEscuela::where('escuela_id', $ownerId)->where('tipo_documento_id', $tipo->id)->value('archivo_path');
+        [$modelo, $columna, $ownerId] = match ($tipo->ambito) {
+            'plantel' => [new DocumentoPlantel, 'plantel_id', $escuela->plantel_id],
+            'escuela' => [new DocumentoEscuela, 'escuela_id', $escuelaId],
+            'escuela_nivel' => [new DocumentoEscuelaNivel, 'escuela_nivel_id', (int) $escuelaNivelId],
+            default => throw new InvalidArgumentException("ámbito desconocido: {$tipo->ambito}"),
+        };
+
+        $rutaAnterior = $modelo->newQuery()->where($columna, $ownerId)->where('tipo_documento_id', $tipo->id)->value('archivo_path');
 
         // Ruta nueva y única (WS-2.3): nunca pisa el archivo anterior, así
         // que un fallo en la transacción no puede dejar bytes nuevos bajo
@@ -98,7 +125,7 @@ class RegistrarDocumento
         $confirmado = false;
 
         try {
-            DB::transaction(function () use ($tipo, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, &$confirmado) {
+            DB::transaction(function () use ($tipo, $modelo, $columna, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, $datosNivelVerificados, &$confirmado) {
                 $atributos = [
                     'archivo_path' => $ruta,
                     'fecha_emision' => $datos->fechaEmision,
@@ -106,21 +133,31 @@ class RegistrarDocumento
                     'estado_validacion' => 'pendiente',
                 ];
 
-                if ($tipo->ambito === 'plantel') {
-                    $documento = DocumentoPlantel::updateOrCreate(
-                        ['plantel_id' => $ownerId, 'tipo_documento_id' => $tipo->id],
-                        $atributos,
-                    );
-                } else {
-                    $documento = DocumentoEscuela::updateOrCreate(
-                        ['escuela_id' => $ownerId, 'tipo_documento_id' => $tipo->id],
-                        $atributos,
-                    );
+                // WS-5b: documentos_escuela_nivel no tiene UNIQUE y las lecturas
+                // toman la última fila; el lock del nivel (el mismo que toma
+                // RegistrarDatosNivel) serializa dos subidas concurrentes para
+                // que updateOrCreate nunca inserte una segunda fila.
+                if ($tipo->ambito === 'escuela_nivel') {
+                    $escuelaNivel = EscuelaNivel::lockForUpdate()->findOrFail($ownerId);
+
+                    // Revisión Task 4 (I1): RegistrarDatosNivel pudo cambiar
+                    // turno/tipo de alumnado (y descartar el Formato) entre
+                    // verificarNivel() y este lock; un Formato subido contra
+                    // datos que ya no son los verificados sería obsoleto.
+                    $datosActuales = [$escuelaNivel->turno, $escuelaNivel->tipo_alumnado];
+                    if ($tipo->clave === 'formato_solicitud' && (in_array(null, $datosActuales, true) || $datosActuales !== $datosNivelVerificados)) {
+                        throw new PrecondicionIncumplida(EstadoPaso24::DATOS, 'El turno o el tipo de alumnado cambiaron; vuelve a descargar y firmar el Formato de Solicitud.');
+                    }
                 }
+
+                $documento = $modelo->newQuery()->updateOrCreate(
+                    [$columna => $ownerId, 'tipo_documento_id' => $tipo->id],
+                    $atributos,
+                );
 
                 if ($tipo->clave === 'constancia_seguridad_estructural') {
                     ConstanciaSeguridadEstructural::updateOrCreate(
-                        ['documento_plantel_id' => $documento->id],
+                        ['documento_plantel_id' => $documento->getKey()],
                         [
                             'perito_nombre' => $datos->peritoNombre,
                             'perito_cedula_profesional' => $datos->peritoCedulaProfesional,
@@ -133,7 +170,7 @@ class RegistrarDocumento
 
                 if ($tipo->clave === 'escritura_inmueble' && $datos->tipoAcreditacion !== null) {
                     AcreditacionOcupacionLegal::updateOrCreate(
-                        ['documento_plantel_id' => $documento->id],
+                        ['documento_plantel_id' => $documento->getKey()],
                         [
                             'tipo' => $datos->tipoAcreditacion,
                             'numero_escritura' => $datos->numeroEscritura,
@@ -150,6 +187,18 @@ class RegistrarDocumento
                             'ratificado_notario' => $datos->ratificadoNotario,
                             'otro_especifique' => $datos->otroEspecifique,
                             'observaciones' => $datos->observaciones,
+                        ],
+                    );
+                }
+
+                if ($tipo->clave === 'recibo_pago_derechos') {
+                    ReciboPagoDerechos::updateOrCreate(
+                        ['documento_escuela_nivel_id' => $documento->getKey()],
+                        [
+                            'folio' => $datos->folio,
+                            'monto' => $datos->monto,
+                            'fecha_pago' => $datos->fechaPago,
+                            'portal_referencia' => $datos->portalReferencia,
                         ],
                     );
                 }
@@ -202,6 +251,63 @@ class RegistrarDocumento
             }
 
             throw $e;
+        }
+    }
+
+    /** WS-5b: el nivel debe ser de esta escuela, Paso 2 completo, la clave aplicable al nivel y, para el Formato, turno y tipo de alumnado ya capturados. */
+    /** @return array{0: ?string, 1: ?string} turno y tipo de alumnado vistos al verificar (se vuelven a comparar bajo lock). */
+    private function verificarNivel(int $escuelaId, int $escuelaNivelId, string $clave, EstadoPaso2 $estadoPaso2): array
+    {
+        $escuelaNivel = EscuelaNivel::where('id', $escuelaNivelId)->where('escuela_id', $escuelaId)->first();
+        if ($escuelaNivel === null) {
+            throw new DatosInvalidos(["archivos.{$clave}" => 'El nivel educativo no pertenece a esta escuela.']);
+        }
+
+        $etapaFaltante = $estadoPaso2->etapaFaltante($escuelaId);
+        if ($etapaFaltante !== null) {
+            throw new PrecondicionIncumplida($etapaFaltante, 'Completa el Paso 2 antes de subir los documentos del nivel.');
+        }
+
+        $documentosNivel = $this->documentosNivelCompletos ?? app(DocumentosNivelCompletos::class);
+        if (! in_array($clave, $documentosNivel->clavesAplicables($escuelaNivelId), true)) {
+            throw new DatosInvalidos(["archivos.{$clave}" => "El documento \"{$clave}\" no aplica a este nivel educativo."]);
+        }
+
+        $estadoPaso24 = $this->estadoPaso24 ?? app(EstadoPaso24::class);
+        if ($clave === 'formato_solicitud' && ! $estadoPaso24->datosNivelCapturados($escuelaNivelId)) {
+            throw new PrecondicionIncumplida(EstadoPaso24::DATOS, 'Guarda el turno y el tipo de alumnado antes de subir el Formato de Solicitud firmado.');
+        }
+
+        return [$escuelaNivel->turno, $escuelaNivel->tipo_alumnado];
+    }
+
+    /** Invariantes de recibos_pago_derechos (DDL: folio VARCHAR(50), monto NUMERIC(10,2), portal_referencia VARCHAR(200)); el dominio del portal no se exige (spec §5.3). */
+    private function validarRecibo(DatosDocumento $datos): void
+    {
+        $errores = [];
+
+        if ($datos->folio === null || trim($datos->folio) === '' || mb_strlen($datos->folio) > 50) {
+            $errores['recibo.folio'] = 'Captura el folio del recibo (máximo 50 caracteres).';
+        }
+
+        // NUMERIC(10,2): solo dígitos, hasta 8 enteros y 2 decimales (rechaza "1e3", "0.004").
+        if ($datos->monto === null || preg_match('/^\d{1,8}(\.\d{1,2})?$/', $datos->monto) !== 1 || (float) $datos->monto <= 0) {
+            $errores['recibo.monto'] = 'El monto pagado debe ser mayor a cero.';
+        }
+
+        $fecha = $datos->fechaPago === null ? false : DateTimeImmutable::createFromFormat('!Y-m-d', $datos->fechaPago);
+        if ($fecha === false || $fecha->format('Y-m-d') !== $datos->fechaPago) {
+            $errores['recibo.fechaPago'] = 'Captura la fecha de pago.';
+        } elseif ($datos->fechaPago > now()->toDateString()) {
+            $errores['recibo.fechaPago'] = 'La fecha de pago no puede ser posterior a hoy.';
+        }
+
+        if ($datos->portalReferencia !== null && mb_strlen($datos->portalReferencia) > 200) {
+            $errores['recibo.portalReferencia'] = 'La referencia del portal admite máximo 200 caracteres.';
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
         }
     }
 }

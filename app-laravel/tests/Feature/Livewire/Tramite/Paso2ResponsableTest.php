@@ -165,7 +165,7 @@ class Paso2ResponsableTest extends TestCase
             ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
     }
 
-    public function test_redirige_a_paso3_cuando_la_escuela_ya_tiene_niveles(): void
+    public function test_redirige_al_resumen_cuando_la_escuela_ya_tiene_niveles(): void
     {
         (new CatalogoMinimoSeeder)->run();
         $solicitante = Solicitante::factory()->create();
@@ -175,10 +175,9 @@ class Paso2ResponsableTest extends TestCase
         $preescolar = NivelEducativo::where('clave', 'preescolar')->first();
         app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [$preescolar->id]);
         $this->actingAs($solicitante->user);
-        $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
     }
 
     /**
@@ -525,7 +524,7 @@ class Paso2ResponsableTest extends TestCase
             ->call('guardarNiveles');
 
         $this->assertDatabaseHas('escuela_niveles', ['escuela_id' => $escuela->id, 'nivel_educativo_id' => $preescolar->id]);
-        $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
-        $component->assertRedirect(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
+        EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $component->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
     }
 }

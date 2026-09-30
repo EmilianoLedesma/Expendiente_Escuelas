@@ -32,4 +32,10 @@ class ObtenerDocumentoCapturado
 
         return $capturados[$clave]['archivoPath'] ?? null;
     }
+
+    /** Paso 2.4 (WS-5b): ruta del documento capturado del nivel, o null si no aplica al nivel o no está capturado. */
+    public function paraEscuelaNivel(int $escuelaNivelId, string $clave): ?string
+    {
+        return $this->documentosCapturados->paraEscuelaNivel($escuelaNivelId)[$clave]['archivoPath'] ?? null;
+    }
 }

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Estado de todo el trámite para el hub ("Resumen del trámite"), "Mis trámites"
  * y el "Paso X de N" de cada página. No decide nada nuevo: compone EstadoPaso2
- * (Paso 2 completo y vigente), EstadoPaso3 (orden de sub-pasos),
+ * (Paso 2 completo y vigente), EstadoPaso24 (Paso 2.4 de cada nivel), EstadoPaso3 (orden de sub-pasos),
  * DocumentosCompletos (cuántos faltan) y escuela_nivel_pasos. Reemplazó al
  * componente de vista Progreso (retirado en el rediseño UI): la lectura de
  * flujo pasa por Application (ADR-001).
@@ -32,6 +32,9 @@ class ResumenTramite
         'mobiliario' => 'tramite.paso3-mobiliario',
     ];
 
+    /** Paso 2.4 de cada nivel (WS-5b); CompuertaPaso3 y Paso2Responsable redirigen aquí. */
+    public const RUTA_DOCUMENTOS_NIVEL = 'tramite.paso2-nivel-documentos';
+
     /** Mobiliario solo aplica a este nivel; MobiliarioNivel::mount() auto-completa los demás. */
     public const NIVEL_CON_MOBILIARIO = 'inicial';
 
@@ -39,19 +42,21 @@ class ResumenTramite
      * Secciones completadas cuya página se puede volver a abrir hoy. Responsable,
      * Documentos, Niveles e Inmueble redirigen hacia adelante al estar completas;
      * revisarlas llega con WS-7 (docs/decisions/PENDIENTE-edicion-hasta-envio.md).
+     * Documentos del nivel no redirige: el Formato firmado se puede reemplazar.
      */
-    private const REVISABLES = ['infraestructura', 'mobiliario'];
+    private const REVISABLES = ['documentos_nivel', 'infraestructura', 'mobiliario'];
 
     /** @var array<string, array{string, string}> */
     private const GENERALES = [
         'plantel' => ['Datos del plantel', 'Domicilio y datos de contacto del plantel.'],
         'responsable' => ['Responsable legal', 'Persona física o moral que solicita la incorporación y terna de nombres.'],
-        'documentos' => ['Documentos', 'Identificación, documentos del inmueble y Formato de Solicitud, en PDF.'],
+        'documentos' => ['Documentos', 'Identificación y documentos del inmueble, en PDF.'],
         'niveles' => ['Niveles educativos', 'Niveles que se solicita incorporar.'],
     ];
 
-    /** @var array<string, array{string, string}> */
+    /** Secciones de cada nivel: Paso 2.4 (Documentos del nivel) y los sub-pasos de Paso 3. @var array<string, array{string, string}> */
     private const PASO3 = [
+        'documentos_nivel' => ['Documentos del nivel', 'Turno, tipo de alumnado, Formato de Solicitud, recibo de pago y documentos del nivel.'],
         'inmueble' => ['Datos del inmueble', 'Dimensiones, colindancias y servicios cercanos.'],
         'infraestructura' => ['Infraestructura', 'Espacios del plantel, sanitarios y aulas del nivel.'],
         'mobiliario' => ['Mobiliario', 'Mobiliario y equipo de cada sala.'],
@@ -63,6 +68,7 @@ class ResumenTramite
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
+        private readonly EstadoPaso24 $estadoPaso24,
         private readonly DocumentosCompletos $documentosCompletos,
         private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
     ) {}
@@ -118,7 +124,7 @@ class ResumenTramite
         }
 
         $disponibles = array_filter(
-            array_keys(self::RUTAS_PASO3),
+            ['documentos_nivel', ...array_keys(self::RUTAS_PASO3)],
             fn (string $c) => $c !== 'mobiliario' || $nivelClave === self::NIVEL_CON_MOBILIARIO,
         );
         $indice = array_search($clave, $disponibles, true);
@@ -216,8 +222,20 @@ class ResumenTramite
             ->where('escuela_nivel_pasos.escuela_nivel_id', $escuelaNivel->id)
             ->pluck('escuela_nivel_pasos.estado', 'pasos_captura.clave');
 
-        $secciones = [];
-        $anterior = null;
+        // WS-5b: cada nivel empieza por su Paso 2.4; Paso 3 queda detrás (EstadoPaso3).
+        $etapa24 = $this->estadoPaso24->etapaFaltante($escuelaNivel->id);
+        $secciones = [$this->seccion(
+            'documentos_nivel',
+            match ($etapa24) {
+                null => 'completado',
+                EstadoPaso24::DOCUMENTOS_NIVEL => 'en_curso',
+                default => 'pendiente',
+            },
+            route(self::RUTA_DOCUMENTOS_NIVEL, ['escuelaNivel' => $escuelaNivel->id]),
+            $etapaFaltante === null ? null : self::completaPrimero($etapaFaltante),
+            $nivelClave,
+        )];
+        $anterior = self::PASO3['documentos_nivel'][0];
 
         foreach (DB::table('pasos_captura')->orderBy('orden')->pluck('nombre', 'clave') as $clave => $nombreCatalogo) {
             $clave = (string) $clave;
@@ -236,6 +254,7 @@ class ResumenTramite
 
             $motivo = match (true) {
                 $etapaFaltante !== null => self::completaPrimero($etapaFaltante),
+                $etapa24 !== null => 'Completa primero: '.self::PASO3['documentos_nivel'][0],
                 ! $this->estadoPaso3->puedeAcceder($escuelaNivel->id, $clave) => 'Completa primero: '.$anterior,
                 default => null,
             };

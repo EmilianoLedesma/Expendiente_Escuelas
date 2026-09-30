@@ -3,6 +3,7 @@
 namespace Tests\Feature\Application\Tramite;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Tramite\EstadoPaso24;
 use App\Application\Tramite\EstadoPaso3;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -15,11 +16,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class EstadoPaso3Test extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private int $escuelaNivelId;
@@ -40,6 +43,7 @@ class EstadoPaso3Test extends TestCase
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ])->id;
+        $this->completarPaso24($this->escuelaNivelId);
     }
 
     private function completar(string ...$claves): void
@@ -72,6 +76,8 @@ class EstadoPaso3Test extends TestCase
 
     public function test_un_paso_en_progreso_no_cuenta_como_completado(): void
     {
+        // Guarda de no vacuidad: el bloqueo de infraestructura debe venir del paso en progreso, no del Paso 2.4.
+        $this->assertNull(app(EstadoPaso24::class)->etapaFaltante($this->escuelaNivelId));
         DB::table('escuela_nivel_pasos')->insert([
             'escuela_nivel_id' => $this->escuelaNivelId,
             'paso_captura_id' => DB::table('pasos_captura')->where('clave', 'inmueble')->value('id'),
@@ -106,5 +112,23 @@ class EstadoPaso3Test extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         app(EstadoPaso3::class)->puedeAcceder($this->escuelaNivelId, 'no_existe');
+    }
+
+    /** WS-5b: sin Paso 2.4 del nivel ningún sub-paso es alcanzable; con él, el primero sí (control). */
+    public function test_sin_paso24_completo_ningun_sub_paso_es_accesible(): void
+    {
+        $secundaria = EscuelaNivel::create([
+            'escuela_id' => EscuelaNivel::findOrFail($this->escuelaNivelId)->escuela_id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'secundaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        $estado = app(EstadoPaso3::class);
+
+        $this->assertFalse($estado->puedeAcceder($secundaria->id, 'inmueble'));
+
+        $this->completarPaso24($secundaria->id);
+
+        $this->assertTrue($estado->puedeAcceder($secundaria->id, 'inmueble'));
     }
 }

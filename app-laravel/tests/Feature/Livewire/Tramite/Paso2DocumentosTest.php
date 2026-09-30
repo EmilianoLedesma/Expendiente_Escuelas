@@ -18,8 +18,10 @@ use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class Paso2DocumentosTest extends TestCase
@@ -308,39 +310,85 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
     }
 
-    public function test_sube_formato_de_solicitud_de_forma_independiente(): void
+    public function test_subir_el_ultimo_documento_simple_redirige_a_paso2(): void
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['formato_solicitud']) as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['certificado_numero_oficial']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
-            ->call('guardarFormatoSolicitud')
+            ->set('archivos.certificado_numero_oficial', UploadedFile::fake()->create('cno.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'certificado_numero_oficial')
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
-
-        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
     }
 
-    public function test_el_enlace_de_formato_de_solicitud_sigue_visible_cuando_la_seccion_ya_esta_capturada(): void
+    public function test_el_formato_de_solicitud_ya_no_aparece_en_documentos(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertDontSeeHtml('data-clave="formato_solicitud"')
+            ->assertDontSee('Generar y descargar Formato de Solicitud');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function tiposPersona(): array
+    {
+        return ['fisica' => ['fisica'], 'moral' => ['moral'], 'fisica_con_gestor' => ['fisica_con_gestor']];
+    }
+
+    /** WS-5a M1: toda clave aplicable debe tener una fila con control de carga. */
+    #[DataProvider('tiposPersona')]
+    public function test_toda_clave_aplicable_renderiza_su_fila(string $tipoPersona): void
+    {
+        $escuela = $this->crearEscuelaConResponsable($tipoPersona);
+        $this->actingAs($escuela->solicitante->user);
+
+        $componente = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+
+        foreach (app(DocumentosCompletos::class)->clavesAplicables($tipoPersona) as $clave) {
+            $componente->assertSeeHtml('data-clave="'.$clave.'"');
+        }
+    }
+
+    /** M1: una fila nueva del catálogo sin bloque propio se ve y se puede completar. */
+    public function test_una_clave_nueva_del_catalogo_sin_bloque_propio_se_puede_subir(): void
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
+        DB::table('tipos_documentos')->insert([
+            'clave' => 'documento_de_prueba_m1', 'nombre' => 'Documento de prueba M1',
+            'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'created_at' => now(), 'updated_at' => now(),
+        ]);
         $this->actingAs($escuela->solicitante->user);
-        // Solo formato_solicitud capturado; las demás claves quedan pendientes
-        // para que mount() no redirija y la sección se pueda inspeccionar en
-        // su estado de solo lectura.
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'), new DatosDocumento);
-        $nombreArchivo = basename(DocumentoEscuela::where('escuela_id', $escuela->id)->value('archivo_path'));
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSee($nombreArchivo)
-            ->assertSee('Generar y descargar Formato de Solicitud')
-            ->assertSee(route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]), false);
+            ->assertSeeHtml('data-clave="documento_de_prueba_m1"')
+            ->assertSee('Documento de prueba M1') // M6: título del catálogo, no la clave cruda
+            ->set('archivos.documento_de_prueba_m1', UploadedFile::fake()->create('m1.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'documento_de_prueba_m1')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('documentos_plantel', ['plantel_id' => $escuela->plantel_id]);
+    }
+
+    /** O2: la vía genérica no acepta claves con datos estructurados (saltaría la vigencia del dictamen). */
+    public function test_guardar_documento_simple_rechaza_una_clave_con_datos_estructurados(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'dictamen_uso_suelo')
+            ->assertStatus(403);
+
+        $this->assertDatabaseCount('documentos_plantel', 0);
     }
 
     public function test_reentrar_con_todo_completo_y_dictamen_vencido_muestra_el_error_sin_reventar(): void
@@ -382,7 +430,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'formato_solicitud']) as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'certificado_numero_oficial']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
@@ -390,8 +438,8 @@ class Paso2DocumentosTest extends TestCase
         ));
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.formato_solicitud', UploadedFile::fake()->create('firmado.pdf', 10, 'application/pdf'))
-            ->call('guardarFormatoSolicitud')
+            ->set('archivos.certificado_numero_oficial', UploadedFile::fake()->create('cno.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'certificado_numero_oficial')
             ->assertHasErrors('vigencia')
             ->assertNoRedirect();
     }

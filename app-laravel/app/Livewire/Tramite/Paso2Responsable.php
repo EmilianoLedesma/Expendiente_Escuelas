@@ -12,7 +12,6 @@ use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
 use App\Livewire\Forms\PersonaMoralForm;
 use App\Models\Escuela;
-use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
@@ -76,7 +75,7 @@ class Paso2Responsable extends Component
     {
         $this->escuela = $escuela;
 
-        // EstadoPaso2 va ANTES del salto a Paso 3: una escuela_niveles creada
+        // EstadoPaso2 va ANTES del salto al resumen: una escuela_niveles creada
         // sin Paso 2 completo (bypass previo a WS-1.2) no debe atorar al
         // usuario en Paso 3 — vuelve a la etapa que le falta. Una vigencia
         // vencida también es incompletitud: 2.2 vuelve a pedir el documento.
@@ -95,9 +94,9 @@ class Paso2Responsable extends Component
         }
 
         if ($escuela->escuelaNiveles()->exists()) {
-            $this->redirectRoute('tramite.paso3-inmueble', [
-                'escuelaNivel' => $escuela->escuelaNiveles()->orderBy('id')->first(),
-            ]);
+            // WS-5b (decisión del dueño): con niveles ya elegidos, al hub; su
+            // "Siguiente paso" es Documentos del nivel del primer nivel.
+            $this->redirectRoute('tramite.resumen', ['escuela' => $escuela->id]);
 
             return;
         }
@@ -205,9 +204,7 @@ class Paso2Responsable extends Component
             return;
         }
 
-        $primerEscuelaNivel = EscuelaNivel::where('escuela_id', $this->escuela->id)->orderBy('id')->firstOrFail();
-
-        $this->redirectRoute('tramite.paso3-inmueble', ['escuelaNivel' => $primerEscuelaNivel]);
+        $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 
     public function render()

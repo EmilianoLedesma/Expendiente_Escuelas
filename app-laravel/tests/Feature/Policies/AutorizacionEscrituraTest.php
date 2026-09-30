@@ -56,12 +56,14 @@ class AutorizacionEscrituraTest extends TestCase
         return [
             'paso2 responsable' => ['tramite.paso2', 'can:update,escuela'],
             'paso2 documentos' => ['tramite.paso2-documentos', 'can:update,escuela'],
+            'paso2.4 documentos por nivel' => ['tramite.paso2-nivel-documentos', 'can:update,escuelaNivel'],
             'paso3 inmueble' => ['tramite.paso3-inmueble', 'can:update,escuelaNivel'],
             'paso3 infraestructura' => ['tramite.paso3-infraestructura', 'can:update,escuelaNivel'],
             'paso3 mobiliario' => ['tramite.paso3-mobiliario', 'can:update,escuelaNivel'],
             'paso3 proximos pasos (solo lectura)' => ['tramite.paso3-proximos-pasos', 'can:view,escuelaNivel'],
             'descarga documento (solo lectura)' => ['tramite.paso2-documentos.descargar', 'can:view,escuela'],
-            'formato solicitud pdf (solo lectura)' => ['tramite.paso2-documentos.formato-solicitud', 'can:view,escuela'],
+            'formato solicitud pdf por nivel (solo lectura)' => ['tramite.paso2-nivel-documentos.formato-solicitud', 'can:view,escuelaNivel'],
+            'descarga documento por nivel (solo lectura)' => ['tramite.paso2-nivel-documentos.descargar', 'can:view,escuelaNivel'],
             'resumen del trámite (solo lectura)' => ['tramite.resumen', 'can:view,escuela'],
         ];
     }

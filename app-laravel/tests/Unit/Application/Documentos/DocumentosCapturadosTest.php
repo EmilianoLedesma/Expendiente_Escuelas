@@ -4,12 +4,16 @@ namespace Tests\Unit\Application\Documentos;
 
 use App\Application\Documentos\DocumentosCapturados;
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use App\Models\TipoDocumento;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DocumentosCapturadosTest extends TestCase
@@ -52,5 +56,29 @@ class DocumentosCapturadosTest extends TestCase
         $resultado = app(DocumentosCapturados::class)->paraEscuela($escuela->id, 'fisica');
 
         $this->assertCount(0, $resultado);
+    }
+
+    public function test_para_escuela_nivel_devuelve_solo_los_documentos_aplicables_del_nivel(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        foreach (['formato_solicitud' => 'formato-A.pdf', 'inventario_laboratorio' => 'inventario-B.pdf'] as $clave => $archivo) {
+            DocumentoEscuelaNivel::create([
+                'escuela_nivel_id' => $escuelaNivel->id,
+                'tipo_documento_id' => TipoDocumento::where('clave', $clave)->value('id'),
+                'archivo_path' => "escuela_nivel/{$escuelaNivel->id}/{$archivo}",
+            ]);
+        }
+
+        $resultado = app(DocumentosCapturados::class)->paraEscuelaNivel($escuelaNivel->id);
+
+        $this->assertSame(['formato_solicitud'], $resultado->keys()->all(), 'inventario_laboratorio es de Secundaria: no aplica a Primaria');
+        $this->assertSame('formato-A.pdf', $resultado['formato_solicitud']['nombreArchivo']);
     }
 }

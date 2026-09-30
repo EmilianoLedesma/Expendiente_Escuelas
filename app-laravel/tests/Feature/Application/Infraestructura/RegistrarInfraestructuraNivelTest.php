@@ -8,6 +8,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
+use App\Application\Tramite\EstadoPaso24;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
@@ -19,11 +20,13 @@ use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class RegistrarInfraestructuraNivelTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private Plantel $plantel;
@@ -57,6 +60,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             'tipo_tramite' => 'alta_nueva',
         ]);
         // WS-2.4b: Infraestructura solo es alcanzable con Inmueble completado.
+        $this->completarPaso24($escuelaNivel->id);
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
 
         return $escuelaNivel;
@@ -564,6 +568,9 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
+        // Guarda de no vacuidad: el rechazo debe venir de Inmueble, no del Paso 2.4.
+        $this->assertNull(app(EstadoPaso24::class)->etapaFaltante($escuelaNivel->id));
         // Deliberadamente NO se llama a MarcarPasoCompletado('inmueble').
 
         $this->expectException(PrecondicionIncumplida::class);
