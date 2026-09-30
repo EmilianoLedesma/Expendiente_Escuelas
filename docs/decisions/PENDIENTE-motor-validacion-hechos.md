@@ -48,7 +48,7 @@ Los hechos contienen nombre y CURP (misma clase de dato que `personas_fisicas`, 
 - Retención: ¿se conservan los hechos de archivos reemplazados (historial de auditoría) o se borran al reemplazar?
 - Cifrado en reposo: ¿se cifra (cast `encrypted`) esta tabla, `personas_fisicas`, ambas, ninguna?
 
-**Elección provisional del prototipo:** se conservan (inmutables, sin `updated_at`), en claro.
+**Elección provisional del prototipo:** los hechos de archivos reemplazados se conservan; recapturar un dato del mismo archivo sobrescribe el valor (sin historial de correcciones); todo en claro.
 
 ## P5. Documentos fuente de CURP y RFC (SEDEQ)
 

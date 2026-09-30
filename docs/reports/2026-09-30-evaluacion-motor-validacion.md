@@ -176,7 +176,7 @@ Separación de responsabilidades: **la regla dice qué encontró; la capa Applic
 
 - Los hechos contienen **CURP y nombre completo** — datos personales bajo la LFPDPPP / Ley General de Protección de Datos Personales en Posesión de Sujetos Obligados (SEDEQ es sujeto obligado). La misma clase de dato ya vive en claro en `personas_fisicas.curp`, así que la tabla nueva **no aumenta la categoría de riesgo**, pero sí la superficie: una segunda copia.
 - El prototipo guarda el valor **tal como se capturó** (no normalizado), para que la auditoría muestre exactamente qué dijo la fuente; la normalización ocurre al comparar, nunca al guardar.
-- **No hay `updated_at`**: un hecho es inmutable. Un archivo nuevo produce hechos nuevos (otra `archivo_path`); los viejos quedan como historial y se ignoran al validar. Esto da auditoría ("qué dato, de qué archivo, capturado cuándo, por qué método") a costa de retener PII de archivos ya reemplazados. Política de retención/borrado abierta (P4).
+- **Un hecho por (escuela, documento, archivo, tipo de hecho)** (`UNIQUE` en la tabla). Recapturar el mismo dato **para el mismo archivo** lo corrige (`updateOrCreate`, queda `updated_at`) — pensado para que el solicitante arregle un error de dedo antes de enviar; el valor anterior de esa corrección **no** se conserva. Un archivo nuevo produce hechos nuevos (otra `archivo_path`); los del archivo anterior quedan como historial y se ignoran al validar. Esto da auditoría por archivo ("qué dato, de qué archivo, cuándo, por qué método") a costa de retener PII de archivos ya reemplazados. Si se requiere historial de cada corrección, habría que volver la fila inmutable (insertar siempre). Política de retención/borrado abierta (P4).
 - **Cifrado en reposo** (p. ej. cast `encrypted` de Eloquent) no se aplica en el prototipo: impediría consultar por valor e introduce rotación de llaves; tampoco `personas_fisicas` lo aplica hoy. Queda como decisión de conjunto, no de esta tabla (P4).
 - `confidence` de la propuesta: sin extractor probabilístico no significa nada — una captura manual no tiene "confianza 0.87". **No se agrega** la columna; si llega OCR, se agrega con su migración y su semántica definida entonces.
 - **El reporte de validación no se persiste** en el prototipo (se calcula al vuelo, determinista a partir de hechos inmutables + datos declarados). Si se requiere evidencia histórica ("qué vio el sistema cuando el solicitante envió"), hay que persistir el reporte o su huella; los datos declarados en 2.1 *sí* son editables, así que recalcular después no reproduce lo de entonces (P6). Las columnas `documentos_*.estado_validacion`/`observaciones` son para el revisor humano de SEDEQ (fuera de MVP) — **no** se escriben desde el motor, para no mezclar resultado automático con dictamen humano.
@@ -290,15 +290,38 @@ Estricto TDD: cada clase nació de una prueba que se vio fallar por la razón co
 
 **No hecho, a propósito:** extractor de PDF/OCR, cambios en la UI de Paso 2.2 (captura de campos de la INE), página Filament, persistencia del reporte, reglas para moral/gestor/domicilio/RFC. Todo depende de decisiones abiertas.
 
+**Nota de frontera para cuando se conecte al wizard:** `EjecutarValidacionDocumental` devuelve `ReporteValidacion`, un tipo de `app/Domain`. CLAUDE.md dice que Livewire "never import Domain directly"; si un componente necesita tipar el reporte, hará falta un DTO de Application (como `ResumenTramiteDTO`) o que el caso de uso devuelva un arreglo. No se resolvió aquí porque nada lo consume todavía. `RegistrarHechoDocumento` ya recibe strings por esta misma razón.
+
 ### Prueba de no-vacuidad por regla
 
-Para cada regla se aplicó una mutación temporal (no commiteada) que hace que la regla devuelva siempre `cumple`, y se corrió su prueba: debe ponerse en rojo. Resultados en §13.
+Cada mutación fue temporal (no commiteada) y se revirtió después de correr las pruebas. Una regla o filtro cuyas pruebas siguen verdes con la mutación puesta tendría pruebas vacías.
+
+| Mutación | Pruebas en rojo |
+|---|---|
+| `DocumentosRequeridosPresentes::evaluar()` devuelve siempre `cumple` | 3 de 4 (queda verde solo el caso "todos presentes") |
+| `NombreTitularCoincide::evaluar()` devuelve siempre `cumple` | 8 de 9 (queda verde solo "nombres idénticos") |
+| `CurpCoincide::evaluar()` devuelve siempre `cumple` | 5 de 7 (quedan verdes los dos casos de coincidencia) |
+| `ConstruirContextoValidacion`: quitar la condición de join por `archivo_path` | 1 de 16: `test_los_hechos_de_un_archivo_reemplazado_se_descartan` |
+| `ConstruirContextoValidacion`: quitar el filtro por `escuela_id` | 1 de 16: `test_los_hechos_de_otra_escuela_no_se_mezclan` |
+| Regla PHPat: usar `Illuminate\Support\Str` dentro de `NormalizadorNombre` | PHPStan: 1 error "should not depend on Illuminate\Support\Str" |
+
+Además, cada prueba nueva se vio fallar antes de existir su código de producción, siempre por clase inexistente (`Class ... not found` / `Target class ... does not exist`), nunca por sintaxis o entorno.
 
 ---
 
 ## 13. Resultados de verificación
 
-(Se completa al final de la sesión con salidas reales.)
+Entorno: contenedor efímero de esta sesión. PHP 8.4.19. **PostgreSQL 16.13 local** (el proyecto usa 18; es el que trae el contenedor), con la base `sedeq_incorporacion_testing` y el rol `sedeq_app` de `phpunit.xml`, creados en este contenedor. No se tocó ninguna base dev ni de producción. No se corrió ningún `artisan migrate` contra `.env`: las migraciones solo corrieron vía `RefreshDatabase` dentro de las pruebas.
+
+Instalación: `composer install` no pudo descargar la dist de `phpstan/phpstan` (403 de `api.github.com` sin token). Se clonó el repo de phpstan en el commit exacto del lock (`9ba9ac7`) y se instaló desde una copia temporal del lock que apuntaba a ese zip local; la copia se borró y `composer.json`/`composer.lock` no cambiaron. `npm ci && npm run build` hizo falta para el manifiesto de Vite.
+
+| Verificación | Resultado |
+|---|---|
+| Suite completa en `master` antes de cambios | 546/546 (tras `npm run build`; la primera corrida sin assets dio 59 fallas: 58 por manifiesto de Vite ausente y 1, `MisTramitesTest::test_ordena_del_mas_reciente_al_mas_antiguo`, que pasó en la siguiente corrida — posible dependencia de orden temporal; no investigado, no tocado) |
+| Suite completa en la rama | **604/604** (546 + 58 nuevas: 42 unitarias de Domain, 16 de Feature contra Postgres) |
+| Pint `--test` | Pasa. La primera corrida marcó orden de imports en `RegistrarHechoDocumentoTest.php`; corregido en el commit `style:` |
+| PHPStan nivel 5 + PHPat | 0 errores. La regla PHPat sí cubre el código nuevo (ver mutación arriba) |
+| `down()` de la migración nueva | **No verificado** por separado (correrlo requeriría `artisan migrate:rollback` contra la conexión de `.env`) |
 
 ---
 
