@@ -15,6 +15,7 @@ use App\Models\HechoDocumento;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -128,7 +129,7 @@ class RegistrarHechoDocumentoTest extends TestCase
         $this->subir('ine');
         $documento = DocumentoEscuela::where('escuela_id', $this->escuelaId)->sole();
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         HechoDocumento::create([
             'escuela_id' => $this->escuelaId,
