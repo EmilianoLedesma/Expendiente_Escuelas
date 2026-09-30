@@ -254,6 +254,7 @@ class ResumenTramite
 
             $motivo = match (true) {
                 $etapaFaltante !== null => self::completaPrimero($etapaFaltante),
+                $etapa24 !== null => 'Completa primero: '.self::PASO3['documentos_nivel'][0],
                 ! $this->estadoPaso3->puedeAcceder($escuelaNivel->id, $clave) => 'Completa primero: '.$anterior,
                 default => null,
             };

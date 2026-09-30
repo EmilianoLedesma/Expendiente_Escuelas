@@ -494,4 +494,23 @@ class ResumenTramiteTest extends TestCase
         $this->assertNull($inmueble->accion);
         $this->assertNull($inmueble->href);
     }
+
+    public function test_con_inmueble_completo_y_2_4_incompleto_el_motivo_apunta_a_documentos_del_nivel(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $inicial = $this->nivel($escuela, 'inicial');
+        // Inserción directa: MarcarPasoCompletado exige 2.4 completo; aquí simula un nivel regresado por rollout/descarte del Formato.
+        DB::table('escuela_nivel_pasos')->insert([
+            'escuela_nivel_id' => $inicial->id,
+            'paso_captura_id' => DB::table('pasos_captura')->where('clave', 'inmueble')->value('id'),
+            'estado' => 'completado',
+        ]);
+
+        $s = $this->porClave($this->resumen($escuela)->niveles[0]->secciones);
+
+        foreach (['infraestructura', 'mobiliario'] as $clave) {
+            $this->assertSame('Completa primero: Documentos del nivel', $s[$clave]->motivoBloqueo);
+        }
+    }
 }
