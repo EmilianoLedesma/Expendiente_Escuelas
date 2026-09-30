@@ -20,9 +20,8 @@ class DocumentosCompletos
     /**
      * Catálogo-driven desde WS-5a: antes de esto era un array fijo de 6
      * claves; ahora es tipos_documentos, filtrado por aplica_persona y
-     * limitado a los ámbitos de Paso 2.2 (plantel/escuela — los ámbitos
-     * escuela_nivel de Paso 2.4 llegan en un sub-plan futuro y tienen su
-     * propio método). Ordenado por id = orden de inserción del seeder, para
+     * limitado a los ámbitos de Paso 2.2 (plantel/escuela — los
+     * documentos escuela_nivel de Paso 2.4 son de DocumentosNivelCompletos). Ordenado por id = orden de inserción del seeder, para
      * no reordenar el checklist que ya renderiza en un orden dado.
      *
      * @return list<string>

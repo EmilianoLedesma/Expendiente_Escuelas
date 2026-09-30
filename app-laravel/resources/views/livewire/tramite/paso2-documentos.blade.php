@@ -21,13 +21,11 @@
             'escritura_inmueble' => 'Escritura o acreditación de ocupación del inmueble',
             'dictamen_uso_suelo' => 'Dictamen de Uso de Suelo',
             'constancia_seguridad_estructural' => 'Constancia de Seguridad Estructural',
-            'formato_solicitud' => 'Formato de Solicitud',
             'acta_constitutiva' => 'Acta constitutiva',
             'poder_gestor' => 'Poder general para actos de administración (gestor)',
             'visto_bueno_proteccion_civil' => 'Visto Bueno / Dictamen de Protección Civil',
             'plano_inmueble' => 'Plano o croquis del inmueble',
             'certificado_numero_oficial' => 'Certificado de número oficial',
-            'recibo_pago_derechos_plantel' => 'Recibo de pago de derechos',
         ];
     @endphp
 
@@ -36,7 +34,7 @@
             @php
                 $fila = [
                     'clave' => $clave,
-                    'titulo' => $titulos[$clave] ?? $clave,
+                    'titulo' => $titulos[$clave] ?? $nombres[$clave] ?? $clave,
                     'escuelaId' => $escuela->id,
                     'capturado' => $capturados[$clave] ?? null,
                     'editable' => ! $capturados->has($clave) || ($reemplazando[$clave] ?? false),
@@ -44,9 +42,7 @@
                 ];
             @endphp
 
-            @if (in_array($clave, ['ine', 'acta_nacimiento', 'escritura_poder_facultades', 'acta_constitutiva', 'poder_gestor', 'visto_bueno_proteccion_civil', 'plano_inmueble', 'certificado_numero_oficial', 'recibo_pago_derechos_plantel']))
-                <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarDocumentoSimple('{{ $clave }}')" />
-            @elseif ($clave === 'escritura_inmueble')
+            @if ($clave === 'escritura_inmueble')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarAcreditacion">
                     <x-ui.radio-group
                         id="acreditacionForm.tipo"
@@ -89,15 +85,9 @@
                     <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro DRO"><x-ui.input wire:model="constanciaForm.peritoRegistroDro" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroVigencia" label="Vigencia del registro" optional><x-ui.input type="date" wire:model="constanciaForm.peritoRegistroVigencia" /></x-ui.field>
                 </x-tramite.documento-row>
-            @elseif ($clave === 'formato_solicitud')
-                <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarFormatoSolicitud" etiqueta-archivo="Subir Formato de Solicitud firmado">
-                    <x-slot:extra>
-                        <a href="{{ route('tramite.paso2-documentos.formato-solicitud', ['escuela' => $escuela->id]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">
-                            <x-ui.icon nombre="arrow-down-tray" class="h-5 w-5" />
-                            Generar y descargar Formato de Solicitud
-                        </a>
-                    </x-slot:extra>
-                </x-tramite.documento-row>
+            @else
+                {{-- WS-5a M1: toda clave aplicable sin bloque propio se sube como documento simple. --}}
+                <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarDocumentoSimple('{{ $clave }}')" />
             @endif
         @endforeach
     </ul>

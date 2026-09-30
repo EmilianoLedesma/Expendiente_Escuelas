@@ -16,6 +16,7 @@ use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
 use App\Models\Escuela;
+use App\Models\TipoDocumento;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -33,6 +34,9 @@ use Livewire\WithFileUploads;
 class Paso2Documentos extends Component
 {
     use WithFileUploads;
+
+    /** Claves con campos estructurados y método propio; toda otra clave aplicable va por guardarDocumentoSimple() (WS-5a M1). */
+    public const CON_DATOS_ESTRUCTURADOS = ['escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural'];
 
     public Escuela $escuela;
 
@@ -81,14 +85,7 @@ class Paso2Documentos extends Component
 
     public function guardarDocumentoSimple(string $clave, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $simples = array_intersect(
-            $documentosCompletos->clavesAplicables($this->tipoPersona()),
-            [
-                'ine', 'acta_nacimiento', 'escritura_poder_facultades', 'formato_solicitud',
-                'acta_constitutiva', 'poder_gestor', 'visto_bueno_proteccion_civil',
-                'plano_inmueble', 'certificado_numero_oficial', 'recibo_pago_derechos_plantel',
-            ],
-        );
+        $simples = array_diff($documentosCompletos->clavesAplicables($this->tipoPersona()), self::CON_DATOS_ESTRUCTURADOS);
         abort_unless(in_array($clave, $simples, true), 403);
 
         $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
@@ -165,19 +162,6 @@ class Paso2Documentos extends Component
         }
         $this->archivos['escritura_inmueble'] = null;
         $this->reemplazando['escritura_inmueble'] = false;
-
-        $this->avanzar($documentosCompletos);
-    }
-
-    public function guardarFormatoSolicitud(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
-    {
-        $this->validate(['archivos.formato_solicitud' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-
-        if (! $this->intentarRegistrar($registrarDocumento, 'formato_solicitud', new DatosDocumento)) {
-            return;
-        }
-        $this->archivos['formato_solicitud'] = null;
-        $this->reemplazando['formato_solicitud'] = false;
 
         $this->avanzar($documentosCompletos);
     }
@@ -262,6 +246,7 @@ class Paso2Documentos extends Component
         return view('livewire.tramite.paso2-documentos', [
             'clavesAplicables' => $clavesAplicables,
             'capturados' => $capturados,
+            'nombres' => TipoDocumento::whereIn('clave', $clavesAplicables)->pluck('nombre', 'clave')->all(),
             'totalAplicables' => count($clavesAplicables),
             'totalCompletos' => $capturados->count(),
             'encabezado' => ResumenTramite::encabezado('documentos'),
