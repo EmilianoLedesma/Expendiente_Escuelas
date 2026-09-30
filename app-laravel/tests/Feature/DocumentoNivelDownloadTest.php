@@ -92,6 +92,13 @@ class DocumentoNivelDownloadTest extends TestCase
         $this->descargar('inventario_laboratorio')->assertNotFound();
     }
 
+    public function test_un_id_de_nivel_no_numerico_da_404(): void
+    {
+        $this->actingAs($this->dueno->user)
+            ->get('/tramite/paso2/nivel/abc/documentos/acervo_bibliografico_primaria/archivo')
+            ->assertNotFound();
+    }
+
     public function test_la_ruta_la_atiende_un_controlador_no_un_closure(): void
     {
         $this->assertSame(

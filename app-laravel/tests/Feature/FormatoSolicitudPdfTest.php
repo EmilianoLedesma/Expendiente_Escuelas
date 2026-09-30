@@ -14,6 +14,7 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /** WS-5b: el Formato de Solicitud se genera por nivel (D1b) e imprime nivel, turno y tipo de alumnado. */
@@ -61,6 +62,30 @@ class FormatoSolicitudPdfTest extends TestCase
 
         $this->actingAs($solicitante->user)
             ->get(route('tramite.paso2-nivel-documentos.formato-solicitud', ['escuelaNivel' => $escuelaNivel->id]))
+            ->assertNotFound();
+    }
+
+    /** @return array<string, array{?string, ?string}> */
+    public static function datosParciales(): array
+    {
+        return ['solo turno' => ['matutino', null], 'solo tipo de alumnado' => [null, 'mixto']];
+    }
+
+    #[DataProvider('datosParciales')]
+    public function test_con_solo_uno_de_los_dos_datos_no_se_genera(?string $turno, ?string $tipoAlumnado): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuelaNivel = $this->escuelaNivel($solicitante, $turno, $tipoAlumnado);
+
+        $this->actingAs($solicitante->user)
+            ->get(route('tramite.paso2-nivel-documentos.formato-solicitud', ['escuelaNivel' => $escuelaNivel->id]))
+            ->assertNotFound();
+    }
+
+    public function test_un_id_de_nivel_no_numerico_da_404(): void
+    {
+        $this->actingAs(Solicitante::factory()->create()->user)
+            ->get('/tramite/paso2/nivel/abc/documentos/formato-solicitud.pdf')
             ->assertNotFound();
     }
 
