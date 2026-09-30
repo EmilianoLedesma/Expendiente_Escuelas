@@ -21,6 +21,10 @@ class PresentadorValidacion
         'nombre_fiscal_coincide' => 'Nombre o razón social en la Constancia de Situación Fiscal',
         'rfc_coincide' => 'RFC',
         'domicilio_coincide' => 'Domicilio del plantel',
+        'documentos_nivel_presentes' => 'Documentos del nivel',
+        'recibo_no_reutilizado' => 'Recibo de pago no usado en otro nivel',
+        'acervo_coincide' => 'Títulos del acervo bibliográfico',
+        'inventario_con_laboratorio' => 'Inventario y laboratorio declarado',
     ];
 
     private const ESTADOS_DOCUMENTO = [
@@ -64,6 +68,14 @@ class PresentadorValidacion
 
         if (isset($detalles['faltantes'])) {
             return array_map(fn (string $clave) => 'Falta: '.$nombre($clave), $detalles['faltantes']);
+        }
+
+        if (isset($detalles['folio'])) {
+            return ['Folio del recibo: '.$detalles['folio']];
+        }
+
+        if (isset($detalles['laboratorios'])) {
+            return ['Laboratorios declarados en la infraestructura: '.$detalles['laboratorios']];
         }
 
         if (isset($detalles['partes'])) {

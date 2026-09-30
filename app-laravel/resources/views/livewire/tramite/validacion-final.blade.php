@@ -7,8 +7,8 @@
         @php
             $etiquetas = ['cumple' => 'Correcto', 'advertencia' => 'Alerta', 'no_cumple' => 'Debe corregirse', 'no_evaluable' => 'No verificado'];
             $tags = ['cumple' => 'completado', 'advertencia' => 'en_curso', 'no_cumple' => 'error', 'no_evaluable' => 'pendiente'];
-            $errores = $validacion->conEstado('no_cumple');
-            $alertas = $validacion->conEstado('advertencia');
+            $errores = $validacion->totalConEstado('no_cumple');
+            $alertas = $validacion->totalConEstado('advertencia');
         @endphp
 
         @if ($validacion->listaParaEnvio)
@@ -26,39 +26,59 @@
             </x-ui.alert>
         @endif
 
-        <ol class="mt-lg divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
-            @foreach (['no_cumple', 'advertencia', 'no_evaluable', 'cumple'] as $estado)
-                @foreach ($validacion->conEstado($estado) as $fila)
-                    <li class="py-md" data-regla="{{ $fila->clave }}" data-estado="{{ $fila->estado }}">
-                        <div class="flex flex-wrap items-center justify-between gap-sm">
-                            <h2 class="text-body-md font-semibold text-ink">{{ $fila->titulo }}</h2>
-                            <x-ui.status-tag :estado="$tags[$fila->estado]" :texto="$etiquetas[$fila->estado]" />
-                        </div>
-                        @if ($fila->estado !== 'cumple')
-                            <p class="mt-xxs text-body-sm text-ink">{{ $fila->mensaje }}</p>
-                            @if ($fila->lineas !== [])
-                                <ul class="mt-xs list-disc space-y-xxs pl-lg text-body-sm text-muted">
-                                    @foreach ($fila->lineas as $linea)
-                                        <li>{{ $linea }}</li>
-                                    @endforeach
-                                </ul>
+        @php
+            $secciones = [[
+                'titulo' => $validacion->niveles === [] ? null : 'Documentos del trámite',
+                'filas' => $validacion->filas,
+                'corregir' => fn (string $clave) => route('tramite.paso2-documentos', ['escuela' => $escuela->id, 'corregir' => $clave]),
+            ]];
+            foreach ($validacion->niveles as $seccion) {
+                $secciones[] = [
+                    'titulo' => 'Documentos del nivel: '.$seccion->nivel,
+                    'filas' => $seccion->filas,
+                    'corregir' => fn (string $clave) => route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $seccion->escuelaNivelId]),
+                ];
+            }
+        @endphp
+
+        @foreach ($secciones as $seccion)
+            @if ($seccion['titulo'])
+                <h2 class="mt-xl text-title-sm font-semibold text-ink">{{ $seccion['titulo'] }}</h2>
+            @endif
+            <ol class="mt-lg divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
+                @foreach (['no_cumple', 'advertencia', 'no_evaluable', 'cumple'] as $estado)
+                    @foreach (array_filter($seccion['filas'], fn ($fila) => $fila->estado === $estado) as $fila)
+                        <li class="py-md" data-regla="{{ $fila->clave }}" data-estado="{{ $fila->estado }}">
+                            <div class="flex flex-wrap items-center justify-between gap-sm">
+                                <h3 class="text-body-md font-semibold text-ink">{{ $fila->titulo }}</h3>
+                                <x-ui.status-tag :estado="$tags[$fila->estado]" :texto="$etiquetas[$fila->estado]" />
+                            </div>
+                            @if ($fila->estado !== 'cumple')
+                                <p class="mt-xxs text-body-sm text-ink">{{ $fila->mensaje }}</p>
+                                @if ($fila->lineas !== [])
+                                    <ul class="mt-xs list-disc space-y-xxs pl-lg text-body-sm text-muted">
+                                        @foreach ($fila->lineas as $linea)
+                                            <li>{{ $linea }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                @if ($fila->documentos !== [])
+                                    <ul class="mt-sm flex flex-wrap gap-sm">
+                                        @foreach ($fila->documentos as $clave => $nombre)
+                                            <li>
+                                                <a href="{{ $seccion['corregir']($clave) }}" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                                                    Corregir: {{ $nombre }}
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
                             @endif
-                            @if ($fila->documentos !== [])
-                                <ul class="mt-sm flex flex-wrap gap-sm">
-                                    @foreach ($fila->documentos as $clave => $nombre)
-                                        <li>
-                                            <a href="{{ route('tramite.paso2-documentos', ['escuela' => $escuela->id, 'corregir' => $clave]) }}" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">
-                                                Corregir: {{ $nombre }}
-                                            </a>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        @endif
-                    </li>
+                        </li>
+                    @endforeach
                 @endforeach
-            @endforeach
-        </ol>
+            </ol>
+        @endforeach
 
         <div class="mt-lg flex flex-wrap items-center gap-md">
             <x-ui.button-primary type="button" wire:click="validarDeNuevo">Validar de nuevo</x-ui.button-primary>

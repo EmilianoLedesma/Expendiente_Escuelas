@@ -3,7 +3,9 @@
 namespace App\Application\Validaciones;
 
 use App\Application\Documentos\DocumentosCompletos;
+use App\Application\Documentos\DocumentosNivelCompletos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Domain\Validaciones\Documental\CatalogoReglasDocumentales;
 use App\Domain\Validaciones\Documental\ContextoValidacion;
@@ -14,14 +16,20 @@ use App\Models\ConstanciaCurp;
 use App\Models\ConstanciaSituacionFiscal;
 use App\Models\CredencialIne;
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
 use App\Models\Gestor;
+use App\Models\InstalacionEspacio;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
 use App\Models\Plantel;
+use App\Models\ReciboPagoDerechos;
+use App\Models\RelacionAcervoBibliografico;
 use App\Models\ResponsableLegal;
 use App\Models\TipoDocumento;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The only place the documental engine touches the database. It decides
@@ -34,11 +42,94 @@ use App\Models\TipoDocumento;
  *   (razón social; personas_morales has no RFC column).
  * - Address = the plantel captured in Paso 1.
  *
- * Reuses DocumentosCompletos for which documents apply (ADR-006).
+ * Per escuela_nivel (paraNivel, Paso 2.4 documents):
+ * - Recibo folio from recibos_pago_derechos; every other level's folio, of
+ *   any trámite, as foliosAjenos.
+ * - Acervo titles: declared = "libros" titles in the plantel's library
+ *   (Paso 3 infraestructura, shared by its levels per ADR-005); document =
+ *   the relation's captured count.
+ * - Laboratories declared = sum of laboratorio_polifuncional in the plantel.
+ *
+ * Reuses DocumentosCompletos / DocumentosNivelCompletos for which documents
+ * apply (ADR-006).
  */
 class ConstruirContextoValidacion
 {
-    public function __construct(private readonly DocumentosCompletos $documentosCompletos) {}
+    public const ESPACIO_LABORATORIO = 'laboratorio_polifuncional';
+
+    public const MATERIAL_ACERVO = 'libros';
+
+    public function __construct(
+        private readonly DocumentosCompletos $documentosCompletos,
+        private readonly DocumentosNivelCompletos $documentosNivelCompletos,
+        private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
+    ) {}
+
+    public function paraNivel(int $escuelaNivelId): ContextoValidacion
+    {
+        $escuelaNivel = EscuelaNivel::with('escuela')->findOrFail($escuelaNivelId);
+        /** @var Escuela $escuela */
+        $escuela = $escuelaNivel->escuela;
+        $tipoPersona = $this->tipoPersonaDeEscuela->ejecutar($escuela->id);
+
+        if ($tipoPersona === null) {
+            throw new PrecondicionIncumplida(EstadoPaso2::RESPONSABLE, 'Captura el responsable legal (Paso 2) antes de validar documentos.');
+        }
+        $requeridas = $this->documentosNivelCompletos->clavesAplicables($escuelaNivelId);
+        $pendientes = $this->documentosNivelCompletos->clavesPendientes($escuelaNivelId);
+
+        $documentos = DocumentoEscuelaNivel::query()
+            ->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_escuela_nivel.tipo_documento_id')
+            ->where('documentos_escuela_nivel.escuela_nivel_id', $escuelaNivelId)
+            ->pluck('tipos_documentos.clave', 'documentos_escuela_nivel.id');
+
+        $hechos = [];
+
+        foreach (ReciboPagoDerechos::whereIn('documento_escuela_nivel_id', $documentos->keys())->whereNotNull('folio')->get() as $recibo) {
+            $hechos[] = Hecho::deDocumento(TipoHecho::FolioRecibo, (string) $recibo->folio, (string) $documentos[$recibo->documento_escuela_nivel_id]);
+        }
+
+        foreach (RelacionAcervoBibliografico::whereIn('documento_escuela_nivel_id', $documentos->keys())->get() as $relacion) {
+            $hechos[] = Hecho::deDocumento(TipoHecho::TitulosAcervo, (string) $relacion->numero_titulos, (string) $documentos[$relacion->documento_escuela_nivel_id]);
+        }
+
+        $biblioteca = DB::table('biblioteca_materiales')
+            ->join('instalaciones_espacios', 'instalaciones_espacios.id', '=', 'biblioteca_materiales.instalacion_espacio_id')
+            ->join('tipos_material_biblioteca', 'tipos_material_biblioteca.id', '=', 'biblioteca_materiales.tipo_material_id')
+            ->where('instalaciones_espacios.plantel_id', $escuela->plantel_id)
+            ->where('tipos_material_biblioteca.clave', self::MATERIAL_ACERVO)
+            ->whereNotNull('biblioteca_materiales.numero_titulos')
+            ->selectRaw('COUNT(*) AS filas, COALESCE(SUM(biblioteca_materiales.numero_titulos), 0) AS titulos')
+            ->first();
+        if ($biblioteca !== null && (int) $biblioteca->filas > 0) {
+            $hechos[] = Hecho::declarado(TipoHecho::TitulosAcervo, (string) (int) $biblioteca->titulos);
+        }
+
+        // A declared space with no quantity still counts as one.
+        $laboratorios = InstalacionEspacio::query()
+            ->join('tipos_espacios', 'tipos_espacios.id', '=', 'instalaciones_espacios.tipo_espacio_id')
+            ->where('instalaciones_espacios.plantel_id', $escuela->plantel_id)
+            ->where('tipos_espacios.clave', self::ESPACIO_LABORATORIO)
+            ->sum(DB::raw('COALESCE(instalaciones_espacios.cantidad, 1)'));
+        $hechos[] = Hecho::declarado(TipoHecho::LaboratoriosDeclarados, (string) (int) $laboratorios);
+
+        $foliosAjenos = ReciboPagoDerechos::query()
+            ->join('documentos_escuela_nivel', 'documentos_escuela_nivel.id', '=', 'recibos_pago_derechos.documento_escuela_nivel_id')
+            ->where('documentos_escuela_nivel.escuela_nivel_id', '!=', $escuelaNivelId)
+            ->whereNotNull('recibos_pago_derechos.folio')
+            ->pluck('recibos_pago_derechos.folio')
+            ->map(fn ($folio) => (string) $folio)
+            ->values()
+            ->all();
+
+        return new ContextoValidacion(
+            tipoPersona: $tipoPersona,
+            hechos: $hechos,
+            clavesRequeridas: $requeridas,
+            clavesPresentes: array_values(array_diff($requeridas, $pendientes)),
+            foliosAjenos: $foliosAjenos,
+        );
+    }
 
     public function ejecutar(int $escuelaId): ContextoValidacion
     {
