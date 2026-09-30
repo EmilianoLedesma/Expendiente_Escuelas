@@ -131,3 +131,32 @@ Entorno: el mismo contenedor efímero; PostgreSQL 16 local, base `sedeq_incorpor
 - **Retención/limpieza de evaluaciones y PDFs:** cada visita a la página final genera una evaluación.
 - **Documentos subidos antes de este cambio** (INE y certificado sin datos): la validación final los marca `no_cumple` y pide volver a subirlos. Es intencional, pero afecta a expedientes existentes en dev.
 - **Motor de capacidad instalada** (Paso 3): sin cambios, sigue en `PENDIENTE-origen-de-magnitud.md`.
+
+## 6. Evaluación tras WS-5b (Paso 2.4 "Documentos por nivel", ya en `master`)
+
+Se mezcló `master` en esta rama. Los conflictos se resolvieron conservando ambos lados:
+
+- **Catálogo:** las dos constancias de ADR-007 quedan al final del catálogo de Paso 2.2 de WS-5b (18 filas en total).
+- **Paso 2.2:** los cuatro documentos con datos se suman a `CON_DATOS_ESTRUCTURADOS`, y el Formato de Solicitud sale de 2.2 como en `master`.
+- **Registro:** `RegistrarDocumento` guarda los datos tipados de ADR-007 y el recibo de WS-5b.
+- **Fixture:** el de validación final completa Paso 2.4.
+- **Resultado:** suite 778/778.
+
+### ¿Cambia cómo funciona el motor?
+
+**No hace falta.**
+
+- La validación final solo corre con el trámite completo (`ResumenTramite::completo`), y desde WS-5b eso incluye Paso 2.4. Así que los documentos por nivel siempre están cargados cuando el motor corre.
+- `DocumentosRequeridosPresentes` sigue cubriendo solo Paso 2.2, sin hueco real.
+- La regla de domicilio ya trata un certificado de número oficial ausente como `no_evaluable`. Eso cubre el caso de que el certificado se vuelva condicional (`PENDIENTE-dictamenes-por-nivel.md`).
+
+### Usos nuevos que WS-5b hace posibles (propuestos, no implementados)
+
+Todos siguen el mismo patrón de ADR-007: hechos tipados, capturados con el documento, y reglas que solo leen hechos.
+
+1. **Recibo de pago reutilizado.** `recibos_pago_derechos` ya guarda folio, monto y fecha. Regla: el mismo folio en otra escuela o nivel → `no_cumple` (un recibo pagado una vez no debería amparar dos trámites). Determinista, sin datos nuevos.
+2. **Acervo bibliográfico: relación vs. biblioteca declarada.** WS-5b pide la "Relación del acervo bibliográfico" por nivel (Primaria y Secundaria). Si se captura con ella el número de títulos, una regla puede compararlo contra los títulos declarados en Infraestructura (Paso 3). El motor de capacidad (PR #2) ya revisa el mínimo normativo con estos últimos.
+3. **Inventario de laboratorio vs. espacio declarado (Secundaria).** El inventario se sube en 2.4; el laboratorio polifuncional se declara en Infraestructura. Si hay uno sin el otro → `advertencia`.
+4. **Documentos requeridos por nivel.** Extender `DocumentosRequeridosPresentes` a los documentos de 2.4, con enlace "Corregir" a la página del nivel. Hoy no aporta nada, porque la compuerta ya lo asegura. Tendrá sentido cuando WS-7 permita editar y quitar documentos antes del envío.
+
+Sin cambio posible: el Formato de Solicitud firmado sigue sin poder cotejarse contra el PDF generado (limitación ya aceptada en el informe de WS-5b). El turno y el tipo que imprime salen de los mismos datos de 2.4, y cambiarlos descarta el Formato.
