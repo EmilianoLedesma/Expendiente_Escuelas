@@ -39,3 +39,10 @@ Estado actual (`master` en `ce3a154`):
 ## Cierre
 
 Este archivo se renombra a `ADR-00N-edicion-hasta-envio.md` en el mismo commit que implemente las reglas en WS-7, con las respuestas a las preguntas abiertas.
+
+## Relación con la validación final (2026-09-30, rama `spike/validation-engine-eval`)
+
+`ADR-007-motor-validacion-hechos.md` agregó el último paso del flujo, **"Validación final"**: evalúa los documentos contra lo capturado, guarda un PDF y dice si el trámite puede enviarse (cualquier `no_cumple` lo impide). El envío en sí sigue siendo de WS-7. Al implementarlo:
+
+- El disparador de envío debe **volver a ejecutar** `App\Application\Validaciones\EjecutarValidacionFinal` y rechazar si `listaParaEnvio` es falso. No debe confiar en la última evaluación guardada, porque los datos pueden cambiar después.
+- Si se abre la edición de Paso 2.1, los errores en datos **declarados** (no en documentos) se vuelven corregibles. Hoy la validación final solo puede mandar a corregir documentos.

@@ -1,5 +1,7 @@
 # Evaluación de la propuesta "Validation Engine" (v0.1) contra el código real
 
+> **Actualización (2026-09-30, misma rama):** las preguntas abiertas de este informe quedaron resueltas en `docs/decisions/ADR-007-motor-validacion-hechos.md` (antes `PENDIENTE-motor-validacion-hechos.md`) y se implementaron según `docs/reports/2026-09-30-motor-validacion-integracion.md`. Este informe se conserva como registro de la evaluación inicial; lo que dice sobre `hechos_documento`, `RegistrarHechoDocumento` y las reglas `NombreTitularCoincide`/`CurpCoincide` quedó reemplazado.
+
 **Fecha:** 2026-09-30
 **Rama:** `spike/validation-engine-eval` (desde `master` en `cd91ffe`; no mergeada, no se mergea desde esta sesión)
 **Clasificación de la tarea:** spike (evaluación + prototipo mínimo). El prototipo es evidencia para decidir, no una feature lista para `master`.
