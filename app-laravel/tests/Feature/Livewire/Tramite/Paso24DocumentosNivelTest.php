@@ -68,6 +68,17 @@ class Paso24DocumentosNivelTest extends TestCase
             ->assertSee('Documentos del nivel');
     }
 
+    public function test_el_recorrido_marca_documentos_del_nivel_como_la_seccion_actual(): void
+    {
+        $escuelaNivel = $this->nivel();
+
+        $this->get(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $escuelaNivel->id]))
+            ->assertOk()
+            ->assertSee('Primaria · Paso 5 de 7')
+            ->assertSee('aria-current="step"', false)
+            ->assertSee('Aquí estás');
+    }
+
     public function test_muestra_una_fila_por_documento_aplicable_al_nivel(): void
     {
         $escuelaNivel = $this->nivel('secundaria');
