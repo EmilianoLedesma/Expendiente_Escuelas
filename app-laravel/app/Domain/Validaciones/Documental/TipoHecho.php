@@ -23,6 +23,10 @@ enum TipoHecho: string
     case DomicilioColonia = 'domicilio_colonia';
     case DomicilioMunicipio = 'domicilio_municipio';
     case DomicilioCodigoPostal = 'domicilio_codigo_postal';
+    // Per-level facts (Paso 2.4, WS-5b).
+    case FolioRecibo = 'folio_recibo';
+    case TitulosAcervo = 'titulos_acervo';
+    case LaboratoriosDeclarados = 'laboratorios_declarados';
 
     /** @return list<self> */
     public static function domicilio(): array

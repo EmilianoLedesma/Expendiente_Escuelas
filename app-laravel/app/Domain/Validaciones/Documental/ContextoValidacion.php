@@ -13,12 +13,14 @@ final readonly class ContextoValidacion
      * @param  list<Hecho>  $hechos
      * @param  list<string>  $clavesRequeridas  tipos_documentos.clave applicable to this tipo_persona
      * @param  list<string>  $clavesPresentes  tipos_documentos.clave already uploaded
+     * @param  list<string>  $foliosAjenos  recibo folios registered by any other escuela_nivel
      */
     public function __construct(
         public string $tipoPersona,
         public array $hechos,
         public array $clavesRequeridas,
         public array $clavesPresentes,
+        public array $foliosAjenos = [],
     ) {}
 
     public function declarado(TipoHecho $tipo): ?Hecho
