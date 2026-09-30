@@ -3,15 +3,21 @@
 namespace Tests\Concerns;
 
 use App\Application\Documentos\DocumentosCompletos;
+use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use Database\Seeders\CatalogoMinimoSeeder;
+use Database\Seeders\PasosCapturaSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -87,6 +93,33 @@ trait CapturaExpedienteConsistente
     {
         foreach (app(DocumentosCompletos::class)->clavesAplicables($tipoPersona) as $clave) {
             $this->subirDocumento($escuela, $clave, $reemplazos[$clave] ?? $this->datosConsistentes($clave, $tipoPersona));
+        }
+    }
+
+    /**
+     * Every hub section done (ResumenTramite::completo), so the final
+     * validation step is reachable: responsable, all documents with data
+     * (or the given replacements), and one primaria level with its
+     * available Paso 3 sub-steps completed.
+     *
+     * @param  array<string, DatosDocumento>  $reemplazos
+     */
+    protected function completarTramite(Escuela $escuela, string $tipoPersona = 'fisica', array $reemplazos = []): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
+        $this->registrarResponsable($escuela, $tipoPersona);
+        $this->subirTodosConDatos($escuela, $tipoPersona, $reemplazos);
+
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        foreach (['inmueble', 'infraestructura'] as $paso) {
+            (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
         }
     }
 }
