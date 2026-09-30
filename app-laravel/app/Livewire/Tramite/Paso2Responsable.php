@@ -141,6 +141,7 @@ class Paso2Responsable extends Component
             $this->personaFisicaForm->curp = mb_strtoupper($this->personaFisicaForm->curp);
 
             if ($this->tipoPersona === 'fisica_con_gestor') {
+                $this->gestorForm->curp = mb_strtoupper(trim($this->gestorForm->curp));
                 $this->gestorForm->validate();
             }
         }
@@ -170,6 +171,7 @@ class Paso2Responsable extends Component
             gestorNotarioNombre: $this->gestorForm->notarioNombre !== '' ? $this->gestorForm->notarioNombre : null,
             gestorNotarioNumero: $this->gestorForm->notarioNumero !== '' ? $this->gestorForm->notarioNumero : null,
             gestorFechaPoder: $this->gestorForm->fechaPoder !== '' ? $this->gestorForm->fechaPoder : null,
+            gestorCurp: $this->gestorForm->curp !== '' ? $this->gestorForm->curp : null,
         ));
 
         // Mismo gate que mount() (EstadoPaso2: completitud Y vigencia) — aplicado

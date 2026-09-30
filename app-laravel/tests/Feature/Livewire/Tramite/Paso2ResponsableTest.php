@@ -372,6 +372,7 @@ class Paso2ResponsableTest extends TestCase
             ->set('gestorForm.notarioNombre', 'Lic. Ana Notaria')
             ->set('gestorForm.notarioNumero', '10')
             ->set('gestorForm.fechaPoder', '2021-03-10')
+            ->set('gestorForm.curp', 'GOMR800101HQTMBR01')
             ->call('guardarResponsable')
             ->assertHasNoErrors();
 
@@ -527,5 +528,45 @@ class Paso2ResponsableTest extends TestCase
         $this->assertDatabaseHas('escuela_niveles', ['escuela_id' => $escuela->id, 'nivel_educativo_id' => $preescolar->id]);
         $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
         $component->assertRedirect(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]));
+    }
+
+    public function test_con_gestor_se_captura_la_curp_del_gestor(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica_con_gestor')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
+            ->set('personaFisicaForm.nombre', 'Laura Méndez')
+            ->set('gestorForm.nombre', 'Roberto Gómez')
+            ->set('gestorForm.curp', 'gomr800101hqtmbr01')
+            ->call('guardarResponsable')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('gestores', ['nombre' => 'Roberto Gómez', 'curp' => 'GOMR800101HQTMBR01']);
+    }
+
+    public function test_con_gestor_la_curp_del_gestor_es_obligatoria_y_con_formato(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica_con_gestor')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
+            ->set('personaFisicaForm.nombre', 'Laura Méndez')
+            ->set('gestorForm.nombre', 'Roberto Gómez')
+            ->set('gestorForm.curp', 'ABC')
+            ->call('guardarResponsable')
+            ->assertHasErrors(['gestorForm.curp']);
     }
 }

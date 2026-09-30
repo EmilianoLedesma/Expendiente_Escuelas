@@ -13,10 +13,10 @@ use App\Domain\Validaciones\Resultado\EstadoResultado;
  */
 final readonly class IdentificadorCoincide extends ReglaDeCoincidencia
 {
-    private const CURP = '/^[A-Z][AEIOUX][A-Z]{2}\d{6}[HMX][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$/';
+    public const PATRON_CURP = '/^[A-Z][AEIOUX][A-Z]{2}\d{6}[HMX][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$/';
 
     /** 13 chars for personas físicas, 12 for morales. */
-    private const RFC = '/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/u';
+    public const PATRON_RFC = '/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/u';
 
     /** @param list<string> $fuentes */
     public function __construct(string $clave, TipoHecho $tipo, array $fuentes, private string $patron, private string $nombre)
@@ -27,13 +27,13 @@ final readonly class IdentificadorCoincide extends ReglaDeCoincidencia
     /** @param list<string> $fuentes */
     public static function curp(array $fuentes): self
     {
-        return new self('curp_coincide', TipoHecho::Curp, $fuentes, self::CURP, 'la CURP');
+        return new self('curp_coincide', TipoHecho::Curp, $fuentes, self::PATRON_CURP, 'la CURP');
     }
 
     /** @param list<string> $fuentes */
     public static function rfc(array $fuentes): self
     {
-        return new self('rfc_coincide', TipoHecho::Rfc, $fuentes, self::RFC, 'el RFC');
+        return new self('rfc_coincide', TipoHecho::Rfc, $fuentes, self::PATRON_RFC, 'el RFC');
     }
 
     protected function coinciden(string $a, string $b): bool
