@@ -161,3 +161,12 @@ Entorno: el mismo contenedor efímero (PostgreSQL 16 local, `sedeq_incorporacion
 - Las elecciones provisionales están en `PENDIENTE-motor-capacidad-provisionales.md` (P1–P10).
 - Notas agregadas a `PENDIENTE-origen-de-magnitud.md`, `PENDIENTE-umbral-educacion-fisica.md` y `PENDIENTE-perfiles-trabajador-social-prefecto.md`. Los tres siguen abiertos.
 - Al mergear: `php artisan db:seed --class=GradosSeeder` en dev (idempotente), con confirmación del owner según CLAUDE.md.
+
+## 10. Actualización tras integrar WS-5b (`master`)
+
+Se mezcló `master` (WS-5b, Paso 2.4 "Documentos por nivel") en esta rama, a través de `spike/validation-engine-eval`.
+
+- **Numeración:** cada nivel empieza con "Documentos del nivel" y sigue con los seis sub-pasos del Paso 3 (Primaria 10 pasos en total, Inicial 11). La corrección de `posicion()` (`array_values`) se aplicó a la lista nueva.
+- **Conflicto semántico corregido:** WS-5b hizo del turno y el tipo de alumnado un dato de Paso 2.4, donde cambiarlos descarta el Formato de Solicitud ya cargado. `RegistrarPlanEstudios` también los escribía, lo que se saltaba esa regla. Ahora Plan de estudios solo guarda la modalidad, el plan y la plataforma, y muestra turno y tipo como referencia. Hay una prueba y una mutación que lo cubren.
+- **Fixtures:** los de Paso 3 completan Paso 2.4 antes, porque Paso 3 queda bloqueado sin él.
+- **Resultado:** suite 854/854, Pint y PHPStan limpios.

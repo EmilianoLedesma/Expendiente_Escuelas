@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Paso 3, sub-step 4 (Plan de estudios y modalidad). Writes the escuela_niveles
  * columns the DDL already has for it; the allowed values mirror their CHECKs.
+ * Turno and tipo de alumnado are Paso 2.4's (RegistrarDatosNivel, WS-5b), where
+ * changing them discards the uploaded Formato de Solicitud — never written here.
  * COMPENDIO §7 keeps the exact plan fields open, so the plan itself is a
  * free-text reference. The online platform is only asked for outside the
  * escolarizada modality (provisional, PENDIENTE-motor-capacidad-provisionales).
@@ -19,10 +21,6 @@ use Illuminate\Support\Facades\DB;
 class RegistrarPlanEstudios
 {
     public const MODALIDADES = ['escolarizada', 'no_escolarizada', 'mixta', 'virtual'];
-
-    public const TURNOS = ['matutino', 'vespertino', 'mixto'];
-
-    public const TIPOS_ALUMNADO = ['mixto', 'femenino', 'masculino'];
 
     public const PLATAFORMAS = ['propia', 'rentada'];
 
@@ -39,12 +37,6 @@ class RegistrarPlanEstudios
         $errores = [];
         if (! in_array($datos->modalidad, self::MODALIDADES, true)) {
             $errores['modalidad'] = 'Elige una modalidad válida.';
-        }
-        if (! in_array($datos->turno, self::TURNOS, true)) {
-            $errores['turno'] = 'Elige un turno válido.';
-        }
-        if (! in_array($datos->tipoAlumnado, self::TIPOS_ALUMNADO, true)) {
-            $errores['tipoAlumnado'] = 'Elige un tipo de alumnado válido.';
         }
 
         $escolarizada = $datos->modalidad === 'escolarizada';
@@ -64,8 +56,6 @@ class RegistrarPlanEstudios
         DB::transaction(function () use ($escuelaNivel, $datos, $escolarizada, $referencia) {
             $escuelaNivel->update([
                 'modalidad' => $datos->modalidad,
-                'turno' => $datos->turno,
-                'tipo_alumnado' => $datos->tipoAlumnado,
                 'plan_estudios_referencia' => $referencia !== '' ? $referencia : null,
                 'plataforma_educativa_tipo' => $escolarizada ? null : $datos->plataformaEducativaTipo,
             ]);

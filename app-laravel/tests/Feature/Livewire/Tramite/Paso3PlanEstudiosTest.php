@@ -29,14 +29,12 @@ class Paso3PlanEstudiosTest extends TestCase
 
         Livewire::test(PlanEstudios::class, ['escuelaNivel' => $escuelaNivel])
             ->set('modalidad', 'escolarizada')
-            ->set('turno', 'matutino')
-            ->set('tipoAlumnado', 'mixto')
             ->set('planEstudiosReferencia', 'Plan de estudio 2022 (SEP)')
             ->call('guardar')
             ->assertHasNoErrors()
             ->assertRedirect(route('tramite.paso3-plantilla', ['escuelaNivel' => $escuelaNivel->id]));
 
-        $this->assertSame('matutino', $escuelaNivel->refresh()->turno);
+        $this->assertSame('Plan de estudio 2022 (SEP)', $escuelaNivel->refresh()->plan_estudios_referencia);
     }
 
     public function test_muestra_los_errores_del_caso_de_uso(): void
@@ -46,8 +44,6 @@ class Paso3PlanEstudiosTest extends TestCase
 
         Livewire::test(PlanEstudios::class, ['escuelaNivel' => $escuelaNivel])
             ->set('modalidad', 'virtual')
-            ->set('turno', 'matutino')
-            ->set('tipoAlumnado', 'mixto')
             ->call('guardar')
             ->assertHasErrors(['plataformaEducativaTipo'])
             ->assertNoRedirect();
@@ -56,12 +52,11 @@ class Paso3PlanEstudiosTest extends TestCase
     public function test_al_volver_muestra_lo_capturado(): void
     {
         $escuelaNivel = $this->nivelListoPara('primaria', 'plan_estudios');
-        $escuelaNivel->update(['modalidad' => 'mixta', 'turno' => 'vespertino', 'tipo_alumnado' => 'femenino', 'plataforma_educativa_tipo' => 'propia']);
+        $escuelaNivel->update(['modalidad' => 'mixta', 'plataforma_educativa_tipo' => 'propia']);
         $this->actingAs($escuelaNivel->escuela->solicitante->user);
 
         Livewire::test(PlanEstudios::class, ['escuelaNivel' => $escuelaNivel])
             ->assertSet('modalidad', 'mixta')
-            ->assertSet('turno', 'vespertino')
             ->assertSet('plataformaEducativaTipo', 'propia');
     }
 
@@ -73,6 +68,10 @@ class Paso3PlanEstudiosTest extends TestCase
         $this->get(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
             ->assertSee('Plan de estudios y modalidad')
-            ->assertSee('Escolarizada');
+            ->assertSee('Escolarizada')
+            // Captured in Paso 2.4 (WS-5b); shown here for reference, not editable.
+            ->assertSee('Turno: Matutino')
+            ->assertSee('Tipo de alumnado: Mixto')
+            ->assertDontSee('name="turno"', false);
     }
 }

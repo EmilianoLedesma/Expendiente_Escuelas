@@ -1,6 +1,6 @@
 <div class="max-w-3xl">
     <x-ui.page-header :eyebrow="$encabezado" title="Plan de estudios y modalidad">
-        <x-slot:intro>Indica cómo se impartirá el nivel: modalidad, turno y tipo de alumnado.</x-slot:intro>
+        <x-slot:intro>Indica cómo se impartirá el nivel: modalidad y plan de estudios.</x-slot:intro>
     </x-ui.page-header>
 
     <form wire:submit="guardar" class="space-y-lg">
@@ -14,11 +14,12 @@
                 :opciones="['propia' => 'Propia', 'rentada' => 'Rentada']" />
         @endif
 
-        <x-ui.radio-group id="turno" legend="Turno" wire:model="turno"
-            :opciones="['matutino' => 'Matutino', 'vespertino' => 'Vespertino', 'mixto' => 'Mixto']" />
-
-        <x-ui.radio-group id="tipoAlumnado" legend="Tipo de alumnado" wire:model="tipoAlumnado"
-            :opciones="['mixto' => 'Mixto', 'femenino' => 'Femenino', 'masculino' => 'Masculino']" />
+        {{-- Captured in Paso 2.4 (Documentos del nivel), where changing them discards the Formato de Solicitud. --}}
+        <p class="text-body-sm text-muted">
+            Turno: {{ ['matutino' => 'Matutino', 'vespertino' => 'Vespertino', 'mixto' => 'Mixto'][$escuelaNivel->turno] ?? 'sin capturar' }}
+            · Tipo de alumnado: {{ ['mixto' => 'Mixto', 'femenino' => 'Femenino', 'masculino' => 'Masculino'][$escuelaNivel->tipo_alumnado] ?? 'sin capturar' }}
+            <span class="block">Se capturan en Documentos del nivel.</span>
+        </p>
 
         <x-ui.field id="planEstudiosReferencia" label="Plan de estudios" hint="Nombre o referencia del plan que se impartirá (por ejemplo, el plan oficial de la SEP)." optional>
             <x-ui.input wire:model="planEstudiosReferencia" maxlength="200" />

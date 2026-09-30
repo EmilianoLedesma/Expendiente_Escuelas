@@ -22,10 +22,6 @@ class PlanEstudios extends Component
 
     public string $modalidad = '';
 
-    public string $turno = '';
-
-    public string $tipoAlumnado = '';
-
     public string $planEstudiosReferencia = '';
 
     public string $plataformaEducativaTipo = '';
@@ -39,8 +35,6 @@ class PlanEstudios extends Component
         }
 
         $this->modalidad = (string) $escuelaNivel->modalidad;
-        $this->turno = (string) $escuelaNivel->turno;
-        $this->tipoAlumnado = (string) $escuelaNivel->tipo_alumnado;
         $this->planEstudiosReferencia = (string) $escuelaNivel->plan_estudios_referencia;
         $this->plataformaEducativaTipo = (string) $escuelaNivel->plataforma_educativa_tipo;
     }
@@ -49,15 +43,11 @@ class PlanEstudios extends Component
     {
         $this->validate([
             'modalidad' => ['required'],
-            'turno' => ['required'],
-            'tipoAlumnado' => ['required'],
         ]);
 
         try {
             $registrarPlanEstudios->ejecutar($this->escuelaNivel->id, new DatosPlanEstudios(
                 modalidad: $this->modalidad,
-                turno: $this->turno,
-                tipoAlumnado: $this->tipoAlumnado,
                 planEstudiosReferencia: $this->planEstudiosReferencia !== '' ? $this->planEstudiosReferencia : null,
                 plataformaEducativaTipo: $this->plataformaEducativaTipo !== '' ? $this->plataformaEducativaTipo : null,
             ));

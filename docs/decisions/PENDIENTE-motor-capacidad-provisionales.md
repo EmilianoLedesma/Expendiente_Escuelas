@@ -42,6 +42,8 @@ Los espacios se capturan por plantel, no por nivel.
 
 ## P7. Plan de estudios y modalidad
 
+- **Turno y tipo de alumnado** ya no se capturan aquí: desde WS-5b (en `master`) son de Paso 2.4, donde cambiarlos descarta el Formato de Solicitud (decisión del dueño). Plan de estudios los muestra solo como referencia y nunca los escribe.
+
 - **Plataforma educativa:** obligatoria fuera de la modalidad escolarizada; se descarta en la escolarizada.
 - **"Plan de estudios":** referencia libre y opcional. COMPENDIO §7 sigue sin definir los campos exactos del plan.
 

@@ -139,7 +139,7 @@ trait CapturaExpedienteConsistente
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
         }
 
-        app(RegistrarPlanEstudios::class)->ejecutar($escuelaNivel->id, new DatosPlanEstudios(modalidad: 'escolarizada', turno: 'matutino', tipoAlumnado: 'mixto'));
+        app(RegistrarPlanEstudios::class)->ejecutar($escuelaNivel->id, new DatosPlanEstudios(modalidad: 'escolarizada'));
 
         $cargo = fn (string $nombre): int => (int) DB::table('cargos_puestos')->where('nivel_educativo_id', $escuelaNivel->nivel_educativo_id)->where('nombre', $nombre)->value('id');
         app(RegistrarPlantillaDocente::class)->ejecutar($escuelaNivel->id, [
