@@ -4,58 +4,103 @@ namespace App\Application\Validaciones;
 
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Excepciones\PrecondicionIncumplida;
-use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
+use App\Domain\Validaciones\Documental\CatalogoReglasDocumentales;
 use App\Domain\Validaciones\Documental\ContextoValidacion;
 use App\Domain\Validaciones\Documental\Hecho;
 use App\Domain\Validaciones\Documental\TipoHecho;
-use App\Models\HechoDocumento;
-use App\Models\PersonaFisica;
-use Illuminate\Database\Query\JoinClause;
+use App\Models\CertificadoNumeroOficial;
+use App\Models\ConstanciaCurp;
+use App\Models\ConstanciaSituacionFiscal;
+use App\Models\CredencialIne;
+use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
+use App\Models\Escuela;
+use App\Models\Plantel;
+use App\Models\ResponsableLegal;
+use App\Models\TipoDocumento;
 
 /**
- * The only place the documental engine touches the database. Reuses
- * TipoPersonaDeEscuela and DocumentosCompletos rather than re-deciding
- * which documents apply (ADR-006: one source per question).
+ * The only place the documental engine touches the database. It decides
+ * whose data is "declared" for each fact type (ADR-007):
+ *
+ * - Identity (name, CURP) = the person who acts and whose INE / Constancia
+ *   de CURP is uploaded: the titular (fisica), the gestor
+ *   (fisica_con_gestor) or the legal representative (moral, no CURP column).
+ * - Fiscal (name, RFC) = the taxpayer: the titular, or the persona moral
+ *   (razón social; personas_morales has no RFC column).
+ * - Address = the plantel captured in Paso 1.
+ *
+ * Reuses DocumentosCompletos for which documents apply (ADR-006).
  */
 class ConstruirContextoValidacion
 {
-    public function __construct(
-        private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
-        private readonly DocumentosCompletos $documentosCompletos,
-    ) {}
+    public function __construct(private readonly DocumentosCompletos $documentosCompletos) {}
 
     public function ejecutar(int $escuelaId): ContextoValidacion
     {
-        $tipoPersona = $this->tipoPersonaDeEscuela->ejecutar($escuelaId);
+        $escuela = Escuela::with(['plantel', 'responsableLegal.personaFisica', 'responsableLegal.personaMoral', 'responsableLegal.gestor'])->findOrFail($escuelaId);
+        /** @var ResponsableLegal|null $responsable */
+        $responsable = $escuela->responsableLegal;
 
-        if ($tipoPersona === null) {
+        if ($responsable === null) {
             throw new PrecondicionIncumplida(EstadoPaso2::RESPONSABLE, 'Captura el responsable legal (Paso 2) antes de validar documentos.');
         }
 
+        $tipoPersona = $responsable->tipo_persona;
         $requeridas = $this->documentosCompletos->clavesAplicables($tipoPersona);
         $pendientes = $this->documentosCompletos->clavesPendientes($escuelaId, $tipoPersona);
+        /** @var Plantel $plantel */
+        $plantel = $escuela->plantel;
 
         return new ContextoValidacion(
             tipoPersona: $tipoPersona,
-            hechos: [...$this->hechosDeclarados($escuelaId), ...$this->hechosDeDocumentosVigentes($escuelaId)],
+            hechos: [
+                ...$this->declarados($responsable, $plantel),
+                ...$this->deDocumentosDeEscuela($escuelaId),
+                ...$this->deCertificadoNumeroOficial($plantel->id),
+            ],
             clavesRequeridas: $requeridas,
             clavesPresentes: array_values(array_diff($requeridas, $pendientes)),
         );
     }
 
     /** @return list<Hecho> */
-    private function hechosDeclarados(int $escuelaId): array
+    private function declarados(ResponsableLegal $responsable, Plantel $plantel): array
     {
-        $persona = PersonaFisica::whereHas('responsableLegal', fn ($query) => $query->where('escuela_id', $escuelaId))->first();
+        $fisica = $responsable->personaFisica;
+        $moral = $responsable->personaMoral;
+        $gestor = $responsable->gestor;
 
-        if ($persona === null) {
-            return [];
-        }
+        $valores = match ($responsable->tipo_persona) {
+            'fisica' => [
+                TipoHecho::NombreIdentidad->value => $fisica?->nombre,
+                TipoHecho::Curp->value => $fisica?->curp,
+                TipoHecho::NombreFiscal->value => $fisica?->nombre,
+                TipoHecho::Rfc->value => $fisica?->rfc,
+            ],
+            'fisica_con_gestor' => [
+                TipoHecho::NombreIdentidad->value => $gestor?->nombre,
+                TipoHecho::Curp->value => $gestor?->curp,
+                TipoHecho::NombreFiscal->value => $fisica?->nombre,
+                TipoHecho::Rfc->value => $fisica?->rfc,
+            ],
+            default => [
+                TipoHecho::NombreIdentidad->value => $moral?->nombre_representante_legal,
+                TipoHecho::NombreFiscal->value => $moral?->razon_social,
+            ],
+        };
+
+        $valores += [
+            TipoHecho::DomicilioCalle->value => $plantel->calle,
+            TipoHecho::DomicilioNumeroExt->value => $plantel->numero_ext,
+            TipoHecho::DomicilioColonia->value => $plantel->colonia,
+            TipoHecho::DomicilioMunicipio->value => $plantel->municipio,
+            TipoHecho::DomicilioCodigoPostal->value => $plantel->codigo_postal,
+        ];
 
         $hechos = [];
-
-        foreach ([TipoHecho::NombreTitular->value => $persona->nombre, TipoHecho::Curp->value => $persona->curp] as $tipo => $valor) {
+        foreach ($valores as $tipo => $valor) {
             if ($valor !== null && trim($valor) !== '') {
                 $hechos[] = Hecho::declarado(TipoHecho::from($tipo), $valor);
             }
@@ -64,27 +109,58 @@ class ConstruirContextoValidacion
         return $hechos;
     }
 
-    /**
-     * Only facts whose archivo_path is still the document's current file:
-     * a replaced upload keeps the same documentos_escuela row, so matching
-     * on the row alone would validate a file that no longer exists.
-     *
-     * @return list<Hecho>
-     */
-    private function hechosDeDocumentosVigentes(int $escuelaId): array
+    /** @return list<Hecho> */
+    private function deDocumentosDeEscuela(int $escuelaId): array
     {
-        return HechoDocumento::query()
-            ->join('documentos_escuela', function (JoinClause $join) {
-                $join->on('documentos_escuela.escuela_id', '=', 'hechos_documento.escuela_id')
-                    ->on('documentos_escuela.tipo_documento_id', '=', 'hechos_documento.tipo_documento_id')
-                    ->on('documentos_escuela.archivo_path', '=', 'hechos_documento.archivo_path');
-            })
-            ->join('tipos_documentos', 'tipos_documentos.id', '=', 'hechos_documento.tipo_documento_id')
-            ->where('hechos_documento.escuela_id', $escuelaId)
-            ->orderBy('hechos_documento.id')
-            ->get(['hechos_documento.tipo_hecho', 'hechos_documento.valor', 'tipos_documentos.clave'])
-            ->map(fn (HechoDocumento $fila) => Hecho::deDocumento(TipoHecho::from($fila->tipo_hecho), $fila->valor, (string) $fila->getAttribute('clave')))
-            ->values()
-            ->all();
+        $documentos = DocumentoEscuela::query()
+            ->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_escuela.tipo_documento_id')
+            ->where('documentos_escuela.escuela_id', $escuelaId)
+            ->pluck('tipos_documentos.clave', 'documentos_escuela.id');
+
+        $hechos = [];
+
+        foreach (CredencialIne::whereIn('documento_escuela_id', $documentos->keys())->get() as $ine) {
+            $hechos[] = Hecho::deDocumento(TipoHecho::NombreIdentidad, $ine->nombre, 'ine');
+            $hechos[] = Hecho::deDocumento(TipoHecho::Curp, $ine->curp, 'ine');
+        }
+
+        foreach (ConstanciaCurp::whereIn('documento_escuela_id', $documentos->keys())->get() as $constancia) {
+            $hechos[] = Hecho::deDocumento(TipoHecho::NombreIdentidad, $constancia->nombre, 'constancia_curp');
+            $hechos[] = Hecho::deDocumento(TipoHecho::Curp, $constancia->curp, 'constancia_curp');
+        }
+
+        foreach (ConstanciaSituacionFiscal::whereIn('documento_escuela_id', $documentos->keys())->get() as $fiscal) {
+            $hechos[] = Hecho::deDocumento(TipoHecho::NombreFiscal, $fiscal->nombre_razon_social, CatalogoReglasDocumentales::FUENTE_FISCAL);
+            $hechos[] = Hecho::deDocumento(TipoHecho::Rfc, $fiscal->rfc, CatalogoReglasDocumentales::FUENTE_FISCAL);
+        }
+
+        return $hechos;
+    }
+
+    /** Plantel-scoped: the certificate belongs to the plantel and applies to each of its escuelas. @return list<Hecho> */
+    private function deCertificadoNumeroOficial(int $plantelId): array
+    {
+        $tipoId = TipoDocumento::where('clave', CatalogoReglasDocumentales::FUENTE_DOMICILIO)->value('id');
+        $documentoId = DocumentoPlantel::where('plantel_id', $plantelId)->where('tipo_documento_id', $tipoId)->value('id');
+        $certificado = $documentoId === null ? null : CertificadoNumeroOficial::find($documentoId);
+
+        if ($certificado === null) {
+            return [];
+        }
+
+        $hechos = [];
+        foreach ([
+            TipoHecho::DomicilioCalle->value => $certificado->calle,
+            TipoHecho::DomicilioNumeroExt->value => $certificado->numero_ext,
+            TipoHecho::DomicilioColonia->value => $certificado->colonia,
+            TipoHecho::DomicilioMunicipio->value => $certificado->municipio,
+            TipoHecho::DomicilioCodigoPostal->value => $certificado->codigo_postal,
+        ] as $tipo => $valor) {
+            if ($valor !== null && trim($valor) !== '') {
+                $hechos[] = Hecho::deDocumento(TipoHecho::from($tipo), $valor, CatalogoReglasDocumentales::FUENTE_DOMICILIO);
+            }
+        }
+
+        return $hechos;
     }
 }
