@@ -3,6 +3,9 @@
 <head><meta charset="utf-8"></head>
 <body>
     <h1>Formato de Solicitud</h1>
+    <p>Nivel educativo: {{ $escuelaNivel->nivelEducativo->nombre }}</p>
+    <p>Turno: {{ ucfirst((string) $escuelaNivel->turno) }}</p>
+    <p>Tipo de alumnado: {{ ucfirst((string) $escuelaNivel->tipo_alumnado) }}</p>
     @if ($escuela->responsableLegal)
         <p>Tipo de persona: {{ $escuela->responsableLegal->tipo_persona }}</p>
         <p>Domicilio para notificaciones: {{ $escuela->responsableLegal->domicilio_notificaciones }}</p>

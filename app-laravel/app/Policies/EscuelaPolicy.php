@@ -9,7 +9,7 @@ use App\Models\User;
 /**
  * `update` autoriza toda página que escribe (Paso 2 responsable y
  * documentos) y es SOLO del dueño. `view` autoriza lectura pura (descarga
- * de documento, PDF del Formato de Solicitud) y hoy también es solo dueño,
+ * de documento) y hoy también es solo dueño,
  * pero es la habilidad que deberá abrirse a revisores SEDEQ (Etapa 2:
  * dueño O rol `sedeq`) — por eso ninguna ruta que escribe puede usar
  * `view`: abrir `view` nunca debe abrir escrituras. No abierto aquí a
