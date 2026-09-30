@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Catálogo de documentos de Paso 2.2 (plantel/escuela, no escuela_nivel —
- * esos llegan en WS-5b junto con Paso 2.4). 13 filas desde WS-5a (D2/D3a):
+ * esos llegan en WS-5b junto con Paso 2.4). 15 filas: 13 desde WS-5a (D2/D3a)
+ * más constancia_curp y constancia_situacion_fiscal (ADR-007):
  * los 7 originales (COMPENDIO_MAESTRO §Paso 2.2) más 6 que la auditoría del
  * 2026-09-23 encontró faltantes contra los Requisitos reales (Apéndice B.2
  * del brief de remediación).
@@ -42,6 +43,11 @@ class TiposDocumentosSeeder extends Seeder
             ['clave' => 'plano_inmueble', 'nombre' => 'Plano o croquis del inmueble', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'certificado_numero_oficial', 'nombre' => 'Certificado de número oficial', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'recibo_pago_derechos_plantel', 'nombre' => 'Recibo de pago de derechos', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
+            // ADR-007 (owner decision): sources for the CURP and RFC checks.
+            // CURP: of the person who acts (titular, gestor or representative, like the INE).
+            // Situación fiscal: of the taxpayer (titular, or the persona moral).
+            ['clave' => 'constancia_curp', 'nombre' => 'Constancia de CURP', 'aplica_persona' => 'ambas', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
+            ['clave' => 'constancia_situacion_fiscal', 'nombre' => 'Constancia de Situación Fiscal', 'aplica_persona' => 'ambas', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
         ]);
     }
 }

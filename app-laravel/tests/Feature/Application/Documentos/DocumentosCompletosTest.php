@@ -38,10 +38,11 @@ class DocumentosCompletosTest extends TestCase
         $this->assertNotContains('escritura_poder_facultades', $claves);
         $this->assertNotContains('acta_constitutiva', $claves);
         $this->assertNotContains('poder_gestor', $claves);
-        // 13 filas totales: 10 son aplica_persona='ambas' (aplican siempre),
+        // 15 filas totales (ADR-007 agregó constancia_curp y
+        // constancia_situacion_fiscal, ambas 'ambas'): 12 son aplica_persona='ambas' (aplican siempre),
         // 2 son 'moral' (no aplican a fisica), 1 es 'fisica_con_gestor' (no
-        // aplica a fisica). 10 + 0 + 0 = 10.
-        $this->assertCount(10, $claves);
+        // aplica a fisica). 12 + 0 + 0 = 12.
+        $this->assertCount(12, $claves);
     }
 
     public function test_claves_aplicables_para_moral_incluye_acta_constitutiva_y_escritura_poder(): void
@@ -54,8 +55,8 @@ class DocumentosCompletosTest extends TestCase
         $this->assertContains('escritura_poder_facultades', $claves);
         $this->assertContains('acta_nacimiento', $claves);
         $this->assertNotContains('poder_gestor', $claves);
-        // 10 'ambas' + 2 'moral' propias (escritura_poder_facultades, acta_constitutiva) = 12.
-        $this->assertCount(12, $claves);
+        // 12 'ambas' + 2 'moral' propias (escritura_poder_facultades, acta_constitutiva) = 14.
+        $this->assertCount(14, $claves);
     }
 
     public function test_claves_aplicables_para_fisica_con_gestor_incluye_poder_gestor(): void
@@ -67,8 +68,8 @@ class DocumentosCompletosTest extends TestCase
         $this->assertContains('poder_gestor', $claves);
         $this->assertNotContains('escritura_poder_facultades', $claves);
         $this->assertNotContains('acta_constitutiva', $claves);
-        // 10 'ambas' + 1 'fisica_con_gestor' propia (poder_gestor) = 11.
-        $this->assertCount(11, $claves);
+        // 12 'ambas' + 1 'fisica_con_gestor' propia (poder_gestor) = 13.
+        $this->assertCount(13, $claves);
     }
 
     public function test_el_orden_de_los_7_documentos_originales_no_cambia(): void
@@ -90,7 +91,7 @@ class DocumentosCompletosTest extends TestCase
         $escuela = $this->crearEscuela();
 
         $this->assertFalse((new DocumentosCompletos)->paraEscuela($escuela->id, 'fisica'));
-        $this->assertCount(10, (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
+        $this->assertCount(12, (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
     }
 
     public function test_para_escuela_verdadero_cuando_los_10_estan_registrados(): void

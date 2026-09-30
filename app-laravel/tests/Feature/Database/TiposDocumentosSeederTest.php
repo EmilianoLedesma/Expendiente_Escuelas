@@ -15,7 +15,7 @@ class TiposDocumentosSeederTest extends TestCase
     {
         $this->seed(TiposDocumentosSeeder::class);
 
-        $this->assertDatabaseCount('tipos_documentos', 13);
+        $this->assertDatabaseCount('tipos_documentos', 15);
 
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'ine', 'aplica_persona' => 'ambas', 'ambito' => 'escuela', 'vigencia_max_dias' => null]);
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'acta_nacimiento', 'aplica_persona' => 'ambas', 'ambito' => 'escuela']);
@@ -31,7 +31,7 @@ class TiposDocumentosSeederTest extends TestCase
         $this->seed(TiposDocumentosSeeder::class);
         $this->seed(TiposDocumentosSeeder::class);
 
-        $this->assertDatabaseCount('tipos_documentos', 13);
+        $this->assertDatabaseCount('tipos_documentos', 15);
     }
 
     public function test_agrega_los_documentos_faltantes_de_persona_moral_y_gestor(): void
@@ -57,6 +57,6 @@ class TiposDocumentosSeederTest extends TestCase
         (new TiposDocumentosSeeder)->run();
         (new TiposDocumentosSeeder)->run();
 
-        $this->assertSame(13, DB::table('tipos_documentos')->count());
+        $this->assertSame(15, DB::table('tipos_documentos')->count());
     }
 }
