@@ -6,6 +6,7 @@ use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Tramite\Paso1Preregistro;
+use App\Livewire\Tramite\Paso24DocumentosNivel;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
@@ -37,6 +38,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', DescargarDocumentoController::class)
         ->middleware('can:view,escuela')
         ->name('tramite.paso2-documentos.descargar');
+
+    Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos', Paso24DocumentosNivel::class)
+        ->whereNumber('escuelaNivel')
+        ->middleware('can:update,escuelaNivel')
+        ->name('tramite.paso2-nivel-documentos');
 
     Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos/formato-solicitud.pdf', FormatoSolicitudPdfController::class)
         ->whereNumber('escuelaNivel')
