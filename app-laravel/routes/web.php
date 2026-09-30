@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
-use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
 use App\Http\Controllers\Tramite\DescargarDocumentoNivelController;
+use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
