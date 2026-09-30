@@ -22,7 +22,7 @@ class HechoTest extends TestCase
 
     public function test_hecho_de_documento_lleva_su_clave(): void
     {
-        $hecho = Hecho::deDocumento(TipoHecho::NombreTitular, 'PEREZ GOMEZ JUAN', 'ine');
+        $hecho = Hecho::deDocumento(TipoHecho::NombreIdentidad, 'PEREZ GOMEZ JUAN', 'ine');
 
         $this->assertSame(OrigenHecho::Documento, $hecho->origen);
         $this->assertSame('ine', $hecho->documentoClave);
@@ -32,7 +32,7 @@ class HechoTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        Hecho::declarado(TipoHecho::NombreTitular, '   ');
+        Hecho::declarado(TipoHecho::NombreIdentidad, '   ');
     }
 
     public function test_rechaza_hecho_de_documento_sin_clave(): void

@@ -31,6 +31,11 @@ final readonly class ContextoValidacion
         return $this->buscar($tipo, OrigenHecho::Documento, $documentoClave);
     }
 
+    public function presente(string $documentoClave): bool
+    {
+        return in_array($documentoClave, $this->clavesPresentes, true);
+    }
+
     private function buscar(TipoHecho $tipo, OrigenHecho $origen, ?string $documentoClave): ?Hecho
     {
         foreach ($this->hechos as $hecho) {

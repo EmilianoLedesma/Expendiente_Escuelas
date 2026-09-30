@@ -54,6 +54,15 @@ class ReporteValidacionTest extends TestCase
         $this->assertNull($reporte->resultado('inexistente'));
     }
 
+    public function test_un_resultado_senala_los_documentos_afectados(): void
+    {
+        $sinDocumentos = new ResultadoRegla('a', EstadoResultado::Cumple, 'ok');
+        $conDocumentos = new ResultadoRegla('b', EstadoResultado::NoCumple, 'falta', [], ['ine', 'constancia_curp']);
+
+        $this->assertSame([], $sinDocumentos->documentos);
+        $this->assertSame(['ine', 'constancia_curp'], $conDocumentos->documentos);
+    }
+
     public function test_estados_serializan_a_su_clave_estable(): void
     {
         $this->assertSame(

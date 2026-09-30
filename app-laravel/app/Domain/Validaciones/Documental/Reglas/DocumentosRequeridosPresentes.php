@@ -25,6 +25,6 @@ final readonly class DocumentosRequeridosPresentes implements ReglaDocumental
 
         return $faltantes === []
             ? new ResultadoRegla(self::CLAVE, EstadoResultado::Cumple, 'Todos los documentos requeridos están cargados.')
-            : new ResultadoRegla(self::CLAVE, EstadoResultado::NoCumple, 'Faltan documentos requeridos.', ['faltantes' => $faltantes]);
+            : new ResultadoRegla(self::CLAVE, EstadoResultado::NoCumple, 'Faltan documentos requeridos.', ['faltantes' => $faltantes], $faltantes);
     }
 }

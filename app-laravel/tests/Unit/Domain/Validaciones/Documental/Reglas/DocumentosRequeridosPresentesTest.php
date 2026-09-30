@@ -27,6 +27,7 @@ class DocumentosRequeridosPresentesTest extends TestCase
 
         $this->assertSame(EstadoResultado::NoCumple, $resultado->estado);
         $this->assertSame(['ine', 'dictamen_uso_suelo'], $resultado->detalles['faltantes']);
+        $this->assertSame(['ine', 'dictamen_uso_suelo'], $resultado->documentos);
     }
 
     public function test_un_documento_presente_que_no_se_requiere_no_compensa_uno_faltante(): void

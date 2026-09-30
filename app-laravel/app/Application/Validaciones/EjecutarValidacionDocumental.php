@@ -2,11 +2,8 @@
 
 namespace App\Application\Validaciones;
 
+use App\Domain\Validaciones\Documental\CatalogoReglasDocumentales;
 use App\Domain\Validaciones\Documental\MotorValidacionDocumental;
-use App\Domain\Validaciones\Documental\NormalizadorNombre;
-use App\Domain\Validaciones\Documental\Reglas\CurpCoincide;
-use App\Domain\Validaciones\Documental\Reglas\DocumentosRequeridosPresentes;
-use App\Domain\Validaciones\Documental\Reglas\NombreTitularCoincide;
 use App\Domain\Validaciones\Resultado\ReporteValidacion;
 
 /**
@@ -21,11 +18,7 @@ class EjecutarValidacionDocumental
 
     public function ejecutar(int $escuelaId): ReporteValidacion
     {
-        $motor = new MotorValidacionDocumental([
-            new DocumentosRequeridosPresentes,
-            new NombreTitularCoincide(new NormalizadorNombre),
-            new CurpCoincide,
-        ]);
+        $motor = new MotorValidacionDocumental(CatalogoReglasDocumentales::reglas());
 
         return $motor->ejecutar($this->construirContexto->ejecutar($escuelaId));
     }
