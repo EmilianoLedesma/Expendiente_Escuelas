@@ -202,17 +202,19 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame(['inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'], array_keys($s));
         $this->assertSame('comenzar', $s['inmueble']->accion);
         $this->assertSame(route('tramite.paso3-inmueble', ['escuelaNivel' => $primaria->id]), $s['inmueble']->href);
-        $this->assertSame([5, 6], [$s['inmueble']->paso, $s['inmueble']->totalPasos]);
+        $this->assertSame([5, 9], [$s['inmueble']->paso, $s['inmueble']->totalPasos]);
         $this->assertSame('pendiente', $s['infraestructura']->estado);
         $this->assertSame('Completa primero: Datos del inmueble', $s['infraestructura']->motivoBloqueo);
         $this->assertNull($s['infraestructura']->href);
-        $this->assertSame([6, 6], [$s['infraestructura']->paso, $s['infraestructura']->totalPasos]);
+        $this->assertSame([6, 9], [$s['infraestructura']->paso, $s['infraestructura']->totalPasos]);
         $this->assertSame('no_aplica', $s['mobiliario']->estado);
         $this->assertNull($s['mobiliario']->href);
         $this->assertNull($s['mobiliario']->paso);
-        foreach (['plan_estudios', 'plantilla_docente', 'matricula'] as $clave) {
-            $this->assertSame('no_disponible', $s[$clave]->estado);
+        // Available since the Paso 3 sub-steps 4-6 were built (2026-09-30); still locked behind their predecessors.
+        foreach (['plan_estudios' => 7, 'plantilla_docente' => 8, 'matricula' => 9] as $clave => $paso) {
+            $this->assertSame('pendiente', $s[$clave]->estado);
             $this->assertNull($s[$clave]->href);
+            $this->assertSame([$paso, 9], [$s[$clave]->paso, $s[$clave]->totalPasos]);
         }
     }
 
@@ -231,7 +233,7 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame(route('tramite.paso3-infraestructura', ['escuelaNivel' => $inicial->id]), $s['infraestructura']->href);
         $this->assertSame('pendiente', $s['mobiliario']->estado);
         $this->assertSame('comenzar', $s['mobiliario']->accion);
-        $this->assertSame([7, 7], [$s['mobiliario']->paso, $s['mobiliario']->totalPasos]);
+        $this->assertSame([7, 10], [$s['mobiliario']->paso, $s['mobiliario']->totalPasos]);
     }
 
     public function test_un_paso_en_progreso_se_muestra_en_curso(): void
@@ -272,12 +274,17 @@ class ResumenTramiteTest extends TestCase
     {
         $escuela = $this->escuela();
         $this->completarPaso2($escuela->id);
-        $this->nivel($escuela, 'primaria', 'inmueble', 'infraestructura');
+        $this->nivel($escuela, 'primaria', 'inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula');
         $inicial = $this->nivel($escuela, 'inicial', 'inmueble', 'infraestructura');
 
         $this->assertFalse($this->resumen($escuela)->completo);
 
-        (new MarcarPasoCompletado)->ejecutar($inicial->id, 'mobiliario');
+        foreach (['mobiliario', 'plan_estudios', 'plantilla_docente'] as $paso) {
+            (new MarcarPasoCompletado)->ejecutar($inicial->id, $paso);
+        }
+        $this->assertFalse($this->resumen($escuela)->completo, 'Matrícula de Inicial sigue pendiente.');
+
+        (new MarcarPasoCompletado)->ejecutar($inicial->id, 'matricula');
 
         $this->assertTrue($this->resumen($escuela)->completo);
     }
@@ -304,11 +311,13 @@ class ResumenTramiteTest extends TestCase
         return [
             'plantel' => ['plantel', null, ['paso' => 1, 'total' => 4]],
             'niveles' => ['niveles', null, ['paso' => 4, 'total' => 4]],
-            'inmueble primaria' => ['inmueble', 'primaria', ['paso' => 5, 'total' => 6]],
-            'infraestructura primaria' => ['infraestructura', 'primaria', ['paso' => 6, 'total' => 6]],
-            'mobiliario inicial' => ['mobiliario', 'inicial', ['paso' => 7, 'total' => 7]],
+            'inmueble primaria' => ['inmueble', 'primaria', ['paso' => 5, 'total' => 9]],
+            'infraestructura primaria' => ['infraestructura', 'primaria', ['paso' => 6, 'total' => 9]],
+            'mobiliario inicial' => ['mobiliario', 'inicial', ['paso' => 7, 'total' => 10]],
             'mobiliario primaria' => ['mobiliario', 'primaria', null],
-            'plan de estudios' => ['plan_estudios', 'primaria', null],
+            'plan de estudios' => ['plan_estudios', 'primaria', ['paso' => 7, 'total' => 9]],
+            'matricula primaria' => ['matricula', 'primaria', ['paso' => 9, 'total' => 9]],
+            'matricula inicial' => ['matricula', 'inicial', ['paso' => 10, 'total' => 10]],
         ];
     }
 
@@ -323,7 +332,7 @@ class ResumenTramiteTest extends TestCase
         $primaria = (new NivelEducativo)->forceFill(['clave' => 'primaria', 'nombre' => 'Primaria']);
 
         $this->assertSame('Datos generales · Paso 2 de 4', ResumenTramite::encabezado('responsable'));
-        $this->assertSame('Primaria · Paso 6 de 6', ResumenTramite::encabezado('infraestructura', $primaria));
+        $this->assertSame('Primaria · Paso 6 de 9', ResumenTramite::encabezado('infraestructura', $primaria));
         $this->assertNull(ResumenTramite::encabezado('mobiliario', $primaria));
     }
 
@@ -406,8 +415,8 @@ class ResumenTramiteTest extends TestCase
         $this->nivel($escuela, 'inicial', 'inmueble');
 
         $conNivel = $this->resumen($escuela);
-        // 4 generales + inmueble completos; total 4 + inmueble/infraestructura/mobiliario (Inicial).
-        $this->assertSame(['hechas' => 5, 'total' => 7, 'porcentaje' => 71], $conNivel->avance());
+        // 4 generales + inmueble completos; total 4 + the 6 Paso 3 sub-steps of Inicial.
+        $this->assertSame(['hechas' => 5, 'total' => 10, 'porcentaje' => 50], $conNivel->avance());
         $this->assertSame('infraestructura', $conNivel->siguiente()?->clave);
     }
 }

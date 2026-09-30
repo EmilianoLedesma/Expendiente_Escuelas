@@ -10,7 +10,10 @@ use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
+use App\Livewire\Tramite\Paso3\Matricula;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
+use App\Livewire\Tramite\Paso3\PlanEstudios;
+use App\Livewire\Tramite\Paso3\PlantillaDocente;
 use App\Livewire\Tramite\ValidacionFinal;
 use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +68,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/paso3/{escuelaNivel}/mobiliario', MobiliarioNivel::class)
         ->middleware('can:update,escuelaNivel')
         ->name('tramite.paso3-mobiliario');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/plan-estudios', PlanEstudios::class)
+        ->middleware('can:update,escuelaNivel')
+        ->name('tramite.paso3-plan-estudios');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/plantilla', PlantillaDocente::class)
+        ->middleware('can:update,escuelaNivel')
+        ->name('tramite.paso3-plantilla');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/matricula', Matricula::class)
+        ->middleware('can:update,escuelaNivel')
+        ->name('tramite.paso3-matricula');
 
     // Ya no es una página: el hub muestra el estado de cada nivel (rediseño UI, D12). Se conserva el nombre de ruta.
     Route::get('/tramite/paso3/{escuelaNivel}/proximos-pasos', fn (EscuelaNivel $escuelaNivel) => redirect()->route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]))

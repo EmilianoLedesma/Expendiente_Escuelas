@@ -91,7 +91,7 @@ class RegistrarMatricula
         $vistos = [];
         $errores = [];
 
-        foreach (array_values($grupos) as $i => $grupo) {
+        foreach ($grupos as $i => $grupo) {
             if (! in_array($grupo['gradoId'], $grados, true)) {
                 $errores["grupos.{$i}.gradoId"] = 'Elige un grado del nivel.';
             }

@@ -42,7 +42,7 @@ class RegistrarPlantillaDocente
         $asignaturas = Asignatura::pluck('id')->all();
 
         $errores = [];
-        foreach (array_values($personas) as $i => $persona) {
+        foreach ($personas as $i => $persona) {
             $campo = fn (string $nombre) => "personas.{$i}.{$nombre}";
             $cargo = $persona->cargoPuestoId !== null ? $cargos->get($persona->cargoPuestoId) : null;
 
