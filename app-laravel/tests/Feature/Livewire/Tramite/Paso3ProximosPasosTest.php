@@ -13,11 +13,13 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class Paso3ProximosPasosTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private function crearEscuelaNivelPara(Solicitante $solicitante): EscuelaNivel
@@ -37,6 +39,7 @@ class Paso3ProximosPasosTest extends TestCase
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
         // WS-1.3: el aterrizaje solo es alcanzable con los sub-pasos construidos completados.
         foreach (['inmueble', 'infraestructura', 'mobiliario'] as $paso) {
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
@@ -91,6 +94,8 @@ class Paso3ProximosPasosTest extends TestCase
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($primaria->id);
+        $this->completarPaso24($inicial->id);
 
         (new MarcarPasoCompletado)->ejecutar($primaria->id, 'inmueble');
         (new MarcarPasoCompletado)->ejecutar($primaria->id, 'infraestructura');
@@ -127,6 +132,8 @@ class Paso3ProximosPasosTest extends TestCase
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($primaria->id);
+        $this->completarPaso24($inicial->id);
 
         foreach (['inmueble', 'infraestructura', 'mobiliario'] as $paso) {
             (new MarcarPasoCompletado)->ejecutar($primaria->id, $paso);

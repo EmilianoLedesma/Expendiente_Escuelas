@@ -36,6 +36,8 @@ use Illuminate\Support\Facades\Storage;
  */
 trait CapturaExpedienteConsistente
 {
+    use CompletaPaso24;
+
     protected const CURP_TITULAR = 'PEGJ800101HQTRML09';
 
     protected const CURP_GESTOR = 'GOMC800101HQTMRR01';
@@ -108,8 +110,8 @@ trait CapturaExpedienteConsistente
     /**
      * Every hub section done (ResumenTramite::completo), so the final
      * validation step is reachable: responsable, all documents with data
-     * (or the given replacements), and one primaria level whose Paso 3 is
-     * captured through the real use cases.
+     * (or the given replacements), and one primaria level with its Paso 2.4
+     * complete and its Paso 3 captured through the real use cases.
      *
      * @param  array<string, DatosDocumento>  $reemplazos
      */
@@ -129,6 +131,9 @@ trait CapturaExpedienteConsistente
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+
+        // WS-5b: Paso 3 stays locked until the level's Paso 2.4 is complete.
+        $this->completarPaso24($escuelaNivel->id);
 
         foreach (['inmueble', 'infraestructura', 'mobiliario'] as $paso) {
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);

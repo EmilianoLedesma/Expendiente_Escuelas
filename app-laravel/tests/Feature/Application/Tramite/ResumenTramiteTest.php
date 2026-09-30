@@ -6,6 +6,7 @@ use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\DTO\ResumenTramiteDTO;
@@ -26,11 +27,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class ResumenTramiteTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private function escuela(): Escuela
@@ -57,14 +60,21 @@ class ResumenTramiteTest extends TestCase
         }
     }
 
-    private function nivel(Escuela $escuela, string $clave, string ...$completados): EscuelaNivel
+    private function nivel(Escuela $escuela, string $clave): EscuelaNivel
     {
-        $escuelaNivel = EscuelaNivel::create([
+        return EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => NivelEducativo::where('clave', $clave)->value('id'),
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+    }
+
+    /** Nivel con su Paso 2.4 completo y los sub-pasos de Paso 3 indicados marcados. Requiere Paso 2 completo. */
+    private function nivelListo(Escuela $escuela, string $clave, string ...$completados): EscuelaNivel
+    {
+        $escuelaNivel = $this->nivel($escuela, $clave);
+        $this->completarPaso24($escuelaNivel->id);
 
         foreach ($completados as $paso) {
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
@@ -187,7 +197,7 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame('completado', $g['niveles']->estado);
     }
 
-    public function test_un_nivel_primaria_recien_seleccionado(): void
+    public function test_un_nivel_primaria_recien_seleccionado_empieza_por_sus_documentos(): void
     {
         $escuela = $this->escuela();
         $this->completarPaso2($escuela->id);
@@ -198,31 +208,89 @@ class ResumenTramiteTest extends TestCase
 
         $this->assertSame('primaria', $nivel->clave);
         $this->assertSame('Primaria', $nivel->nombre);
-        // Migrado de ProgresoTest::test_renderiza_los_seis_pasos_en_orden.
-        $this->assertSame(['inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'], array_keys($s));
+        $this->assertSame(['documentos_nivel', 'inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'], array_keys($s));
+        $this->assertSame('Documentos del nivel', $s['documentos_nivel']->nombre);
+        $this->assertSame('pendiente', $s['documentos_nivel']->estado);
+        $this->assertSame('comenzar', $s['documentos_nivel']->accion);
+        $this->assertSame(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $primaria->id]), $s['documentos_nivel']->href);
+        $this->assertSame([5, 10], [$s['documentos_nivel']->paso, $s['documentos_nivel']->totalPasos]);
+        $this->assertSame([6, 10], [$s['inmueble']->paso, $s['inmueble']->totalPasos]);
+        $this->assertSame([7, 10], [$s['infraestructura']->paso, $s['infraestructura']->totalPasos]);
+        $this->assertSame('no_aplica', $s['mobiliario']->estado);
+        $this->assertNull($s['mobiliario']->paso);
+        // Available since the Paso 3 sub-steps 4-6 were built (2026-09-30); still locked behind their predecessors.
+        foreach (['plan_estudios' => 8, 'plantilla_docente' => 9, 'matricula' => 10] as $clave => $paso) {
+            $this->assertSame('pendiente', $s[$clave]->estado);
+            $this->assertNull($s[$clave]->href);
+            $this->assertSame([$paso, 10], [$s[$clave]->paso, $s[$clave]->totalPasos]);
+        }
+    }
+
+    public function test_con_documentos_del_nivel_completos_inmueble_se_puede_comenzar(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $primaria = $this->nivelListo($escuela, 'primaria');
+
+        $s = $this->porClave($this->resumen($escuela)->niveles[0]->secciones);
+
+        $this->assertSame('completado', $s['documentos_nivel']->estado);
+        $this->assertSame('revisar', $s['documentos_nivel']->accion, 'el Formato firmado se puede reemplazar');
         $this->assertSame('comenzar', $s['inmueble']->accion);
         $this->assertSame(route('tramite.paso3-inmueble', ['escuelaNivel' => $primaria->id]), $s['inmueble']->href);
-        $this->assertSame([5, 9], [$s['inmueble']->paso, $s['inmueble']->totalPasos]);
         $this->assertSame('pendiente', $s['infraestructura']->estado);
         $this->assertSame('Completa primero: Datos del inmueble', $s['infraestructura']->motivoBloqueo);
         $this->assertNull($s['infraestructura']->href);
-        $this->assertSame([6, 9], [$s['infraestructura']->paso, $s['infraestructura']->totalPasos]);
-        $this->assertSame('no_aplica', $s['mobiliario']->estado);
-        $this->assertNull($s['mobiliario']->href);
-        $this->assertNull($s['mobiliario']->paso);
-        // Available since the Paso 3 sub-steps 4-6 were built (2026-09-30); still locked behind their predecessors.
-        foreach (['plan_estudios' => 7, 'plantilla_docente' => 8, 'matricula' => 9] as $clave => $paso) {
-            $this->assertSame('pendiente', $s[$clave]->estado);
-            $this->assertNull($s[$clave]->href);
-            $this->assertSame([$paso, 9], [$s[$clave]->paso, $s[$clave]->totalPasos]);
-        }
+    }
+
+    public function test_documentos_del_nivel_con_datos_pero_sin_documentos_queda_en_curso(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $primaria = $this->nivel($escuela, 'primaria');
+        app(RegistrarDatosNivel::class)->ejecutar($primaria->id, 'matutino', 'mixto');
+
+        $documentosNivel = $this->porClave($this->resumen($escuela)->niveles[0]->secciones)['documentos_nivel'];
+
+        $this->assertSame('en_curso', $documentosNivel->estado);
+        $this->assertSame('continuar', $documentosNivel->accion);
+    }
+
+    public function test_con_paso2_incompleto_documentos_del_nivel_queda_bloqueado(): void
+    {
+        $escuela = $this->escuela();
+        $this->responsable($escuela);
+        $this->nivel($escuela, 'primaria');
+
+        $documentosNivel = $this->porClave($this->resumen($escuela)->niveles[0]->secciones)['documentos_nivel'];
+
+        $this->assertSame('Completa primero: Documentos', $documentosNivel->motivoBloqueo);
+        $this->assertNull($documentosNivel->href);
+    }
+
+    /**
+     * Decisión del dueño (#15): tras seleccionar niveles, Paso2Responsable manda al
+     * hub; el "Siguiente paso" del hub debe ser Documentos del primer nivel.
+     */
+    public function test_el_siguiente_paso_de_una_escuela_multinivel_recien_seleccionada_es_documentos_del_primer_nivel(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $primaria = $this->nivel($escuela, 'primaria');
+        $this->nivel($escuela, 'secundaria');
+
+        $siguiente = $this->resumen($escuela)->siguiente();
+
+        $this->assertNotNull($siguiente);
+        $this->assertSame('documentos_nivel', $siguiente->clave);
+        $this->assertSame(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $primaria->id]), $siguiente->href);
     }
 
     public function test_inicial_incluye_mobiliario_y_revisar_solo_en_las_revisables(): void
     {
         $escuela = $this->escuela();
         $this->completarPaso2($escuela->id);
-        $inicial = $this->nivel($escuela, 'inicial', 'inmueble', 'infraestructura');
+        $inicial = $this->nivelListo($escuela, 'inicial', 'inmueble', 'infraestructura');
 
         $s = $this->porClave($this->resumen($escuela)->niveles[0]->secciones);
 
@@ -233,14 +301,14 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame(route('tramite.paso3-infraestructura', ['escuelaNivel' => $inicial->id]), $s['infraestructura']->href);
         $this->assertSame('pendiente', $s['mobiliario']->estado);
         $this->assertSame('comenzar', $s['mobiliario']->accion);
-        $this->assertSame([7, 10], [$s['mobiliario']->paso, $s['mobiliario']->totalPasos]);
+        $this->assertSame([8, 11], [$s['mobiliario']->paso, $s['mobiliario']->totalPasos]);
     }
 
     public function test_un_paso_en_progreso_se_muestra_en_curso(): void
     {
         $escuela = $this->escuela();
         $this->completarPaso2($escuela->id);
-        $primaria = $this->nivel($escuela, 'primaria');
+        $primaria = $this->nivelListo($escuela, 'primaria');
         DB::table('escuela_nivel_pasos')->insert([
             'escuela_nivel_id' => $primaria->id,
             'paso_captura_id' => DB::table('pasos_captura')->where('clave', 'inmueble')->value('id'),
@@ -258,8 +326,8 @@ class ResumenTramiteTest extends TestCase
     {
         $escuela = $this->escuela();
         $this->completarPaso2($escuela->id);
-        $this->nivel($escuela, 'primaria', 'inmueble', 'infraestructura', 'mobiliario');
-        $inicial = $this->nivel($escuela, 'inicial');
+        $this->nivelListo($escuela, 'primaria', 'inmueble', 'infraestructura', 'mobiliario');
+        $inicial = $this->nivelListo($escuela, 'inicial');
 
         $niveles = $this->resumen($escuela)->niveles;
 
@@ -274,8 +342,8 @@ class ResumenTramiteTest extends TestCase
     {
         $escuela = $this->escuela();
         $this->completarPaso2($escuela->id);
-        $this->nivel($escuela, 'primaria', 'inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula');
-        $inicial = $this->nivel($escuela, 'inicial', 'inmueble', 'infraestructura');
+        $this->nivelListo($escuela, 'primaria', 'inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula');
+        $inicial = $this->nivelListo($escuela, 'inicial', 'inmueble', 'infraestructura');
 
         $this->assertFalse($this->resumen($escuela)->completo);
 
@@ -311,13 +379,15 @@ class ResumenTramiteTest extends TestCase
         return [
             'plantel' => ['plantel', null, ['paso' => 1, 'total' => 4]],
             'niveles' => ['niveles', null, ['paso' => 4, 'total' => 4]],
-            'inmueble primaria' => ['inmueble', 'primaria', ['paso' => 5, 'total' => 9]],
-            'infraestructura primaria' => ['infraestructura', 'primaria', ['paso' => 6, 'total' => 9]],
-            'mobiliario inicial' => ['mobiliario', 'inicial', ['paso' => 7, 'total' => 10]],
+            'documentos del nivel primaria' => ['documentos_nivel', 'primaria', ['paso' => 5, 'total' => 10]],
+            'inmueble primaria' => ['inmueble', 'primaria', ['paso' => 6, 'total' => 10]],
+            'infraestructura primaria' => ['infraestructura', 'primaria', ['paso' => 7, 'total' => 10]],
+            'documentos del nivel inicial' => ['documentos_nivel', 'inicial', ['paso' => 5, 'total' => 11]],
+            'mobiliario inicial' => ['mobiliario', 'inicial', ['paso' => 8, 'total' => 11]],
             'mobiliario primaria' => ['mobiliario', 'primaria', null],
-            'plan de estudios' => ['plan_estudios', 'primaria', ['paso' => 7, 'total' => 9]],
-            'matricula primaria' => ['matricula', 'primaria', ['paso' => 9, 'total' => 9]],
-            'matricula inicial' => ['matricula', 'inicial', ['paso' => 10, 'total' => 10]],
+            'plan de estudios' => ['plan_estudios', 'primaria', ['paso' => 8, 'total' => 10]],
+            'matricula primaria' => ['matricula', 'primaria', ['paso' => 10, 'total' => 10]],
+            'matricula inicial' => ['matricula', 'inicial', ['paso' => 11, 'total' => 11]],
         ];
     }
 
@@ -332,7 +402,8 @@ class ResumenTramiteTest extends TestCase
         $primaria = (new NivelEducativo)->forceFill(['clave' => 'primaria', 'nombre' => 'Primaria']);
 
         $this->assertSame('Datos generales · Paso 2 de 4', ResumenTramite::encabezado('responsable'));
-        $this->assertSame('Primaria · Paso 6 de 9', ResumenTramite::encabezado('infraestructura', $primaria));
+        $this->assertSame('Primaria · Paso 7 de 10', ResumenTramite::encabezado('infraestructura', $primaria));
+        $this->assertSame('Primaria · Paso 5 de 10', ResumenTramite::encabezado('documentos_nivel', $primaria));
         $this->assertNull(ResumenTramite::encabezado('mobiliario', $primaria));
     }
 
@@ -412,11 +483,43 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame('responsable', $nuevo->siguiente()?->clave);
 
         $this->completarPaso2($escuela->id);
-        $this->nivel($escuela, 'inicial', 'inmueble');
+        $this->nivelListo($escuela, 'inicial', 'inmueble');
 
         $conNivel = $this->resumen($escuela);
-        // 4 generales + inmueble completos; total 4 + the 6 Paso 3 sub-steps of Inicial.
-        $this->assertSame(['hechas' => 5, 'total' => 10, 'porcentaje' => 50], $conNivel->avance());
+        // 4 generales + Documentos del nivel + inmueble completos; total 4 + the 7 per-level sections of Inicial (2.4 + six Paso 3 sub-steps).
+        $this->assertSame(['hechas' => 6, 'total' => 11, 'porcentaje' => 54], $conNivel->avance());
         $this->assertSame('infraestructura', $conNivel->siguiente()?->clave);
+    }
+
+    public function test_sin_documentos_del_nivel_inmueble_queda_bloqueado(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $this->nivel($escuela, 'primaria');
+
+        $inmueble = $this->porClave($this->resumen($escuela)->niveles[0]->secciones)['inmueble'];
+
+        $this->assertSame('Completa primero: Documentos del nivel', $inmueble->motivoBloqueo);
+        $this->assertNull($inmueble->accion);
+        $this->assertNull($inmueble->href);
+    }
+
+    public function test_con_inmueble_completo_y_2_4_incompleto_el_motivo_apunta_a_documentos_del_nivel(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $inicial = $this->nivel($escuela, 'inicial');
+        // Inserción directa: MarcarPasoCompletado exige 2.4 completo; aquí simula un nivel regresado por rollout/descarte del Formato.
+        DB::table('escuela_nivel_pasos')->insert([
+            'escuela_nivel_id' => $inicial->id,
+            'paso_captura_id' => DB::table('pasos_captura')->where('clave', 'inmueble')->value('id'),
+            'estado' => 'completado',
+        ]);
+
+        $s = $this->porClave($this->resumen($escuela)->niveles[0]->secciones);
+
+        foreach (['infraestructura', 'mobiliario'] as $clave) {
+            $this->assertSame('Completa primero: Documentos del nivel', $s[$clave]->motivoBloqueo);
+        }
     }
 }

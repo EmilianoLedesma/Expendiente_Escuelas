@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $nombre
  * @property string $aplica_persona
  * @property string $ambito
+ * @property int|null $nivel_educativo_id
  * @property int|null $vigencia_max_dias
  */
 class TipoDocumento extends Model

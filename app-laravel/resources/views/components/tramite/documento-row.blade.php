@@ -1,9 +1,9 @@
 {{--
     Fila de la checklist de Documentos. Si es editable dibuja el formulario: archivo PDF,
     luego el slot (campos estructurados) y "Guardar". Si ya está capturada: Reemplazar / Descargar.
-    $capturado: ['nombreArchivo' => string, 'subidoEn' => Carbon] | null. $vencido: mensaje de vigencia | null.
+    $capturado: ['nombreArchivo' => string, 'subidoEn' => Carbon] | null. $vencido: mensaje de vigencia | null. $descargarHref: ruta de descarga (Paso 2.4); por omisión la de Paso 2.2 por escuela.
 --}}
-@props(['clave', 'titulo', 'escuelaId', 'accion', 'capturado' => null, 'editable' => true, 'vencido' => null, 'etiquetaArchivo' => 'Archivo PDF'])
+@props(['clave', 'titulo', 'escuelaId', 'accion', 'capturado' => null, 'editable' => true, 'vencido' => null, 'etiquetaArchivo' => 'Archivo PDF', 'descargarHref' => null])
 
 @php
     $metodo = \Illuminate\Support\Str::before($accion, '(');
@@ -56,7 +56,7 @@
                 <x-ui.icon nombre="arrow-up-tray" class="h-5 w-5" />
                 Reemplazar<span class="sr-only"> {{ $titulo }}</span>
             </x-ui.button-secondary>
-            <x-ui.button-secondary :href="route('tramite.paso2-documentos.descargar', ['escuela' => $escuelaId, 'clave' => $clave])">
+            <x-ui.button-secondary :href="$descargarHref ?? route('tramite.paso2-documentos.descargar', ['escuela' => $escuelaId, 'clave' => $clave])">
                 <x-ui.icon nombre="arrow-down-tray" class="h-5 w-5" />
                 Descargar<span class="sr-only"> {{ $titulo }}</span>
             </x-ui.button-secondary>

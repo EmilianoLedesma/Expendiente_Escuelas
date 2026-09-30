@@ -4,6 +4,7 @@ namespace Tests\Feature\Application\EscuelaNiveles;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EstadoPaso24;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
@@ -15,11 +16,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class MarcarPasoCompletadoTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     // Minor 7 — MarcarPasoCompletado ahora exige Paso 2 completo (mismo
@@ -41,12 +44,18 @@ class MarcarPasoCompletadoTest extends TestCase
             $this->completarPaso2($escuela->id);
         }
 
-        return EscuelaNivel::create([
+        $escuelaNivel = EscuelaNivel::create([
             'escuela_id' => $escuela->id,
             'nivel_educativo_id' => $nivel->id,
             'estado_id' => $estadoId,
             'tipo_tramite' => 'alta_nueva',
         ]);
+
+        if ($conPaso2Completo) {
+            $this->completarPaso24($escuelaNivel->id);
+        }
+
+        return $escuelaNivel;
     }
 
     private function fila(int $escuelaNivelId, string $pasoClave): ?object
@@ -116,6 +125,8 @@ class MarcarPasoCompletadoTest extends TestCase
     public function test_rechaza_marcar_un_paso_cuyo_predecesor_no_esta_completado(): void
     {
         $escuelaNivel = $this->crearEscuelaNivel();
+        // Guarda de no vacuidad: el rechazo debe venir del predecesor, no del Paso 2.4.
+        $this->assertNull(app(EstadoPaso24::class)->etapaFaltante($escuelaNivel->id));
 
         $this->expectException(PrecondicionIncumplida::class);
 
@@ -133,5 +144,34 @@ class MarcarPasoCompletadoTest extends TestCase
         $this->expectException(PrecondicionIncumplida::class);
 
         (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+    }
+
+    /** WS-5b, con control: sin 2.4 se rechaza sin escribir; con 2.4 el mismo llamado pasa. Nivel armado aquí: el helper completa 2.4 tras el barrido. */
+    public function test_rechaza_marcar_sin_paso24_completo(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        (new PasosCapturaSeeder)->run();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => Solicitante::factory()->create()->id]);
+        $this->completarPaso2($escuela->id);
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        try {
+            (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            // esperado
+        }
+        $this->assertDatabaseCount('escuela_nivel_pasos', 0);
+
+        $this->completarPaso24($escuelaNivel->id);
+        (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, 'inmueble');
+
+        $this->assertSame('completado', $this->fila($escuelaNivel->id, 'inmueble')->estado);
     }
 }

@@ -14,11 +14,13 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class ResumenTramitePaginaTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private function escuelaDe(Solicitante $solicitante): Escuela
@@ -92,10 +94,12 @@ class ResumenTramitePaginaTest extends TestCase
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($primaria->id);
 
         $this->actingAs($solicitante->user)
             ->get(route('tramite.resumen', ['escuela' => $escuela->id]))
             ->assertOk()
+            ->assertSee('Documentos del nivel')
             ->assertSee('Primaria')
             ->assertSee('border-nivel-primaria', false)
             ->assertSee('href="'.route('tramite.paso3-inmueble', ['escuelaNivel' => $primaria->id]).'"', false)
@@ -104,6 +108,26 @@ class ResumenTramitePaginaTest extends TestCase
             ->assertSee('Plantilla docente')
             ->assertSee('Matrícula')
             ->assertDontSee('No disponible aún');
+    }
+
+    public function test_tras_seleccionar_niveles_el_hub_ofrece_comenzar_los_documentos_del_primer_nivel(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->escuelaDe($solicitante);
+        $this->completarPaso2($escuela->id);
+        $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
+        $primaria = EscuelaNivel::create(['escuela_id' => $escuela->id, 'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'), 'estado_id' => $estadoId, 'tipo_tramite' => 'alta_nueva']);
+        EscuelaNivel::create(['escuela_id' => $escuela->id, 'nivel_educativo_id' => NivelEducativo::where('clave', 'secundaria')->value('id'), 'estado_id' => $estadoId, 'tipo_tramite' => 'alta_nueva']);
+
+        $html = $this->actingAs($solicitante->user)
+            ->get(route('tramite.resumen', ['escuela' => $escuela->id]))
+            ->assertOk()
+            ->assertSee('Siguiente paso')
+            ->getContent();
+
+        // El primer enlace a una página 2.4 dentro del bloque "Siguiente paso" es el de Primaria.
+        $bloque = substr($html, strpos($html, 'Siguiente paso'));
+        $this->assertStringContainsString('href="'.route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $primaria->id]).'"', substr($bloque, 0, 1500));
     }
 
     public function test_el_resumen_muestra_el_recorrido_y_el_siguiente_paso(): void

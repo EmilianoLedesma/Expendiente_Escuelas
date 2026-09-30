@@ -16,12 +16,13 @@ use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Fixture: an escuela_nivel with Paso 2 complete and every Paso 3 sub-step
+ * Fixture: an escuela_nivel with Paso 2 and its Paso 2.4 complete, and every Paso 3 sub-step
  * before $hasta already completed, so the sub-step under test is reachable.
  */
 trait PreparaPaso3
 {
     use CompletaPaso2;
+    use CompletaPaso24;
 
     protected function nivelListoPara(string $nivelClave, string $hasta): EscuelaNivel
     {
@@ -41,6 +42,9 @@ trait PreparaPaso3
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+
+        // WS-5b: Paso 3 stays locked until the level's Paso 2.4 is complete.
+        $this->completarPaso24($escuelaNivel->id);
 
         foreach (DB::table('pasos_captura')->orderBy('orden')->pluck('clave') as $clave) {
             if ($clave === $hasta) {

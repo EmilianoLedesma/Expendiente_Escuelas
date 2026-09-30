@@ -17,11 +17,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
 
 class Paso3VistaTest extends TestCase
 {
     use CompletaPaso2;
+    use CompletaPaso24;
     use RefreshDatabase;
 
     private Solicitante $solicitante;
@@ -45,6 +47,7 @@ class Paso3VistaTest extends TestCase
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+        $this->completarPaso24($escuelaNivel->id);
         foreach ($completados as $paso) {
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
         }
@@ -58,7 +61,7 @@ class Paso3VistaTest extends TestCase
 
         $this->get(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('Primaria · Paso 5 de 9')
+            ->assertSee('Primaria · Paso 6 de 10')
             ->assertSee('href="'.route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]).'"', false)
             ->assertSee('for="metrosTotales"', false)
             ->assertSee('for="colindanciaNorte"', false)
@@ -83,7 +86,7 @@ class Paso3VistaTest extends TestCase
 
         $this->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('Primaria · Paso 6 de 9')
+            ->assertSee('Primaria · Paso 7 de 10')
             ->assertSee('for="espacios.'.$bibliotecaId.'.cantidad"', false)
             ->assertSee('id="espacios.'.$bibliotecaId.'.cantidad"', false)
             ->assertSee('Material de la biblioteca')
@@ -96,7 +99,7 @@ class Paso3VistaTest extends TestCase
         $conceptoId = MobiliarioConcepto::orderBy('id')->value('id');
 
         Livewire::test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
-            ->assertSee('Educación Inicial · Paso 7 de 10')
+            ->assertSee('Educación Inicial · Paso 8 de 11')
             ->assertSeeHtml('<caption')
             ->assertSeeHtml('for="cantidades.'.$conceptoId.'"')
             ->call('guardar')
