@@ -1,0 +1,64 @@
+# PENDIENTE — Elecciones provisionales del Motor de Capacidad Instalada y del Paso 3
+
+**Estado:** abierto. El agente tuvo que elegir para que el motor y los sub-pasos 4–6 funcionen; cada punto se puede revertir sin rediseño. Requiere confirmación del owner (P2–P10) y de SEDEQ (P1).
+**Fecha:** 2026-09-30
+**Origen:** `docs/reports/2026-09-30-motor-capacidad-instalada.md`
+**Rama:** `feat/motor-capacidad-instalada` (apilada sobre `spike/validation-engine-eval`, sin mergear)
+
+Documentos relacionados que siguen abiertos y que este archivo **no** resuelve: `PENDIENTE-origen-de-magnitud.md`, `PENDIENTE-umbral-educacion-fisica.md`, `PENDIENTE-personal-condicionado-por-grado.md`, `PENDIENTE-matriz-espacios-por-nivel.md`.
+
+---
+
+## P1. Umbrales de personal: ¿matrícula o capacidad instalada? (SEDEQ)
+
+`PENDIENTE-umbral-educacion-fisica.md` señala que el Profesiograma habla de **capacidad** de las instalaciones y el Acuerdo de **alumnos**.
+
+**Elección provisional:** matrícula capturada en el sub-paso Matrícula, que es el único número de alumnos que el sistema tiene. El umbral sigue en 61 (`condicion_min`, provisional en ese otro PENDIENTE).
+
+## P2. Superficie del predio con varios niveles en el mismo plantel
+
+`PENDIENTE-origen-de-magnitud.md` §3.
+
+**Elección provisional:** las reglas `*.superficie.predio_total` usan la matrícula de **todos los niveles de todas las escuelas del plantel**. El predio lo usan todos sus alumnos. Los niveles sin matrícula capturada suman 0.
+
+## P3. ¿La capacidad instalada bloquea el envío?
+
+**Elección provisional:** no. El PRD dice "mostrar advertencias... **sin bloquear el guardado** (el expediente puede quedar 'con observaciones')". En la página y el PDF se muestran como **"Observación"**, con enlace al sub-paso donde se corrige. La validación documental (ADR-007) sigue siendo la única que bloquea.
+
+## P4. Áreas compartidas entre niveles (recreativas, sala de usos múltiples, sanitarios, biblioteca)
+
+Los espacios se capturan por plantel, no por nivel.
+
+**Elección provisional:** la regla de cada nivel compara su propio requerimiento contra el área **total** del plantel. Con dos niveles en el plantel, cada uno puede cumplir por separado aunque la suma de sus requerimientos no quepa. Es la misma pregunta de P2, aplicada a los espacios, y se deja con la solución más simple.
+
+## P5. Mobiliario de Inicial
+
+- **Redondeo:** "1 por cada N niños" redondea **hacia arriba** por sala. La norma no lo dice; hacia abajo dejaría niños sin el artículo.
+- **Conceptos de la sala de usos múltiples** (`sala_id` nulo): **no se evalúan**, porque el catálogo no dice si el ratio cuenta lactantes, maternales o todos. Se listan como "no verificados".
+
+## P6. Acervo bibliográfico
+
+**Elección provisional:** se cuentan solo los títulos de tipo `libros` de las bibliotecas del plantel ("acervo bibliográfico"). Revistas, videos, etc. no cuentan.
+
+## P7. Plan de estudios y modalidad
+
+- **Plataforma educativa:** obligatoria fuera de la modalidad escolarizada; se descarta en la escolarizada.
+- **"Plan de estudios":** referencia libre y opcional. COMPENDIO §7 sigue sin definir los campos exactos del plan.
+
+## P8. Plantilla docente y matrícula
+
+- **Guardado:** cada envío **reemplaza** la plantilla y la matrícula completas del nivel (el formulario siempre manda todo).
+- **Plantilla:** exige al menos una persona, con los seis datos del Anexo 1. La sala es obligatoria para los cargos con `requiere_sala` (Inicial) y la asignatura para los que tienen `requiere_asignatura` (Docente Titular de Secundaria).
+- **Matrícula:** exige al menos un alumno. Inicial se captura por sala; los demás niveles, por grado y grupo.
+- **Grados:** se sembraron `grados` (Preescolar 3, Primaria 6, Secundaria 3), que nunca se habían sembrado.
+- **Asistentes de Inicial:** solo cuentan para lactantes o maternales si están **asignados a una sala** de ese tipo.
+
+## P9. "Revisar la captura" hacia Datos del inmueble
+
+Las observaciones de predio y superficie construida enlazan a "Datos del inmueble". Esa página, una vez completa, sigue siendo de solo lectura y redirige hacia adelante (WS-7, `PENDIENTE-edicion-hasta-envio.md`). El enlace no permite corregir hasta que WS-7 abra la edición. Infraestructura, Mobiliario, Plan de estudios, Plantilla y Matrícula sí se pueden reabrir y guardar de nuevo.
+
+## P10. Educación Física en Secundaria
+
+`PENDIENTE-perfiles-trabajador-social-prefecto.md`, "Hueco relacionado": la regla no tiene `cargo_puesto_id`.
+
+**Elección provisional:** la opción (b) de ese documento. El motor cuenta a los Docentes Titulares cuya asignatura es "Educación Física" (`personal_asignaturas`), sin cambio de esquema.

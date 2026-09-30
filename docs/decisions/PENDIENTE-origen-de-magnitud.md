@@ -148,3 +148,13 @@ patrones de composición justifique moverse a la Opción A y/o B.
 
 No implementado aquí, por instrucción explícita — este documento es solo para guiar
 la decisión del arquitecto antes de escribir el Motor de Validación.
+
+## Estado en código (2026-09-30, rama `feat/motor-capacidad-instalada`, sin mergear)
+
+Se implementó la **opción C**, de forma **provisional**: `App\Domain\Validaciones\Engine\ValidacionCapacidadService` resuelve magnitud y valor declarado por `clave`, sin cambios de esquema.
+
+- **Composición (§2.1):** `preescolar.superficie.aula` + `espacio_maestro` se evalúan como un solo requerimiento (1 m² por educando + 2 m² por aula).
+- **§2.2 (aula mayor):** no se evalúa; la superficie por aula no se captura.
+- **§3 (predio compartido):** se usa la matrícula de todo el plantel. Ver `PENDIENTE-motor-capacidad-provisionales.md` P2.
+
+Este documento **sigue abierto** hasta que el arquitecto confirme la opción. Al confirmarla se renombra a `ADR-00N-origen-de-magnitud.md` en el mismo commit.
