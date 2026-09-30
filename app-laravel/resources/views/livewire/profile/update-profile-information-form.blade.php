@@ -1,5 +1,7 @@
 <?php
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -9,6 +11,7 @@ use Livewire\Volt\Component;
 new class extends Component
 {
     public string $name = '';
+    #[Normalizar(Normalizacion::Correo)]
     public string $email = '';
 
     /**
@@ -73,7 +76,7 @@ new class extends Component
         </p>
     </header>
 
-    <form wire:submit="updateProfileInformation" class="mt-6 space-y-6">
+    <form novalidate wire:submit="updateProfileInformation" class="mt-6 space-y-6">
         <div>
             <x-input-label for="name" :value="__('Name')" />
             <x-text-input wire:model="name" id="name" name="name" type="text" class="mt-1 block w-full" required autofocus autocomplete="name" />

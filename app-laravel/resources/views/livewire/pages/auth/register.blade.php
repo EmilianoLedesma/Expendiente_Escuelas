@@ -1,5 +1,7 @@
 <?php
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +13,7 @@ use Livewire\Volt\Component;
 new #[Layout('layouts.guest')] class extends Component
 {
     public string $name = '';
+    #[Normalizar(Normalizacion::Correo)]
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
@@ -41,13 +44,13 @@ new #[Layout('layouts.guest')] class extends Component
         <x-slot:intro>Regístrate para iniciar y dar seguimiento a tus trámites de incorporación.</x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="register" class="space-y-md">
+    <form novalidate wire:submit="register" class="space-y-md">
         <x-ui.error-summary />
 
-        <x-ui.field id="name" label="Nombre completo"><x-ui.input wire:model="name" autofocus autocomplete="name" /></x-ui.field>
-        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model="email" autocomplete="username" /></x-ui.field>
-        <x-ui.field id="password" label="Contraseña"><x-ui.input type="password" wire:model="password" autocomplete="new-password" /></x-ui.field>
-        <x-ui.field id="password_confirmation" label="Confirmar contraseña"><x-ui.input type="password" wire:model="password_confirmation" autocomplete="new-password" /></x-ui.field>
+        <x-ui.field id="name" label="Nombre completo"><x-ui.input wire:model.blur="name" autofocus autocomplete="name" /></x-ui.field>
+        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model.blur="email" autocomplete="username" /></x-ui.field>
+        <x-ui.field id="password" label="Contraseña"><x-ui.input type="password" wire:model.blur="password" autocomplete="new-password" /></x-ui.field>
+        <x-ui.field id="password_confirmation" label="Confirmar contraseña"><x-ui.input type="password" wire:model.blur="password_confirmation" autocomplete="new-password" /></x-ui.field>
 
         <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
             <a class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline" href="{{ route('login') }}" wire:navigate>¿Ya tienes cuenta?</a>

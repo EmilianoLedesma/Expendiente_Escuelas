@@ -13,7 +13,7 @@
         ], fn ($valor) => $valor !== null)" />
     </x-ui.section>
 
-    <form wire:submit="guardar" class="mt-xl">
+    <form novalidate wire:submit="guardar" class="mt-xl">
         <x-ui.error-summary />
 
         <x-ui.section title="Dimensiones">

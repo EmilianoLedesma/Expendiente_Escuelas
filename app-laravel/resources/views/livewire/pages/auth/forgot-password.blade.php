@@ -1,11 +1,14 @@
 <?php
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
 use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
 {
+    #[Normalizar(Normalizacion::Correo)]
     public string $email = '';
 
     /**
@@ -45,9 +48,9 @@ new #[Layout('layouts.guest')] class extends Component
         <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
     @endif
 
-    <form wire:submit="sendPasswordResetLink" class="space-y-md">
+    <form novalidate wire:submit="sendPasswordResetLink" class="space-y-md">
         <x-ui.error-summary />
-        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model="email" autofocus autocomplete="username" /></x-ui.field>
+        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model.blur="email" autofocus autocomplete="username" /></x-ui.field>
         <div class="flex justify-end border-t border-hairline pt-lg">
             <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="sendPasswordResetLink">Enviar enlace</x-ui.button-primary>
         </div>

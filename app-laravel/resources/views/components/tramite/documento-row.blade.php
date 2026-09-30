@@ -33,7 +33,7 @@
     @endisset
 
     @if ($editable)
-        <form wire:submit="{{ $accion }}" class="mt-md space-y-md">
+        <form novalidate wire:submit="{{ $accion }}" class="mt-md space-y-md">
             <x-ui.field id="archivos.{{ $clave }}" :label="$etiquetaArchivo">
                 <input
                     type="file"

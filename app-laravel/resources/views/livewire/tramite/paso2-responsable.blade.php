@@ -4,7 +4,7 @@
             <x-slot:intro>Persona física o moral que solicita la incorporación, su domicilio para notificaciones y la terna de nombres propuestos para la escuela.</x-slot:intro>
         </x-ui.page-header>
 
-        <form wire:submit="guardarResponsable">
+        <form novalidate wire:submit="guardarResponsable">
             <x-ui.error-summary />
 
             <x-ui.radio-group
@@ -17,86 +17,86 @@
             @if ($tipoPersona !== 'moral')
                 <x-ui.section title="Datos personales">
                     <x-ui.field id="personaFisicaForm.nombre" label="Nombre completo">
-                        <x-ui.input wire:model="personaFisicaForm.nombre" autocomplete="name" />
+                        <x-ui.input maxlength="200" wire:model.blur="personaFisicaForm.nombre" autocomplete="name" />
                     </x-ui.field>
                     <x-ui.field id="personaFisicaForm.fechaNacimiento" label="Fecha de nacimiento" optional>
-                        <x-ui.input type="date" wire:model="personaFisicaForm.fechaNacimiento" />
+                        <x-ui.input type="date" wire:model.blur="personaFisicaForm.fechaNacimiento" />
                     </x-ui.field>
                     <x-ui.field id="personaFisicaForm.rfc" label="RFC" optional>
-                        <x-ui.input wire:model="personaFisicaForm.rfc" class="uppercase" />
+                        <x-ui.input maxlength="13" autocapitalize="characters" spellcheck="false" wire:model.blur="personaFisicaForm.rfc" class="uppercase" />
                     </x-ui.field>
                     <x-ui.field id="personaFisicaForm.curp" label="CURP" optional>
-                        <x-ui.input wire:model="personaFisicaForm.curp" class="uppercase" />
+                        <x-ui.input maxlength="18" autocapitalize="characters" spellcheck="false" wire:model.blur="personaFisicaForm.curp" class="uppercase" />
                     </x-ui.field>
                 </x-ui.section>
 
                 @if ($tipoPersona === 'fisica_con_gestor')
                     <x-ui.section title="Datos del gestor">
                         <x-ui.field id="gestorForm.nombre" label="Nombre del gestor">
-                            <x-ui.input wire:model="gestorForm.nombre" />
+                            <x-ui.input maxlength="200" wire:model.blur="gestorForm.nombre" />
                         </x-ui.field>
                         <x-ui.field id="gestorForm.numeroPoder" label="Número de poder" optional>
-                            <x-ui.input wire:model="gestorForm.numeroPoder" />
+                            <x-ui.input maxlength="50" wire:model.blur="gestorForm.numeroPoder" />
                         </x-ui.field>
                         <x-ui.field id="gestorForm.notarioNombre" label="Nombre del notario" optional>
-                            <x-ui.input wire:model="gestorForm.notarioNombre" />
+                            <x-ui.input maxlength="150" wire:model.blur="gestorForm.notarioNombre" />
                         </x-ui.field>
                         <x-ui.field id="gestorForm.notarioNumero" label="Número de notaría" optional>
-                            <x-ui.input wire:model="gestorForm.notarioNumero" />
+                            <x-ui.input maxlength="20" wire:model.blur="gestorForm.notarioNumero" />
                         </x-ui.field>
                         <x-ui.field id="gestorForm.fechaPoder" label="Fecha del poder" optional>
-                            <x-ui.input type="date" wire:model="gestorForm.fechaPoder" />
+                            <x-ui.input type="date" wire:model.blur="gestorForm.fechaPoder" />
                         </x-ui.field>
                     </x-ui.section>
                 @endif
             @else
                 <x-ui.section title="Datos de la persona moral">
                     <x-ui.field id="personaMoralForm.razonSocial" label="Razón social">
-                        <x-ui.input wire:model="personaMoralForm.razonSocial" autocomplete="organization" />
+                        <x-ui.input maxlength="200" wire:model.blur="personaMoralForm.razonSocial" autocomplete="organization" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.nombreRepresentanteLegal" label="Representante legal">
-                        <x-ui.input wire:model="personaMoralForm.nombreRepresentanteLegal" />
+                        <x-ui.input maxlength="200" wire:model.blur="personaMoralForm.nombreRepresentanteLegal" />
                     </x-ui.field>
                 </x-ui.section>
 
                 <x-ui.section title="Datos notariales">
                     <x-ui.field id="personaMoralForm.numeroEscrituraConstitutiva" label="Número de escritura constitutiva" optional>
-                        <x-ui.input wire:model="personaMoralForm.numeroEscrituraConstitutiva" />
+                        <x-ui.input maxlength="50" wire:model.blur="personaMoralForm.numeroEscrituraConstitutiva" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.fechaEscrituraConstitutiva" label="Fecha de escritura constitutiva" optional>
-                        <x-ui.input type="date" wire:model="personaMoralForm.fechaEscrituraConstitutiva" />
+                        <x-ui.input type="date" wire:model.blur="personaMoralForm.fechaEscrituraConstitutiva" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.notarioNombre" label="Nombre del notario" optional>
-                        <x-ui.input wire:model="personaMoralForm.notarioNombre" />
+                        <x-ui.input maxlength="150" wire:model.blur="personaMoralForm.notarioNombre" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.notarioNumero" label="Número de notaría" optional>
-                        <x-ui.input wire:model="personaMoralForm.notarioNumero" />
+                        <x-ui.input maxlength="20" wire:model.blur="personaMoralForm.notarioNumero" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.notarioCiudad" label="Ciudad de la notaría" optional>
-                        <x-ui.input wire:model="personaMoralForm.notarioCiudad" />
+                        <x-ui.input maxlength="100" wire:model.blur="personaMoralForm.notarioCiudad" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.folioRegistroPublico" label="Folio del Registro Público" optional>
-                        <x-ui.input wire:model="personaMoralForm.folioRegistroPublico" />
+                        <x-ui.input maxlength="50" wire:model.blur="personaMoralForm.folioRegistroPublico" />
                     </x-ui.field>
                     <x-ui.field id="personaMoralForm.fechaInscripcionRpp" label="Fecha de inscripción en el Registro Público" optional>
-                        <x-ui.input type="date" wire:model="personaMoralForm.fechaInscripcionRpp" />
+                        <x-ui.input type="date" wire:model.blur="personaMoralForm.fechaInscripcionRpp" />
                     </x-ui.field>
                 </x-ui.section>
             @endif
 
             <x-ui.section title="Domicilio para notificaciones">
                 <x-ui.field id="domicilioNotificaciones" label="Domicilio para notificaciones">
-                    <x-ui.input wire:model="domicilioNotificaciones" autocomplete="street-address" />
+                    <x-ui.input maxlength="250" wire:model.blur="domicilioNotificaciones" autocomplete="street-address" />
                 </x-ui.field>
                 <x-ui.field id="personaAutorizadaRecoger" label="Persona autorizada para recoger notificaciones" optional>
-                    <x-ui.input wire:model="personaAutorizadaRecoger" />
+                    <x-ui.input maxlength="200" wire:model.blur="personaAutorizadaRecoger" />
                 </x-ui.field>
             </x-ui.section>
 
             <x-ui.section title="Terna de nombres">
                 @foreach ([1, 2, 3] as $n)
                     <x-ui.field id="nombrePropuesto{{ $n }}" label="Propuesta de nombre {{ $n }}">
-                        <x-ui.input wire:model="nombrePropuesto{{ $n }}" />
+                        <x-ui.input maxlength="200" wire:model.blur="nombrePropuesto{{ $n }}" />
                     </x-ui.field>
                 @endforeach
             </x-ui.section>
@@ -121,7 +121,7 @@
             </x-ui.section>
         @endif
 
-        <form wire:submit="guardarNiveles" class="mt-xl">
+        <form novalidate wire:submit="guardarNiveles" class="mt-xl">
             <x-ui.error-summary />
 
             <fieldset id="nivelesSeleccionados" @error('nivelesSeleccionados') aria-describedby="nivelesSeleccionados-error" @enderror>
