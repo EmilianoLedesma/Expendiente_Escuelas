@@ -7,6 +7,7 @@ use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Livewire\Tramite\Paso24DocumentosNivel;
+use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
@@ -17,6 +18,7 @@ use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CompletaPaso2;
@@ -307,7 +309,7 @@ class Paso24DocumentosNivelTest extends TestCase
         $this->conDatos($escuelaNivel);
         app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'formato_solicitud', $this->pdf('firmado.pdf'), new DatosDocumento, $escuelaNivel->id);
 
-        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
+        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel->fresh()])
             ->set('turno', 'vespertino')
             ->call('guardarDatos')
             ->assertHasNoErrors()
@@ -345,5 +347,99 @@ class Paso24DocumentosNivelTest extends TestCase
         $conVigencia = DB::table('tipos_documentos')->where('ambito', 'escuela_nivel')->whereNotNull('vigencia_max_dias')->pluck('clave')->all();
 
         $this->assertSame([], array_values(array_diff($conVigencia, Paso24DocumentosNivel::CON_DATOS_ESTRUCTURADOS)));
+    }
+
+    /**
+     * Revisión Importante 1: Livewire ya rechaza reescribir propiedades de un modelo público
+     * ("Can't set model properties directly"); #[Locked] lo vuelve explícito y estable ante
+     * cambios de Livewire. La prueba exige la excepción de bloqueo, no un rechazo cualquiera.
+     */
+    public function test_el_modelo_del_nivel_esta_bloqueado_contra_reescritura_del_cliente(): void
+    {
+        $propio = $this->nivel();
+        $ajeno = $this->nivel();
+        $this->actingAs($propio->escuela->solicitante->user);
+
+        foreach (['escuelaNivel.id' => $ajeno->id, 'escuelaNivel.escuela_id' => $ajeno->escuela_id] as $ruta => $valor) {
+            $componente = Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $propio->fresh()]);
+
+            try {
+                $componente->set($ruta, $valor);
+                $this->fail("Se aceptó reescribir {$ruta}.");
+            } catch (CannotUpdateLockedPropertyException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_guardar_datos_solo_toca_el_nivel_propio(): void
+    {
+        $propio = $this->nivel();
+        $ajeno = $this->nivel();
+        $this->actingAs($propio->escuela->solicitante->user);
+
+        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $propio->fresh()])
+            ->set('turno', 'vespertino')
+            ->set('tipoAlumnado', 'femenino')
+            ->call('guardarDatos');
+
+        $this->assertSame('vespertino', $propio->fresh()->turno);
+        $this->assertNull($ajeno->fresh()->turno);
+    }
+
+    /** Revisión Importante 2a: DatosInvalidos que el formulario deja pasar y el caso de uso rechaza (3 decimales) llega como error de campo. */
+    public function test_un_monto_que_el_caso_de_uso_rechaza_se_muestra_como_error_del_campo(): void
+    {
+        $escuelaNivel = $this->nivel();
+
+        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->set('archivos.recibo_pago_derechos', $this->pdf('recibo.pdf'))
+            ->set('recibo.folio', 'F-1')
+            ->set('recibo.monto', '10.999')
+            ->set('recibo.fechaPago', now()->toDateString())
+            ->call('guardarRecibo')
+            ->assertHasErrors('recibo.monto');
+
+        $this->assertDatabaseCount('recibos_pago_derechos', 0);
+    }
+
+    /** Revisión Importante 2b: si Paso 2 deja de estar completo tras montar, guardar redirige a Paso 2 (sin error de campo ni escritura). */
+    public function test_si_paso2_se_incompleta_tras_montar_guardar_documento_redirige_a_paso2(): void
+    {
+        $escuelaNivel = $this->nivel();
+        $componente = Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel->fresh()]);
+        DocumentoEscuela::where('escuela_id', $escuelaNivel->escuela_id)->delete();
+
+        $componente->set('archivos.acervo_bibliografico_primaria', $this->pdf())
+            ->call('guardarDocumento', 'acervo_bibliografico_primaria')
+            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]));
+
+        $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+    }
+
+    public function test_si_paso2_se_incompleta_tras_montar_guardar_datos_redirige_a_paso2(): void
+    {
+        $escuelaNivel = $this->nivel();
+        $componente = Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel->fresh()]);
+        DocumentoEscuela::where('escuela_id', $escuelaNivel->escuela_id)->delete();
+
+        $componente->set('turno', 'vespertino')
+            ->set('tipoAlumnado', 'mixto')
+            ->call('guardarDatos')
+            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]));
+
+        $this->assertNull($escuelaNivel->fresh()->turno);
+    }
+
+    public function test_toggle_reemplazar_solo_acepta_claves_aplicables_al_nivel(): void
+    {
+        $escuelaNivel = $this->nivel('primaria');
+
+        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->call('toggleReemplazar', 'inventario_laboratorio')
+            ->call('toggleReemplazar', 'clave_inventada')
+            ->assertSet('reemplazando', [])
+            ->call('toggleReemplazar', 'formato_solicitud')
+            ->assertSet('reemplazando.formato_solicitud', true);
     }
 }

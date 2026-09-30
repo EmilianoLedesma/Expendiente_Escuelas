@@ -17,6 +17,7 @@ use App\Livewire\Forms\ReciboPagoForm;
 use App\Models\EscuelaNivel;
 use App\Models\TipoDocumento;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -35,6 +36,8 @@ class Paso24DocumentosNivel extends Component
     /** Claves con campos propios y método propio; toda otra clave aplicable va por guardarDocumento() (WS-5a M1). Pública: la lee la prueba guarda del catálogo. */
     public const CON_DATOS_ESTRUCTURADOS = ['recibo_pago_derechos'];
 
+    /** Bloqueada: el cliente no puede retargetar el nivel (id/escuela_id) que leen todas las acciones. */
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     public string $turno = '';
@@ -50,7 +53,7 @@ class Paso24DocumentosNivel extends Component
 
     public function mount(EscuelaNivel $escuelaNivel, EstadoPaso2 $estadoPaso2): void
     {
-        $this->escuelaNivel = $escuelaNivel->refresh(); // el modelo puede venir con turno/alumnado ya obsoletos
+        $this->escuelaNivel = $escuelaNivel;
 
         if (! $estadoPaso2->puedeSeleccionarNiveles($escuelaNivel->escuela_id)) {
             $this->redirectRoute('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]);
@@ -71,11 +74,8 @@ class Paso24DocumentosNivel extends Component
 
         try {
             $registrarDatosNivel->ejecutar($this->escuelaNivel->id, $this->turno, $this->tipoAlumnado);
-        } catch (DatosInvalidos $e) {
-            foreach ($e->errores as $campo => $mensaje) {
-                $this->addError($campo, $mensaje);
-            }
         } catch (PrecondicionIncumplida) {
+            // DatosInvalidos no puede ocurrir aquí: validate() ya aplica las mismas listas que el caso de uso.
             $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuelaNivel->escuela_id]);
         }
     }
@@ -110,8 +110,12 @@ class Paso24DocumentosNivel extends Component
         }
     }
 
-    public function toggleReemplazar(string $clave): void
+    public function toggleReemplazar(string $clave, DocumentosNivelCompletos $documentosNivelCompletos): void
     {
+        if (! in_array($clave, $documentosNivelCompletos->clavesAplicables($this->escuelaNivel->id), true)) {
+            return;
+        }
+
         $this->reemplazando[$clave] = ! ($this->reemplazando[$clave] ?? false);
     }
 
