@@ -2,26 +2,31 @@
 
 namespace App\Livewire\Forms;
 
-use App\Application\Validaciones\FormatosIdentificador;
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
+use App\Application\Captura\ReglasCaptura;
 use Livewire\Form;
 
 class SituacionFiscalForm extends Form
 {
     public string $nombre = '';
 
+    #[Normalizar(Normalizacion::Identificador)]
     public string $rfc = '';
 
     public function rules(): array
     {
         return [
-            'nombre' => ['required', 'string', 'max:200'],
-            'rfc' => ['required', 'string', 'between:12,13', 'regex:'.FormatosIdentificador::RFC],
+            'nombre' => ReglasCaptura::texto(requerido: true, max: 200),
+            'rfc' => ReglasCaptura::rfc(requerido: true),
         ];
     }
 
-    public function normalizar(): void
+    public function validationAttributes(): array
     {
-        $this->nombre = trim($this->nombre);
-        $this->rfc = mb_strtoupper(trim($this->rfc));
+        return [
+            'nombre' => 'nombre o razón social',
+            'rfc' => 'RFC',
+        ];
     }
 }

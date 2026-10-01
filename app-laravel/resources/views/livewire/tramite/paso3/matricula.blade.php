@@ -10,7 +10,7 @@
         </x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="guardar">
+    <form novalidate wire:submit="guardar">
         <x-ui.error-summary />
 
         @error('matricula')
@@ -31,7 +31,7 @@
                             <tr wire:key="sala-{{ $salaId }}">
                                 <th scope="row" class="px-lg py-xs text-body-md font-normal text-body"><label for="salas.{{ $salaId }}">{{ $nombresSalas[$salaId] ?? $salaId }}</label></th>
                                 <td class="px-lg py-xs">
-                                    <x-ui.input id="salas.{{ $salaId }}" type="number" inputmode="numeric" min="0" class="text-right tabular-nums" wire:model="salas.{{ $salaId }}" />
+                                    <x-ui.input id="salas.{{ $salaId }}" type="number" inputmode="numeric" min="0" class="text-right tabular-nums" wire:model.blur="salas.{{ $salaId }}" />
                                     @error("salas.{$salaId}")
                                         <p id="salas.{{ $salaId }}-error" class="mt-xxs text-body-sm font-semibold text-error-ink">{{ $message }}</p>
                                     @enderror
@@ -53,8 +53,8 @@
                                 @endforeach
                             </x-ui.select>
                         </x-ui.field>
-                        <x-ui.field id="grupos.{{ $i }}.grupo" label="Grupo"><x-ui.input wire:model="grupos.{{ $i }}.grupo" maxlength="5" class="uppercase" /></x-ui.field>
-                        <x-ui.field id="grupos.{{ $i }}.alumnos" :label="$etiquetaAlumnos"><x-ui.input type="number" inputmode="numeric" min="0" wire:model="grupos.{{ $i }}.alumnos" /></x-ui.field>
+                        <x-ui.field id="grupos.{{ $i }}.grupo" label="Grupo"><x-ui.input wire:model.blur="grupos.{{ $i }}.grupo" maxlength="5" class="uppercase" /></x-ui.field>
+                        <x-ui.field id="grupos.{{ $i }}.alumnos" :label="$etiquetaAlumnos"><x-ui.input type="number" inputmode="numeric" min="0" wire:model.blur="grupos.{{ $i }}.alumnos" /></x-ui.field>
                         @if (count($grupos) > 1)
                             <button type="button" wire:click="quitarGrupo({{ $i }})" class="min-h-11 self-end font-semibold text-primary underline underline-offset-4 hover:no-underline">
                                 Quitar<span class="sr-only"> grupo {{ $i + 1 }}</span>

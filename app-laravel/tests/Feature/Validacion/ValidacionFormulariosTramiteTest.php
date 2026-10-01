@@ -195,6 +195,55 @@ class ValidacionFormulariosTramiteTest extends TestCase
             ->assertSet('acreditacionForm.observaciones', "Primera línea\n\nSegunda");
     }
 
+    public function test_paso2_documentos_normaliza_los_datos_que_compara_el_motor_documental(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('ineForm.curp', ' pegj800101hqtrml09 ')
+            ->set('constanciaCurpForm.curp', 'pegj-800101-hqtrml09')
+            ->set('situacionFiscalForm.rfc', 'pegj 800101 ab1')
+            ->set('numeroOficialForm.codigoPostal', '76 000')
+            ->assertSet('ineForm.curp', 'PEGJ800101HQTRML09')
+            ->assertSet('constanciaCurpForm.curp', 'PEGJ800101HQTRML09')
+            ->assertSet('situacionFiscalForm.rfc', 'PEGJ800101AB1')
+            ->assertSet('numeroOficialForm.codigoPostal', '76000')
+            ->assertHasNoErrors();
+    }
+
+    public function test_paso2_documentos_los_datos_del_motor_usan_los_mismos_formatos_y_mensajes(): void
+    {
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('ineForm.curp', 'PEGJ801301HQTRML09')
+            ->set('situacionFiscalForm.rfc', 'PEGJ8001')
+            ->set('numeroOficialForm.codigoPostal', '00123')
+            ->assertHasErrors(['ineForm.curp', 'situacionFiscalForm.rfc', 'numeroOficialForm.codigoPostal']);
+
+        $this->assertSame('La CURP no tiene un formato válido: son 18 caracteres, por ejemplo GOMA800101HQTRRL09.', $this->primerError($prueba, 'ineForm.curp'));
+        $this->assertSame('El RFC no tiene un formato válido: son 13 caracteres para persona física o 12 para persona moral.', $this->primerError($prueba, 'situacionFiscalForm.rfc'));
+        $this->assertSame('El código postal debe tener 5 dígitos, por ejemplo 76000.', $this->primerError($prueba, 'numeroOficialForm.codigoPostal'));
+    }
+
+    public function test_paso2_documentos_los_datos_del_motor_muestran_todos_los_errores_en_una_sola_ronda(): void
+    {
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()]);
+
+        $prueba->call('guardarIne')->assertHasErrors(['archivos.ine', 'ineForm.nombre', 'ineForm.curp']);
+        $prueba->call('guardarSituacionFiscal')->assertHasErrors(['archivos.constancia_situacion_fiscal', 'situacionFiscalForm.rfc']);
+        $prueba->call('guardarNumeroOficial')->assertHasErrors(['archivos.certificado_numero_oficial', 'numeroOficialForm.calle']);
+    }
+
+    public function test_paso2_responsable_normaliza_y_valida_la_curp_del_gestor(): void
+    {
+        $prueba = Livewire::test(Paso2Responsable::class, ['escuela' => $this->escuela()])
+            ->set('tipoPersona', 'fisica_con_gestor')
+            ->set('gestorForm.curp', ' gomc800101hqtmrr01 ')
+            ->assertSet('gestorForm.curp', 'GOMC800101HQTMRR01')
+            ->assertHasNoErrors('gestorForm.curp')
+            ->set('gestorForm.curp', 'GOMC80')
+            ->assertHasErrors(['gestorForm.curp']);
+
+        $this->assertSame('La CURP del gestor no tiene un formato válido: son 18 caracteres, por ejemplo GOMA800101HQTRRL09.', $this->primerError($prueba, 'gestorForm.curp'));
+    }
+
     // --- Paso 2.4 (WS-5b) ---------------------------------------------------
 
     public function test_paso24_recibo_de_pago_valida_monto_fecha_y_folio(): void
