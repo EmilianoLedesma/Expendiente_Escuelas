@@ -44,6 +44,10 @@ class RegistrarMatricula
         }
 
         DB::transaction(function () use ($escuelaNivel, $datos, $porSala) {
+            // WS-5b: the level's row lock serializes concurrent saves of the
+            // delete-and-recreate; the gate re-runs on the locked row.
+            $this->compuerta->verificar(EscuelaNivel::lockForUpdate()->findOrFail($escuelaNivel->id), 'matricula');
+
             if ($porSala) {
                 MatriculaSala::where('escuela_nivel_id', $escuelaNivel->id)->delete();
                 foreach ($datos->salas as $salaId => $alumnos) {

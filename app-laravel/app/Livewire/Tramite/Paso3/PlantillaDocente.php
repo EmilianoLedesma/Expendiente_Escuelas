@@ -11,6 +11,7 @@ use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -28,6 +29,7 @@ class PlantillaDocente extends Component
         'estudios' => '', 'cedulaODocumento' => '', 'salaId' => '', 'asignaturaId' => '',
     ];
 
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     /** @var list<array<string, string>> */

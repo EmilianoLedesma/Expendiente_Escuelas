@@ -11,6 +11,7 @@ use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -23,6 +24,7 @@ class Matricula extends Component
 {
     use CompuertaPaso3;
 
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     public bool $porSala = false;

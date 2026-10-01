@@ -122,6 +122,21 @@ class ValidacionFinalTest extends TestCase
         $this->assertSame(1, EvaluacionValidacion::count());
     }
 
+    /** A row stored before the capacity engine existed has no 'capacidad' key: opening the page runs it once more. */
+    public function test_una_evaluacion_anterior_a_la_capacidad_se_vuelve_a_validar_al_abrir(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $this->actingAs($escuela->solicitante->user);
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela]);
+        $vieja = EvaluacionValidacion::sole();
+        $vieja->update(['resultados' => array_diff_key($vieja->resultados, ['capacidad' => true])]);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])->assertSee('Capacidad instalada · Primaria');
+
+        $this->assertSame(2, EvaluacionValidacion::count());
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $escuela = $this->crearEscuelaConPlantel();

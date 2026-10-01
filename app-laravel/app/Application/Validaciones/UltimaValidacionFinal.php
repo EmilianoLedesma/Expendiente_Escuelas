@@ -11,6 +11,14 @@ use App\Models\EvaluacionValidacion;
 /** Re-reads the most recent stored final validation exactly as it was shown. */
 class UltimaValidacionFinal
 {
+    /** No stored evaluation, or one stored before the capacity engine (no 'capacidad' key): opening the page must run it. */
+    public function faltaParaEscuela(int $escuelaId): bool
+    {
+        $resultados = EvaluacionValidacion::where('escuela_id', $escuelaId)->latest('id')->first()?->resultados;
+
+        return $resultados === null || ! array_key_exists('capacidad', $resultados);
+    }
+
     public function paraEscuela(int $escuelaId): ?ValidacionFinal
     {
         $evaluacion = EvaluacionValidacion::where('escuela_id', $escuelaId)->latest('id')->first();
