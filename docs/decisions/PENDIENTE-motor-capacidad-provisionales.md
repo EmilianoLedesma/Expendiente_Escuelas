@@ -3,7 +3,7 @@
 **Estado:** abierto. El agente tuvo que elegir para que el motor y los sub-pasos 4–6 funcionen; cada punto se puede revertir sin rediseño. Requiere confirmación del owner (P2–P10) y de SEDEQ (P1).
 **Fecha:** 2026-09-30
 **Origen:** `docs/reports/2026-09-30-motor-capacidad-instalada.md`
-**Rama:** `feat/motor-capacidad-instalada` (apilada sobre `spike/validation-engine-eval`, sin mergear)
+**Rama:** `feat/motor-capacidad-instalada` (mergeada a `master` en `df9ce33`, PR #2)
 
 Documentos relacionados que siguen abiertos y que este archivo **no** resuelve: `PENDIENTE-origen-de-magnitud.md`, `PENDIENTE-umbral-educacion-fisica.md`, `PENDIENTE-personal-condicionado-por-grado.md`, `PENDIENTE-matriz-espacios-por-nivel.md`.
 
