@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /app-laravel
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+  - package-ecosystem: npm
+    directory: /app-laravel
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies]
