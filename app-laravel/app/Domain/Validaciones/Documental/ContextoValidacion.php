@@ -13,7 +13,7 @@ final readonly class ContextoValidacion
      * @param  list<Hecho>  $hechos
      * @param  list<string>  $clavesRequeridas  tipos_documentos.clave applicable to this tipo_persona
      * @param  list<string>  $clavesPresentes  tipos_documentos.clave already uploaded
-     * @param  list<string>  $foliosAjenos  recibo folios registered by any other escuela_nivel
+     * @param  list<string>  $foliosAjenos  other escuela_nivel recibo folios equal to this level's own (not all of them)
      */
     public function __construct(
         public string $tipoPersona,

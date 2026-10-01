@@ -108,6 +108,18 @@ class ValidacionFinalTest extends TestCase
         $this->assertSame(2, EvaluacionValidacion::count());
     }
 
+    public function test_abrir_la_pagina_de_nuevo_no_repite_la_validacion_si_ya_hay_una(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela]);
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])->assertSee('Validación final');
+
+        $this->assertSame(1, EvaluacionValidacion::count());
+    }
+
     public function test_un_no_dueno_recibe_403(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
