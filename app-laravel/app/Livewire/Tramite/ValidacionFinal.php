@@ -20,12 +20,12 @@ class ValidacionFinal extends Component
 {
     public Escuela $escuela;
 
-    /** A GET must not write: it validates only the first time; later runs are the "validar de nuevo" action. */
+    /** A GET must not write: it validates only the first time (or over a pre-capacity row); later runs are the "validar de nuevo" action. */
     public function mount(Escuela $escuela, EjecutarValidacionFinal $ejecutarValidacionFinal, UltimaValidacionFinal $ultimaValidacionFinal): void
     {
         $this->escuela = $escuela;
 
-        if ($ultimaValidacionFinal->paraEscuela($escuela->id) === null) {
+        if ($ultimaValidacionFinal->faltaParaEscuela($escuela->id)) {
             $this->validar($ejecutarValidacionFinal);
         }
     }

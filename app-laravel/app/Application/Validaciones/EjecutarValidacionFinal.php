@@ -5,6 +5,7 @@ namespace App\Application\Validaciones;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Validaciones\DTO\FilaValidacion;
+use App\Application\Validaciones\DTO\SeccionCapacidad;
 use App\Application\Validaciones\DTO\SeccionNivel;
 use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Infrastructure\Pdf\ReporteValidacionPdf;
@@ -33,6 +34,7 @@ class EjecutarValidacionFinal
         private readonly EjecutarValidacionDocumental $validacionDocumental,
         private readonly PresentadorValidacion $presentador,
         private readonly ReporteValidacionPdf $pdf,
+        private readonly EjecutarValidacionCapacidad $validacionCapacidad,
     ) {}
 
     public function ejecutar(int $escuelaId): ValidacionFinal
@@ -45,6 +47,8 @@ class EjecutarValidacionFinal
 
         $reporte = $this->validacionDocumental->ejecutar($escuelaId);
         $filas = $this->presentador->filas($reporte);
+        // Capacity results are observations only (PRD: "sin bloquear el guardado",
+        // the expediente may stay "con observaciones"): they never change listaParaEnvio.
         $listaParaEnvio = ! $reporte->tieneNoCumplimientos();
         $niveles = [];
 
@@ -54,13 +58,14 @@ class EjecutarValidacionFinal
             $niveles[] = new SeccionNivel($escuelaNivel->id, $escuelaNivel->nivelEducativo->nombre, $this->presentador->filas($reporteNivel));
         }
 
+        $capacidad = $this->capacidad($escuelaId);
         $generadaEn = Carbon::now();
 
         $ruta = $this->pdf->guardar($escuelaId, [
             'numero' => $resumen->numero(),
             'nombre' => $resumen->nombre,
             'domicilio' => $resumen->domicilio,
-        ], $listaParaEnvio, $filas, $niveles, $generadaEn);
+        ], $listaParaEnvio, $filas, $capacidad, $niveles, $generadaEn);
 
         try {
             $evaluacion = EvaluacionValidacion::create([
@@ -69,6 +74,7 @@ class EjecutarValidacionFinal
                 'lista_para_envio' => $listaParaEnvio,
                 'resultados' => [
                     'documental' => array_map(fn (FilaValidacion $fila) => $fila->aArreglo(), $filas),
+                    'capacidad' => array_map(fn (SeccionCapacidad $seccion) => $seccion->aArreglo(), $capacidad),
                     'niveles' => array_map(fn (SeccionNivel $seccion) => $seccion->aArreglo(), $niveles),
                 ],
                 'created_at' => $generadaEn,
@@ -79,6 +85,22 @@ class EjecutarValidacionFinal
             throw $e;
         }
 
-        return new ValidacionFinal($evaluacion->id, $generadaEn, $listaParaEnvio, $filas, $niveles);
+        return new ValidacionFinal($evaluacion->id, $generadaEn, $listaParaEnvio, $filas, $capacidad, $niveles);
+    }
+
+    /** @return list<SeccionCapacidad> */
+    private function capacidad(int $escuelaId): array
+    {
+        return EscuelaNivel::with('nivelEducativo')->where('escuela_id', $escuelaId)->orderBy('id')->get()
+            ->map(fn (EscuelaNivel $escuelaNivel) => new SeccionCapacidad(
+                $escuelaNivel->id,
+                $escuelaNivel->nivelEducativo->nombre,
+                $this->presentador->filasCapacidad(
+                    $this->validacionCapacidad->ejecutar($escuelaNivel->id),
+                    $this->validacionCapacidad->conceptos($escuelaNivel->id),
+                ),
+            ))
+            ->values()
+            ->all();
     }
 }

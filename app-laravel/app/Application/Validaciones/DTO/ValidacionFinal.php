@@ -7,7 +7,8 @@ use DateTimeInterface;
 final readonly class ValidacionFinal
 {
     /**
-     * @param  list<FilaValidacion>  $filas  escuela/plantel documents (Paso 2.2)
+     * @param  list<FilaValidacion>  $filas  escuela/plantel documents (Paso 2.2; decides listaParaEnvio with $niveles)
+     * @param  list<SeccionCapacidad>  $capacidad  capacity engine per level (observations, never blocks)
      * @param  list<SeccionNivel>  $niveles  each escuela_nivel's documents (Paso 2.4)
      */
     public function __construct(
@@ -15,6 +16,7 @@ final readonly class ValidacionFinal
         public DateTimeInterface $generadaEn,
         public bool $listaParaEnvio,
         public array $filas,
+        public array $capacidad = [],
         public array $niveles = [],
     ) {}
 

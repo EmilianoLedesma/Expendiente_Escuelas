@@ -6,6 +6,12 @@ use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Matricula\DTO\DatosMatricula;
+use App\Application\Matricula\RegistrarMatricula;
+use App\Application\Personal\DTO\DatosPersona;
+use App\Application\Personal\RegistrarPlantillaDocente;
+use App\Application\PlanEstudios\DTO\DatosPlanEstudios;
+use App\Application\PlanEstudios\RegistrarPlanEstudios;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Models\Escuela;
@@ -13,7 +19,10 @@ use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use Database\Seeders\AsignaturasSeeder;
+use Database\Seeders\CargosPuestosSeeder;
 use Database\Seeders\CatalogoMinimoSeeder;
+use Database\Seeders\GradosSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Http\UploadedFile;
@@ -102,14 +111,17 @@ trait CapturaExpedienteConsistente
      * Every hub section done (ResumenTramite::completo), so the final
      * validation step is reachable: responsable, all documents with data
      * (or the given replacements), and one primaria level with its Paso 2.4
-     * and available Paso 3 sub-steps completed.
+     * complete and its Paso 3 captured through the real use cases.
      *
      * @param  array<string, DatosDocumento>  $reemplazos
      */
-    protected function completarTramite(Escuela $escuela, string $tipoPersona = 'fisica', array $reemplazos = []): void
+    protected function completarTramite(Escuela $escuela, string $tipoPersona = 'fisica', array $reemplazos = []): EscuelaNivel
     {
         (new CatalogoMinimoSeeder)->run();
         (new PasosCapturaSeeder)->run();
+        (new GradosSeeder)->run();
+        (new CargosPuestosSeeder)->run();
+        (new AsignaturasSeeder)->run();
         $this->registrarResponsable($escuela, $tipoPersona);
         $this->subirTodosConDatos($escuela, $tipoPersona, $reemplazos);
 
@@ -123,8 +135,21 @@ trait CapturaExpedienteConsistente
         // WS-5b: Paso 3 stays locked until the level's Paso 2.4 is complete.
         $this->completarPaso24($escuelaNivel->id);
 
-        foreach (['inmueble', 'infraestructura'] as $paso) {
+        foreach (['inmueble', 'infraestructura', 'mobiliario'] as $paso) {
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, $paso);
         }
+
+        app(RegistrarPlanEstudios::class)->ejecutar($escuelaNivel->id, new DatosPlanEstudios(modalidad: 'escolarizada'));
+
+        $cargo = fn (string $nombre): int => (int) DB::table('cargos_puestos')->where('nivel_educativo_id', $escuelaNivel->nivel_educativo_id)->where('nombre', $nombre)->value('id');
+        app(RegistrarPlantillaDocente::class)->ejecutar($escuelaNivel->id, [
+            new DatosPersona($cargo('Director Técnico'), 'Laura Méndez', 'Mexicana', 'F', 'Lic. en Educación Primaria', '1234567'),
+            new DatosPersona($cargo('Docente Titular de Grupo'), 'Luis Pérez', 'Mexicana', 'M', 'Lic. en Educación Primaria', '7654321'),
+        ]);
+
+        $primero = (int) DB::table('grados')->where('nivel_educativo_id', $escuelaNivel->nivel_educativo_id)->where('orden', 1)->value('id');
+        app(RegistrarMatricula::class)->ejecutar($escuelaNivel->id, new DatosMatricula(grupos: [['gradoId' => $primero, 'grupo' => 'A', 'alumnos' => 25]]));
+
+        return $escuelaNivel;
     }
 }

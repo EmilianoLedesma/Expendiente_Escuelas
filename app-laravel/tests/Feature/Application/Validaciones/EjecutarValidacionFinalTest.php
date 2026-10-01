@@ -9,7 +9,9 @@ use App\Application\Validaciones\DTO\FilaValidacion;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Application\Validaciones\ReporteValidacionGuardado;
 use App\Application\Validaciones\UltimaValidacionFinal;
+use App\Models\AulaNivel;
 use App\Models\EvaluacionValidacion;
+use Database\Seeders\ReglasValidacionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CapturaExpedienteConsistente;
@@ -140,5 +142,42 @@ class EjecutarValidacionFinalTest extends TestCase
 
         $this->assertSame(EvaluacionValidacion::sole()->archivo_path, app(ReporteValidacionGuardado::class)->ruta($escuela->id, $validacion->evaluacionId));
         $this->assertNull(app(ReporteValidacionGuardado::class)->ruta($otra->id, $validacion->evaluacionId));
+    }
+
+    public function test_incluye_la_capacidad_instalada_por_nivel_sin_bloquear_el_envio(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $escuelaNivel = $this->completarTramite($escuela);
+        (new ReglasValidacionSeeder)->run();
+        // 25 alumnos × 0.90 m² = 22.50 m² required, 10 declared
+        AulaNivel::create(['escuela_nivel_id' => $escuelaNivel->id, 'numero_aulas' => 1, 'superficie_m2' => 10]);
+
+        $validacion = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
+
+        $this->assertTrue($validacion->listaParaEnvio, 'La capacidad instalada no bloquea el envío (PRD: con observaciones).');
+        $this->assertCount(1, $validacion->capacidad);
+        $seccion = $validacion->capacidad[0];
+        $this->assertSame('Primaria', $seccion->nivel);
+        $this->assertSame($escuelaNivel->id, $seccion->escuelaNivelId);
+        $aulas = $this->porClave($seccion->filas)['primaria.superficie.aulas'];
+        $this->assertSame('no_cumple', $aulas->estado);
+        $this->assertSame('Superficie de aulas', $aulas->titulo);
+        $this->assertContains('Requerido: 22.50 m² · Declarado: 10 m²', $aulas->lineas);
+        $this->assertSame('infraestructura', $aulas->pasoCorreccion);
+        $this->assertSame('cumple', $this->porClave($seccion->filas)['primaria.personal.director_tecnico']->estado);
+        $this->assertSame('plantilla_docente', $this->porClave($seccion->filas)['primaria.personal.director_tecnico']->pasoCorreccion);
+    }
+
+    public function test_la_capacidad_se_relee_igual_que_se_guardo(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        (new ReglasValidacionSeeder)->run();
+        $guardada = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
+
+        $releida = app(UltimaValidacionFinal::class)->paraEscuela($escuela->id);
+
+        $this->assertEquals($guardada->capacidad, $releida?->capacidad);
+        $this->assertEquals($guardada->filas, $releida?->filas);
     }
 }
