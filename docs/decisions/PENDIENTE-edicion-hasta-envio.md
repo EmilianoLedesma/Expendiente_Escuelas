@@ -46,3 +46,6 @@ Este archivo se renombra a `ADR-00N-edicion-hasta-envio.md` en el mismo commit q
 
 - El disparador de envío debe **volver a ejecutar** `App\Application\Validaciones\EjecutarValidacionFinal` y rechazar si `listaParaEnvio` es falso. No debe confiar en la última evaluación guardada, porque los datos pueden cambiar después.
 - Si se abre la edición de Paso 2.1, los errores en datos **declarados** (no en documentos) se vuelven corregibles. Hoy la validación final solo puede mandar a corregir documentos.
+
+## Actualización (2026-10-01)
+La lista "Estado actual" de arriba (`master` en `ce3a154`) es anterior a varios cambios: ya existen el Paso 2.4 (documentos por nivel, WS-5b) y los sub-pasos 4–6 de Paso 3 (Plan de estudios, Plantilla docente y Matrícula, PR #2), además de la página de Validación final (PR #1), que vuelve a ejecutarse con "Validar de nuevo" y que el envío deberá volver a ejecutar en lugar de confiar en una fila anterior. Sigue sin existir el paso de envío ni la transición de estado. El alcance y las preguntas abiertas de este archivo no cambian.

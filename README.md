@@ -78,23 +78,47 @@ consistente en cada expediente.
 ## Arquitectura de la app
 
 Diseño **domain-first** / monolito modular dentro de `app-laravel/app/` —
-no el split clásico Controllers/Services/Repositories. La lógica de
-negocio vive en `Domain/` e `Infrastructure/`, nunca en controllers,
-componentes Livewire, Filament Resources o modelos Eloquent.
+no el split clásico Controllers/Services/Repositories. Las reglas de negocio puras viven en `Domain/`, los casos de uso transaccionales en `Application/` (ADR-001), y las implementaciones concretas en `Infrastructure/` — nunca en controllers, componentes Livewire, Filament Resources o modelos Eloquent.
 
 ```
 app-laravel/app/
-├── Domain/            # Reglas de negocio, agnósticas del framework
+├── Domain/            # Reglas de negocio puras, agnósticas del framework
+│   ├── Captura/
+│   ├── Personal/
 │   └── Validaciones/
-│       └── Engine/     # Motor de Validación de Capacidad Instalada
-├── Infrastructure/     # PDF, documentos, integraciones concretas
+│       ├── Documental/
+│       ├── Engine/     # Motor de Validación de Capacidad Instalada
+│       ├── Regla/
+│       └── Resultado/
+├── Application/       # Casos de uso por feature, una Action por operación
+│   ├── Captura/
+│   ├── Documentos/
+│   ├── EscuelaNiveles/
+│   ├── Escuelas/
+│   ├── Excepciones/
+│   ├── Infraestructura/
+│   ├── Inmueble/
+│   ├── Matricula/
+│   ├── Mobiliario/
+│   ├── Personal/
+│   ├── PlanEstudios/
+│   ├── Preregistro/
+│   ├── ResponsableLegal/
+│   ├── Tramite/
+│   └── Validaciones/
+├── Infrastructure/    # PDF, documentos, integraciones concretas
+│   ├── Documentos/
+│   └── Pdf/
 ├── Http/
-│   ├── Controllers/
-│   └── Livewire/       # Componentes — presentación, delgados
-│       └── Tramite/     # Wizard: Paso1Preregistro … Paso3/*
+│   └── Controllers/
+├── Livewire/          # Componentes Livewire — presentación, delgados
+│   ├── Tramite/       # Wizard: Paso1Preregistro … Paso3/*, ValidacionFinal
+│   └── …/
 ├── Filament/
-│   └── Resources/      # Panel administrativo SEDEQ (/admin)
-└── Models/
+│   └── Resources/     # Panel administrativo SEDEQ (/admin)
+├── Models/
+├── Policies/
+└── …/
 ```
 
 El **Motor de Validación de Capacidad Instalada** (`Domain/Validaciones/Engine/`)

@@ -75,14 +75,21 @@ app/
 ├── Application/       # transactional use cases (one Action per operation), DTOs,
 │   │                  # ownership decision classes; called by Livewire/Http,
 │   │                  # never the reverse (per ADR-001 frontera-de-capas)
+│   ├── Captura/
 │   ├── Documentos/
 │   ├── EscuelaNiveles/
 │   ├── Escuelas/
+│   ├── Excepciones/
 │   ├── Infraestructura/
 │   ├── Inmueble/
+│   ├── Matricula/
 │   ├── Mobiliario/
+│   ├── Personal/
+│   ├── PlanEstudios/
 │   ├── Preregistro/
-│   └── ResponsableLegal/
+│   ├── ResponsableLegal/
+│   ├── Tramite/
+│   └── Validaciones/
 ├── Infrastructure/    # concrete implementations the domain depends on
 │   ├── Documentos/    # document/checklist handling
 │   └── Pdf/           # Formato de Solicitud PDF generation (dompdf)
@@ -98,7 +105,7 @@ app/
 │                      # (próximos-pasos is now a redirect to the hub, no component)
 ├── Filament/
 │   └── Resources/     # SEDEQ admin panel (id: 'admin', path: /admin)
-├── Models/            # Eloquent persistence layer (25 models)
+├── Models/            # Eloquent persistence layer (39 models)
 ├── Policies/          # authorization policies (2 policies)
 ├── View/
 │   └── Components/    # class-based layouts (App/Guest/TramiteLayout) and
@@ -117,7 +124,7 @@ Rules for this layout (from the architecture doc, already applied — keep follo
 - As of this writing, `app/Services/*` (Domain root was `app/Domain/Validacion/`) is the **old** location — code has since moved to `app/Infrastructure/*`, `app/Domain/Validaciones/Engine/`. If you see references to the old paths anywhere (docs, comments), they're stale.
 - Livewire components live under `app/Livewire/`, Livewire 3's own auto-discovered convention — **not** `app/Http/Livewire/`. They briefly lived under `app/Http/Livewire/` (2026-09-03 to 2026-09-08); that path broke every Livewire AJAX round-trip with a misleading "page expired" 419, because Livewire's `ComponentRegistry` looks a component up by a name it auto-derives from the class's namespace, and that lookup only resolves under Livewire's own convention. Do not move Livewire components back under `app/Http/` — see `docs/decisions/ADR-003-namespace-livewire.md` and `docs/reports/2026-09-08-namespace-livewire.md` before reconsidering this.
 
-app/Domain and app/Infrastructure are populated: Domain has Personal (RegistroPersonalCompleto) and Validaciones (ValidacionCapacidadService as empty stub, CalculadoraRequerimiento with code). Infrastructure has Documentos and Pdf implementations. ValidacionCapacidadService remains a stub pending specification; all others are working code.
+app/Domain and app/Infrastructure are populated: Domain has Captura (shared input formats), Personal (RegistroPersonalCompleto), and Validaciones with Documental, Engine (capacity engine), Regla, and Resultado subfolders. Infrastructure has Documentos and Pdf implementations (FormatoSolicitudPdf, ReporteValidacionPdf). Application has 65 classes coordinating transactional use cases per feature. The capacity engine is implemented and fed by `app/Application/Validaciones/ConstruirDatosCapacidad`, run by `EjecutarValidacionCapacidad`.
 
 ## Ways of working
 
@@ -137,7 +144,7 @@ Architectural work becomes a written plan with literal code per task, then gets 
 Any change with real shape gets its own git worktree before implementation starts, merged (or discarded) once done. Reserve direct-on-main work for genuinely trivial, single-file changes.
 
 ### Verify before claiming done
-GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push/PR and independently re-verifies the test suite, PHPStan (level 5, plus one PHPat rule enforcing ADR-001: `app/Domain` must not depend on `Illuminate\*`), and Pint style — it does not replace running these locally before claiming done, but a red CI check on a pushed branch is real signal, not noise. It also runs in a clean environment, so it can surface drift your local machine can't see (e.g. it caught composer.lock requiring PHP 8.4 while CLAUDE.md and composer.json still said 8.3) — treat a CI-only failure as a real finding, not a fluke to retry past.
+GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push/PR and independently re-verifies the test suite, PHPStan level 5 plus six PHPat rules (`tests/Architecture/DomainBoundaryTest.php` and `PresentationBoundaryTest.php`): `app/Domain` must not depend on `Illuminate\*`; `app/Application` must not depend on Livewire, Http, or view components; Livewire components and view components must not use the raw `DB` facade; and Pint style — it does not replace running these locally before claiming done, but a red CI check on a pushed branch is real signal, not noise. It also runs in a clean environment, so it can surface drift your local machine can't see (e.g. it caught composer.lock requiring PHP 8.4 while CLAUDE.md and composer.json still said 8.3) — treat a CI-only failure as a real finding, not a fluke to retry past.
 
 ### Data safety is a hard line, not a judgment call
 Never insert/mutate/upload data against a live database — dev included — without asking first, even for a known, pre-existing test fixture, even for an idempotent operation. Reading data (SELECTs, navigating pages) is free; anything that writes is not. Same bar for DDL/schema changes.

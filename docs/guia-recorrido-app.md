@@ -1,3 +1,5 @@
+> **Aviso (2026-10-01):** esta guía describe el estado de la aplicación en el commit `8d1a6bb` (2026-09-25). Desde entonces se agregaron, entre otros, el Paso 2.4 (documentos por nivel), más documentos en Paso 2.2, los sub-pasos 4–6 de Paso 3 (Plan de estudios, Plantilla docente, Matrícula), el motor de validación documental, el motor de capacidad instalada y la página de Validación final. Consulta `docs/progress.md` y `docs/reports/2026-10-01-revision-global-proyecto.md` para el estado actual. Una actualización completa de esta guía está pendiente.
+
 # Guía de recorrido de la aplicación
 
 **Estado descrito:** `master` en `8d1a6bb` (2026-09-25), después de WS-0, WS-1, WS-2 y WS-3 de la remediación de la auditoría **y del rediseño de la interfaz** (dirección B, "recorrido guiado"; reporte `docs/reports/2026-09-25-rediseno-ui.md`).

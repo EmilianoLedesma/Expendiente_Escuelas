@@ -46,3 +46,6 @@ omisión, no una decisión de diseño distinta.
 La rama se fusiona con `DatosInmueble::mount()` redirigiendo sin rama de
 solo lectura, sin cambios de comportamiento. Este documento dejó constancia
 del problema; no lo corrigió.
+
+## Actualización (2026-10-01)
+La decisión D8 del brief de remediación ya fue respondida por el dueño y quedó absorbida en WS-7 ("edición hasta el envío"): ver `PENDIENTE-edicion-hasta-envio.md`. Este archivo sigue abierto porque la relectura y corrección de los datos del inmueble en el asistente aún no está implementada.
