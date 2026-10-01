@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Validacion;
 
+use App\Application\Documentos\DTO\DatosDocumento;
+use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
@@ -12,6 +14,8 @@ use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
+use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
@@ -20,9 +24,12 @@ use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
+use Database\Seeders\TiposDocumentosSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\CompletaPaso24;
 use Tests\TestCase;
@@ -89,6 +96,38 @@ class InvariantesDeCapturaTest extends TestCase
 
         $this->assertSame(['personaFisicaForm.rfc', 'personaFisicaForm.curp'], array_keys($errores));
         $this->assertSame(0, ResponsableLegal::count());
+    }
+
+    public function test_responsable_rechaza_la_curp_del_gestor_mal_formada(): void
+    {
+        $errores = $this->erroresDe(fn () => (new RegistrarResponsableLegal)->ejecutar($this->escuela()->id, new DatosResponsableLegal(
+            tipoPersona: 'fisica_con_gestor',
+            nombre: 'Juana Pérez',
+            gestorNombre: 'Carlos Gómez',
+            gestorCurp: 'GOMC80',
+        )));
+
+        $this->assertSame(['gestorForm.curp'], array_keys($errores));
+        $this->assertSame(0, ResponsableLegal::count());
+    }
+
+    public function test_documento_rechaza_datos_tipados_mal_formados_sin_escribir_nada(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->escuela();
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $subir = fn (string $clave, DatosDocumento $datos) => $this->erroresDe(fn () => app(RegistrarDocumento::class)->ejecutar(
+            $escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), $datos,
+        ));
+
+        $this->assertSame(['ineForm.curp'], array_keys($subir('ine', new DatosDocumento(identidadNombre: 'PEREZ JUANA', identidadCurp: 'NO ES CURP'))));
+        $this->assertSame(['constanciaCurpForm.nombre'], array_keys($subir('constancia_curp', new DatosDocumento(identidadNombre: str_repeat('A', 201), identidadCurp: 'PEGJ800101HQTRML09'))));
+        $this->assertSame(['situacionFiscalForm.rfc'], array_keys($subir('constancia_situacion_fiscal', new DatosDocumento(fiscalNombre: 'PEREZ JUANA', fiscalRfc: 'PEGJ800101AB12'))));
+        $this->assertSame(['numeroOficialForm.calle', 'numeroOficialForm.codigoPostal'], array_keys($subir('certificado_numero_oficial', new DatosDocumento(
+            domicilioCalle: str_repeat('A', 151), domicilioColonia: 'Centro', domicilioMunicipio: 'Querétaro', domicilioCodigoPostal: '7600',
+        ))));
+        $this->assertSame(0, DocumentoEscuela::count() + DocumentoPlantel::count());
     }
 
     public function test_responsable_exige_los_nombres_que_la_base_de_datos_exige(): void

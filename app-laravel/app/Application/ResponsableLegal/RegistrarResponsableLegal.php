@@ -127,6 +127,9 @@ class RegistrarResponsableLegal
             if ($datos->tipoPersona === 'fisica_con_gestor' && $vacio($datos->gestorNombre)) {
                 $errores['gestorForm.nombre'] = 'El campo nombre del gestor es obligatorio.';
             }
+            if ($datos->tipoPersona === 'fisica_con_gestor' && $datos->gestorCurp !== null && ! Formatos::esCurp($datos->gestorCurp)) {
+                $errores['gestorForm.curp'] = 'La CURP del gestor no tiene un formato válido: son 18 caracteres, por ejemplo GOMA800101HQTRRL09.';
+            }
         }
 
         if ($errores !== []) {

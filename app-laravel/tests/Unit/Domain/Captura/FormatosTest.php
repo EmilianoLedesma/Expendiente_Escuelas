@@ -3,6 +3,7 @@
 namespace Tests\Unit\Domain\Captura;
 
 use App\Domain\Captura\Formatos;
+use App\Domain\Validaciones\Documental\Reglas\IdentificadorCoincide;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -109,5 +110,21 @@ class FormatosTest extends TestCase
             'sin punto en el dominio' => ['direccion@localhost', false],
             'con espacio' => ['dire ccion@escuela.mx', false],
         ];
+    }
+
+    public function test_rfc_acepta_persona_fisica_o_moral(): void
+    {
+        $this->assertTrue(Formatos::esRfc('GOMA800101AB1'));
+        $this->assertTrue(Formatos::esRfc('ABC800101AB1'));
+        $this->assertTrue(Formatos::esRfc('Ñ&AB800101AB1'));
+        $this->assertFalse(Formatos::esRfc('GOMA801301AB1'));
+        $this->assertFalse(Formatos::esRfc('AB800101AB1'));
+    }
+
+    /** Una sola fuente: el motor documental (ADR-007) revisa CURP/RFC con los mismos patrones que la captura. */
+    public function test_el_motor_documental_usa_los_mismos_patrones_que_la_captura(): void
+    {
+        $this->assertSame(Formatos::CURP, IdentificadorCoincide::PATRON_CURP);
+        $this->assertSame(Formatos::RFC, IdentificadorCoincide::PATRON_RFC);
     }
 }

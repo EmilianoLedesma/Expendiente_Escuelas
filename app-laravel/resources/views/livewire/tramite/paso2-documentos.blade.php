@@ -53,24 +53,24 @@
                 @php($form = $clave === 'ine' ? 'ineForm' : 'constanciaCurpForm')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" :accion="$clave === 'ine' ? 'guardarIne' : 'guardarConstanciaCurp'">
                     <x-ui.field :id="$form.'.nombre'" :label="$clave === 'ine' ? 'Nombre como aparece en la credencial' : 'Nombre como aparece en la constancia'" :hint="$identidadAyuda">
-                        <x-ui.input wire:model="{{ $form }}.nombre" />
+                        <x-ui.input maxlength="200" wire:model.blur="{{ $form }}.nombre" />
                     </x-ui.field>
                     <x-ui.field :id="$form.'.curp'" label="CURP">
-                        <x-ui.input wire:model="{{ $form }}.curp" class="uppercase" maxlength="18" />
+                        <x-ui.input wire:model.blur="{{ $form }}.curp" class="uppercase" maxlength="18" />
                     </x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'constancia_situacion_fiscal')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarSituacionFiscal">
-                    <x-ui.field id="situacionFiscalForm.nombre" label="Nombre o razón social como aparece en la constancia"><x-ui.input wire:model="situacionFiscalForm.nombre" /></x-ui.field>
-                    <x-ui.field id="situacionFiscalForm.rfc" label="RFC"><x-ui.input wire:model="situacionFiscalForm.rfc" class="uppercase" maxlength="13" /></x-ui.field>
+                    <x-ui.field id="situacionFiscalForm.nombre" label="Nombre o razón social como aparece en la constancia"><x-ui.input maxlength="200" wire:model.blur="situacionFiscalForm.nombre" /></x-ui.field>
+                    <x-ui.field id="situacionFiscalForm.rfc" label="RFC"><x-ui.input wire:model.blur="situacionFiscalForm.rfc" class="uppercase" maxlength="13" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'certificado_numero_oficial')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarNumeroOficial">
-                    <x-ui.field id="numeroOficialForm.calle" label="Calle" hint="Tal como aparece en el certificado."><x-ui.input wire:model="numeroOficialForm.calle" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" optional><x-ui.input wire:model="numeroOficialForm.numeroExt" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input wire:model="numeroOficialForm.colonia" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.municipio" label="Municipio"><x-ui.input wire:model="numeroOficialForm.municipio" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.codigoPostal" label="Código postal"><x-ui.input wire:model="numeroOficialForm.codigoPostal" inputmode="numeric" maxlength="5" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.calle" label="Calle" hint="Tal como aparece en el certificado."><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.calle" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroExt" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.colonia" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.municipio" label="Municipio"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.municipio" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.codigoPostal" label="Código postal"><x-ui.input wire:model.blur="numeroOficialForm.codigoPostal" inputmode="numeric" maxlength="5" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'escritura_inmueble')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarAcreditacion">

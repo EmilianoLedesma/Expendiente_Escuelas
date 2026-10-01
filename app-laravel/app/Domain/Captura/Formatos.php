@@ -13,9 +13,8 @@ namespace App\Domain\Captura;
  * casos de uso, para que la validación de la pantalla y la del backend no
  * puedan divergir.
  *
- * El patrón de CURP es el mismo que IdentificadorCoincide::PATRON_CURP de la
- * rama del motor documental (ADR-007), más el rango de mes/día de la fecha
- * embebida; todo lo que acepta este patrón lo acepta aquel.
+ * Única fuente de los patrones: el motor documental (ADR-007,
+ * IdentificadorCoincide) revisa CURP y RFC con estas mismas constantes.
  */
 final class Formatos
 {
@@ -27,6 +26,9 @@ final class Formatos
 
     /** Persona moral: 3 letras, AAMMDD, homoclave de 3. */
     public const RFC_PERSONA_MORAL = '/^[A-ZÑ&]{3}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z\d]{3}$/u';
+
+    /** Física (13) o moral (12), cuando no se sabe de cuál se trata (constancia de situación fiscal, motor documental). */
+    public const RFC = '/^[A-ZÑ&]{3,4}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z\d]{3}$/u';
 
     /** 5 dígitos; en México no existe el prefijo 00. */
     public const CODIGO_POSTAL = '/^(?!00)\d{5}$/';
@@ -47,6 +49,11 @@ final class Formatos
     public static function esRfcPersonaMoral(string $valor): bool
     {
         return preg_match(self::RFC_PERSONA_MORAL, $valor) === 1;
+    }
+
+    public static function esRfc(string $valor): bool
+    {
+        return preg_match(self::RFC, $valor) === 1;
     }
 
     public static function esCodigoPostal(string $valor): bool

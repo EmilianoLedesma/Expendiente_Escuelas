@@ -8,6 +8,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
+use App\Domain\Captura\Formatos;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\CertificadoNumeroOficial;
@@ -91,6 +92,8 @@ class RegistrarDocumento
         if ($tipoDocumentoClave === 'recibo_pago_derechos') {
             $this->validarRecibo($datos);
         }
+
+        $this->validarDatosTipados($tipoDocumentoClave, $datos);
 
         if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
             throw new DatosInvalidos(['acervo.titulos' => 'El número de títulos no puede ser negativo.']);
@@ -329,6 +332,50 @@ class RegistrarDocumento
         }
 
         return [$escuelaNivel->turno, $escuelaNivel->tipo_alumnado];
+    }
+
+    /**
+     * ADR-007: formato y largo de los datos tipados, con la ruta de campo del
+     * formulario de Paso 2.2. La obligatoriedad sigue siendo del formulario
+     * (registrarDatosTipados borra la fila si falta un dato); aquí solo se
+     * impide guardar un valor mal formado o que no cabe en la columna.
+     */
+    private function validarDatosTipados(string $clave, DatosDocumento $datos): void
+    {
+        [$form, $campos] = match ($clave) {
+            'ine', 'constancia_curp' => [$clave === 'ine' ? 'ineForm' : 'constanciaCurpForm', [
+                'nombre' => [$datos->identidadNombre, 200, null],
+                'curp' => [$datos->identidadCurp, 18, Formatos::esCurp(...)],
+            ]],
+            'constancia_situacion_fiscal' => ['situacionFiscalForm', [
+                'nombre' => [$datos->fiscalNombre, 200, null],
+                'rfc' => [$datos->fiscalRfc, 13, Formatos::esRfc(...)],
+            ]],
+            'certificado_numero_oficial' => ['numeroOficialForm', [
+                'calle' => [$datos->domicilioCalle, 150, null],
+                'numeroExt' => [$datos->domicilioNumeroExt, 20, null],
+                'colonia' => [$datos->domicilioColonia, 150, null],
+                'municipio' => [$datos->domicilioMunicipio, 150, null],
+                'codigoPostal' => [$datos->domicilioCodigoPostal, 10, Formatos::esCodigoPostal(...)],
+            ]],
+            default => [null, []],
+        };
+
+        $errores = [];
+        foreach ($campos as $campo => [$valor, $maximo, $formato]) {
+            if ($valor === null) {
+                continue;
+            }
+            if (mb_strlen($valor) > $maximo) {
+                $errores["{$form}.{$campo}"] = "Admite hasta {$maximo} caracteres.";
+            } elseif ($formato !== null && ! $formato($valor)) {
+                $errores["{$form}.{$campo}"] = 'El dato no tiene un formato válido.';
+            }
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
     }
 
     /** Invariantes de recibos_pago_derechos (DDL: folio VARCHAR(50), monto NUMERIC(10,2), portal_referencia VARCHAR(200)); el dominio del portal no se exige (spec §5.3). */

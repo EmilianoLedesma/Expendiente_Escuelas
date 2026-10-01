@@ -221,9 +221,10 @@ class Paso2Documentos extends Component
 
     public function guardarSituacionFiscal(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivos.constancia_situacion_fiscal' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $this->situacionFiscalForm->normalizar();
-        $this->situacionFiscalForm->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.constancia_situacion_fiscal' => self::REGLAS_ARCHIVO]),
+            fn () => $this->situacionFiscalForm->validate(),
+        );
 
         if (! $this->intentarRegistrar($registrarDocumento, 'constancia_situacion_fiscal', new DatosDocumento(
             fiscalNombre: $this->situacionFiscalForm->nombre,
@@ -236,8 +237,10 @@ class Paso2Documentos extends Component
 
     public function guardarNumeroOficial(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(['archivos.certificado_numero_oficial' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $this->numeroOficialForm->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.certificado_numero_oficial' => self::REGLAS_ARCHIVO]),
+            fn () => $this->numeroOficialForm->validate(),
+        );
 
         if (! $this->intentarRegistrar($registrarDocumento, 'certificado_numero_oficial', new DatosDocumento(
             domicilioCalle: trim($this->numeroOficialForm->calle),
@@ -253,9 +256,10 @@ class Paso2Documentos extends Component
 
     private function guardarIdentidad(string $clave, IdentidadDocumentoForm $form, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
     {
-        $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
-        $form->normalizar();
-        $form->validate();
+        $this->validarEnConjunto(
+            fn () => $this->validate(["archivos.{$clave}" => self::REGLAS_ARCHIVO]),
+            fn () => $form->validate(),
+        );
 
         if (! $this->intentarRegistrar($registrarDocumento, $clave, new DatosDocumento(
             identidadNombre: $form->nombre,

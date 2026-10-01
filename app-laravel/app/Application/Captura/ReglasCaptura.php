@@ -72,7 +72,7 @@ final class ReglasCaptura
     public static function rfc(bool|string $requerido = false): array
     {
         return [...self::base($requerido), 'string', self::formato(
-            fn (string $valor): bool => Formatos::esRfcPersonaFisica($valor) || Formatos::esRfcPersonaMoral($valor),
+            Formatos::esRfc(...),
             'El :attribute no tiene un formato válido: son 13 caracteres para persona física o 12 para persona moral.',
         )];
     }
