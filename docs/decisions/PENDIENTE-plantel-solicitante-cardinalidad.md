@@ -123,3 +123,6 @@ de este documento sigue abierta.**
 **Dato heredado (2026-09-23):** una consulta de solo lectura a la base de desarrollo halló 1 plantel con escuelas de más de un solicitante; sigue pasando la compuerta y ambos dueños pueden leer/sobrescribir los documentos del plantel del otro. Requiere decisión de limpieza del dueño (reasignar o separar el plantel) antes de producción.
 
 **WS-5a (2026-09-29):** cuatro documentos más con ámbito plantel (Protección Civil, plano, número oficial y recibo de derechos) quedan visibles/sobrescribibles por ambos dueños de un plantel compartido; misma clase de problema, sin ampliar el mecanismo.
+
+## Actualización (2026-10-01)
+Las menciones de arriba a un plantel compartido en la base de desarrollo ("dato heredado") pueden estar obsoletas: `docs/progress.md` registra un TRUNCATE de las tablas de captura el 2026-09-25. No se ha vuelto a verificar contra la base de desarrollo. La decisión de cardinalidad sigue abierta.
