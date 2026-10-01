@@ -113,10 +113,13 @@ class ConstruirContextoValidacion
             ->sum(DB::raw('COALESCE(instalaciones_espacios.cantidad, 1)'));
         $hechos[] = Hecho::declarado(TipoHecho::LaboratoriosDeclarados, (string) (int) $laboratorios);
 
-        $foliosAjenos = ReciboPagoDerechos::query()
+        // Only the other levels' folios equal to this one (same normalization
+        // as ReciboNoReutilizado) — never every folio of every trámite.
+        $folioPropio = ReciboPagoDerechos::whereIn('documento_escuela_nivel_id', $documentos->keys())->whereNotNull('folio')->value('folio');
+        $foliosAjenos = $folioPropio === null ? [] : ReciboPagoDerechos::query()
             ->join('documentos_escuela_nivel', 'documentos_escuela_nivel.id', '=', 'recibos_pago_derechos.documento_escuela_nivel_id')
             ->where('documentos_escuela_nivel.escuela_nivel_id', '!=', $escuelaNivelId)
-            ->whereNotNull('recibos_pago_derechos.folio')
+            ->whereRaw('UPPER(TRIM(recibos_pago_derechos.folio)) = ?', [mb_strtoupper(trim((string) $folioPropio))])
             ->pluck('recibos_pago_derechos.folio')
             ->map(fn ($folio) => (string) $folio)
             ->values()

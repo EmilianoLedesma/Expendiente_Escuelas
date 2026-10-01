@@ -92,7 +92,7 @@ app/
 │   ├── Actions/       # component method should call into Application/,
 │   ├── Forms/         # not contain business logic; never import Domain directly
 │   └── Tramite/       # wizard page components: Paso1Preregistro, Paso2Documentos,
-│                      # Paso2Responsable, Paso3/{DatosInmueble,
+│                      # Paso2Responsable, Paso24DocumentosNivel, Paso3/{DatosInmueble,
 │                      # InfraestructuraNivel,MobiliarioNivel,PlanEstudios,
 │                      # PlantillaDocente,Matricula}
 │                      # (próximos-pasos is now a redirect to the hub, no component)

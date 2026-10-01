@@ -20,10 +20,14 @@ class ValidacionFinal extends Component
 {
     public Escuela $escuela;
 
-    public function mount(Escuela $escuela, EjecutarValidacionFinal $ejecutarValidacionFinal): void
+    /** A GET must not write: it validates only the first time; later runs are the "validar de nuevo" action. */
+    public function mount(Escuela $escuela, EjecutarValidacionFinal $ejecutarValidacionFinal, UltimaValidacionFinal $ultimaValidacionFinal): void
     {
         $this->escuela = $escuela;
-        $this->validar($ejecutarValidacionFinal);
+
+        if ($ultimaValidacionFinal->paraEscuela($escuela->id) === null) {
+            $this->validar($ejecutarValidacionFinal);
+        }
     }
 
     public function validarDeNuevo(EjecutarValidacionFinal $ejecutarValidacionFinal): void
