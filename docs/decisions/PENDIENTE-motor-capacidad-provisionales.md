@@ -64,3 +64,11 @@ Las observaciones de predio y superficie construida enlazan a "Datos del inmuebl
 `PENDIENTE-perfiles-trabajador-social-prefecto.md`, "Hueco relacionado": la regla no tiene `cargo_puesto_id`.
 
 **Elección provisional:** la opción (b) de ese documento. El motor cuenta a los Docentes Titulares cuya asignatura es "Educación Física" (`personal_asignaturas`), sin cambio de esquema.
+
+**Fragilidad (revisión 2026-10-01):** la coincidencia es por el **nombre** de la asignatura (`ConstruirDatosCapacidad::ASIGNATURA_EDUCACION_FISICA = 'Educación Física'`, comparado contra `asignaturas.nombre`), no por una clave estable; si el catálogo `AsignaturasSeeder` cambia la redacción o la acentuación, el conteo cae a 0 sin ningún error.
+
+## Efecto secundario de P2 en planteles compartidos (revisión 2026-10-01)
+
+`ConstruirDatosCapacidad::matriculaPlantel()` suma la matrícula (`matricula_grados` + `matricula_salas`) de todos los `escuela_niveles` de **todas las escuelas del plantel**, sin filtrar por solicitante. Esa suma es la magnitud de las reglas `*.superficie.predio_total`, y el "Requerido: X m²" que se muestra en la página de validación final y en el PDF se calcula a partir de ella. Si un plantel tuviera escuelas de dos solicitantes distintos, cada uno podría deducir la matrícula declarada por el otro (requerido ÷ m² por alumno − su propia matrícula).
+
+Hoy esto solo puede ocurrir con planteles compartidos heredados: desde el 2026-09-23 `IniciarTramiteNuevo` rechaza adjuntar una escuela a un plantel sin escuelas propias, pero la consulta de esa fecha halló un plantel de desarrollo con escuelas de más de un solicitante. Depende, por tanto, de `PENDIENTE-plantel-solicitante-cardinalidad.md`: si se confirma 1 plantel : 1 solicitante (y se limpia el caso heredado), el efecto desaparece; si se permite compartir planteles, P2 debe decidir si la suma incluye a otros dueños y cómo se muestra sin revelar su matrícula. No se cambió el comportamiento.

@@ -123,4 +123,15 @@ class RegistrarPlantillaDocenteTest extends TestCase
 
         app(RegistrarPlantillaDocente::class)->ejecutar($escuelaNivel->id, [$this->persona($this->cargoId('primaria', 'Director Técnico'))]);
     }
+
+    /** Like WS-5b: the delete-and-recreate runs under the level's row lock. A real race cannot run in PHPUnit; this checks the lock is taken. */
+    public function test_reemplaza_la_plantilla_bajo_el_lock_del_nivel(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('primaria', 'plantilla_docente');
+        DB::enableQueryLog();
+
+        app(RegistrarPlantillaDocente::class)->ejecutar($escuelaNivel->id, [$this->persona($this->cargoId('primaria', 'Director Técnico'))]);
+
+        $this->assertNotEmpty(array_filter(DB::getQueryLog(), fn (array $q) => str_contains($q['query'], 'from "escuela_niveles"') && str_ends_with($q['query'], 'for update')));
+    }
 }

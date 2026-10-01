@@ -10,6 +10,7 @@ use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /** Paso 3, sub-step 4. Presentation only: RegistrarPlanEstudios validates and writes (ADR-001). */
@@ -18,6 +19,7 @@ class PlanEstudios extends Component
 {
     use CompuertaPaso3;
 
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     public string $modalidad = '';
