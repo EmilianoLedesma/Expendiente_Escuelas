@@ -79,12 +79,25 @@ class ValidacionPorNivelTest extends TestCase
         $contexto = app(ConstruirContextoValidacion::class)->paraNivel($propio->id);
 
         $this->assertSame($this->folio($propio), $this->valor($contexto->hechos, TipoHecho::FolioRecibo, 'recibo_pago_derechos'));
-        $this->assertSame([$this->folio($ajeno)], $contexto->foliosAjenos);
+        $this->assertSame([], $contexto->foliosAjenos, 'Solo se traen los folios ajenos que coinciden con el propio.');
         $this->assertSame('300', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, 'acervo_bibliografico_primaria'));
         $this->assertSame('250', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, null), 'Solo cuentan los libros de la biblioteca.');
         $this->assertSame('0', $this->valor($contexto->hechos, TipoHecho::LaboratoriosDeclarados, null));
         $this->assertSame(['formato_solicitud', 'recibo_pago_derechos', 'acervo_bibliografico_primaria'], $contexto->clavesRequeridas);
         $this->assertSame($contexto->clavesRequeridas, $contexto->clavesPresentes);
+    }
+
+    public function test_el_contexto_trae_solo_los_folios_ajenos_que_coinciden_ignorando_mayusculas_y_espacios(): void
+    {
+        $propio = $this->tramiteCompleto();
+        $ajeno = $this->tramiteCompleto();
+        $this->tramiteCompleto();
+        $copiado = ' '.strtolower($this->folio($propio)).' ';
+        ReciboPagoDerechos::where('folio', $this->folio($ajeno))->update(['folio' => $copiado]);
+
+        $contexto = app(ConstruirContextoValidacion::class)->paraNivel($propio->id);
+
+        $this->assertSame([$copiado], $contexto->foliosAjenos);
     }
 
     public function test_sin_biblioteca_declarada_no_hay_titulos_declarados_y_los_laboratorios_se_suman(): void
