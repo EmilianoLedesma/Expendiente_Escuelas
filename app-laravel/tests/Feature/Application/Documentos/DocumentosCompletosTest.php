@@ -38,9 +38,10 @@ class DocumentosCompletosTest extends TestCase
         $this->assertNotContains('escritura_poder_facultades', $claves);
         $this->assertNotContains('acta_constitutiva', $claves);
         $this->assertNotContains('poder_gestor', $claves);
-        // 11 filas de Paso 2.2 (las 5 escuela_nivel de Paso 2.4 no cuentan): 8 'ambas',
-        // 2 'moral', 1 'fisica_con_gestor'. fisica = 8.
-        $this->assertCount(8, $claves);
+        // 13 filas de Paso 2.2 (las 5 escuela_nivel de Paso 2.4 no cuentan): 10 'ambas'
+        // (8 + constancia_curp y constancia_situacion_fiscal de ADR-007),
+        // 2 'moral', 1 'fisica_con_gestor'. fisica = 10.
+        $this->assertCount(10, $claves);
         $this->assertNotContains('formato_solicitud', $claves);
     }
 
@@ -54,8 +55,8 @@ class DocumentosCompletosTest extends TestCase
         $this->assertContains('escritura_poder_facultades', $claves);
         $this->assertContains('acta_nacimiento', $claves);
         $this->assertNotContains('poder_gestor', $claves);
-        // 8 'ambas' + 2 'moral' propias = 10.
-        $this->assertCount(10, $claves);
+        // 10 'ambas' + 2 'moral' propias = 12.
+        $this->assertCount(12, $claves);
     }
 
     public function test_claves_aplicables_para_fisica_con_gestor_incluye_poder_gestor(): void
@@ -67,8 +68,8 @@ class DocumentosCompletosTest extends TestCase
         $this->assertContains('poder_gestor', $claves);
         $this->assertNotContains('escritura_poder_facultades', $claves);
         $this->assertNotContains('acta_constitutiva', $claves);
-        // 8 'ambas' + 1 'fisica_con_gestor' (poder_gestor) = 9.
-        $this->assertCount(9, $claves);
+        // 10 'ambas' + 1 'fisica_con_gestor' (poder_gestor) = 11.
+        $this->assertCount(11, $claves);
     }
 
     public function test_el_orden_del_checklist_sigue_el_orden_del_seeder(): void
@@ -76,7 +77,7 @@ class DocumentosCompletosTest extends TestCase
         (new TiposDocumentosSeeder)->run();
 
         $this->assertSame(
-            ['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'visto_bueno_proteccion_civil', 'plano_inmueble', 'certificado_numero_oficial'],
+            ['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'visto_bueno_proteccion_civil', 'plano_inmueble', 'certificado_numero_oficial', 'constancia_curp', 'constancia_situacion_fiscal'],
             (new DocumentosCompletos)->clavesAplicables('fisica'),
         );
     }
@@ -99,7 +100,7 @@ class DocumentosCompletosTest extends TestCase
         $escuela = $this->crearEscuela();
 
         $this->assertFalse((new DocumentosCompletos)->paraEscuela($escuela->id, 'fisica'));
-        $this->assertCount(8, (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
+        $this->assertCount(10, (new DocumentosCompletos)->clavesPendientes($escuela->id, 'fisica'));
     }
 
     public function test_para_escuela_verdadero_cuando_los_10_estan_registrados(): void

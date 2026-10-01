@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Forms;
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
 use App\Application\Captura\ReglasCaptura;
 use Livewire\Form;
 
@@ -17,6 +19,10 @@ class GestorForm extends Form
 
     public string $fechaPoder = '';
 
+    /** ADR-007: the uploaded INE and Constancia de CURP are the gestor's. */
+    #[Normalizar(Normalizacion::Identificador)]
+    public string $curp = '';
+
     public function rules(): array
     {
         return [
@@ -25,6 +31,7 @@ class GestorForm extends Form
             'notarioNombre' => ReglasCaptura::nombrePersona(max: 150),
             'notarioNumero' => ReglasCaptura::texto(max: 20),
             'fechaPoder' => ReglasCaptura::fechaPasada(),
+            'curp' => ReglasCaptura::curp(requerido: true),
         ];
     }
 
@@ -36,6 +43,7 @@ class GestorForm extends Form
             'notarioNombre' => 'nombre del notario',
             'notarioNumero' => 'número de notaría',
             'fechaPoder' => 'fecha del poder',
+            'curp' => 'CURP del gestor',
         ];
     }
 }

@@ -74,7 +74,7 @@ class Paso24DocumentosNivelTest extends TestCase
 
         $this->get(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('Primaria · Paso 5 de 7')
+            ->assertSee('Primaria · Paso 5 de 10')
             ->assertSee('aria-current="step"', false)
             ->assertSee('Aquí estás');
     }
@@ -219,6 +219,41 @@ class Paso24DocumentosNivelTest extends TestCase
             ->assertHasErrors(['recibo.folio', 'recibo.monto', 'recibo.fechaPago']);
 
         $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+    }
+
+    /** ADR-007: la relación del acervo se sube con su número de títulos (lo compara la validación final). */
+    public function test_la_relacion_del_acervo_exige_y_guarda_el_numero_de_titulos(): void
+    {
+        $escuelaNivel = $this->nivel('primaria');
+
+        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->assertSeeHtml('wire:model="acervoTitulos.acervo_bibliografico_primaria"')
+            ->set('archivos.acervo_bibliografico_primaria', $this->pdf())
+            ->call('guardarDocumento', 'acervo_bibliografico_primaria')
+            ->assertHasErrors('acervoTitulos.acervo_bibliografico_primaria')
+            ->assertSee('Captura el número de títulos de la relación')
+            ->set('acervoTitulos.acervo_bibliografico_primaria', '-3')
+            ->call('guardarDocumento', 'acervo_bibliografico_primaria')
+            ->assertHasErrors('acervoTitulos.acervo_bibliografico_primaria')
+            ->set('acervoTitulos.acervo_bibliografico_primaria', '320')
+            ->call('guardarDocumento', 'acervo_bibliografico_primaria')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('relaciones_acervo_bibliografico', [
+            'documento_escuela_nivel_id' => DocumentoEscuelaNivel::sole()->id,
+            'numero_titulos' => 320,
+        ]);
+    }
+
+    public function test_otros_documentos_del_nivel_no_piden_numero_de_titulos(): void
+    {
+        $escuelaNivel = $this->nivel('secundaria');
+
+        Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->assertDontSeeHtml('wire:model="acervoTitulos.inventario_laboratorio"')
+            ->set('archivos.inventario_laboratorio', $this->pdf())
+            ->call('guardarDocumento', 'inventario_laboratorio')
+            ->assertHasNoErrors();
     }
 
     public function test_guardar_documento_rechaza_una_clave_que_no_aplica_al_nivel(): void
@@ -422,6 +457,7 @@ class Paso24DocumentosNivelTest extends TestCase
         DocumentoEscuela::where('escuela_id', $escuelaNivel->escuela_id)->delete();
 
         $componente->set('archivos.acervo_bibliografico_primaria', $this->pdf())
+            ->set('acervoTitulos.acervo_bibliografico_primaria', '300')
             ->call('guardarDocumento', 'acervo_bibliografico_primaria')
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]));
 

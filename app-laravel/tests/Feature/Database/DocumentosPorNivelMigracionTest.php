@@ -65,7 +65,7 @@ class DocumentosPorNivelMigracionTest extends TestCase
         $this->migracion('2026_01_02_000003_mover_formato_solicitud_a_escuela_nivel')->up();
         $this->migracion('2026_01_02_000003_mover_formato_solicitud_a_escuela_nivel')->up();
 
-        $this->assertDatabaseCount('tipos_documentos', 16);
+        $this->assertDatabaseCount('tipos_documentos', 18);
     }
 
     public function test_retiro_borra_las_filas_del_recibo_por_plantel_y_su_tipo(): void
@@ -98,6 +98,6 @@ class DocumentosPorNivelMigracionTest extends TestCase
 
         $this->migracion('2026_01_02_000004_retirar_recibo_pago_derechos_plantel')->up();
 
-        $this->assertDatabaseCount('tipos_documentos', 16);
+        $this->assertDatabaseCount('tipos_documentos', 18);
     }
 }

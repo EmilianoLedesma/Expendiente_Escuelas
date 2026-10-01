@@ -35,10 +35,24 @@ final readonly class DatosDocumento
         public ?bool $ratificadoNotario = null,
         public ?string $otroEspecifique = null,
         public ?string $observaciones = null,
+        // ine, constancia_curp: identity of the person who acts (ADR-007)
+        public ?string $identidadNombre = null,
+        public ?string $identidadCurp = null,
+        // constancia_situacion_fiscal
+        public ?string $fiscalNombre = null,
+        public ?string $fiscalRfc = null,
+        // certificado_numero_oficial
+        public ?string $domicilioCalle = null,
+        public ?string $domicilioNumeroExt = null,
+        public ?string $domicilioColonia = null,
+        public ?string $domicilioMunicipio = null,
+        public ?string $domicilioCodigoPostal = null,
         // recibo_pago_derechos (recibos_pago_derechos, Paso 2.4)
         public ?string $folio = null,
         public ?string $monto = null,
         public ?string $fechaPago = null,
         public ?string $portalReferencia = null,
+        // acervo_bibliografico_primaria / _secundaria (relaciones_acervo_bibliografico)
+        public ?int $acervoTitulos = null,
     ) {}
 }

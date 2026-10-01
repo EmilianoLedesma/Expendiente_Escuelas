@@ -116,7 +116,7 @@ class Paso3OrdenSubPasosHttpRoundTripTest extends TestCase
         $escuelaNivel = $this->escuelaNivel('preescolar', 'inmueble', 'infraestructura');
 
         $this->get3('mobiliario', $escuelaNivel)
-            ->assertRedirect(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
+            ->assertRedirect(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]));
 
         $this->assertDatabaseHas('escuela_nivel_pasos', [
             'escuela_nivel_id' => $escuelaNivel->id,

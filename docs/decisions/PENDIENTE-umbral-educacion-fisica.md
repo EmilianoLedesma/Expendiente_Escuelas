@@ -196,3 +196,7 @@ para SEDEQ:
 > inscritos)? Los documentos internos que tenemos usan ambas redacciones en
 > distintos lugares y necesitamos que SEDEQ confirme cuál aplica en cada
 > caso."
+
+## Nota (2026-09-30, rama `feat/motor-capacidad-instalada`, sin mergear)
+
+El Motor de Capacidad ya evalúa estas reglas con `condicion_min = 61` tal como está sembrado, usando como magnitud la **matrícula** capturada (no la capacidad instalada). Ambas elecciones siguen provisionales; ver `PENDIENTE-motor-capacidad-provisionales.md` P1. Cambiar el umbral a 60 es un cambio de datos en el seeder; no hay que tocar el motor.

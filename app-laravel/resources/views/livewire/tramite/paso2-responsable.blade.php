@@ -35,6 +35,9 @@
                         <x-ui.field id="gestorForm.nombre" label="Nombre del gestor">
                             <x-ui.input maxlength="200" wire:model.blur="gestorForm.nombre" />
                         </x-ui.field>
+                        <x-ui.field id="gestorForm.curp" label="CURP del gestor" hint="La credencial de elector y la Constancia de CURP que subas en Documentos deben ser las del gestor.">
+                            <x-ui.input wire:model="gestorForm.curp" class="uppercase" />
+                        </x-ui.field>
                         <x-ui.field id="gestorForm.numeroPoder" label="Número de poder" optional>
                             <x-ui.input maxlength="50" wire:model.blur="gestorForm.numeroPoder" />
                         </x-ui.field>

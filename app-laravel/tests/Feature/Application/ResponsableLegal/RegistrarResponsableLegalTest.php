@@ -127,4 +127,18 @@ class RegistrarResponsableLegalTest extends TestCase
         $this->assertDatabaseCount('responsables_legales', 1);
         $this->assertDatabaseCount('personas_fisicas', 1);
     }
+
+    public function test_guarda_la_curp_del_gestor(): void
+    {
+        $escuela = $this->crearEscuela();
+
+        (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(
+            tipoPersona: 'fisica_con_gestor',
+            nombre: 'Ana López',
+            gestorNombre: 'Carlos Gómez',
+            gestorCurp: 'GOMC800101HQTMRR01',
+        ));
+
+        $this->assertDatabaseHas('gestores', ['nombre' => 'Carlos Gómez', 'curp' => 'GOMC800101HQTMRR01']);
+    }
 }
