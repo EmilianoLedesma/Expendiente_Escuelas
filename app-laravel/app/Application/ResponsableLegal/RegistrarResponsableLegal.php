@@ -70,6 +70,7 @@ class RegistrarResponsableLegal
                     'notario_nombre' => $datos->gestorNotarioNombre,
                     'notario_numero' => $datos->gestorNotarioNumero,
                     'fecha_poder' => $datos->gestorFechaPoder,
+                    'curp' => $datos->gestorCurp,
                 ]);
             }
 

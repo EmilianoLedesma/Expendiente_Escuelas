@@ -17,7 +17,7 @@ use Tests\TestCase;
  * simular por HTTP crudo (Livewire sube el PDF a un endpoint de "temporary
  * upload" propio antes del round-trip normal, con su propia firma y
  * middleware), así que en su lugar se ejercita el camino de error de
- * validación de guardarDocumentoSimple() sin adjuntar archivo: confirma que
+ * validación de guardarIne() sin adjuntar archivo: confirma que
  * la respuesta trae el errorBag de Livewire (422), no un 500, sobre el
  * transporte HTTP real — que es exactamente el código que
  * Livewire::test() nunca ejercita (docs/reports/2026-09-07-fix-sesion-419.md).
@@ -68,7 +68,7 @@ class Paso2DocumentosGuardarHttpRoundTripTest extends TestCase
                 'components' => [[
                     'snapshot' => $snapshotJson,
                     'updates' => [],
-                    'calls' => [['path' => '', 'method' => 'guardarDocumentoSimple', 'params' => ['ine']]],
+                    'calls' => [['path' => '', 'method' => 'guardarIne', 'params' => []]],
                 ]],
             ]);
 

@@ -40,5 +40,7 @@ final readonly class DatosResponsableLegal
         public ?string $gestorNotarioNombre = null,
         public ?string $gestorNotarioNumero = null,
         public ?string $gestorFechaPoder = null,
+        // ADR-007: the gestor's INE and CURP are the ones uploaded
+        public ?string $gestorCurp = null,
     ) {}
 }

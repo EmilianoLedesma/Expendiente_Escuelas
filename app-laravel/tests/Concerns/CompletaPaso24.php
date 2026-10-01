@@ -25,9 +25,12 @@ trait CompletaPaso24
 
         $registrar = app(RegistrarDocumento::class);
         foreach (app(DocumentosNivelCompletos::class)->clavesAplicables($escuelaNivelId) as $clave) {
-            $datos = $clave === 'recibo_pago_derechos'
-                ? new DatosDocumento(folio: 'F-0001', monto: '1500.00', fechaPago: now()->toDateString())
-                : new DatosDocumento;
+            // Folio único por nivel y títulos capturados: los datos que lee la validación final por nivel (ADR-007).
+            $datos = match ($clave) {
+                'recibo_pago_derechos' => new DatosDocumento(folio: "F-{$escuelaNivelId}", monto: '1500.00', fechaPago: now()->toDateString()),
+                'acervo_bibliografico_primaria', 'acervo_bibliografico_secundaria' => new DatosDocumento(acervoTitulos: 300),
+                default => new DatosDocumento,
+            };
 
             $registrar->ejecutar($escuelaId, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), $datos, $escuelaNivelId);
         }

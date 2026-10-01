@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Catálogo de documentos. 16 filas desde WS-5b:
+ * Catálogo de documentos. 18 filas: 16 desde WS-5b, más 2 de ADR-007:
  *  - Paso 2.2 (ámbito plantel/escuela): los 7 originales (COMPENDIO_MAESTRO
  *    §Paso 2.2) más los que WS-5a agregó contra los Requisitos (Apéndice B.2
  *    del brief de remediación), menos el Formato de Solicitud y el recibo
@@ -48,6 +48,11 @@ class TiposDocumentosSeeder extends Seeder
             ['clave' => 'visto_bueno_proteccion_civil', 'nombre' => 'Visto Bueno / Dictamen de Protección Civil', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'plano_inmueble', 'nombre' => 'Plano o croquis del inmueble', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'certificado_numero_oficial', 'nombre' => 'Certificado de número oficial', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
+            // ADR-007 (owner decision): sources for the CURP and RFC checks.
+            // CURP: of the person who acts (titular, gestor or representative, like the INE).
+            // Situación fiscal: of the taxpayer (titular, or the persona moral).
+            ['clave' => 'constancia_curp', 'nombre' => 'Constancia de CURP', 'aplica_persona' => 'ambas', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
+            ['clave' => 'constancia_situacion_fiscal', 'nombre' => 'Constancia de Situación Fiscal', 'aplica_persona' => 'ambas', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
         ]);
 
         // Segundo insert: insertOrIgnore exige las mismas columnas en todas las

@@ -15,11 +15,15 @@ use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
+use App\Livewire\Forms\IdentidadDocumentoForm;
+use App\Livewire\Forms\NumeroOficialForm;
+use App\Livewire\Forms\SituacionFiscalForm;
 use App\Models\Escuela;
 use App\Models\TipoDocumento;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -36,7 +40,11 @@ class Paso2Documentos extends Component
     use WithFileUploads;
 
     /** Claves con campos estructurados y método propio; toda otra clave aplicable va por guardarDocumentoSimple() (WS-5a M1). */
-    public const CON_DATOS_ESTRUCTURADOS = ['escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural'];
+    public const CON_DATOS_ESTRUCTURADOS = [
+        'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural',
+        // ADR-007: captured with the data the validation engine compares
+        'ine', 'constancia_curp', 'constancia_situacion_fiscal', 'certificado_numero_oficial',
+    ];
 
     public Escuela $escuela;
 
@@ -51,6 +59,22 @@ class Paso2Documentos extends Component
 
     public AcreditacionOcupacionForm $acreditacionForm;
 
+    public IdentidadDocumentoForm $ineForm;
+
+    public IdentidadDocumentoForm $constanciaCurpForm;
+
+    public SituacionFiscalForm $situacionFiscalForm;
+
+    public NumeroOficialForm $numeroOficialForm;
+
+    /**
+     * Set by the final validation step's "Corregir" link (ADR-007): reopens
+     * that document even when Paso 2.2 is complete, and returns to the
+     * validation after saving it.
+     */
+    #[Url]
+    public ?string $corregir = null;
+
     public function mount(Escuela $escuela, DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, EstadoPaso2 $estadoPaso2): void
     {
         $this->escuela = $escuela;
@@ -64,6 +88,14 @@ class Paso2Documentos extends Component
         }
 
         $tipoPersona = $this->tipoPersona();
+
+        if ($this->corregir !== null && in_array($this->corregir, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
+            $this->reemplazando[$this->corregir] = true;
+
+            return;
+        }
+        $this->corregir = null;
+
         $pendientes = $documentosCompletos->clavesPendientes($escuela->id, $tipoPersona);
 
         if ($pendientes !== []) {
@@ -166,6 +198,71 @@ class Paso2Documentos extends Component
         $this->avanzar($documentosCompletos);
     }
 
+    public function guardarIne(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->guardarIdentidad('ine', $this->ineForm, $registrarDocumento, $documentosCompletos);
+    }
+
+    public function guardarConstanciaCurp(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->guardarIdentidad('constancia_curp', $this->constanciaCurpForm, $registrarDocumento, $documentosCompletos);
+    }
+
+    public function guardarSituacionFiscal(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->validate(['archivos.constancia_situacion_fiscal' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->situacionFiscalForm->normalizar();
+        $this->situacionFiscalForm->validate();
+
+        if (! $this->intentarRegistrar($registrarDocumento, 'constancia_situacion_fiscal', new DatosDocumento(
+            fiscalNombre: $this->situacionFiscalForm->nombre,
+            fiscalRfc: $this->situacionFiscalForm->rfc,
+        ))) {
+            return;
+        }
+        $this->terminarGuardado('constancia_situacion_fiscal', $documentosCompletos);
+    }
+
+    public function guardarNumeroOficial(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->validate(['archivos.certificado_numero_oficial' => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $this->numeroOficialForm->validate();
+
+        if (! $this->intentarRegistrar($registrarDocumento, 'certificado_numero_oficial', new DatosDocumento(
+            domicilioCalle: trim($this->numeroOficialForm->calle),
+            domicilioNumeroExt: trim($this->numeroOficialForm->numeroExt) !== '' ? trim($this->numeroOficialForm->numeroExt) : null,
+            domicilioColonia: trim($this->numeroOficialForm->colonia),
+            domicilioMunicipio: trim($this->numeroOficialForm->municipio),
+            domicilioCodigoPostal: $this->numeroOficialForm->codigoPostal,
+        ))) {
+            return;
+        }
+        $this->terminarGuardado('certificado_numero_oficial', $documentosCompletos);
+    }
+
+    private function guardarIdentidad(string $clave, IdentidadDocumentoForm $form, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $form->normalizar();
+        $form->validate();
+
+        if (! $this->intentarRegistrar($registrarDocumento, $clave, new DatosDocumento(
+            identidadNombre: $form->nombre,
+            identidadCurp: $form->curp,
+        ))) {
+            return;
+        }
+        $this->terminarGuardado($clave, $documentosCompletos);
+    }
+
+    private function terminarGuardado(string $clave, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->archivos[$clave] = null;
+        $this->reemplazando[$clave] = false;
+
+        $this->avanzar($documentosCompletos);
+    }
+
     /**
      * Envuelve RegistrarDocumento::ejecutar() para que un DatosInvalidos
      * (invariante de entrada violado — clave no aplicable, archivo no PDF)
@@ -214,6 +311,12 @@ class Paso2Documentos extends Component
 
     private function avanzar(DocumentosCompletos $documentosCompletos): void
     {
+        if ($this->corregir !== null) {
+            $this->redirectRoute('tramite.validacion', ['escuela' => $this->escuela->id]);
+
+            return;
+        }
+
         $tipoPersona = $this->tipoPersona();
         $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $tipoPersona);
 
@@ -250,6 +353,7 @@ class Paso2Documentos extends Component
             'totalAplicables' => count($clavesAplicables),
             'totalCompletos' => $capturados->count(),
             'encabezado' => ResumenTramite::encabezado('documentos'),
+            'tipoPersona' => $this->tipoPersona(),
             // Solo para marcar la fila vencida; la regla sigue en ValidarVigenciaDocumentos.
             'vencidos' => $this->getErrorBag()->has('vigencia') ? $validarVigencia->ejecutar($this->escuela->id) : [],
         ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => 'documentos']);
