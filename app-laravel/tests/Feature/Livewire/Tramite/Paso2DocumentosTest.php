@@ -89,7 +89,7 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->call('toggleReemplazar', 'ine')
             ->set('archivos.ine', UploadedFile::fake()->create('segundo.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'ine')
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
             ->assertHasNoErrors();
 
         $this->assertDatabaseCount('documentos_escuela', 1);
@@ -107,7 +107,7 @@ class Paso2DocumentosTest extends TestCase
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'ine')
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
@@ -210,7 +210,7 @@ class Paso2DocumentosTest extends TestCase
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.ine', UploadedFile::fake()->create('ine.jpg', 50, 'image/jpeg'))
-            ->call('guardarDocumentoSimple', 'ine')
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
             ->assertHasErrors('archivos.ine');
     }
 
@@ -231,7 +231,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
@@ -316,13 +316,13 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['certificado_numero_oficial']) as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['plano_inmueble']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.certificado_numero_oficial', UploadedFile::fake()->create('cno.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'certificado_numero_oficial')
+            ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'plano_inmueble')
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
     }
 
@@ -430,7 +430,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'certificado_numero_oficial']) as $clave) {
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'plano_inmueble']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
         $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
@@ -438,8 +438,8 @@ class Paso2DocumentosTest extends TestCase
         ));
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('archivos.certificado_numero_oficial', UploadedFile::fake()->create('cno.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'certificado_numero_oficial')
+            ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'plano_inmueble')
             ->assertHasErrors('vigencia')
             ->assertNoRedirect();
     }
@@ -450,7 +450,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
@@ -467,7 +467,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
@@ -494,7 +494,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
@@ -516,7 +516,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('comodato.pdf', 10, 'application/pdf'))
@@ -540,7 +540,7 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
-        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'ine');
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
         $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
 
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('otro.pdf', 10, 'application/pdf'))
@@ -574,7 +574,7 @@ class Paso2DocumentosTest extends TestCase
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'ine')
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
             ->assertHasErrors('archivos.ine');
 
         $this->assertDatabaseCount('documentos_escuela', 0);
@@ -598,7 +598,7 @@ class Paso2DocumentosTest extends TestCase
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'ine')
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
 
         $this->assertDatabaseCount('documentos_escuela', 0);

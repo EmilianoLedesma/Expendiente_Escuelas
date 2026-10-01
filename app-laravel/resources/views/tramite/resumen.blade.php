@@ -15,10 +15,14 @@
                 </x-ui.button-primary>
             </div>
         @elseif ($resumen->completo)
-            <p class="mb-lg flex items-center gap-sm">
-                <x-ui.status-tag estado="completado" />
-                <span class="text-body-sm text-muted">Todas las secciones disponibles están capturadas.</span>
-            </p>
+            <div class="mb-lg rounded-lg bg-surface-card p-lg">
+                <p class="text-section-eyebrow font-semibold uppercase text-muted">Siguiente paso</p>
+                <p class="mt-xs text-title-md font-semibold text-ink">Validación final</p>
+                <p class="text-body-sm text-muted">Todas las secciones están capturadas. Revisamos que tus datos coincidan con tus documentos antes de enviar.</p>
+                <x-ui.button-primary :href="route('tramite.validacion', ['escuela' => $resumen->escuelaId])" class="mt-md">
+                    Ir a la validación final
+                </x-ui.button-primary>
+            </div>
         @endif
 
         <x-ui.section title="Información general">

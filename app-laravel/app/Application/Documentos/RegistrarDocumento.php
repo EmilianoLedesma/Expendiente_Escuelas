@@ -10,13 +10,18 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
+use App\Models\CertificadoNumeroOficial;
+use App\Models\ConstanciaCurp;
 use App\Models\ConstanciaSeguridadEstructural;
+use App\Models\ConstanciaSituacionFiscal;
+use App\Models\CredencialIne;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\ReciboPagoDerechos;
+use App\Models\RelacionAcervoBibliografico;
 use App\Models\TipoDocumento;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
@@ -85,6 +90,10 @@ class RegistrarDocumento
 
         if ($tipoDocumentoClave === 'recibo_pago_derechos') {
             $this->validarRecibo($datos);
+        }
+
+        if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
+            throw new DatosInvalidos(['acervo.titulos' => 'El número de títulos no puede ser negativo.']);
         }
 
         $almacen = $this->almacen ?? app(AlmacenDocumentos::class);
@@ -191,6 +200,8 @@ class RegistrarDocumento
                     );
                 }
 
+                $this->registrarDatosTipados($tipo->clave, $documento->getKey(), $datos);
+
                 if ($tipo->clave === 'recibo_pago_derechos') {
                     ReciboPagoDerechos::updateOrCreate(
                         ['documento_escuela_nivel_id' => $documento->getKey()],
@@ -252,6 +263,45 @@ class RegistrarDocumento
 
             throw $e;
         }
+    }
+
+    /**
+     * ADR-007: typed data the documental validation engine reads. Written in
+     * the same transaction as the upload; a re-upload overwrites it, and a
+     * re-upload without data deletes it, so values captured from a replaced
+     * file never outlive it. Required-ness is the form's job, as with the
+     * constancia de seguridad estructural.
+     */
+    private function registrarDatosTipados(string $clave, int $documentoId, DatosDocumento $datos): void
+    {
+        [$modelo, $llave, $valores] = match ($clave) {
+            'ine' => [CredencialIne::class, 'documento_escuela_id', ['nombre' => $datos->identidadNombre, 'curp' => $datos->identidadCurp]],
+            'constancia_curp' => [ConstanciaCurp::class, 'documento_escuela_id', ['nombre' => $datos->identidadNombre, 'curp' => $datos->identidadCurp]],
+            'constancia_situacion_fiscal' => [ConstanciaSituacionFiscal::class, 'documento_escuela_id', ['nombre_razon_social' => $datos->fiscalNombre, 'rfc' => $datos->fiscalRfc]],
+            'certificado_numero_oficial' => [CertificadoNumeroOficial::class, 'documento_plantel_id', [
+                'calle' => $datos->domicilioCalle,
+                'numero_ext' => $datos->domicilioNumeroExt,
+                'colonia' => $datos->domicilioColonia,
+                'municipio' => $datos->domicilioMunicipio,
+                'codigo_postal' => $datos->domicilioCodigoPostal,
+            ]],
+            'acervo_bibliografico_primaria', 'acervo_bibliografico_secundaria' => [RelacionAcervoBibliografico::class, 'documento_escuela_nivel_id', ['numero_titulos' => $datos->acervoTitulos]],
+            default => [null, null, []],
+        };
+
+        if ($modelo === null) {
+            return;
+        }
+
+        $requeridos = array_filter($valores, fn (string $columna) => $columna !== 'numero_ext', ARRAY_FILTER_USE_KEY);
+
+        if (in_array(null, $requeridos, true)) {
+            $modelo::where($llave, $documentoId)->delete();
+
+            return;
+        }
+
+        $modelo::updateOrCreate([$llave => $documentoId], $valores);
     }
 
     /** WS-5b: el nivel debe ser de esta escuela, Paso 2 completo, la clave aplicable al nivel y, para el Formato, turno y tipo de alumnado ya capturados. */
