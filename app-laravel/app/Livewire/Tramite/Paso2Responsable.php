@@ -214,6 +214,7 @@ class Paso2Responsable extends Component
                 gestorNotarioNombre: $this->gestorForm->notarioNombre !== '' ? $this->gestorForm->notarioNombre : null,
                 gestorNotarioNumero: $this->gestorForm->notarioNumero !== '' ? $this->gestorForm->notarioNumero : null,
                 gestorFechaPoder: $this->gestorForm->fechaPoder !== '' ? $this->gestorForm->fechaPoder : null,
+                gestorCurp: $this->gestorForm->curp !== '' ? $this->gestorForm->curp : null,
             ));
         } catch (DatosInvalidos $e) {
             foreach ($e->errores as $campo => $mensaje) {

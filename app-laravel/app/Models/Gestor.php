@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $nombre
+ * @property string|null $curp
+ */
 class Gestor extends Model
 {
     const UPDATED_AT = null;
@@ -22,6 +26,7 @@ class Gestor extends Model
         'notario_nombre',
         'notario_numero',
         'fecha_poder',
+        'curp',
     ];
 
     public function responsableLegal(): BelongsTo

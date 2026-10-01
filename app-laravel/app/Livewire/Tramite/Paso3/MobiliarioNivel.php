@@ -49,7 +49,7 @@ class MobiliarioNivel extends Component
             // Un paso que no aplica al nivel no está pendiente: está
             // trivialmente satisfecho (spec §4).
             $marcarPasoCompletado->ejecutar($escuelaNivel->id, 'mobiliario');
-            $this->redirectRoute('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]);
+            $this->redirectRoute('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]);
 
             return;
         }
@@ -87,7 +87,7 @@ class MobiliarioNivel extends Component
             return;
         }
 
-        $this->redirectRoute('tramite.paso3-proximos-pasos', ['escuelaNivel' => $this->escuelaNivel->id]);
+        $this->redirectRoute('tramite.paso3-plan-estudios', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 
     /** mobiliario_nivel.cantidad_declarada es SMALLINT. */

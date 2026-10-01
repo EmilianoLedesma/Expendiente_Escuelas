@@ -30,6 +30,9 @@ class ResumenTramite
         'inmueble' => 'tramite.paso3-inmueble',
         'infraestructura' => 'tramite.paso3-infraestructura',
         'mobiliario' => 'tramite.paso3-mobiliario',
+        'plan_estudios' => 'tramite.paso3-plan-estudios',
+        'plantilla_docente' => 'tramite.paso3-plantilla',
+        'matricula' => 'tramite.paso3-matricula',
     ];
 
     /** Paso 2.4 de cada nivel (WS-5b); CompuertaPaso3 y Paso2Responsable redirigen aquí. */
@@ -44,7 +47,7 @@ class ResumenTramite
      * revisarlas llega con WS-7 (docs/decisions/PENDIENTE-edicion-hasta-envio.md).
      * Documentos del nivel no redirige: el Formato firmado se puede reemplazar.
      */
-    private const REVISABLES = ['documentos_nivel', 'infraestructura', 'mobiliario'];
+    private const REVISABLES = ['documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
 
     /** @var array<string, array{string, string}> */
     private const GENERALES = [
@@ -123,10 +126,12 @@ class ResumenTramite
             return ['paso' => $indice + 1, 'total' => count($generales)];
         }
 
-        $disponibles = array_filter(
+        // array_values: array_filter keeps keys, which numbered every sub-step
+        // after a skipped Mobiliario one too high (latent until sub-steps 4-6 got pages).
+        $disponibles = array_values(array_filter(
             ['documentos_nivel', ...array_keys(self::RUTAS_PASO3)],
             fn (string $c) => $c !== 'mobiliario' || $nivelClave === self::NIVEL_CON_MOBILIARIO,
-        );
+        ));
         $indice = array_search($clave, $disponibles, true);
 
         return $indice === false

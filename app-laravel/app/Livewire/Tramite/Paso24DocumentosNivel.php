@@ -38,6 +38,9 @@ class Paso24DocumentosNivel extends Component
     /** Claves con campos propios y método propio; toda otra clave aplicable va por guardarDocumento() (WS-5a M1). Pública: la lee la prueba guarda del catálogo. */
     public const CON_DATOS_ESTRUCTURADOS = ['recibo_pago_derechos'];
 
+    /** Vía genérica, más el número de títulos que compara la validación final (ADR-007). */
+    public const CON_TITULOS = ['acervo_bibliografico_primaria', 'acervo_bibliografico_secundaria'];
+
     /** Bloqueada: el cliente no puede retargetar el nivel (id/escuela_id) que leen todas las acciones. */
     #[Locked]
     public EscuelaNivel $escuelaNivel;
@@ -50,6 +53,9 @@ class Paso24DocumentosNivel extends Component
 
     /** @var array<string, bool> clave => true mientras se muestra el form de reemplazo. */
     public array $reemplazando = [];
+
+    /** @var array<string, string|int|null> clave de acervo => número de títulos. */
+    public array $acervoTitulos = [];
 
     public ReciboPagoForm $recibo;
 
@@ -103,11 +109,18 @@ class Paso24DocumentosNivel extends Component
         $simples = array_diff($documentosNivelCompletos->clavesAplicables($this->escuelaNivel->id), self::CON_DATOS_ESTRUCTURADOS);
         abort_unless(in_array($clave, $simples, true), 403);
 
-        $this->validate(["archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240']]);
+        $conTitulos = in_array($clave, self::CON_TITULOS, true);
+        $this->validate([
+            "archivos.{$clave}" => ['required', 'file', 'mimes:pdf', 'max:10240'],
+            ...($conTitulos ? ["acervoTitulos.{$clave}" => ['required', 'integer', 'min:0', 'max:2147483647']] : []),
+        ], ["acervoTitulos.{$clave}" => 'Captura el número de títulos de la relación (entero, cero o mayor).']);
 
-        if ($this->intentarRegistrar($registrarDocumento, $clave, new DatosDocumento)) {
+        $datos = $conTitulos ? new DatosDocumento(acervoTitulos: (int) $this->acervoTitulos[$clave]) : new DatosDocumento;
+
+        if ($this->intentarRegistrar($registrarDocumento, $clave, $datos)) {
             $this->archivos[$clave] = null;
             $this->reemplazando[$clave] = false;
+            unset($this->acervoTitulos[$clave]);
         }
     }
 

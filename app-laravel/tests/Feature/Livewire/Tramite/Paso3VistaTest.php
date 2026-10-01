@@ -61,7 +61,7 @@ class Paso3VistaTest extends TestCase
 
         $this->get(route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('Primaria · Paso 6 de 7')
+            ->assertSee('Primaria · Paso 6 de 10')
             ->assertSee('href="'.route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]).'"', false)
             ->assertSee('for="metrosTotales"', false)
             ->assertSee('for="colindanciaNorte"', false)
@@ -86,7 +86,7 @@ class Paso3VistaTest extends TestCase
 
         $this->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('Primaria · Paso 7 de 7')
+            ->assertSee('Primaria · Paso 7 de 10')
             ->assertSee('for="espacios.'.$bibliotecaId.'.cantidad"', false)
             ->assertSee('id="espacios.'.$bibliotecaId.'.cantidad"', false)
             ->assertSee('Material de la biblioteca')
@@ -99,7 +99,7 @@ class Paso3VistaTest extends TestCase
         $conceptoId = MobiliarioConcepto::orderBy('id')->value('id');
 
         Livewire::test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
-            ->assertSee('Educación Inicial · Paso 8 de 8')
+            ->assertSee('Educación Inicial · Paso 8 de 11')
             ->assertSeeHtml('<caption')
             ->assertSeeHtml('for="cantidades.'.$conceptoId.'"')
             ->call('guardar')
