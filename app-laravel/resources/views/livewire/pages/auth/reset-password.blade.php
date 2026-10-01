@@ -1,5 +1,7 @@
 <?php
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -14,6 +16,7 @@ new #[Layout('layouts.guest')] class extends Component
 {
     #[Locked]
     public string $token = '';
+    #[Normalizar(Normalizacion::Correo)]
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
@@ -74,11 +77,11 @@ new #[Layout('layouts.guest')] class extends Component
         <x-slot:intro>Escribe tu nueva contraseña.</x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="resetPassword" class="space-y-md">
+    <form novalidate wire:submit="resetPassword" class="space-y-md">
         <x-ui.error-summary />
-        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model="email" autofocus autocomplete="username" /></x-ui.field>
-        <x-ui.field id="password" label="Nueva contraseña"><x-ui.input type="password" wire:model="password" autocomplete="new-password" /></x-ui.field>
-        <x-ui.field id="password_confirmation" label="Confirmar contraseña"><x-ui.input type="password" wire:model="password_confirmation" autocomplete="new-password" /></x-ui.field>
+        <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model.blur="email" autofocus autocomplete="username" /></x-ui.field>
+        <x-ui.field id="password" label="Nueva contraseña"><x-ui.input type="password" wire:model.blur="password" autocomplete="new-password" /></x-ui.field>
+        <x-ui.field id="password_confirmation" label="Confirmar contraseña"><x-ui.input type="password" wire:model.blur="password_confirmation" autocomplete="new-password" /></x-ui.field>
         <div class="flex justify-end border-t border-hairline pt-lg">
             <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="resetPassword">Restablecer contraseña</x-ui.button-primary>
         </div>

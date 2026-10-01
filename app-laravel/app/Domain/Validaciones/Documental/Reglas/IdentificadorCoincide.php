@@ -2,6 +2,7 @@
 
 namespace App\Domain\Validaciones\Documental\Reglas;
 
+use App\Domain\Captura\Formatos;
 use App\Domain\Validaciones\Documental\TipoHecho;
 use App\Domain\Validaciones\Resultado\EstadoResultado;
 
@@ -13,10 +14,11 @@ use App\Domain\Validaciones\Resultado\EstadoResultado;
  */
 final readonly class IdentificadorCoincide extends ReglaDeCoincidencia
 {
-    public const PATRON_CURP = '/^[A-Z][AEIOUX][A-Z]{2}\d{6}[HMX][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$/';
+    /** Same patterns as capture (one source of truth): App\Domain\Captura\Formatos. */
+    public const PATRON_CURP = Formatos::CURP;
 
     /** 13 chars for personas físicas, 12 for morales. */
-    public const PATRON_RFC = '/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/u';
+    public const PATRON_RFC = Formatos::RFC;
 
     /** @param list<string> $fuentes */
     public function __construct(string $clave, TipoHecho $tipo, array $fuentes, private string $patron, private string $nombre)

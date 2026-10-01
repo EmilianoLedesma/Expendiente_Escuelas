@@ -7,7 +7,7 @@
 
     <x-ui.section title="Datos del nivel">
         {{-- Decisión del dueño (WS-5b): cambiar turno o tipo de alumnado descarta el Formato firmado ya subido. --}}
-        <form wire:submit="guardarDatos" @if ($formatoSubido) wire:confirm="Si cambias el turno o el tipo de alumnado se descartará el Formato de Solicitud firmado que ya subiste. ¿Deseas continuar?" @endif class="space-y-md">
+        <form novalidate wire:submit="guardarDatos" @if ($formatoSubido) wire:confirm="Si cambias el turno o el tipo de alumnado se descartará el Formato de Solicitud firmado que ya subiste. ¿Deseas continuar?" @endif class="space-y-md">
             <x-ui.radio-group id="turno" legend="Turno" wire:model="turno" :opciones="['matutino' => 'Matutino', 'vespertino' => 'Vespertino', 'mixto' => 'Mixto']" />
             <x-ui.radio-group id="tipoAlumnado" legend="Tipo de alumnado" wire:model="tipoAlumnado" :opciones="['mixto' => 'Mixto', 'femenino' => 'Femenino', 'masculino' => 'Masculino']" />
             @if ($formatoSubido)
@@ -33,10 +33,10 @@
 
             @if ($clave === 'recibo_pago_derechos')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$clave" :titulo="$fila['titulo']" :escuela-id="$escuelaNivel->escuela_id" :capturado="$fila['capturado']" :editable="$fila['editable']" :descargar-href="$fila['descargarHref']" :vencido="$fila['vencido']" accion="guardarRecibo">
-                    <x-ui.field id="recibo.folio" label="Folio del recibo"><x-ui.input wire:model="recibo.folio" /></x-ui.field>
-                    <x-ui.field id="recibo.monto" label="Monto pagado"><x-ui.input type="number" step="0.01" min="0.01" inputmode="decimal" unit="MXN" wire:model="recibo.monto" /></x-ui.field>
-                    <x-ui.field id="recibo.fechaPago" label="Fecha de pago"><x-ui.input type="date" wire:model="recibo.fechaPago" /></x-ui.field>
-                    <x-ui.field id="recibo.portalReferencia" label="Referencia del portal de pago" optional><x-ui.input wire:model="recibo.portalReferencia" /></x-ui.field>
+                    <x-ui.field id="recibo.folio" label="Folio del recibo"><x-ui.input maxlength="50" wire:model.blur="recibo.folio" /></x-ui.field>
+                    <x-ui.field id="recibo.monto" label="Monto pagado"><x-ui.input type="number" step="0.01" min="0.01" inputmode="decimal" unit="MXN" wire:model.blur="recibo.monto" /></x-ui.field>
+                    <x-ui.field id="recibo.fechaPago" label="Fecha de pago"><x-ui.input type="date" wire:model.blur="recibo.fechaPago" /></x-ui.field>
+                    <x-ui.field id="recibo.portalReferencia" label="Referencia del portal de pago" optional><x-ui.input maxlength="200" wire:model.blur="recibo.portalReferencia" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'formato_solicitud')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$clave" :titulo="$fila['titulo']" :escuela-id="$escuelaNivel->escuela_id" :capturado="$fila['capturado']" :editable="$fila['editable']" :descargar-href="$fila['descargarHref']" :vencido="$fila['vencido']" accion="guardarDocumento('formato_solicitud')" etiqueta-archivo="Subir Formato de Solicitud firmado">
@@ -53,7 +53,7 @@
                 </x-tramite.documento-row>
             @elseif (in_array($clave, \App\Livewire\Tramite\Paso24DocumentosNivel::CON_TITULOS, true))
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$clave" :titulo="$fila['titulo']" :escuela-id="$escuelaNivel->escuela_id" :capturado="$fila['capturado']" :editable="$fila['editable']" :descargar-href="$fila['descargarHref']" :vencido="$fila['vencido']" accion="guardarDocumento('{{ $clave }}')">
-                    <x-ui.field id="acervoTitulos.{{ $clave }}" label="Número de títulos de la relación"><x-ui.input type="number" step="1" min="0" inputmode="numeric" wire:model="acervoTitulos.{{ $clave }}" /></x-ui.field>
+                    <x-ui.field id="acervoTitulos.{{ $clave }}" label="Número de títulos de la relación"><x-ui.input type="number" step="1" min="0" inputmode="numeric" wire:model.blur="acervoTitulos.{{ $clave }}" /></x-ui.field>
                 </x-tramite.documento-row>
             @else
                 {{-- WS-5a M1: toda clave aplicable sin bloque propio se sube como documento simple. --}}

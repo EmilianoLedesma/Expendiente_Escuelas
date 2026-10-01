@@ -13,7 +13,7 @@
         <x-slot:intro>Declara los espacios del plantel y las aulas del nivel que se pretende incorporar.</x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="guardar">
+    <form novalidate wire:submit="guardar">
         <x-ui.error-summary />
 
         @if ($yaCapturado !== [])

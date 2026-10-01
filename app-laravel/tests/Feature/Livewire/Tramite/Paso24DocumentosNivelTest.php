@@ -227,7 +227,7 @@ class Paso24DocumentosNivelTest extends TestCase
         $escuelaNivel = $this->nivel('primaria');
 
         Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
-            ->assertSeeHtml('wire:model="acervoTitulos.acervo_bibliografico_primaria"')
+            ->assertSeeHtml('wire:model.blur="acervoTitulos.acervo_bibliografico_primaria"')
             ->set('archivos.acervo_bibliografico_primaria', $this->pdf())
             ->call('guardarDocumento', 'acervo_bibliografico_primaria')
             ->assertHasErrors('acervoTitulos.acervo_bibliografico_primaria')

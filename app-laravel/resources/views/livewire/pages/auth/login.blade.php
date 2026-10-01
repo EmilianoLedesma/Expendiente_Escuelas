@@ -38,14 +38,14 @@ new #[Layout('layouts.guest')] class extends Component
         <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
     @endif
 
-    <form wire:submit="login" class="space-y-md">
+    <form novalidate wire:submit="login" class="space-y-md">
         <x-ui.error-summary />
 
         <x-ui.field id="form.email" label="Correo electrónico">
-            <x-ui.input type="email" wire:model="form.email" autofocus autocomplete="username" />
+            <x-ui.input type="email" wire:model.blur="form.email" autofocus autocomplete="username" />
         </x-ui.field>
         <x-ui.field id="form.password" label="Contraseña">
-            <x-ui.input type="password" wire:model="form.password" autocomplete="current-password" />
+            <x-ui.input type="password" wire:model.blur="form.password" autocomplete="current-password" />
         </x-ui.field>
         <x-ui.checkbox id="form.remember" wire:model="form.remember" name="remember">Recordarme</x-ui.checkbox>
 

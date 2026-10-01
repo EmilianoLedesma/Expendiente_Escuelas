@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Application\Captura\ReglasCaptura;
 use Livewire\Form;
 
 /** Campos del recibo de pago de derechos (Paso 2.4). RegistrarDocumento repite los invariantes. */
@@ -18,10 +19,21 @@ class ReciboPagoForm extends Form
     public function rules(): array
     {
         return [
-            'folio' => ['required', 'string', 'max:50'],
-            'monto' => ['required', 'numeric', 'gt:0', 'max:99999999.99'],
-            'fechaPago' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'portalReferencia' => ['nullable', 'string', 'max:200'],
+            'folio' => ReglasCaptura::texto(requerido: true, max: 50),
+            // recibos_pago_derechos.monto es NUMERIC(10,2) y debe ser positivo.
+            'monto' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2, min: 0.01, requerido: true),
+            'fechaPago' => ReglasCaptura::fechaPasada(requerido: true),
+            'portalReferencia' => ReglasCaptura::texto(max: 200),
+        ];
+    }
+
+    public function validationAttributes(): array
+    {
+        return [
+            'folio' => 'folio del recibo',
+            'monto' => 'monto pagado',
+            'fechaPago' => 'fecha de pago',
+            'portalReferencia' => 'referencia del portal de pago',
         ];
     }
 }

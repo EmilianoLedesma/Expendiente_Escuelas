@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
 use App\Listeners\CrearSolicitanteAlRegistrarUsuario;
+use App\Livewire\Hooks\LimpiarYValidarAlCapturar;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Support\Facades\Blade;
@@ -23,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
             AlmacenDocumentos::class,
             AlmacenDocumentosLocal::class,
         );
+
+        // Livewire skips TrimStrings for its own requests: clean every captured
+        // text value and validate that one field as soon as it changes. Must be
+        // registered here, not in boot(): Livewire wires its component hooks
+        // while booting, before this provider's boot() runs.
+        Livewire::componentHook(LimpiarYValidarAlCapturar::class);
     }
 
     /**

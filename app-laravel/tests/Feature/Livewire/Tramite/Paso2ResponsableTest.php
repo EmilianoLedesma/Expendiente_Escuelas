@@ -402,13 +402,13 @@ class Paso2ResponsableTest extends TestCase
             ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->set('personaFisicaForm.rfc', 'perj850620ab1')
-            ->set('personaFisicaForm.curp', 'perj850620mqrrn01')
+            ->set('personaFisicaForm.curp', 'perj850620mqtrrn01')
             ->call('guardarResponsable')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('personas_fisicas', [
             'rfc' => 'PERJ850620AB1',
-            'curp' => 'PERJ850620MQRRN01',
+            'curp' => 'PERJ850620MQTRRN01',
         ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Application\Infraestructura;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
@@ -212,12 +213,20 @@ class RegistrarInfraestructuraNivel
     {
         $errores = [];
 
+        // Además de "no negativo", el rango de la columna (SMALLINT, NUMERIC(10,2),
+        // NUMERIC(8,2), INTEGER): fuera de él sería un error de base de datos.
+        $fueraDeRango = fn (int|float|null $valor, int|float $maximo): bool => $valor !== null && $valor > $maximo;
+
         if ($datos->numeroAulas < 0) {
             $errores['numeroAulas'] = 'El número de aulas no puede ser negativo.';
+        } elseif ($fueraDeRango($datos->numeroAulas, ReglasCaptura::MAX_SMALLINT)) {
+            $errores['numeroAulas'] = 'El número de aulas no debe ser mayor que '.ReglasCaptura::MAX_SMALLINT.'.';
         }
 
         if ($datos->superficieAulasM2 !== null && $datos->superficieAulasM2 < 0) {
             $errores['superficieAulasM2'] = 'La superficie de aulas no puede ser negativa.';
+        } elseif ($fueraDeRango($datos->superficieAulasM2, ReglasCaptura::MAX_NUMERIC_10_2)) {
+            $errores['superficieAulasM2'] = 'La superficie de aulas no debe ser mayor que '.ReglasCaptura::MAX_NUMERIC_10_2.'.';
         }
 
         $tiposAplicables = DB::table('niveles_tipos_espacios')
@@ -239,9 +248,11 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
-            foreach (['cantidad' => 'cantidad', 'superficieM2' => 'superficieM2', 'capacidadPromedio' => 'capacidadPromedio'] as $campo => $rutaCampo) {
+            foreach (['cantidad' => ReglasCaptura::MAX_SMALLINT, 'superficieM2' => ReglasCaptura::MAX_NUMERIC_10_2, 'capacidadPromedio' => ReglasCaptura::MAX_SMALLINT] as $campo => $maximo) {
                 if ($espacio[$campo] !== null && $espacio[$campo] < 0) {
-                    $errores["{$prefijo}.{$rutaCampo}"] = 'No puede ser negativo.';
+                    $errores["{$prefijo}.{$campo}"] = 'No puede ser negativo.';
+                } elseif ($fueraDeRango($espacio[$campo], $maximo)) {
+                    $errores["{$prefijo}.{$campo}"] = "No debe ser mayor que {$maximo}.";
                 }
             }
 
@@ -250,10 +261,14 @@ class RegistrarInfraestructuraNivel
 
                 if ($material['numeroTitulos'] !== null && $material['numeroTitulos'] < 0) {
                     $errores["{$prefijoMaterial}.numeroTitulos"] = 'No puede ser negativo.';
+                } elseif ($fueraDeRango($material['numeroTitulos'], ReglasCaptura::MAX_INTEGER)) {
+                    $errores["{$prefijoMaterial}.numeroTitulos"] = 'No debe ser mayor que '.ReglasCaptura::MAX_INTEGER.'.';
                 }
 
                 if ($material['numeroVolumenes'] !== null && $material['numeroVolumenes'] < 0) {
                     $errores["{$prefijoMaterial}.numeroVolumenes"] = 'No puede ser negativo.';
+                } elseif ($fueraDeRango($material['numeroVolumenes'], ReglasCaptura::MAX_INTEGER)) {
+                    $errores["{$prefijoMaterial}.numeroVolumenes"] = 'No debe ser mayor que '.ReglasCaptura::MAX_INTEGER.'.';
                 }
             }
         }
@@ -277,11 +292,15 @@ class RegistrarInfraestructuraNivel
             foreach (['cantidadRetretes', 'cantidadMingitorios', 'cantidadLavabos', 'cantidadBacinicas'] as $campo) {
                 if ($sanitario[$campo] !== null && $sanitario[$campo] < 0) {
                     $errores["{$prefijo}.{$campo}"] = 'No puede ser negativo.';
+                } elseif ($fueraDeRango($sanitario[$campo], ReglasCaptura::MAX_SMALLINT)) {
+                    $errores["{$prefijo}.{$campo}"] = 'No debe ser mayor que '.ReglasCaptura::MAX_SMALLINT.'.';
                 }
             }
 
             if ($sanitario['superficieM2'] !== null && $sanitario['superficieM2'] < 0) {
                 $errores["{$prefijo}.superficieM2"] = 'No puede ser negativo.';
+            } elseif ($fueraDeRango($sanitario['superficieM2'], ReglasCaptura::MAX_NUMERIC_8_2)) {
+                $errores["{$prefijo}.superficieM2"] = 'No debe ser mayor que '.ReglasCaptura::MAX_NUMERIC_8_2.'.';
             }
         }
 

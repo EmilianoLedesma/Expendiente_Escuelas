@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\CatalogosInfraestructura;
@@ -85,28 +86,42 @@ class InfraestructuraNivel extends Component
         }
     }
 
-    public function guardar(RegistrarInfraestructuraNivel $registrarInfraestructura): void
+    /**
+     * Límites = tipo de la columna en el DDL: SMALLINT para cantidades,
+     * NUMERIC(10,2) para superficies de espacios y aulas, NUMERIC(8,2) para
+     * sanitarios, INTEGER para el acervo de biblioteca.
+     */
+    protected function rules(): array
     {
         $bodegaId = $this->idTipoBodega();
 
-        $this->validate([
-            'numeroAulas' => ['required', 'integer', 'min:1', 'max:32767'],
-            'superficieAulasM2' => ['nullable', 'numeric', 'min:0'],
-            'espacios.*.cantidad' => ['nullable', 'integer', 'min:0', 'max:32767'],
-            'espacios.*.superficieM2' => ['nullable', 'numeric', 'min:0'],
-            'espacios.*.capacidadPromedio' => ['nullable', 'integer', 'min:0', 'max:32767'],
-            'espacios.*.destinadoA' => ['nullable', 'string', 'max:200'],
+        return [
+            'numeroAulas' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT, min: 1, requerido: true),
+            'superficieAulasM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
+            'espacios.*.cantidad' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
+            'espacios.*.superficieM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
+            'espacios.*.capacidadPromedio' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
+            'espacios.*.destinadoA' => ReglasCaptura::texto(max: 200),
             "espacios.{$bodegaId}.destinadoA" => ['nullable', 'in:limpieza,general,otro'],
-            'espacios.*.campoFutbolTipoSuperficie' => ['nullable', 'string', 'max:50'],
-            'espacios.*.campoFutbolFormato' => ['nullable', 'string', 'max:20'],
-            'sanitarios.*.cantidadRetretes' => ['nullable', 'integer', 'min:0', 'max:32767'],
-            'sanitarios.*.cantidadMingitorios' => ['nullable', 'integer', 'min:0', 'max:32767'],
-            'sanitarios.*.cantidadLavabos' => ['nullable', 'integer', 'min:0', 'max:32767'],
-            'sanitarios.*.superficieM2' => ['nullable', 'numeric', 'min:0'],
-            'sanitarios.*.cantidadBacinicas' => ['nullable', 'integer', 'min:0', 'max:32767'],
-            'materialesBiblioteca.*.numeroTitulos' => ['nullable', 'integer', 'min:0'],
-            'materialesBiblioteca.*.numeroVolumenes' => ['nullable', 'integer', 'min:0'],
-        ]);
+            'espacios.*.ventilacionNatural' => ['nullable', 'boolean'],
+            'espacios.*.iluminacionNatural' => ['nullable', 'boolean'],
+            'espacios.*.campoFutbolTipoSuperficie' => ReglasCaptura::texto(max: 50),
+            'espacios.*.campoFutbolFormato' => ReglasCaptura::texto(max: 20),
+            'sanitarios.*.cantidadRetretes' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
+            'sanitarios.*.cantidadMingitorios' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
+            'sanitarios.*.cantidadLavabos' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
+            'sanitarios.*.superficieM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_8_2),
+            'sanitarios.*.ventilacionNatural' => ['nullable', 'boolean'],
+            'sanitarios.*.iluminacionNatural' => ['nullable', 'boolean'],
+            'sanitarios.*.cantidadBacinicas' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
+            'materialesBiblioteca.*.numeroTitulos' => ReglasCaptura::entero(ReglasCaptura::MAX_INTEGER),
+            'materialesBiblioteca.*.numeroVolumenes' => ReglasCaptura::entero(ReglasCaptura::MAX_INTEGER),
+        ];
+    }
+
+    public function guardar(RegistrarInfraestructuraNivel $registrarInfraestructura): void
+    {
+        $this->validate();
 
         try {
             $registrarInfraestructura->ejecutar(
@@ -148,8 +163,11 @@ class InfraestructuraNivel extends Component
             ->get();
     }
 
-    /** Categorías de sanitario aplicables al nivel en curso y aún no capturadas por el plantel. */
-    /** @return list<string> */
+    /**
+     * Categorías de sanitario aplicables al nivel en curso y aún no capturadas por el plantel.
+     *
+     * @return list<string>
+     */
     public function categoriasSanitarios(): array
     {
         $aplicables = app(CategoriasSanitariosPorNivel::class)->paraNivel($this->escuelaNivel->nivelEducativo->clave);

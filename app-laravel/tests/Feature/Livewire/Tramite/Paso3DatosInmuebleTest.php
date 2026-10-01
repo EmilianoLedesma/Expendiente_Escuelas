@@ -225,13 +225,14 @@ class Paso3DatosInmuebleTest extends TestCase
             ]));
         });
 
-        // latitud dentro de rango para que la validación de Livewire (que ya
+        // latitud (con su longitud: van en par) dentro de rango para que la validación de Livewire (que ya
         // la cubre client-side) no intercepte antes de llegar al caso de uso
         // mockeado — así se prueba específicamente el catch de DatosInvalidos.
         Livewire::actingAs($this->solicitante->user)
             ->test(DatosInmueble::class, ['escuelaNivel' => $escuelaNivel])
             ->set('metrosTotales', 900)
             ->set('latitud', 20.0)
+            ->set('longitud', -100.0)
             ->call('guardar')
             ->assertHasErrors('latitud');
 
