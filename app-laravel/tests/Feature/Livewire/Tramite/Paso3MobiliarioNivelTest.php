@@ -73,7 +73,7 @@ class Paso3MobiliarioNivelTest extends TestCase
         $response = $this->actingAs($solicitante->user)
             ->get(route('tramite.paso3-mobiliario', ['escuelaNivel' => $escuelaNivel->id]));
 
-        $response->assertRedirect(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
+        $response->assertRedirect(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]));
 
         $pasoId = DB::table('pasos_captura')->where('clave', 'mobiliario')->value('id');
         $this->assertDatabaseHas('escuela_nivel_pasos', [
@@ -93,7 +93,7 @@ class Paso3MobiliarioNivelTest extends TestCase
             ->test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
             ->set("cantidades.{$conceptoId}", 5)
             ->call('guardar')
-            ->assertRedirect(route('tramite.paso3-proximos-pasos', ['escuelaNivel' => $escuelaNivel->id]));
+            ->assertRedirect(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]));
 
         $this->assertDatabaseHas('mobiliario_nivel', [
             'escuela_nivel_id' => $escuelaNivel->id,

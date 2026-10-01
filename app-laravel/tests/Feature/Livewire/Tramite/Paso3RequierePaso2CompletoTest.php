@@ -27,6 +27,9 @@ class Paso3RequierePaso2CompletoTest extends TestCase
         'tramite.paso3-inmueble',
         'tramite.paso3-infraestructura',
         'tramite.paso3-mobiliario',
+        'tramite.paso3-plan-estudios',
+        'tramite.paso3-plantilla',
+        'tramite.paso3-matricula',
         'tramite.paso3-proximos-pasos',
     ];
 

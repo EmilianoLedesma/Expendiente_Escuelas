@@ -105,7 +105,9 @@ class ResumenTramitePaginaTest extends TestCase
             ->assertSee('href="'.route('tramite.paso3-inmueble', ['escuelaNivel' => $primaria->id]).'"', false)
             ->assertSee('Completa primero: Datos del inmueble')
             ->assertSee('No aplica para este nivel')
-            ->assertSee('No disponible aún');
+            ->assertSee('Plantilla docente')
+            ->assertSee('Matrícula')
+            ->assertDontSee('No disponible aún');
     }
 
     public function test_tras_seleccionar_niveles_el_hub_ofrece_comenzar_los_documentos_del_primer_nivel(): void

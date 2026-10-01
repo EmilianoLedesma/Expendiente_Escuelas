@@ -184,6 +184,7 @@ class ValidacionPorNivelTest extends TestCase
             'escuela' => ['numero' => '0001', 'nombre' => null, 'domicilio' => 'Centro'],
             'listaParaEnvio' => $validacion->listaParaEnvio,
             'filas' => $validacion->filas,
+            'capacidad' => $validacion->capacidad,
             'niveles' => $validacion->niveles,
             'generadaEn' => $validacion->generadaEn,
         ])->render();

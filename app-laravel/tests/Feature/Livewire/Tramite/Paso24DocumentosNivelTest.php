@@ -74,7 +74,7 @@ class Paso24DocumentosNivelTest extends TestCase
 
         $this->get(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('Primaria · Paso 5 de 7')
+            ->assertSee('Primaria · Paso 5 de 10')
             ->assertSee('aria-current="step"', false)
             ->assertSee('Aquí estás');
     }

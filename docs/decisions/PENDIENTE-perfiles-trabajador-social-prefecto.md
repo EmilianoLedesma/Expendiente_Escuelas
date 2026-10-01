@@ -70,3 +70,7 @@ pendiente, no una pregunta para SEDEQ.
 ---
 
 **Nota:** Este pendiente permanece abierto hasta que SEDEQ proporcione la información requerida.
+
+## Nota (2026-09-30, rama `feat/motor-capacidad-instalada`, sin mergear)
+
+El hueco de `secundaria.personal.educacion_fisica` se atiende **en el Motor**, opción (b): se cuentan los Docentes Titulares con asignatura "Educación Física" (`personal_asignaturas`), sin columna `asignatura_id` nueva. Es provisional; ver `PENDIENTE-motor-capacidad-provisionales.md` P10. La pregunta a SEDEQ sobre los perfiles de Trabajador Social y Prefecto sigue abierta.
