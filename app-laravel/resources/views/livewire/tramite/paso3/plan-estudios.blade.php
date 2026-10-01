@@ -3,7 +3,7 @@
         <x-slot:intro>Indica cómo se impartirá el nivel: modalidad y plan de estudios.</x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="guardar" class="space-y-lg">
+    <form novalidate wire:submit="guardar" class="space-y-lg">
         <x-ui.error-summary />
 
         <x-ui.radio-group id="modalidad" legend="Modalidad" wire:model.live="modalidad"
@@ -22,7 +22,7 @@
         </p>
 
         <x-ui.field id="planEstudiosReferencia" label="Plan de estudios" hint="Nombre o referencia del plan que se impartirá (por ejemplo, el plan oficial de la SEP)." optional>
-            <x-ui.input wire:model="planEstudiosReferencia" maxlength="200" />
+            <x-ui.input wire:model.blur="planEstudiosReferencia" maxlength="200" />
         </x-ui.field>
 
         <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />

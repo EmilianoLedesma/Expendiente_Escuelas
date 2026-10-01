@@ -3,7 +3,7 @@
         <x-slot:intro>Registra a cada persona que laborará en el nivel (Anexo 1), bajo protesta de decir verdad. Incluye al Director Técnico.</x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="guardar">
+    <form novalidate wire:submit="guardar">
         <x-ui.error-summary />
 
         <ol id="personas" class="space-y-lg">
@@ -51,8 +51,8 @@
                             </x-ui.field>
                         @endif
 
-                        <x-ui.field id="personas.{{ $i }}.nombre" label="Nombre completo" class="sm:col-span-2"><x-ui.input wire:model="personas.{{ $i }}.nombre" /></x-ui.field>
-                        <x-ui.field id="personas.{{ $i }}.nacionalidad" label="Nacionalidad"><x-ui.input wire:model="personas.{{ $i }}.nacionalidad" /></x-ui.field>
+                        <x-ui.field id="personas.{{ $i }}.nombre" label="Nombre completo" class="sm:col-span-2"><x-ui.input maxlength="200" wire:model.blur="personas.{{ $i }}.nombre" /></x-ui.field>
+                        <x-ui.field id="personas.{{ $i }}.nacionalidad" label="Nacionalidad"><x-ui.input maxlength="100" wire:model.blur="personas.{{ $i }}.nacionalidad" /></x-ui.field>
                         <x-ui.field id="personas.{{ $i }}.sexo" label="Sexo">
                             <x-ui.select wire:model="personas.{{ $i }}.sexo">
                                 <option value="">Selecciona</option>
@@ -60,8 +60,8 @@
                                 <option value="M">M</option>
                             </x-ui.select>
                         </x-ui.field>
-                        <x-ui.field id="personas.{{ $i }}.estudios" label="Estudios"><x-ui.input wire:model="personas.{{ $i }}.estudios" /></x-ui.field>
-                        <x-ui.field id="personas.{{ $i }}.cedulaODocumento" label="Cédula profesional o documento académico"><x-ui.input wire:model="personas.{{ $i }}.cedulaODocumento" /></x-ui.field>
+                        <x-ui.field id="personas.{{ $i }}.estudios" label="Estudios"><x-ui.input maxlength="200" wire:model.blur="personas.{{ $i }}.estudios" /></x-ui.field>
+                        <x-ui.field id="personas.{{ $i }}.cedulaODocumento" label="Cédula profesional o documento académico"><x-ui.input maxlength="100" wire:model.blur="personas.{{ $i }}.cedulaODocumento" /></x-ui.field>
                     </div>
                 </li>
             @endforeach

@@ -53,24 +53,24 @@
                 @php($form = $clave === 'ine' ? 'ineForm' : 'constanciaCurpForm')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" :accion="$clave === 'ine' ? 'guardarIne' : 'guardarConstanciaCurp'">
                     <x-ui.field :id="$form.'.nombre'" :label="$clave === 'ine' ? 'Nombre como aparece en la credencial' : 'Nombre como aparece en la constancia'" :hint="$identidadAyuda">
-                        <x-ui.input wire:model="{{ $form }}.nombre" />
+                        <x-ui.input maxlength="200" wire:model.blur="{{ $form }}.nombre" />
                     </x-ui.field>
                     <x-ui.field :id="$form.'.curp'" label="CURP">
-                        <x-ui.input wire:model="{{ $form }}.curp" class="uppercase" maxlength="18" />
+                        <x-ui.input wire:model.blur="{{ $form }}.curp" class="uppercase" maxlength="18" />
                     </x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'constancia_situacion_fiscal')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarSituacionFiscal">
-                    <x-ui.field id="situacionFiscalForm.nombre" label="Nombre o razón social como aparece en la constancia"><x-ui.input wire:model="situacionFiscalForm.nombre" /></x-ui.field>
-                    <x-ui.field id="situacionFiscalForm.rfc" label="RFC"><x-ui.input wire:model="situacionFiscalForm.rfc" class="uppercase" maxlength="13" /></x-ui.field>
+                    <x-ui.field id="situacionFiscalForm.nombre" label="Nombre o razón social como aparece en la constancia"><x-ui.input maxlength="200" wire:model.blur="situacionFiscalForm.nombre" /></x-ui.field>
+                    <x-ui.field id="situacionFiscalForm.rfc" label="RFC"><x-ui.input wire:model.blur="situacionFiscalForm.rfc" class="uppercase" maxlength="13" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'certificado_numero_oficial')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarNumeroOficial">
-                    <x-ui.field id="numeroOficialForm.calle" label="Calle" hint="Tal como aparece en el certificado."><x-ui.input wire:model="numeroOficialForm.calle" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" optional><x-ui.input wire:model="numeroOficialForm.numeroExt" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input wire:model="numeroOficialForm.colonia" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.municipio" label="Municipio"><x-ui.input wire:model="numeroOficialForm.municipio" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.codigoPostal" label="Código postal"><x-ui.input wire:model="numeroOficialForm.codigoPostal" inputmode="numeric" maxlength="5" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.calle" label="Calle" hint="Tal como aparece en el certificado."><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.calle" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroExt" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.colonia" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.municipio" label="Municipio"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.municipio" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.codigoPostal" label="Código postal"><x-ui.input wire:model.blur="numeroOficialForm.codigoPostal" inputmode="numeric" maxlength="5" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'escritura_inmueble')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarAcreditacion">
@@ -82,38 +82,38 @@
                     />
 
                     @if ($acreditacionForm->tipo === 'escritura_publica')
-                        <x-ui.field id="acreditacionForm.numeroEscritura" label="Número de escritura"><x-ui.input wire:model="acreditacionForm.numeroEscritura" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.notarioNombre" label="Nombre del notario"><x-ui.input wire:model="acreditacionForm.notarioNombre" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.notarioNumero" label="Número del notario" optional><x-ui.input wire:model="acreditacionForm.notarioNumero" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.notarioLocalidad" label="Localidad del notario" optional><x-ui.input wire:model="acreditacionForm.notarioLocalidad" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.folioRpp" label="Folio del Registro Público de la Propiedad" optional><x-ui.input wire:model="acreditacionForm.folioRpp" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción RPP" optional><x-ui.input type="date" wire:model="acreditacionForm.fechaInscripcionRpp" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.numeroEscritura" label="Número de escritura"><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.numeroEscritura" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioNombre" label="Nombre del notario"><x-ui.input maxlength="150" wire:model.blur="acreditacionForm.notarioNombre" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioNumero" label="Número del notario" optional><x-ui.input maxlength="20" wire:model.blur="acreditacionForm.notarioNumero" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioLocalidad" label="Localidad del notario" optional><x-ui.input maxlength="100" wire:model.blur="acreditacionForm.notarioLocalidad" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.folioRpp" label="Folio del Registro Público de la Propiedad" optional><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.folioRpp" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción RPP" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInscripcionRpp" /></x-ui.field>
                     @endif
 
                     @if (in_array($acreditacionForm->tipo, ['arrendamiento', 'comodato']))
-                        <x-ui.field id="acreditacionForm.arrendadorComodante" label="Arrendador / comodante"><x-ui.input wire:model="acreditacionForm.arrendadorComodante" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.arrendatarioComodatario" label="Arrendatario / comodatario"><x-ui.input wire:model="acreditacionForm.arrendatarioComodatario" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.fechaContrato" label="Fecha del contrato"><x-ui.input type="date" wire:model="acreditacionForm.fechaContrato" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.vigenciaContrato" label="Vigencia del contrato"><x-ui.input type="date" wire:model="acreditacionForm.vigenciaContrato" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado" optional><x-ui.input wire:model="acreditacionForm.usoAutorizado" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.arrendadorComodante" label="Arrendador / comodante"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.arrendadorComodante" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.arrendatarioComodatario" label="Arrendatario / comodatario"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.arrendatarioComodatario" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaContrato" label="Fecha del contrato"><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaContrato" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.vigenciaContrato" label="Vigencia del contrato"><x-ui.input type="date" wire:model.blur="acreditacionForm.vigenciaContrato" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado" optional><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
                     @endif
 
                     @if ($acreditacionForm->tipo === 'otro')
-                        <x-ui.field id="acreditacionForm.otroEspecifique" label="Especifique"><x-ui.input wire:model="acreditacionForm.otroEspecifique" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroEspecifique" label="Especifique"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroEspecifique" /></x-ui.field>
                     @endif
 
-                    <x-ui.field id="acreditacionForm.observaciones" label="Observaciones" optional><x-ui.textarea wire:model="acreditacionForm.observaciones" /></x-ui.field>
+                    <x-ui.field id="acreditacionForm.observaciones" label="Observaciones" optional><x-ui.textarea maxlength="1000" wire:model.blur="acreditacionForm.observaciones" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'dictamen_uso_suelo')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarDictamen">
-                    <x-ui.field id="dictamenForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model="dictamenForm.fechaEmision" /></x-ui.field>
+                    <x-ui.field id="dictamenForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="dictamenForm.fechaEmision" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'constancia_seguridad_estructural')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarConstancia">
-                    <x-ui.field id="constanciaForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model="constanciaForm.fechaEmision" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoNombre" label="Nombre del perito"><x-ui.input wire:model="constanciaForm.peritoNombre" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro DRO"><x-ui.input wire:model="constanciaForm.peritoRegistroDro" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoRegistroVigencia" label="Vigencia del registro" optional><x-ui.input type="date" wire:model="constanciaForm.peritoRegistroVigencia" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="constanciaForm.fechaEmision" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoNombre" label="Nombre del perito"><x-ui.input maxlength="200" wire:model.blur="constanciaForm.peritoNombre" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro DRO"><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoRegistroDro" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoRegistroVigencia" label="Vigencia del registro" optional><x-ui.input type="date" wire:model.blur="constanciaForm.peritoRegistroVigencia" /></x-ui.field>
                 </x-tramite.documento-row>
             @else
                 {{-- WS-5a M1: toda clave aplicable sin bloque propio se sube como documento simple. --}}

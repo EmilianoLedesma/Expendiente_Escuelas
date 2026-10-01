@@ -38,9 +38,9 @@ new #[Layout('layouts.guest')] class extends Component
         <x-slot:intro>Esta es un área segura. Confirma tu contraseña para continuar.</x-slot:intro>
     </x-ui.page-header>
 
-    <form wire:submit="confirmPassword" class="space-y-md">
+    <form novalidate wire:submit="confirmPassword" class="space-y-md">
         <x-ui.error-summary />
-        <x-ui.field id="password" label="Contraseña"><x-ui.input type="password" wire:model="password" autocomplete="current-password" /></x-ui.field>
+        <x-ui.field id="password" label="Contraseña"><x-ui.input type="password" wire:model.blur="password" autocomplete="current-password" /></x-ui.field>
         <div class="flex justify-end border-t border-hairline pt-lg">
             <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="confirmPassword">Confirmar</x-ui.button-primary>
         </div>

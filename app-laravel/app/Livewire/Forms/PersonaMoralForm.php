@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Application\Captura\ReglasCaptura;
 use Livewire\Form;
 
 class PersonaMoralForm extends Form
@@ -27,15 +28,30 @@ class PersonaMoralForm extends Form
     public function rules(): array
     {
         return [
-            'razonSocial' => ['required', 'string', 'max:200'],
-            'numeroEscrituraConstitutiva' => ['nullable', 'string', 'max:50'],
-            'fechaEscrituraConstitutiva' => ['nullable', 'date'],
-            'notarioNombre' => ['nullable', 'string', 'max:150'],
-            'notarioNumero' => ['nullable', 'string', 'max:20'],
-            'notarioCiudad' => ['nullable', 'string', 'max:100'],
-            'folioRegistroPublico' => ['nullable', 'string', 'max:50'],
-            'fechaInscripcionRpp' => ['nullable', 'date'],
-            'nombreRepresentanteLegal' => ['required', 'string', 'max:200'],
+            'razonSocial' => ReglasCaptura::texto(requerido: true, max: 200),
+            'numeroEscrituraConstitutiva' => ReglasCaptura::texto(max: 50),
+            'fechaEscrituraConstitutiva' => ReglasCaptura::fechaPasada(),
+            'notarioNombre' => ReglasCaptura::nombrePersona(max: 150),
+            'notarioNumero' => ReglasCaptura::texto(max: 20),
+            'notarioCiudad' => ReglasCaptura::texto(max: 100),
+            'folioRegistroPublico' => ReglasCaptura::texto(max: 50),
+            'fechaInscripcionRpp' => ReglasCaptura::fechaPasada(),
+            'nombreRepresentanteLegal' => ReglasCaptura::nombrePersona(requerido: true, max: 200),
+        ];
+    }
+
+    public function validationAttributes(): array
+    {
+        return [
+            'razonSocial' => 'razón social',
+            'numeroEscrituraConstitutiva' => 'número de escritura constitutiva',
+            'fechaEscrituraConstitutiva' => 'fecha de escritura constitutiva',
+            'notarioNombre' => 'nombre del notario',
+            'notarioNumero' => 'número de notaría',
+            'notarioCiudad' => 'ciudad de la notaría',
+            'folioRegistroPublico' => 'folio del Registro Público',
+            'fechaInscripcionRpp' => 'fecha de inscripción en el Registro Público',
+            'nombreRepresentanteLegal' => 'representante legal',
         ];
     }
 }

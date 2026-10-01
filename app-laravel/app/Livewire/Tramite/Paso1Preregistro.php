@@ -2,6 +2,10 @@
 
 namespace App\Livewire\Tramite;
 
+use App\Application\Captura\Normalizacion;
+use App\Application\Captura\Normalizar;
+use App\Application\Captura\ReglasCaptura;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
 use App\Application\Preregistro\ListarPlantelesDisponibles;
@@ -35,26 +39,31 @@ class Paso1Preregistro extends Component
 
     public string $municipio = '';
 
+    #[Normalizar(Normalizacion::Digitos)]
     public string $codigoPostal = '';
 
+    #[Normalizar(Normalizacion::Telefono)]
     public string $telefono = '';
 
+    #[Normalizar(Normalizacion::Correo)]
     public string $correoElectronico = '';
 
     protected function rules(): array
     {
+        $siEsNuevo = 'required_if:bifurcacion,nuevo';
+
         return [
             'bifurcacion' => ['required', 'in:nuevo,existente'],
             'plantelId' => ['required_if:bifurcacion,existente', 'nullable', 'integer', 'exists:planteles,id'],
-            'calle' => ['required_if:bifurcacion,nuevo', 'nullable', 'string', 'max:150'],
-            'numeroExt' => ['nullable', 'string', 'max:20'],
-            'numeroInt' => ['nullable', 'string', 'max:20'],
-            'colonia' => ['required_if:bifurcacion,nuevo', 'nullable', 'string', 'max:150'],
-            'localidad' => ['nullable', 'string', 'max:150'],
-            'municipio' => ['required_if:bifurcacion,nuevo', 'nullable', 'string', 'max:150'],
-            'codigoPostal' => ['required_if:bifurcacion,nuevo', 'nullable', 'string', 'max:10'],
-            'telefono' => ['nullable', 'string', 'max:20'],
-            'correoElectronico' => ['nullable', 'email', 'max:150'],
+            'calle' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
+            'numeroExt' => ReglasCaptura::texto(max: 20),
+            'numeroInt' => ReglasCaptura::texto(max: 20),
+            'colonia' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
+            'localidad' => ReglasCaptura::texto(max: 150),
+            'municipio' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
+            'codigoPostal' => ReglasCaptura::codigoPostal(requerido: $siEsNuevo),
+            'telefono' => ReglasCaptura::telefono(),
+            'correoElectronico' => ReglasCaptura::correo(max: 150),
         ];
     }
 
@@ -86,6 +95,12 @@ class Paso1Preregistro extends Component
             $resultado = $iniciarTramiteNuevo->ejecutar($dto, auth()->user()->solicitante->getKey());
         } catch (PlantelNoDisponible $e) {
             $this->addError('plantelId', $e->getMessage());
+
+            return;
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
 
             return;
         } catch (InvalidArgumentException $e) {
