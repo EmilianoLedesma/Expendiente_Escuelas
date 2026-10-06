@@ -54,5 +54,9 @@
                 </x-tramite.nivel>
             </x-ui.section>
         @endforeach
+
+        @if ($resumen->puedeEliminar)
+            <x-tramite.eliminar :tramite="$resumen" class="mt-xl" />
+        @endif
     </div>
 </x-tramite-layout>

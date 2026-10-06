@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
 use App\Http\Controllers\Tramite\DescargarDocumentoNivelController;
 use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
+use App\Http\Controllers\Tramite\EliminarTramiteController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
@@ -31,6 +32,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereNumber('escuela')
         ->middleware('can:view,escuela')
         ->name('tramite.resumen');
+
+    // Un segundo envío (trámite ya borrado) vuelve a Mis trámites en vez de un 404.
+    Route::delete('/tramite/{escuela}', EliminarTramiteController::class)
+        ->whereNumber('escuela')
+        ->middleware('can:delete,escuela')
+        ->missing(fn () => redirect()->route('tramite.index')->with('status', 'El trámite ya no existe.'))
+        ->name('tramite.eliminar');
 
     Route::get('/tramite/paso2/{escuela}', Paso2Responsable::class)
         ->middleware('can:update,escuela')
