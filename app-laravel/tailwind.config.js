@@ -34,6 +34,8 @@ export default {
                 'brand-accent': '#4996C4',
                 // Azul institucional de la barra y el pie (tableros_municipales); blanco encima = 5.2:1.
                 'brand-blue': '#266fb6',
+                // Listón decorativo de la onda del pie (nunca lleva texto).
+                'brand-blue-pale': '#c3cfe0',
                 success: '#28a745',
                 warning: '#f59e0b',
                 error: '#ef4444',
