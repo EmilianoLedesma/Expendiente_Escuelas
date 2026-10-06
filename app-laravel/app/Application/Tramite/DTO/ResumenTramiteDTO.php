@@ -21,6 +21,8 @@ final class ResumenTramiteDTO
         public readonly bool $completo,
         public readonly ?string $nombre,
         public readonly DateTimeInterface $iniciadoEl,
+        /** Todos los niveles siguen en captura: el dueño puede eliminar el trámite (EliminarTramite). */
+        public readonly bool $puedeEliminar = false,
     ) {}
 
     /** Número visible del trámite (id de la escuela a 4 dígitos). No es folio_expediente: ese es por nivel y lo asigna SEDEQ. */
