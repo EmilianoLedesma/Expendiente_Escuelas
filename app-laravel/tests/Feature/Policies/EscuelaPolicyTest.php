@@ -5,6 +5,7 @@ namespace Tests\Feature\Policies;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,6 +28,20 @@ class EscuelaPolicyTest extends TestCase
         $response = $this->actingAs($solicitante->user)->get(route('tramite.paso2', ['escuela' => $escuela->id]));
 
         $response->assertOk();
+    }
+
+    public function test_delete_solo_para_el_dueno_y_view_update_sin_cambios(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($dueno);
+        $otro = Solicitante::factory()->create();
+        $sinSolicitante = User::factory()->create();
+
+        foreach (['view', 'update', 'delete'] as $habilidad) {
+            $this->assertTrue($dueno->user->can($habilidad, $escuela), "dueño: {$habilidad}");
+            $this->assertFalse($otro->user->can($habilidad, $escuela), "otro: {$habilidad}");
+            $this->assertFalse($sinSolicitante->can($habilidad, $escuela), "sin solicitante: {$habilidad}");
+        }
     }
 
     public function test_un_no_dueno_recibe_403_en_la_ruta_de_paso2(): void

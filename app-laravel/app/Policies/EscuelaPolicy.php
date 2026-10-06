@@ -30,6 +30,16 @@ class EscuelaPolicy
         return $this->esDueno($user, $escuela);
     }
 
+    /**
+     * Eliminar el trámite: SOLO el dueño, habilidad propia para que abrir
+     * `view` a SEDEQ (o `update` a quien sea) nunca otorgue borrar. La regla
+     * "todos los niveles en captura" vive en EliminarTramite, no aquí.
+     */
+    public function delete(User $user, Escuela $escuela): bool
+    {
+        return $this->esDueno($user, $escuela);
+    }
+
     private function esDueno(User $user, Escuela $escuela): bool
     {
         if ($user->solicitante === null) {
