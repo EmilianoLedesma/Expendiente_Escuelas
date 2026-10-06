@@ -1,7 +1,7 @@
 ---
 version: 2.0
 name: sedeq-design-system
-description: Institutional design system for SEDEQ's (Secretaría de Educación del Estado de Querétaro) digital products. White canvas with navy-blue institutional primary CTAs (#242B57), Cal Sans for display typography, Hanken Grotesk for body and UI, generous whitespace, soft-rounded cards (12px), dark footer closing every page. Educational level colors appear exclusively in data visualizations, tables, and legend chips — never on action buttons.
+description: Institutional design system for SEDEQ's (Secretaría de Educación del Estado de Querétaro) digital products. White canvas with navy-blue institutional primary CTAs (#242B57), Cal Sans for display typography, Hanken Grotesk for body and UI, generous whitespace, soft-rounded cards (12px), an institutional blue top bar and a three-band footer framing every page. Educational level colors appear exclusively in data visualizations, tables, and legend chips — never on action buttons.
 
 colors:
   primary: "#242B57"
@@ -22,6 +22,7 @@ colors:
   on-dark: "#ffffff"
   on-dark-soft: "#a1a1aa"
   brand-accent: "#4996C4"
+  brand-blue: "#266fb6"
   success: "#28a745"
   warning: "#f59e0b"
   error: "#ef4444"
@@ -191,11 +192,28 @@ components:
   button-icon:
     padding: 9px
     rounded: "{rounded.md}"
-  top-nav:
+  # 2026-10-06: top-nav (sticky 56px) replaced by institutional-bar + site-header (normal flow).
+  institutional-bar:
+    backgroundColor: "{colors.brand-blue}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.caption}"
+    minHeight: 44px
+    focusRing: "3px solid #ffffff, offset -3px"
+  site-header:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
-    typography: "{typography.nav-link}"
-    height: 56px
+    logoHeight: 60px
+    logoHeightMobile: 40px
+    position: static
+    shadow: "0 4px 6px rgba(0,0,0,0.1)"
+  site-header-nav-link:
+    textColor: "{colors.muted}"
+    textTransform: uppercase
+    typography: "{typography.body-sm}"
+    minHeight: 44px
+  site-header-nav-link-active:
+    textColor: "{colors.ink}"
+    borderBottom: "3px solid {colors.brand-blue}"
   nav-pill-group:
     backgroundColor: "{colors.surface-soft}"
     textColor: "{colors.ink}"
@@ -299,11 +317,23 @@ components:
     textColor: "{colors.on-dark-soft}"
     rounded: "{rounded.lg}"
     padding: "2rem"
-  footer:
-    backgroundColor: "{colors.surface-dark}"
-    textColor: "{colors.on-dark-soft}"
+  # 2026-10-06: three-band site footer (was single surface-dark band, on-dark-soft text, 64px padding).
+  footer-heraldica:
+    background: "linear-gradient({colors.surface-dark}, {colors.brand-blue})"
+    padding: "32px 16px"
+    imageWidth: 200px
+  footer-contact:
+    backgroundColor: "{colors.brand-blue}"
+    textColor: "{colors.on-dark}"
     typography: "{typography.body-sm}"
-    padding: 64px
+    columns: "1 / 2 (sm) / 4 (lg)"
+    padding: "32px"
+  footer-legal:
+    backgroundColor: "{colors.surface-dark}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.body-sm}"
+    linkDecoration: underline
+    padding: "32px"
 ---
 
 ## Overview
@@ -314,7 +344,7 @@ Type voice splits cleanly into two roles: **Cal Sans** (the display face — use
 
 Component voltage comes from **real data shown directly inside cards** — enrollment statistics, school count metrics, level-by-level breakdowns. The system doesn't illustrate data; it shows it. Educational level colors (`{colors.nivel-*}`) encode category in charts and tables and are never repurposed as interface action colors.
 
-The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the primary CTA, visually closing every page. The footer is the only dark surface in the system; everything above stays white-with-light-gray-cards.
+The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the primary CTA, visually closing every page. ~~The footer is the only dark surface in the system~~ — revised 2026-10-06 (owner decision, see `docs/reports/2026-10-06-navbar-footer.md`): the shell now follows the sibling SEDEQ project `tableros_municipales`. An institutional top bar in `{colors.brand-blue}` (#266fb6, white text 5.2:1) opens every page above a white header with the official logo, and the footer has three bands (heráldica band navy→blue gradient, `{colors.brand-blue}` contact band, `{colors.surface-dark}` legal band). Footer text is white (not `on-dark-soft`) and links are underlined. Content between header and footer stays white-with-light-gray-cards.
 
 **Key Characteristics:**
 - White canvas with navy-blue primary CTA (`{colors.primary}` — #242B57). Buttons are `{rounded.md}` (8px) with weight-600 Hanken Grotesk labels. Institutional without being stiff.
@@ -323,7 +353,7 @@ The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the p
 - Educational level colors — a dedicated eight-color palette for data visualization only. Each level has a fixed color; the palette is never used on buttons, nav, or structural UI elements.
 - `nav-pill-group` (`{component.nav-pill-group}`) — pill-radius wrapper around 2-3 sub-nav segments (e.g. Municipal / Estatal / Nacional; Público / Privado). The active segment renders as a white-canvas pill with subtle inner shadow. Signature interactive component of the system.
 - Avatars are circular (`{rounded.full}`), 36px diameter, with tonal fills.
-- Footer is navy-dark (`{colors.surface-dark}` — #242B57) with muted-white text (`{colors.on-dark-soft}` — #a1a1aa). The dark footer closes every page even though the body above is white.
+- Footer closes every page in three bands (heráldica, `{colors.brand-blue}` contact columns, `{colors.surface-dark}` legal row) with white text; an institutional `{colors.brand-blue}` bar opens every page (revised 2026-10-06, see Overview).
 - Spacing rhythm is `{spacing.section}` (96px) between major bands — tight enough to feel modern but generous enough to breathe.
 - Border radius is hierarchical: `{rounded.md}` (8px) for buttons + inputs, `{rounded.lg}` (12px) for content cards and tables, `{rounded.xl}` (16px) for the hero app-mockup card, `{rounded.pill}` for nav-pill-group + badges, `{rounded.full}` for avatars.
 
@@ -338,8 +368,8 @@ The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the p
 - **Canvas** (`{colors.canvas}` — #ffffff): The default page floor.
 - **Surface Soft** (`{colors.surface-soft}` — #f8f9fa): Nav-pill-group background, disabled input fill, very-soft section separators.
 - **Surface Card** (`{colors.surface-card}` — #f5f7fa): Feature cards, stat cards, badge pill fills, color swatches. Slightly cool-tinted to read as data-neutral.
-- **Surface Dark** (`{colors.surface-dark}` — #242B57): The footer background and featured pricing tier — the only dark surface on every page. Shares the same hex as `{colors.primary}`, creating full-system coherence.
-- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #1a1f3f): Nested cards inside the dark footer or featured tier.
+- **Surface Dark** (`{colors.surface-dark}` — #242B57): The footer legal band (and heráldica gradient start) and featured pricing tier. Since 2026-10-06 it shares the page frame with `{colors.brand-blue}` (institutional bar and footer contact band); inside the content area it remains scarce. Shares the same hex as `{colors.primary}`, creating full-system coherence.
+- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #1a1f3f): Nested cards inside inline dark-footer surfaces or the featured tier.
 - **Hairline** (`{colors.hairline}` — #e5e7eb): 0.5px border tone on light surfaces — inputs, table row dividers, raised card outlines.
 - **Hairline Soft** (`{colors.hairline-soft}` — #f3f4f6): Nearly invisible divider between bands that share the white canvas.
 
@@ -348,8 +378,9 @@ The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the p
 - **Body** (`{colors.body}` — #374151): Default running-text color.
 - **Muted** (`{colors.muted}` — #707F8F): Secondary text — sub-headings, breadcrumbs, chart axis labels, footer body.
 - **Faint** (`{colors.faint}` — #9ca3af): Tertiary text — captions, fine-print, copyright lines.
-- **On Primary / On Dark** (`{colors.on-primary}` / `{colors.on-dark}` — #ffffff): Text on primary buttons and dark footer.
-- **On Dark Soft** (`{colors.on-dark-soft}` — #a1a1aa): Footer link-row text — slightly muted white.
+- **On Primary / On Dark** (`{colors.on-primary}` / `{colors.on-dark}` — #ffffff): Text on primary buttons, the institutional bar and every footer band.
+- **On Dark Soft** (`{colors.on-dark-soft}` — #a1a1aa): Text on inline `dark-footer` surfaces only. The site footer uses `{colors.on-dark}` (pure white) since 2026-10-06.
+- **Brand Blue** (`{colors.brand-blue}` — #266fb6): Institutional bar and footer contact band (from the sibling SEDEQ project `tableros_municipales`). White text on it is 5.2:1; focus rings on it are white (the accent gives 1.6:1). Not a CTA colour.
 
 ### Semantic
 - **Success** (`{colors.success}` — #28a745): Complete data, verified CURP, successful export.
@@ -400,7 +431,7 @@ The split is functional:
 | `{typography.section-eyebrow}` | 11px | 600 | 1.0 | 2px | Section number + name in uppercase — `{colors.brand-accent}` |
 | `{typography.code}` | 13px | 400 | 1.5 | 0 | Code, SQL queries, token refs — JetBrains Mono |
 | `{typography.button}` | 13px | 600 | 1.0 | 0 | Button labels |
-| `{typography.nav-link}` | 13px | 500 | 1.4 | 0 | Top-nav items |
+| `{typography.nav-link}` | 13px | 500 | 1.4 | 0 | Compact nav items (the site-header nav uses body-sm uppercase) |
 
 ### Principles
 Cal Sans is the brand voice — every display headline uses it. Hanken Grotesk handles the supporting type. The boundary is strict: never put body copy in Cal Sans, never put a display headline in Hanken Grotesk. Cal Sans without negative letter-spacing reads as off-brand — the -0.3 to -1.5px tracking is part of the voice.
@@ -427,7 +458,7 @@ If Cal Sans is unavailable, **Hanken Grotesk** at weight 600 with `-0.04em` lett
 - **Feature card grids:** 3-up at desktop, 2-up at tablet, 1-up at mobile.
 - **Stat cards:** 4-up at desktop, 2-up at tablet, 1-up at mobile.
 - **Color swatches:** 4-up grid (`repeat(4, 1fr)`).
-- **Footer:** 3-column link grid inline; 4-column at full-page footer.
+- **Footer:** 3-column link grid inline; full-page footer contact band 1 → 2 → 4 columns.
 
 ### Whitespace Philosophy
 SEDEQ's system uses generous but calibrated whitespace — 96px between sections, 24–32px internal card padding. The rhythm is designed for fast scanning: every section has a single headline + description + supporting components, never densely-packed lists. The result reads as institutional-trustworthy, not bureaucratic-dense.
@@ -440,7 +471,7 @@ SEDEQ's system uses generous but calibrated whitespace — 96px between sections
 | Soft hairline | 0.5px `{colors.hairline}` border | Inputs, table row dividers, `{component.card-raised}` |
 | Card surface | `{colors.surface-card}` background — no shadow | Feature cards, stat cards, color swatches |
 | Subtle drop shadow | `0 2px 12px rgba(36,43,87,0.07)` | Hero app-mockup card |
-| Featured tier | `{colors.surface-dark}` background, no extra shadow | Footer, featured pricing tier — color contrast does the elevation work |
+| Featured tier | `{colors.surface-dark}` background, no extra shadow | Footer legal band, featured pricing tier — color contrast does the elevation work |
 
 The elevation philosophy is soft and precise — the system uses a single tonal shadow at low alpha, colored with the system's own navy blue (`rgba(36,43,87,...)`), never generic black. No heavy shadows, no neumorphism, no glassmorphism.
 
@@ -466,7 +497,13 @@ The elevation philosophy is soft and precise — the system uses a single tonal 
 
 ### Top Navigation
 
-**`top-nav`** — White nav bar pinned to the top of every page. 56px tall, `{colors.canvas}` background, 0.5px bottom border in `{colors.hairline}`, `position: sticky`. Carries the brand name in Cal Sans at left, section links in `{typography.nav-link}` center, and a small `{component.button-primary}` at right with a download or action icon.
+~~`top-nav` — white sticky 56px bar~~ — replaced 2026-10-06 by the two pieces below (owner decision, `docs/reports/2026-10-06-navbar-footer.md`). Both live in one Blade component (`x-shell.encabezado`) used by every layout; data comes from `config/sedeq.php`.
+
+**`institutional-bar`** — First band of every page, `{colors.brand-blue}`, white text. Left: government links (Portal Transparencia, Portal Prensa) in uppercase caption. Right: Chatbot, Facebook, X, Instagram, YouTube and the phone, icon + visible label on desktop, icon + screen-reader label on mobile (never hover-only text). Targets ≥ 44px; external links open in a new tab and say so in their accessible name. On mobile it wraps to two centered rows. Focus ring is white with a -3px offset (drawn inside the link so the single-row bar never clips it).
+
+**`site-header`** — White band with shadow, **normal flow (not sticky/fixed)**. Official logo (60px tall, 40px on mobile) linked to the user's home, then the system title "Trámite de Incorporación de Escuelas Particulares". Right: account nav (`<nav aria-label="Cuenta">`) with "Mis trámites", the user name and "Cerrar sesión", uppercase with tracking; the current page gets a 3px `{colors.brand-blue}` bottom border plus `aria-current="page"`. No hamburger and no JS menu: the nav is short enough to wrap.
+
+The skip link "Saltar al contenido" precedes both and targets `#contenido`.
 
 **`nav-pill-group`** — A pill-radius wrapper around 2–3 sub-nav segments (e.g. Municipal / Estatal / Nacional; Público / Privado). Background `{colors.surface-soft}` with 4px internal padding, rounded `{rounded.pill}`. Active segment renders as a white-canvas pill with a subtle drop shadow inside the wrapper. The pill-in-pill treatment is one of the system's signature interactive components.
 
@@ -502,7 +539,7 @@ The elevation philosophy is soft and precise — the system uses a single tonal 
 
 **`dark-footer`** — Inline dark surface used inside content sections for featured tiers and multi-column link lists. Background `{colors.surface-dark}` (#242B57), rounded `{rounded.lg}`, 3-column grid. Column headings at 10px / 700 in `rgba(255,255,255,0.35)` uppercase. Link text in `rgba(255,255,255,0.55)`, hovering to `rgba(255,255,255,0.85)`.
 
-**`footer`** — Full-page dark footer closing every page. Background `{colors.surface-dark}`, padding 64px, 4-column link grid. Brand name in Cal Sans white top-left. The footer is the only dark surface on every page — the deliberate inversion visually closes the scroll.
+**`footer`** — Full-page footer closing every page, in three bands (heráldica, `{colors.brand-blue}` contact, `{colors.surface-dark}` legal) since 2026-10-06. Full spec under "CTA / Footer" below.
 
 ### Inputs & Forms
 
@@ -549,7 +586,11 @@ Charts follow these principles:
 
 **`dark-footer` (inline)** — Used inside page sections for featured tiers and multi-column navigation blocks. Background `{colors.surface-dark}` in a 3-column grid. See Cards section above.
 
-**`footer` (full-page)** — Closes every page. Background `{colors.surface-dark}`, 4-column link grid, 64px padding. The Cal Sans brand name anchors the top-left in white. The footer is the only dark surface on every page — the deliberate inversion is part of the editorial rhythm.
+**`footer` (full-page, three bands — since 2026-10-06)** — Closes every page (`x-shell.pie`, data from `config/sedeq.php`):
+1. `footer-heraldica` — navy→blue gradient with the white state coat of arms (alt "Gobierno de Querétaro"). Self-hosted image; no remote background.
+2. `footer-contact` — `{colors.brand-blue}`, four centered columns (Dirección, Teléfono, Atención ciudadana, Web master) with line icons and uppercase `h3` titles; 1 → 2 → 4 columns.
+3. `footer-legal` — `{colors.surface-dark}`, underlined "Aviso de privacidad", "PODER EJECUTIVO DEL ESTADO DE QUERÉTARO Copyright © {year} Derechos Reservados.", the system version line, and the same social list as the institutional bar.
+White text throughout, white focus ring.
 
 ## Do's and Don'ts
 
@@ -560,15 +601,15 @@ Charts follow these principles:
 - Use `{colors.nivel-*}` colors exclusively for data representation — charts, table dots, legend chips. Never on buttons, nav, or UI structure.
 - Keep `nivel-chip` wrappers unified (`#e8eaf6` bg / `#242E57` text) with only the inner dot changing color. Consistency of the chip matters more than per-level text color variation.
 - Use `{component.feature-card}` (`{colors.surface-card}`) and `{component.card-raised}` (white + hairline) deliberately — card surface signals "data display", raised card signals "interactive UI object".
-- End every page with the dark footer. The light-to-dark transition is part of the editorial rhythm.
+- Frame every page with the shared shell: institutional bar + site header on top, three-band footer at the bottom.
 - Use `{component.nav-pill-group}` for sub-view selectors. The pill-in-pill treatment is the system's signature interactive component.
 
 ### Don't
 - Don't use the educational level color palette (`{colors.nivel-*}`) on buttons, navigation, or any interface action element.
 - Don't bold display weight beyond 600. Cal Sans at 700 loses the institutional-precise voice and reads as heavy.
 - Don't use rounded radius beyond `{rounded.xl}` (16px) on cards. Larger radii read as consumer-app, not government data platform.
-- Don't put dark surface cards anywhere except the footer and the featured pricing tier. The dark surface is a deliberate, scarce signal.
-- Don't repeat the same surface mode in consecutive bands. The system alternates: white → surface-card → white → dark-footer.
+- Don't put dark or `{colors.brand-blue}` surfaces inside the content area (except the featured pricing tier). They belong to the shell frame (bar and footer).
+- Don't repeat the same surface mode in consecutive content bands. The system alternates: white → surface-card → white, then the footer bands.
 - Don't use generic black box-shadows — all shadows in this system carry the navy tint `rgba(36,43,87,...)` for tonal coherence.
 - Don't mix `{colors.brand-accent}` (#4996C4) with the level color palette. The accent is for links and eyebrows; level colors are for data.
 
@@ -578,7 +619,7 @@ Charts follow these principles:
 
 | Name | Width | Key Changes |
 |---|---|---|
-| Mobile | < 768px | Hamburger nav; hero h1 52→28px; hero grid to single column; feature/stat cards 1-up; footer 4 cols → 1 |
+| Mobile | < 768px | Institutional bar wraps to two rows (labels become screen-reader only); header nav wraps (no hamburger); hero h1 52→28px; hero grid to single column; feature/stat cards 1-up; footer 4 cols → 1 |
 | Tablet | 768–1024px | Nav stays horizontal but tightens; nav-pill-group wraps; feature cards 2-up; stat cards 2-up |
 | Desktop | 1024–1440px | Full nav; hero 5fr/4fr grid; 3-up feature cards; 4-up stat cards |
 | Wide | > 1440px | Same as desktop with more outer breathing room; max-width 1200px |
@@ -590,10 +631,10 @@ Charts follow these principles:
 - `{component.nav-pill-group}` tabs have sufficient vertical padding for 44px+ effective tap area inside the wrapper.
 
 ### Collapsing Strategy
-- Top nav collapses to hamburger at < 768px; menu opens as a full-screen sheet.
+- No hamburger: the institutional bar wraps to two rows and the short account nav wraps under the logo.
 - Hero 5fr/4fr grid collapses to single-column on mobile — text and buttons first, app-mockup card below.
 - Feature and stat grids reduce columns rather than scaling cards down.
-- The dark footer maintains its visual contrast signal at every breakpoint.
+- The three footer bands keep their order at every breakpoint; the contact columns stack to one on mobile.
 - Nav-pill-group wraps to multi-row on tablet if segments don't fit horizontally.
 - Data tables on mobile get a wrapper with `overflow-x: auto` — the table structure is preserved, not collapsed.
 
@@ -609,7 +650,7 @@ Charts follow these principles:
 3. Use `{token.refs}` everywhere — never inline hex in production code.
 4. Never document hover. Default and Active/Pressed states only.
 5. Display headlines stay Cal Sans 600 with negative letter-spacing. Body stays Hanken Grotesk 400. The boundary does not blur.
-6. The dark footer is the only dark surface on most pages. Don't add other dark cards casually.
+6. Dark and brand-blue surfaces belong to the shell frame (bar, footer). Don't add other dark cards to content casually.
 7. Educational level colors are a data palette, not a UI palette. Keep them out of the interface layer.
 8. When a new educational service has no assigned level color, use `{colors.nivel-cam}` as a temporary proxy until the token is formally defined.
 9. When in doubt about emphasis: bigger Cal Sans before bolder Cal Sans.
@@ -621,5 +662,5 @@ Charts follow these principles:
 - Hover states are intentionally undocumented per the iteration guide policy.
 - Animation and transition timings (chart load, pill-group active transition, input focus ring) are not in scope for this version.
 - A donut/pie chart component for público vs. privado enrollment distribution has been identified as the next component to specify for the Tableros Municipales module.
-- Full dark mode (interface-level) is out of scope — only `{colors.surface-dark}` footer and inline dark-footer surfaces are specified.
+- Full dark mode (interface-level) is out of scope — only the shell frame (`{colors.brand-blue}` bar, three-band footer) and inline dark-footer surfaces are specified.
 - Form validation states beyond the four documented input variants would require sign-up and data-entry flow screenshots to confirm edge cases.

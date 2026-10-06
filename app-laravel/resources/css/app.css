@@ -13,6 +13,14 @@
         outline-offset: 2px !important;
     }
 
+    /* Sobre las franjas azul/marino del shell el acento da 1.6:1; el blanco da 5.2:1 y 13.5:1 (WCAG 1.4.11).
+       Offset negativo: la barra es una fila sin padding vertical y un anillo exterior se recortaría
+       arriba y quedaría blanco sobre blanco abajo. */
+    .shell-oscuro :focus-visible {
+        outline-color: theme('colors.white') !important;
+        outline-offset: -3px !important;
+    }
+
     @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
