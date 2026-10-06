@@ -13,7 +13,7 @@
     </svg>
     <div class="flex justify-center bg-brand-blue px-md pb-md">
         <img src="{{ asset('img/heraldicas.png') }}" alt="Gobierno de Querétaro" width="824" height="421"
-             class="relative h-auto w-[150px] sm:-mt-8 sm:w-[180px] lg:-mt-14">
+             class="relative h-auto w-[190px] sm:-mt-8 sm:w-[240px] lg:-mt-14">
     </div>
 
     {{-- Franja de contacto --}}
