@@ -9,6 +9,13 @@
         </x-ui.button-primary>
     </div>
 
+    @if (session('status'))
+        <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
+    @endif
+    @if (session('error'))
+        <x-ui.alert tipo="error" class="mb-lg">{{ session('error') }}</x-ui.alert>
+    @endif
+
     @if ($tramites === [])
         <div class="max-w-3xl space-y-md rounded-lg bg-surface-card p-lg text-body-md text-body">
             <p>Este sistema te guía para capturar la solicitud de incorporación de una escuela particular: los datos del plantel, el responsable legal, los documentos y la información de cada nivel educativo.</p>
@@ -80,6 +87,9 @@
                                     <x-ui.button-primary :href="route('tramite.resumen', ['escuela' => $tramite->escuelaId])" class="whitespace-nowrap">
                                         Continuar<span class="sr-only">: {{ $nombre }}, Nº {{ $tramite->numero() }}</span>
                                     </x-ui.button-primary>
+                                @endif
+                                @if ($tramite->puedeEliminar)
+                                    <x-tramite.eliminar :tramite="$tramite" class="mt-sm" />
                                 @endif
                             </td>
                         </tr>

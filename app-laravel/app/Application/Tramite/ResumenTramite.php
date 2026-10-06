@@ -68,6 +68,9 @@ class ResumenTramite
         'matricula' => ['Matrícula', 'Alumnos inscritos en el nivel.'],
     ];
 
+    /** Memo por instancia: "Mis trámites" arma un resumen por escuela con la misma instancia. */
+    private ?int $enCapturaId = null;
+
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
@@ -113,6 +116,7 @@ class ResumenTramite
             ),
             nombre: $escuela->nombre_aprobado ?? $ternasNombres->sortBy('numero_propuesta')->first()?->nombre_propuesto,
             iniciadoEl: $escuela->created_at,
+            puedeEliminar: EliminarTramite::todosEnCaptura($escuelaNiveles->pluck('estado_id'), $this->enCapturaId ??= EliminarTramite::idEnCaptura()),
         );
     }
 
