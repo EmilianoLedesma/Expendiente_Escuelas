@@ -23,6 +23,7 @@ colors:
   on-dark-soft: "#a1a1aa"
   brand-accent: "#4996C4"
   brand-blue: "#266fb6"
+  brand-blue-pale: "#c3cfe0"
   success: "#28a745"
   warning: "#f59e0b"
   error: "#ef4444"
@@ -318,22 +319,26 @@ components:
     rounded: "{rounded.lg}"
     padding: "2rem"
   # 2026-10-06: three-band site footer (was single surface-dark band, on-dark-soft text, 64px padding).
+  # 2026-10-06 (ajuste visual): wave top edge, tall bands, larger type — matches the queretaro.gob.mx footer.
   footer-heraldica:
-    background: "linear-gradient({colors.surface-dark}, {colors.brand-blue})"
-    padding: "32px 16px"
-    imageWidth: 200px
+    wave: "inline SVG, {colors.brand-blue} over a {colors.brand-blue-pale} ribbon, on the page background; height 64 / 96 (sm) / 128px (lg)"
+    backgroundColor: "{colors.brand-blue}"
+    imageWidth: "150px / 180px (sm+)"
   footer-contact:
     backgroundColor: "{colors.brand-blue}"
     textColor: "{colors.on-dark}"
-    typography: "{typography.body-sm}"
+    typography: "{typography.body-md}, line-height 1.625"
+    headingTypography: "{typography.title-sm}, 700, uppercase"
+    iconSize: 64px
     columns: "1 / 2 (sm) / 4 (lg)"
-    padding: "32px"
+    padding: "48px 16px (mobile) / 96px top, 64px bottom (lg)"
   footer-legal:
     backgroundColor: "{colors.surface-dark}"
     textColor: "{colors.on-dark}"
-    typography: "{typography.body-sm}"
-    linkDecoration: underline
-    padding: "32px"
+    typography: "{typography.title-md}, 400"
+    linkDecoration: "permanent underline at 60 % white, full white on hover"
+    socialIconSize: 24px
+    padding: "48px (mobile) / 64px (lg)"
 ---
 
 ## Overview
@@ -344,7 +349,7 @@ Type voice splits cleanly into two roles: **Cal Sans** (the display face — use
 
 Component voltage comes from **real data shown directly inside cards** — enrollment statistics, school count metrics, level-by-level breakdowns. The system doesn't illustrate data; it shows it. Educational level colors (`{colors.nivel-*}`) encode category in charts and tables and are never repurposed as interface action colors.
 
-The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the primary CTA, visually closing every page. ~~The footer is the only dark surface in the system~~ — revised 2026-10-06 (owner decision, see `docs/reports/2026-10-06-navbar-footer.md`): the shell now follows the sibling SEDEQ project `tableros_municipales`. An institutional top bar in `{colors.brand-blue}` (#266fb6, white text 5.2:1) opens every page above a white header with the official logo, and the footer has three bands (heráldica band navy→blue gradient, `{colors.brand-blue}` contact band, `{colors.surface-dark}` legal band). Footer text is white (not `on-dark-soft`) and links are underlined. Content between header and footer stays white-with-light-gray-cards.
+The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the primary CTA, visually closing every page. ~~The footer is the only dark surface in the system~~ — revised 2026-10-06 (owner decision, see `docs/reports/2026-10-06-navbar-footer.md`): the shell now follows the sibling SEDEQ project `tableros_municipales`. An institutional top bar in `{colors.brand-blue}` (#266fb6, white text 5.2:1) opens every page above a white header with the official logo, and the footer has three bands (heráldica band opening with a wave curve into `{colors.brand-blue}`, `{colors.brand-blue}` contact band, `{colors.surface-dark}` legal band). Footer text is white (not `on-dark-soft`); footer links carry a permanent underline (60 % white, full white on hover). Content between header and footer stays white-with-light-gray-cards.
 
 **Key Characteristics:**
 - White canvas with navy-blue primary CTA (`{colors.primary}` — #242B57). Buttons are `{rounded.md}` (8px) with weight-600 Hanken Grotesk labels. Institutional without being stiff.
@@ -368,7 +373,7 @@ The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the p
 - **Canvas** (`{colors.canvas}` — #ffffff): The default page floor.
 - **Surface Soft** (`{colors.surface-soft}` — #f8f9fa): Nav-pill-group background, disabled input fill, very-soft section separators.
 - **Surface Card** (`{colors.surface-card}` — #f5f7fa): Feature cards, stat cards, badge pill fills, color swatches. Slightly cool-tinted to read as data-neutral.
-- **Surface Dark** (`{colors.surface-dark}` — #242B57): The footer legal band (and heráldica gradient start) and featured pricing tier. Since 2026-10-06 it shares the page frame with `{colors.brand-blue}` (institutional bar and footer contact band); inside the content area it remains scarce. Shares the same hex as `{colors.primary}`, creating full-system coherence.
+- **Surface Dark** (`{colors.surface-dark}` — #242B57): The footer legal band and featured pricing tier. Since 2026-10-06 it shares the page frame with `{colors.brand-blue}` (institutional bar and footer contact band); inside the content area it remains scarce. Shares the same hex as `{colors.primary}`, creating full-system coherence.
 - **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #1a1f3f): Nested cards inside inline dark-footer surfaces or the featured tier.
 - **Hairline** (`{colors.hairline}` — #e5e7eb): 0.5px border tone on light surfaces — inputs, table row dividers, raised card outlines.
 - **Hairline Soft** (`{colors.hairline-soft}` — #f3f4f6): Nearly invisible divider between bands that share the white canvas.
@@ -376,11 +381,12 @@ The footer flips to `{colors.surface-dark}` (#242B57) — the same navy as the p
 ### Text
 - **Ink** (`{colors.ink}` — #242B57): All headlines and primary text. Same hex as primary — every heading is a color-consistent extension of the brand.
 - **Body** (`{colors.body}` — #374151): Default running-text color.
-- **Muted** (`{colors.muted}` — #707F8F): Secondary text — sub-headings, breadcrumbs, chart axis labels, footer body.
+- **Muted** (`{colors.muted}` — #707F8F): Secondary text — sub-headings, breadcrumbs, chart axis labels. (Not used in the site footer, which is white on blue/navy.)
 - **Faint** (`{colors.faint}` — #9ca3af): Tertiary text — captions, fine-print, copyright lines.
 - **On Primary / On Dark** (`{colors.on-primary}` / `{colors.on-dark}` — #ffffff): Text on primary buttons, the institutional bar and every footer band.
 - **On Dark Soft** (`{colors.on-dark-soft}` — #a1a1aa): Text on inline `dark-footer` surfaces only. The site footer uses `{colors.on-dark}` (pure white) since 2026-10-06.
 - **Brand Blue** (`{colors.brand-blue}` — #266fb6): Institutional bar and footer contact band (from the sibling SEDEQ project `tableros_municipales`). White text on it is 5.2:1; focus rings on it are white (the accent gives 1.6:1). Not a CTA colour.
+- **Brand Blue Pale** (`{colors.brand-blue-pale}` — #c3cfe0): Decorative ribbon behind the footer wave only. Never carries text or icons.
 
 ### Semantic
 - **Success** (`{colors.success}` — #28a745): Complete data, verified CURP, successful export.
@@ -426,7 +432,7 @@ The split is functional:
 | `{typography.title-md}` | 18px | 600 | 1.4 | 0 | Feature card titles, intro paragraphs |
 | `{typography.title-sm}` | 16px | 600 | 1.4 | 0 | Small card titles, list labels |
 | `{typography.body-md}` | 16px | 400 | 1.5 | 0 | Default running-text |
-| `{typography.body-sm}` | 14px | 400 | 1.5 | 0 | Footer body, fine-print, secondary descriptions |
+| `{typography.body-sm}` | 14px | 400 | 1.5 | 0 | Fine-print (footer version line), secondary descriptions |
 | `{typography.caption}` | 12px | 500 | 1.4 | 0.3px | Metric labels, data captions, source lines |
 | `{typography.section-eyebrow}` | 11px | 600 | 1.0 | 2px | Section number + name in uppercase — `{colors.brand-accent}` |
 | `{typography.code}` | 13px | 400 | 1.5 | 0 | Code, SQL queries, token refs — JetBrains Mono |
@@ -587,9 +593,9 @@ Charts follow these principles:
 **`dark-footer` (inline)** — Used inside page sections for featured tiers and multi-column navigation blocks. Background `{colors.surface-dark}` in a 3-column grid. See Cards section above.
 
 **`footer` (full-page, three bands — since 2026-10-06)** — Closes every page (`x-shell.pie`, data from `config/sedeq.php`):
-1. `footer-heraldica` — navy→blue gradient with the white state coat of arms (alt "Gobierno de Querétaro"). Self-hosted image; no remote background.
-2. `footer-contact` — `{colors.brand-blue}`, four centered columns (Dirección, Teléfono, Atención ciudadana, Web master) with line icons and uppercase `h3` titles; 1 → 2 → 4 columns.
-3. `footer-legal` — `{colors.surface-dark}`, underlined "Aviso de privacidad", "PODER EJECUTIVO DEL ESTADO DE QUERÉTARO Copyright © {year} Derechos Reservados.", the system version line, and the same social list as the institutional bar.
+1. `footer-heraldica` — the page background meets the footer in a wave: a self-drawn inline SVG (`preserveAspectRatio="none"`, `aria-hidden`) with a `{colors.brand-blue-pale}` ribbon behind a `{colors.brand-blue}` curve (low on the left, crest ~40 %, falling to the right; the ribbon hugs the rise and widens along the right descent; 64 → 96 → 128px tall). The white state coat of arms (alt "Gobierno de Querétaro", 150 → 180px) sits on the blue just under the crest. Self-hosted image; no remote background (the state portal's `bg-footer.png` is not copied).
+2. `footer-contact` — `{colors.brand-blue}`, continuous with the band above. Four centered columns (Dirección, Teléfono, Atención ciudadana, Web master) with 64px decorative white icons (`pie-ubicacion`, `pie-telefono`, `pie-correo`), `{typography.title-sm}` bold uppercase `h3` titles and `{typography.body-md}` regular text at line-height 1.625; tall padding (96px top on desktop); 1 → 2 → 4 columns.
+3. `footer-legal` — `{colors.surface-dark}`, `{typography.title-md}` regular: "Aviso de privacidad" (permanent quiet underline at 60 % white, full white on hover, white focus ring), "PODER EJECUTIVO DEL ESTADO DE QUERÉTARO Copyright © {year} Derechos Reservados.", the system version line in `{typography.body-sm}` at 80 % white, and the same social list as the institutional bar with 24px icons in 44px targets.
 White text throughout, white focus ring.
 
 ## Do's and Don'ts
