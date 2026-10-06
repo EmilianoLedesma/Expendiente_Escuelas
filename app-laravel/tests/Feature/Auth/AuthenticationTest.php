@@ -74,6 +74,7 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    /** El perfil usa el shell institucional (nav "Cuenta" sin Livewire), no el menú Breeze layout.navigation. */
     public function test_navigation_menu_can_be_rendered(): void
     {
         $user = User::factory()->create();
@@ -84,24 +85,9 @@ class AuthenticationTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSeeVolt('layout.navigation');
-    }
-
-    public function test_users_can_logout(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user);
-
-        $component = Volt::test('layout.navigation');
-
-        $component->call('logout');
-
-        $component
-            ->assertHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
+            ->assertSee('<nav aria-label="Cuenta"', false)
+            ->assertSee('action="'.route('logout').'"', false)
+            ->assertDontSee('fonts.bunny.net');
     }
 
     public function test_post_logout_route_logs_out_and_redirects_to_login(): void
