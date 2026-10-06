@@ -246,6 +246,46 @@ class ShellTest extends TestCase
         $this->assertSame(1, $x->query('//footer//a[@href="'.config('sedeq.aviso_privacidad').'"]')->length);
     }
 
+    /** Ajuste visual del pie al portal estatal (2026-10-06): onda propia, columnas cortas, iconos grandes decorativos. */
+    public function test_el_pie_sigue_el_portal_estatal(): void
+    {
+        $x = $this->dom($this->html('login', false));
+
+        $titulos = array_map(fn ($h3) => trim($h3->textContent), iterator_to_array($x->query('//footer//h3')));
+        $this->assertSame(['Dirección', 'Teléfono', 'Atención ciudadana', 'Web master'], $titulos);
+        $this->assertStringContainsString(config('sedeq.institucion'), $x->query('//footer')->item(0)->textContent);
+
+        // Onda dibujada en línea (no bg-footer.png ni degradado): una sola, decorativa.
+        $this->assertSame(1, $x->query('//footer//svg[@data-onda][@aria-hidden="true"][@focusable="false"]')->length);
+        $this->assertStringNotContainsString('bg-gradient', file_get_contents(resource_path('views/components/shell/pie.blade.php')));
+
+        // Iconos de contacto de 64 px, decorativos (el h3 nombra la columna).
+        $iconos = $x->query('//footer//h3/preceding-sibling::svg[@aria-hidden="true"][contains(concat(" ", @class, " "), " h-16 ")]');
+        $this->assertSame(4, $iconos->length);
+        $this->assertSame(
+            ['pie-ubicacion', 'pie-telefono', 'pie-correo', 'pie-correo'],
+            array_map(fn ($svg) => $svg->getAttribute('data-icono'), iterator_to_array($iconos)),
+        );
+
+        // «Aviso de privacidad» con subrayado permanente (1.4.1: no se distingue solo por color), más marcado al pasar el cursor.
+        $clases = ' '.$x->query('//footer//a[@href="'.config('sedeq.aviso_privacidad').'"]')->item(0)->getAttribute('class').' ';
+        $this->assertStringContainsString(' underline ', $clases);
+        $this->assertStringContainsString(' hover:decoration-white ', $clases);
+    }
+
+    public function test_las_redes_tienen_icono_chico_en_la_barra_y_grande_en_el_pie(): void
+    {
+        $x = $this->dom($this->html('login', false));
+
+        foreach (config('sedeq.redes') as $red) {
+            foreach (['header' => ' h-5 w-5 ', 'footer' => ' h-6 w-6 '] as $zona => $tamano) {
+                $svg = $x->query('//'.$zona.'//a[@href="'.$red['url'].'"]/svg')->item(0);
+                $this->assertInstanceOf(DOMElement::class, $svg, $zona.': '.$red['url']);
+                $this->assertStringContainsString($tamano, ' '.$svg->getAttribute('class').' ', $zona.': '.$red['url']);
+            }
+        }
+    }
+
     public function test_los_recursos_graficos_estan_alojados_en_el_proyecto(): void
     {
         $this->assertFileExists(public_path('img/layout_set_logo.png'));

@@ -111,3 +111,50 @@ Commit WIP local `6223a30` (solo archivos de esta rama, sin push) para poder hac
 
 - El logotipo dice «Poder Ejecutivo del Estado de Querétaro / Querétaro Gobierno del Estado», pero el alt pedido es «SEDEQ - Secretaría de Educación del Estado de Querétaro». Se usó el alt indicado (describe el destino del enlace); revisar si SEDEQ tiene un logotipo propio.
 - Los trazos Font Awesome son CC BY 4.0: la atribución está en el código; confirmar si basta o si se prefiere otro set (p. ej. Simple Icons, CC0).
+
+## Ajuste visual del pie
+
+Segunda ronda, solo presentación, sobre `master` @ `c854446`, sin commit. Objetivo: que el pie se parezca al del portal estatal queretaro.gob.mx (captura de referencia del dueño).
+
+### Qué cambió frente a la referencia
+
+- **Borde superior en onda** (antes: degradado marino→azul con borde recto). SVG en línea **dibujado aquí** (`viewBox 0 0 1440 160`, `preserveAspectRatio="none"`, `aria-hidden="true"`, `focusable="false"`, `data-onda`): un listón pálido `#c3cfe0` detrás y la curva `#266fb6` delante; baja a la izquierda, cresta hacia el 40 % del ancho y caída hacia la derecha; el listón casi pega con el azul en la subida izquierda y se ensancha a lo largo de la bajada derecha (corregido en la ronda de revisión; la primera versión lo tenía al revés). **No** es una copia del `bg-footer.png` del portal (ese archivo vive en queretaro.gob.mx; no se descargó ni se enlaza): son dos trazos Bézier propios que aproximan la forma. Alto 64 / 96 / 128 px (móvil / `sm` / `lg`); el `<footer>` lleva `overflow-hidden` para que la onda nunca provoque desplazamiento horizontal. Nuevo token `brand-blue-pale` (`tailwind.config.js` y `DESIGN.md`), solo decorativo.
+- **Franja heráldica**: el azul de la onda continúa sin corte en la franja de contacto (`-mb-px` evita la línea de subpíxel). Escudo de 150 px (móvil) y 180 px (`sm`+), subido sobre la onda con margen negativo (`sm:-mt-8`, `lg:-mt-14`; en móvil no se sube para no tocar el listón).
+- **Iconos de contacto**: tres iconos nuevos en `x-ui.icon` (`pie-ubicacion`: pin con punto sólido; `pie-telefono`: auricular con dos arcos de señal; `pie-correo`: sobre con solapa), a 64 px (`h-16`), decorativos (`aria-hidden`). Auricular y pin derivados de Heroicons v2 solid (MIT); arcos de señal y sobre, dibujo propio. Los `map-pin`/`phone`/`envelope` de Heroicons (outline) quedaron sin uso y se **eliminaron** en la ronda de revisión.
+- **Tipografía y espacio**: texto de contacto 16 px regular (`text-body-md`, `leading-relaxed` = 1.625, lo más cercano a 1.7 sin token nuevo); títulos 16 px negrita en mayúsculas (`text-title-sm`; la referencia ronda 15 px). Relleno superior de la franja de contacto 96 px en `lg` (≈ 110 px entre escudo e iconos), 48 px en móvil. Solo Hanken Grotesk.
+- **Columna de dirección**: el título pasa a «Dirección» (literal único en la vista, como «Teléfono», «Atención ciudadana» y «Web master»); debajo, el nombre de la institución (`config('sedeq.institucion')`) y la dirección (`config('sedeq.contacto.direccion')`). Ninguna cadena duplicada; `config/sedeq.php` no cambió.
+- **Franja legal**: 18 px regular (`text-title-md`). «Aviso de privacidad» con **subrayado permanente** discreto (`underline decoration-white/60 underline-offset-4`, pleno con `hover:decoration-white`), más el anillo blanco de `.shell-oscuro` al enfocar. Decisión sobre 1.4.1 (uso del color): el enlace es blanco de 18 px regular, igual que la línea de copyright, así que lo que lo distingue como enlace es el subrayado permanente, no el color. (La primera versión lo dejaba sin subrayado fijo con el argumento de que iba en su propio renglón; la revisión lo rechazó: un usuario con ratón o táctil no podía saber que era un enlace.) Línea «Sistema de Incorporación · versión MVP» conservada, más discreta (14 px, blanco al 80 %). Redes del pie a 24 px (`x-shell.redes` admite ahora la prop `icono`; por defecto `h-5 w-5`, que conserva la barra), con `gap-xs` y blancos de 44 px.
+- Sin chat, sin botón «volver arriba», sin fuentes, imágenes ni dependencias nuevas.
+
+### Contraste de los pares nuevos
+
+| Par | Ratio | Resultado |
+|---|---|---|
+| Blanco 16 px regular sobre `#266fb6` (texto de contacto) | 5.2:1 | AA ✓ |
+| Blanco 18 px regular sobre `#242B57` (franja legal) | 13.5:1 | AAA ✓ |
+| Blanco al 80 % (≈ `#d3d5dd`) 14 px sobre `#242B57` (línea de versión) | ≈ 9.2:1 | AAA ✓ |
+| Subrayado del aviso, blanco al 60 % (≈ `#a7aabc`) sobre `#242B57` | ≈ 5.9:1 | 1.4.11 ✓ |
+| Listón `#c3cfe0` sobre blanco / junto a `#266fb6` | — | Decorativo (`aria-hidden`, sin texto): fuera de 1.4.3 y 1.4.11 |
+
+### Pruebas cambiadas deliberadamente
+
+`tests/Feature/View/ShellTest.php`: nueva `test_el_pie_sigue_el_portal_estatal`, roja primero por la razón esperada (el primer `h3` era el nombre de la institución, no «Dirección»). Afirma: títulos `h3` = Dirección / Teléfono / Atención ciudadana / Web master; el nombre de la institución sigue en el pie; una sola onda `svg[data-onda]` con `aria-hidden="true"` y `focusable="false"`; `pie.blade.php` sin `bg-gradient`; cuatro iconos `h-16` decorativos antes de cada `h3`, con `data-icono` = pie-ubicacion / pie-telefono / pie-correo / pie-correo (un icono equivocado falla); el aviso con `underline` permanente y `hover:decoration-white`. Nueva `test_las_redes_tienen_icono_chico_en_la_barra_y_grande_en_el_pie`: cada red lleva `h-5 w-5` en el `header` y `h-6 w-6` en el `footer`. Ninguna prueba previa a esta ronda se modificó ni se eliminó.
+
+### Sin verificar (no se lanzó navegador)
+
+- Parecido visual real con la referencia: forma y proporción de la onda (incluido el listón redibujado: delgado en la subida, ancho en la bajada derecha), posición del escudo respecto a la cresta en cada ancho, peso visual de los iconos dibujados. Requiere revisión en navegador.
+- 375 px: que las columnas apilen sin desplazamiento horizontal y que el escudo no pise el listón; con 64 px de alto la onda puede verse plana en pantallas estrechas.
+- Ausencia de línea de subpíxel entre la onda y la franja azul en distintos niveles de zoom.
+
+### Ronda de correcciones del ajuste (revisión Opus: 1 importante, 6 menores)
+
+1. **Aviso sin subrayado** (importante): restaurado subrayado permanente `underline decoration-white/60 underline-offset-4 hover:decoration-white`; aserción invertida en la prueba (roja → verde); comentario de la vista, `DESIGN.md` y el razonamiento 1.4.1 de este reporte corregidos.
+2. `map-pin`/`phone`/`envelope` eliminados de `x-ui.icon` (búsqueda en `resources/`, `app/`, `tests/`, `config/`: sin llamadas).
+3. Comentario de `$pie` con la procedencia: auricular/pin derivados de Heroicons v2 solid (MIT).
+4. Listón redibujado: `M0 134C200 86 380 36 580 32c300-4 560 70 860 88v40H0Z` (6 unidades sobre el azul a la izquierda, 36 a la derecha). Parecido sin verificar en navegador.
+5. Iconos con `data-icono`; la prueba exige la secuencia pie-ubicacion / pie-telefono / pie-correo / pie-correo (roja → verde).
+6. Nueva prueba del tamaño de iconos de redes (barra `h-5 w-5`, pie `h-6 w-6`). Pasó en verde desde el principio: la prop `icono` ya existía; es cobertura, no hubo rojo.
+7. Párrafo 1.4.1 reescrito (ver «Franja legal»).
+
+Evidencia: suite completa **1039/1039** (3345 aserciones) = 1037 de `master` + 2 nuevas; PHPStan `{"tool":"phpstan","result":"passed","errors":0}`; Pint `{"tool":"pint","result":"passed"}`; `npm run build` ✓ (`app-DpBRdCVG.css`, contiene `decoration-white/60` y `hover:decoration-white`).
+- Recorrido de foco y subrayado del aviso con teclado.
