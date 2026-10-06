@@ -33,7 +33,7 @@
                     <img src="{{ asset('img/layout_set_logo.png') }}" alt="SEDEQ - Secretaría de Educación del Estado de Querétaro"
                          width="2359" height="444" class="h-10 w-auto sm:h-[60px]">
                 </a>
-                <p class="border-hairline text-body-sm font-semibold leading-tight text-ink sm:border-l sm:pl-md">
+                <p class="border-hairline text-title-md font-semibold leading-tight text-ink sm:border-l sm:pl-md">
                     Trámite de Incorporación de Escuelas Particulares
                 </p>
             </div>
