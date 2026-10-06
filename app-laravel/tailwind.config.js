@@ -32,6 +32,8 @@ export default {
                 'on-dark': '#ffffff',
                 'on-dark-soft': '#a1a1aa',
                 'brand-accent': '#4996C4',
+                // Azul institucional de la barra y el pie (tableros_municipales); blanco encima = 5.2:1.
+                'brand-blue': '#266fb6',
                 success: '#28a745',
                 warning: '#f59e0b',
                 error: '#ef4444',
