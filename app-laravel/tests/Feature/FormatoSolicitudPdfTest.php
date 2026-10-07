@@ -119,9 +119,63 @@ class FormatoSolicitudPdfTest extends TestCase
 
         $html = view('pdf.formato-solicitud', ['escuela' => $escuelaNivel->escuela, 'escuelaNivel' => $escuelaNivel])->render();
 
-        $this->assertStringContainsString('Nivel educativo: Primaria', $html);
-        $this->assertStringContainsString('Turno: Vespertino', $html);
-        $this->assertStringContainsString('Tipo de alumnado: Femenino', $html);
+        $this->assertStringContainsString('autorización para impartir educación <u>Primaria</u>', $html);
+        $this->assertStringContainsString('en el horario <u>Vespertino</u>', $html);
+        $this->assertStringContainsString('con alumnado <u>Femenino</u>', $html);
         $this->assertStringContainsString('Juana Pérez', $html);
+    }
+
+    /** WS-5c: estructura oficial del "FORMATO DE SOLICITUD EDUCACIÓN BÁSICA" (docx de SEDEQ). */
+    public function test_la_vista_sigue_la_estructura_oficial_con_los_datos_de_persona_fisica(): void
+    {
+        $escuelaNivel = $this->escuelaNivel(Solicitante::factory()->create());
+        $escuelaNivel->escuela->responsableLegal->update(['persona_autorizada_recoger' => 'Luis Mora']);
+        $escuelaNivel->escuela->responsableLegal->personaFisica->update([
+            'fecha_nacimiento' => '1980-01-31', 'rfc' => 'PEJU800131AB1', 'curp' => 'PEJU800131MQTRRN09',
+        ]);
+        $escuelaNivel->load(['nivelEducativo', 'escuela.responsableLegal.personaFisica', 'escuela.responsableLegal.personaMoral']);
+
+        $html = view('pdf.formato-solicitud', ['escuela' => $escuelaNivel->escuela, 'escuelaNivel' => $escuelaNivel])->render();
+
+        $this->assertStringContainsString('FORMATO DE SOLICITUD', $html);
+        $this->assertStringContainsString('DIRECTOR DE EDUCACIÓN', $html);
+        $this->assertStringContainsString('El que suscribe <u>Juana Pérez</u>', $html);
+        $this->assertStringContainsString('<u>Calle Falsa 123</u>', $html);
+        $this->assertStringContainsString('<u>Luis Mora</u>', $html);
+        $this->assertStringContainsString('DEL PROPIETARIO EN CASO DE SER PERSONA FÍSICA', $html);
+        $this->assertStringContainsString('31 de enero de 1980', $html);
+        $this->assertStringContainsString('PEJU800131AB1', $html);
+        $this->assertStringContainsString('PEJU800131MQTRRN09', $html);
+        $this->assertStringNotContainsString('DEL PROPIETARIO EN CASO DE SER PERSONA MORAL', $html);
+        $this->assertStringContainsString('BAJO PROTESTA DE DECIR VERDAD', $html);
+    }
+
+    public function test_la_vista_imprime_los_datos_de_persona_moral_y_su_representante(): void
+    {
+        $escuelaNivel = $this->escuelaNivel(Solicitante::factory()->create());
+        $escuelaNivel->escuela->responsableLegal->delete();
+        (new RegistrarResponsableLegal)->ejecutar($escuelaNivel->escuela_id, new DatosResponsableLegal(
+            tipoPersona: 'moral',
+            domicilioNotificaciones: 'Av. Reforma 10',
+            razonSocial: 'Colegio Futuro SA de CV',
+            nombreRepresentanteLegal: 'Ana Ruiz',
+            numeroEscrituraConstitutiva: '4521',
+            fechaEscrituraConstitutiva: '2015-03-09',
+            notarioNombre: 'Lic. Pedro Soto',
+            notarioNumero: '12',
+            notarioCiudad: 'Querétaro',
+            folioRegistroPublico: 'RPPC 778',
+            fechaInscripcionRpp: '2015-04-20',
+        ));
+        $escuelaNivel->load(['nivelEducativo', 'escuela.responsableLegal.personaFisica', 'escuela.responsableLegal.personaMoral']);
+
+        $html = view('pdf.formato-solicitud', ['escuela' => $escuelaNivel->escuela, 'escuelaNivel' => $escuelaNivel])->render();
+
+        $this->assertStringContainsString('El que suscribe <u>Ana Ruiz</u>', $html);
+        $this->assertStringContainsString('DEL PROPIETARIO EN CASO DE SER PERSONA MORAL', $html);
+        $this->assertStringNotContainsString('DEL PROPIETARIO EN CASO DE SER PERSONA FÍSICA', $html);
+        foreach (['Colegio Futuro SA de CV', '4521', '9 de marzo de 2015', 'Lic. Pedro Soto', '<u>12</u>', 'RPPC 778', '20 de abril de 2015'] as $dato) {
+            $this->assertStringContainsString($dato, $html);
+        }
     }
 }
