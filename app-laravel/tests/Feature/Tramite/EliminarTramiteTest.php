@@ -356,12 +356,12 @@ class EliminarTramiteTest extends TestCase
             $this->actingAs($dueno)->get($pagina)
                 ->assertOk()
                 ->assertSee('Eliminar trámite')
-                ->assertSee('<details', false)
+                ->assertSee('<dialog', false)
+                ->assertSee('.showModal()', false)
                 ->assertSee($accion, false)
                 ->assertSee('name="_method" value="DELETE"', false)
                 ->assertSee('Se borrará el trámite, sus datos y archivos. El domicilio del plantel no se elimina.')
                 ->assertSee('Sí, eliminar trámite')
-                ->assertSee('group-open:hidden', false)
                 ->assertSee('Cancelar');
         }
     }
