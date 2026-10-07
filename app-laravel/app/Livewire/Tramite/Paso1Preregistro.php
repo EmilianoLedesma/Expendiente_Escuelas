@@ -57,7 +57,7 @@ class Paso1Preregistro extends Component
             'plantelId' => ['required_if:bifurcacion,existente', 'nullable', 'integer', 'exists:planteles,id'],
             'calle' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
             'numeroExt' => ReglasCaptura::texto(max: 20),
-            'numeroInt' => ReglasCaptura::texto(max: 20),
+            'numeroInt' => [...ReglasCaptura::texto(max: 20), 'regex:/^\d+$/'],
             'colonia' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
             'localidad' => ReglasCaptura::texto(max: 150),
             'municipio' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
@@ -70,7 +70,10 @@ class Paso1Preregistro extends Component
     /** Mismo texto que PlantelNoDisponible: no revelar si el plantel existe para otro solicitante. */
     protected function messages(): array
     {
-        return ['plantelId.exists' => (new PlantelNoDisponible)->getMessage()];
+        return [
+            'plantelId.exists' => (new PlantelNoDisponible)->getMessage(),
+            'numeroInt.regex' => 'El número interior solo puede contener dígitos.',
+        ];
     }
 
     public function guardar(IniciarTramiteNuevo $iniciarTramiteNuevo): void
