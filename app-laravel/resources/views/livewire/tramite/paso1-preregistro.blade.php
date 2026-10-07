@@ -37,7 +37,7 @@
                         <x-ui.input maxlength="20" wire:model.blur="numeroExt" />
                     </x-ui.field>
                     <x-ui.field id="numeroInt" label="Número interior" optional>
-                        <x-ui.input maxlength="20" wire:model.blur="numeroInt" />
+                        <x-ui.input maxlength="20" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" wire:model.blur="numeroInt" />
                     </x-ui.field>
                     <x-ui.field id="colonia" label="Colonia">
                         <x-ui.input maxlength="150" wire:model.blur="colonia" />
@@ -49,7 +49,7 @@
                         <x-ui.input maxlength="150" wire:model.blur="municipio" />
                     </x-ui.field>
                     <x-ui.field id="codigoPostal" label="Código postal">
-                        <x-ui.input maxlength="5" wire:model.blur="codigoPostal" inputmode="numeric" autocomplete="postal-code" />
+                        <x-ui.input maxlength="5" wire:model.blur="codigoPostal" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" autocomplete="postal-code" />
                     </x-ui.field>
                 </div>
             </x-ui.section>
@@ -57,7 +57,7 @@
             <x-ui.section title="Datos de contacto">
                 <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                     <x-ui.field id="telefono" label="Teléfono" optional>
-                        <x-ui.input maxlength="20" type="tel" inputmode="tel" wire:model.blur="telefono" autocomplete="tel" />
+                        <x-ui.input maxlength="20" type="tel" inputmode="tel" oninput="this.value=this.value.replace(/\D/g,'')" wire:model.blur="telefono" autocomplete="tel" />
                     </x-ui.field>
                     <x-ui.field id="correoElectronico" label="Correo electrónico" optional>
                         <x-ui.input maxlength="150" type="email" wire:model.blur="correoElectronico" autocomplete="email" />
