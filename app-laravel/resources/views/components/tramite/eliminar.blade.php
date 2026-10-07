@@ -13,13 +13,13 @@
             Cancelar<span class="sr-only"> la eliminación del trámite Nº {{ $tramite->numero() }}</span>
         </span>
     </summary>
-    <div class="mt-sm max-w-md whitespace-normal rounded-md border border-error-ink bg-error-soft p-md text-left text-body-sm text-error-ink">
+    <div class="mt-sm w-72 max-w-full whitespace-normal rounded-md border border-error-ink bg-error-soft p-md text-left text-body-sm text-error-ink">
         <p class="font-semibold">Esta acción no se puede deshacer.</p>
         <p class="mt-xxs">Se borrará el trámite, sus datos y archivos. El domicilio del plantel no se elimina.</p>
         <form method="POST" action="{{ route('tramite.eliminar', ['escuela' => $tramite->escuelaId]) }}" class="mt-md">
             @csrf
             @method('DELETE')
-            <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-md bg-error-ink px-lg text-body-md font-semibold text-on-primary">
+            <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-md bg-error-ink px-md text-body-md font-semibold text-on-primary">
                 Sí, eliminar trámite
             </button>
         </form>
