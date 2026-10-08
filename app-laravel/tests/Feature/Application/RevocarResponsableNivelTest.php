@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Application;
 
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsablesNivel\RevocarResponsableNivel;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\ResponsableNivel;
 use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\ConNivelParaResponsables;
 use Tests\TestCase;
 
@@ -60,6 +63,47 @@ class RevocarResponsableNivelTest extends TestCase
             $this->assertTrue(ResponsableNivel::whereKey($acceso->id)->exists());
             $this->assertTrue(User::whereKey($usuario->id)->exists());
         }
+    }
+
+    public function test_en_un_tramite_enviado_no_se_revoca(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($dueno, 'primaria', 'en_revision');
+        $usuario = $this->responsableDe($nivel);
+        $acceso = ResponsableNivel::where('user_id', $usuario->id)->firstOrFail();
+
+        try {
+            app(RevocarResponsableNivel::class)->ejecutar($dueno->id, $acceso->id);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
+            $this->assertSame('El trámite ya se envió a SEDEQ y no puede modificarse.', $e->getMessage());
+        }
+
+        $this->assertTrue(ResponsableNivel::whereKey($acceso->id)->exists());
+        $this->assertTrue(User::whereKey($usuario->id)->exists());
+    }
+
+    /** WS-7a lock order: nivel FOR UPDATE (as InvitarResponsableNivel) before the escuela guard and before the acceso/user rows. */
+    public function test_bloquea_el_nivel_antes_que_la_escuela_y_el_acceso(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($dueno);
+        $usuario = $this->responsableDe($nivel);
+        $acceso = ResponsableNivel::where('user_id', $usuario->id)->firstOrFail();
+        $bloqueos = [];
+        DB::listen(function ($query) use (&$bloqueos) {
+            if (preg_match('/for (share|update)$/', $query->sql) === 1 || preg_match('/^delete\b/', $query->sql) === 1) {
+                $bloqueos[] = $query->sql;
+            }
+        });
+
+        app(RevocarResponsableNivel::class)->ejecutar($dueno->id, $acceso->id);
+
+        $this->assertStringContainsString('from "escuela_niveles"', $bloqueos[0]);
+        $this->assertStringEndsWith('for update', $bloqueos[0]);
+        $this->assertStringContainsString('from "escuelas"', $bloqueos[1]);
+        $this->assertStringEndsWith('for share', $bloqueos[1]);
     }
 
     public function test_un_id_inexistente_no_hace_nada(): void

@@ -5,12 +5,14 @@ namespace App\Application\Validaciones;
 use App\Domain\Personal\RegistroPersonalCompleto;
 use App\Domain\Validaciones\Engine\DatosCapacidadNivel;
 use App\Domain\Validaciones\Engine\LineaMobiliario;
+use App\Models\Asignatura;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\Personal;
 use App\Models\Plantel;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * The capacity engine's only database read: every magnitude and declared
@@ -23,7 +25,14 @@ use Illuminate\Support\Facades\DB;
  */
 class ConstruirDatosCapacidad
 {
-    private const ASIGNATURA_EDUCACION_FISICA = 'Educación Física';
+    /** tipos_espacios.categoria whose superficie feeds the area_recreativa/recreacion rules; RegistrarInfraestructuraNivel requires it at capture (WS-7a §3.1). */
+    public const CATEGORIA_RECREATIVA = 'recreativo_deportivo';
+
+    /** tipos_espacios.clave of the sala de usos múltiples (inicial.superficie.sala_usos_multiples). */
+    public const CLAVE_USOS_MULTIPLES = 'salon_usos_multiples';
+
+    /** sanitarios.categoria prefix of the students' blocks (inicial.superficie.sanitarios). */
+    public const PREFIJO_SANITARIOS_ALUMNOS = 'alumnado_';
 
     public function __construct(private readonly RegistroPersonalCompleto $registroCompleto) {}
 
@@ -50,8 +59,8 @@ class ConstruirDatosCapacidad
             superficieAulas: $aulas?->superficie_m2 !== null ? (float) $aulas->superficie_m2 : null,
             superficiePredio: $plantel->metros_totales !== null ? (float) $plantel->metros_totales : null,
             superficieConstruida: $plantel->metros_construidos !== null ? (float) $plantel->metros_construidos : null,
-            superficieRecreativa: $this->sumaEspacios($plantel->id, fn ($q) => $q->where('tipos_espacios.categoria', 'recreativo_deportivo')),
-            superficieUsosMultiples: $this->sumaEspacios($plantel->id, fn ($q) => $q->where('tipos_espacios.clave', 'salon_usos_multiples')),
+            superficieRecreativa: $this->sumaEspacios($plantel->id, fn ($q) => $q->where('tipos_espacios.categoria', self::CATEGORIA_RECREATIVA)),
+            superficieUsosMultiples: $this->sumaEspacios($plantel->id, fn ($q) => $q->where('tipos_espacios.clave', self::CLAVE_USOS_MULTIPLES)),
             superficieSanitariosAlumnos: $this->superficieSanitariosAlumnos($plantel->id),
             acervoTitulos: $this->acervo($plantel->id),
             personalPorCargo: $personalPorCargo,
@@ -122,20 +131,18 @@ class ConstruirDatosCapacidad
     {
         $consulta = DB::table('sanitarios')
             ->where('plantel_id', $plantelId)
-            ->where('categoria', 'like', 'alumnado\_%')
+            ->where('categoria', 'like', addcslashes(self::PREFIJO_SANITARIOS_ALUMNOS, '_').'%')
             ->whereNotNull('superficie_m2');
 
         return $consulta->exists() ? (float) $consulta->sum('superficie_m2') : null;
     }
 
-    /** "Acervo bibliográfico" = book titles in the plantel's libraries. */
+    /** "Acervo bibliográfico" = every title of every material in the plantel's libraries (ADR-010 P6). */
     private function acervo(int $plantelId): ?int
     {
         $consulta = DB::table('biblioteca_materiales')
             ->join('instalaciones_espacios', 'instalaciones_espacios.id', '=', 'biblioteca_materiales.instalacion_espacio_id')
-            ->join('tipos_material_biblioteca', 'tipos_material_biblioteca.id', '=', 'biblioteca_materiales.tipo_material_id')
-            ->where('instalaciones_espacios.plantel_id', $plantelId)
-            ->where('tipos_material_biblioteca.clave', 'libros');
+            ->where('instalaciones_espacios.plantel_id', $plantelId);
 
         return $consulta->exists() ? (int) $consulta->sum('biblioteca_materiales.numero_titulos') : null;
     }
@@ -151,10 +158,10 @@ class ConstruirDatosCapacidad
 
         $salas = DB::table('personal_salas')->join('salas', 'salas.id', '=', 'personal_salas.sala_id')
             ->whereIn('personal_salas.personal_id', $filas->pluck('id'))->pluck('salas.clave', 'personal_salas.personal_id');
-        $conEducacionFisica = DB::table('personal_asignaturas')->join('asignaturas', 'asignaturas.id', '=', 'personal_asignaturas.asignatura_id')
-            ->whereIn('personal_asignaturas.personal_id', $filas->pluck('id'))
-            ->where('asignaturas.nombre', self::ASIGNATURA_EDUCACION_FISICA)
-            ->pluck('personal_asignaturas.personal_id')->all();
+        $conEducacionFisica = DB::table('personal_asignaturas')
+            ->whereIn('personal_id', $filas->pluck('id'))
+            ->where('asignatura_id', $this->idEducacionFisica())
+            ->pluck('personal_id')->all();
 
         $porCargo = [];
         $porCargoYSala = [];
@@ -177,6 +184,18 @@ class ConstruirDatosCapacidad
         }
 
         return [$porCargo, $porCargoYSala, $educacionFisica];
+    }
+
+    /** ADR-010 P10: by the catalog row seeded from Asignatura::EDUCACION_FISICA; a missing row is a deployment error, never "0 docentes". */
+    private function idEducacionFisica(): int
+    {
+        $id = Asignatura::where('nombre', Asignatura::EDUCACION_FISICA)->value('id');
+
+        if ($id === null) {
+            throw new LogicException('Falta la asignatura «'.Asignatura::EDUCACION_FISICA.'» en el catálogo (AsignaturasSeeder).');
+        }
+
+        return (int) $id;
     }
 
     /** @return list<LineaMobiliario> */

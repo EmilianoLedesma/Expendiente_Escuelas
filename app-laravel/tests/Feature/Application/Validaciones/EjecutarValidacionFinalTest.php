@@ -6,6 +6,7 @@ use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Validaciones\DTO\FilaValidacion;
+use App\Application\Validaciones\DTO\SeccionCapacidad;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Application\Validaciones\ReporteValidacionGuardado;
 use App\Application\Validaciones\UltimaValidacionFinal;
@@ -13,6 +14,7 @@ use App\Models\AulaNivel;
 use App\Models\EvaluacionValidacion;
 use Database\Seeders\ReglasValidacionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\TestCase;
@@ -101,6 +103,28 @@ class EjecutarValidacionFinalTest extends TestCase
         $this->assertContains('Código postal: plantel «76000», certificado «76010» — no coincide', $domicilio->lineas);
     }
 
+    public function test_evaluar_no_escribe_nada_y_guardar_lo_guarda(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $servicio = app(EjecutarValidacionFinal::class);
+
+        $evaluada = $servicio->evaluar($escuela->id);
+
+        $this->assertNull($evaluada->evaluacionId);
+        $this->assertTrue($evaluada->listaParaEnvio);
+        $this->assertSame(0, EvaluacionValidacion::count());
+        $this->assertSame([], Storage::disk('documentos')->allFiles('validaciones'));
+
+        $guardada = $servicio->guardar($escuela->id, $evaluada);
+
+        $evaluacion = EvaluacionValidacion::sole();
+        $this->assertSame($evaluacion->id, $guardada->evaluacionId);
+        $this->assertEquals($evaluada->filas, $guardada->filas);
+        $this->assertSame($evaluada->listaParaEnvio, $evaluacion->lista_para_envio);
+        Storage::disk('documentos')->assertExists($evaluacion->archivo_path);
+    }
+
     public function test_no_corre_si_el_tramite_no_esta_completo(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
@@ -144,7 +168,7 @@ class EjecutarValidacionFinalTest extends TestCase
         $this->assertNull(app(ReporteValidacionGuardado::class)->ruta($otra->id, $validacion->evaluacionId));
     }
 
-    public function test_incluye_la_capacidad_instalada_por_nivel_sin_bloquear_el_envio(): void
+    public function test_incluye_la_capacidad_instalada_por_nivel_y_bloquea_el_envio(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
         $escuelaNivel = $this->completarTramite($escuela);
@@ -154,7 +178,8 @@ class EjecutarValidacionFinalTest extends TestCase
 
         $validacion = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
 
-        $this->assertTrue($validacion->listaParaEnvio, 'La capacidad instalada no bloquea el envío (PRD: con observaciones).');
+        $this->assertFalse($validacion->listaParaEnvio, 'WS-7a (ADR-010 P3): la capacidad que no se cumple bloquea el envío.');
+        $this->assertContains('Capacidad instalada · Primaria: Superficie de aulas', $validacion->motivosBloqueo());
         $this->assertCount(1, $validacion->capacidad);
         $seccion = $validacion->capacidad[0];
         $this->assertSame('Primaria', $seccion->nivel);
@@ -179,5 +204,57 @@ class EjecutarValidacionFinalTest extends TestCase
 
         $this->assertEquals($guardada->capacidad, $releida?->capacidad);
         $this->assertEquals($guardada->filas, $releida?->filas);
+    }
+
+    private function regla(string $clave, string $tipoRegla, string $tipoCalculo, string $ambito, float $valor, string $concepto): void
+    {
+        DB::table('reglas_validacion')->insert([
+            'clave' => $clave,
+            'nivel_educativo_id' => DB::table('niveles_educativos')->where('clave', 'primaria')->value('id'),
+            'tipo_regla' => $tipoRegla, 'tipo_calculo' => $tipoCalculo, 'ambito' => $ambito, 'redondeo' => 'na',
+            'concepto' => $concepto, 'valor_numerico' => $valor, 'unidad' => 'prueba', 'fuente' => 'prueba',
+        ]);
+    }
+
+    public function test_una_captura_faltante_bloquea_y_las_reglas_sin_dato_no(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $escuelaNivel = $this->completarTramite($escuela);
+        $this->regla('primaria.infraestructura.altura_aulas', 'infraestructura', 'minimo_fijo', 'aula', 2.70, 'Altura de aulas');
+        $this->regla('primaria.superficie.aulas', 'superficie', 'ratio_por_alumno', 'aula', 0.90, 'Superficie de aulas');
+
+        $sinAulas = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
+
+        $this->assertFalse($sinAulas->listaParaEnvio);
+        $this->assertSame(['Capacidad instalada · Primaria: Superficie de aulas'], $sinAulas->motivosBloqueo());
+        $this->assertSame('no_evaluable', $this->porClave($sinAulas->capacidad[0]->filas)['primaria.superficie.aulas']->estado);
+
+        // 25 alumnos × 0.90 = 22.5 m² required; 30 declared.
+        AulaNivel::create(['escuela_nivel_id' => $escuelaNivel->id, 'numero_aulas' => 1, 'superficie_m2' => 30]);
+        $conAulas = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
+
+        $this->assertTrue($conAulas->listaParaEnvio, 'Solo queda la regla estructural: no bloquea.');
+        $this->assertSame('no_verificable', $this->porClave($conAulas->capacidad[0]->filas)['primaria.infraestructura.altura_aulas']->estado);
+        $this->assertSame(EjecutarValidacionFinal::REGLA_ENVIO, EvaluacionValidacion::latest('id')->first()?->resultados['regla_envio']);
+    }
+
+    public function test_el_pdf_dice_que_la_capacidad_bloquea_y_que_es_no_verificable(): void
+    {
+        $fila = fn (string $estado) => new FilaValidacion("primaria.{$estado}", "Regla {$estado}", $estado, 'mensaje', [], []);
+
+        $html = view('pdf.reporte-validacion', [
+            'escuela' => ['numero' => '0001', 'nombre' => null, 'domicilio' => 'Centro'],
+            'listaParaEnvio' => false,
+            'filas' => [],
+            'capacidad' => [new SeccionCapacidad(1, 'Primaria', [$fila('no_cumple'), $fila('no_evaluable'), $fila('no_verificable')])],
+            'niveles' => [],
+            'generadaEn' => now(),
+        ])->render();
+
+        $this->assertStringContainsString('Bloquea el envío', $html);
+        $this->assertStringContainsString('Falta capturar: bloquea el envío', $html);
+        $this->assertStringContainsString('No verificable por el sistema', $html);
+        $this->assertStringNotContainsString('no impiden enviar', $html);
+        $this->assertStringNotContainsString('Observación', $html);
     }
 }

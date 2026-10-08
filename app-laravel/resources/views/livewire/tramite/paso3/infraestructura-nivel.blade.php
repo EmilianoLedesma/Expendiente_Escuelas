@@ -81,7 +81,7 @@
                         @endif
 
                         @if ($tipo->permite_material_biblioteca)
-                            <fieldset class="mt-md border-l-4 border-hairline pl-md">
+                            <fieldset id="materialesBiblioteca" class="mt-md border-l-4 border-hairline pl-md">
                                 <legend class="text-body-sm font-semibold text-ink">Material de la biblioteca</legend>
                                 <div class="hidden gap-sm text-body-sm font-semibold text-muted md:grid md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]" aria-hidden="true">
                                     <span>Material</span><span>Títulos</span><span>Volúmenes</span>
@@ -133,7 +133,7 @@
                 <x-ui.field id="numeroAulas" label="Número de aulas">
                     <x-ui.input type="number" inputmode="numeric" min="1" wire:model.blur="numeroAulas" />
                 </x-ui.field>
-                <x-ui.field id="superficieAulasM2" label="Superficie total (m²)" optional>
+                <x-ui.field id="superficieAulasM2" label="Superficie total (m²)">
                     <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="superficieAulasM2" />
                 </x-ui.field>
             </div>

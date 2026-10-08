@@ -123,6 +123,32 @@ class Paso3DatosInmuebleTest extends TestCase
         $this->assertEquals(1200.5, (float) $this->plantel->fresh()->metros_totales);
     }
 
+    public function test_la_etiqueta_de_metros_construidos_ya_no_dice_opcional(): void
+    {
+        $html = Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $this->escuelaNivel()])
+            ->html();
+
+        preg_match('/<label for="metrosConstruidos".*?<\/label>/s', $html, $etiqueta);
+        $this->assertStringContainsString('Superficie construida (m²)', $etiqueta[0] ?? '');
+        $this->assertStringNotContainsString('(opcional)', $etiqueta[0]);
+    }
+
+    public function test_los_metros_construidos_son_obligatorios(): void
+    {
+        $escuelaNivel = $this->escuelaNivel();
+
+        $prueba = Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $escuelaNivel])
+            ->set('metrosTotales', 1200)
+            ->set('metrosConstruidos', '')
+            ->call('guardar')
+            ->assertHasErrors(['metrosConstruidos' => 'required']);
+
+        $this->assertSame('El campo superficie construida es obligatorio.', $prueba->errors()->first('metrosConstruidos'));
+        $this->assertNull($this->plantel->fresh()->metros_totales);
+    }
+
     public function test_metros_totales_es_obligatorio(): void
     {
         $escuelaNivel = $this->escuelaNivel();
@@ -143,6 +169,7 @@ class Paso3DatosInmuebleTest extends TestCase
         Livewire::actingAs($this->solicitante->user)
             ->test(DatosInmueble::class, ['escuelaNivel' => $escuelaNivel])
             ->set('metrosTotales', 900)
+            ->set('metrosConstruidos', 600)
             ->call('agregarServicio')
             ->set('serviciosCercanos.0.nombre', 'Cruz Roja')
             ->set('serviciosCercanos.0.tipo', 'emergencia')
@@ -164,6 +191,7 @@ class Paso3DatosInmuebleTest extends TestCase
         Livewire::actingAs($this->solicitante->user)
             ->test(DatosInmueble::class, ['escuelaNivel' => $escuelaNivel])
             ->set('metrosTotales', 900)
+            ->set('metrosConstruidos', 600)
             ->call('agregarEstudio')
             ->set('estudiosActuales.0.nivelEducativoId', '')
             ->set('estudiosActuales.0.otroNivelTexto', 'Academia de inglés')
@@ -185,6 +213,7 @@ class Paso3DatosInmuebleTest extends TestCase
         Livewire::actingAs($this->solicitante->user)
             ->test(DatosInmueble::class, ['escuelaNivel' => $primaria])
             ->set('metrosTotales', 900)
+            ->set('metrosConstruidos', 600)
             ->call('guardar');
 
         $preescolar = $this->escuelaNivel('preescolar');
@@ -231,6 +260,7 @@ class Paso3DatosInmuebleTest extends TestCase
         Livewire::actingAs($this->solicitante->user)
             ->test(DatosInmueble::class, ['escuelaNivel' => $escuelaNivel])
             ->set('metrosTotales', 900)
+            ->set('metrosConstruidos', 600)
             ->set('latitud', 20.0)
             ->set('longitud', -100.0)
             ->call('guardar')

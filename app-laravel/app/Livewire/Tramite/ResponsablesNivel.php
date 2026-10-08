@@ -3,6 +3,7 @@
 namespace App\Livewire\Tramite;
 
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsablesNivel\InvitarResponsableNivel;
 use App\Application\ResponsablesNivel\ListarResponsablesNivel;
 use App\Application\ResponsablesNivel\RevocarResponsableNivel;
@@ -63,6 +64,10 @@ class ResponsablesNivel extends Component
             $revocar->ejecutar($this->solicitanteId(), $accesoId);
         } catch (AuthorizationException) {
             abort(403);
+        } catch (PrecondicionIncumplida $e) {
+            $this->addError('revocar', $e->getMessage());
+
+            return;
         }
 
         session()->now('status', 'Acceso revocado. Lo que ya capturó se conserva.');

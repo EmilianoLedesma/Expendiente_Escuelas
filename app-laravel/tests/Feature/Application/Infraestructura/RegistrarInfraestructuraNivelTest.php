@@ -309,6 +309,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             espacios: [],
             sanitarios: $this->soloSanitarios(),
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
         app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $primaria->id, $datosSoloSanitarios);
 
@@ -355,6 +356,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             ],
             sanitarios: [],
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
 
         app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
@@ -389,6 +391,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             ],
             sanitarios: [],
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
 
         app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
@@ -412,7 +415,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
                 [
                     'tipoEspacioId' => $this->idTipo('campo_futbol'),
                     'cantidad' => null,
-                    'superficieM2' => null,
+                    'superficieM2' => 800.0,
                     'capacidadPromedio' => null,
                     'ventilacionNatural' => null,
                     'iluminacionNatural' => null,
@@ -423,6 +426,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             ],
             sanitarios: [],
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
 
         app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
@@ -439,6 +443,65 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             'instalacion_espacio_id' => $campoId,
             'formato' => '7',
         ]);
+    }
+
+    // WS-7a §3.1: un campo_futbol con solo formato y sin superficie es "dato significativo"
+    // (se escribiría una vez, ADR-005) y la capacidad lee su superficie: se rechaza.
+    public function test_campo_futbol_con_solo_formato_y_sin_superficie_se_rechaza(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $espacio = $this->espacio('campo_futbol', null);
+        $espacio['cantidad'] = null;
+        $espacio['campoFutbol'] = ['tipoSuperficie' => null, 'formato' => '7'];
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+                espacios: [$espacio], sanitarios: [], numeroAulas: 6, superficieAulasM2: 240.0,
+            ));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertSame(['espacios.'.$this->idTipo('campo_futbol').'.superficieM2'], array_keys($e->errores));
+        }
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+    }
+
+    // Nota para el informe 9.2: "no tengo" se captura como superficie 0; vacío se rechaza aunque cantidad sea 0.
+    public function test_un_espacio_recreativo_con_cantidad_cero_y_sin_superficie_se_rechaza_y_con_cero_se_guarda(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $sinSuperficie = $this->espacio('areas_verdes', null);
+        $sinSuperficie['cantidad'] = 0;
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+                espacios: [$sinSuperficie], sanitarios: [], numeroAulas: 6, superficieAulasM2: 240.0,
+            ));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('espacios.'.$this->idTipo('areas_verdes').'.superficieM2', $e->errores);
+        }
+
+        $conCero = $this->espacio('areas_verdes', 0.0);
+        $conCero['cantidad'] = 0;
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+            espacios: [$conCero], sanitarios: [], numeroAulas: 6, superficieAulasM2: 240.0,
+        ));
+        $this->assertDatabaseHas('instalaciones_espacios', ['plantel_id' => $this->plantel->id, 'tipo_espacio_id' => $this->idTipo('areas_verdes')]);
+    }
+
+    public function test_los_sanitarios_que_no_son_de_alumnos_no_exigen_superficie(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $sanitario = $this->soloSanitarios()[0];
+        $sanitario['categoria'] = 'personal_masculino';
+        $sanitario['superficieM2'] = null;
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+            espacios: [], sanitarios: [$sanitario], numeroAulas: 6, superficieAulasM2: 240.0,
+        ));
+
+        $this->assertDatabaseHas('sanitarios', ['plantel_id' => $this->plantel->id, 'categoria' => 'personal_masculino']);
     }
 
     // Minor 8 — un sanitario totalmente vacío (todo null) no debe crear fila,
@@ -462,6 +525,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
                 ],
             ],
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
 
         app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $datos);
@@ -492,6 +556,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
             ]],
             sanitarios: [],
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
 
         try {
@@ -522,6 +587,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
                 'cantidadBacinicas' => 5,
             ]],
             numeroAulas: 6,
+            superficieAulasM2: 240.0,
         );
 
         try {
@@ -576,6 +642,111 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         $this->expectException(PrecondicionIncumplida::class);
 
         app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+    }
+
+    /**
+     * WS-7a §3.1: espacios and sanitarios are written once (ADR-005). A captured space a
+     * capacity rule reads, left without superficie, would keep that rule "falta capturar"
+     * forever and block the send with no way to fix it.
+     *
+     * @return array<string, mixed>
+     */
+    private function espacio(string $clave, ?float $superficie, array $materiales = []): array
+    {
+        return [
+            'tipoEspacioId' => $this->idTipo($clave), 'cantidad' => 1, 'superficieM2' => $superficie, 'capacidadPromedio' => null,
+            'ventilacionNatural' => null, 'iluminacionNatural' => null, 'destinadoA' => null, 'campoFutbol' => null,
+            'materialesBiblioteca' => $materiales,
+        ];
+    }
+
+    public function test_exige_la_superficie_de_aulas(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+                espacios: [], sanitarios: [], numeroAulas: 6,
+            ));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertSame('Captura la superficie total de las aulas.', $e->errores['superficieAulasM2'] ?? null);
+        }
+
+        $this->assertDatabaseCount('aulas_nivel', 0);
+    }
+
+    public function test_exige_la_superficie_de_los_espacios_que_lee_la_capacidad(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+                espacios: [$this->espacio('areas_verdes', null), $this->espacio('salon_usos_multiples', null), $this->espacio('direccion', null)],
+                sanitarios: [], numeroAulas: 6, superficieAulasM2: 240.0,
+            ));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertSame([
+                'espacios.'.$this->idTipo('areas_verdes').'.superficieM2',
+                'espacios.'.$this->idTipo('salon_usos_multiples').'.superficieM2',
+            ], array_keys($e->errores), 'direccion no la lee ninguna regla: no se exige.');
+            $this->assertSame('Captura la superficie: la revisión de capacidad instalada la usa.', $e->errores['espacios.'.$this->idTipo('areas_verdes').'.superficieM2']);
+        }
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+    }
+
+    public function test_exige_la_superficie_de_los_sanitarios_de_alumnos(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $sanitario = $this->soloSanitarios()[0];
+        $sanitario['superficieM2'] = null;
+
+        try {
+            app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+                espacios: [], sanitarios: [$sanitario], numeroAulas: 6, superficieAulasM2: 240.0,
+            ));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertSame(['sanitarios.alumnado_masculino.superficieM2'], array_keys($e->errores));
+        }
+
+        $this->assertDatabaseCount('sanitarios', 0);
+    }
+
+    public function test_una_biblioteca_exige_su_acervo_con_numero_de_titulos(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $libros = (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id');
+
+        foreach ([
+            'sin material' => [[], 'materialesBiblioteca'],
+            'solo volúmenes' => [[['tipoMaterialId' => $libros, 'numeroTitulos' => null, 'numeroVolumenes' => 40]], "materialesBiblioteca.{$libros}.numeroTitulos"],
+        ] as $caso => [$materiales, $clave]) {
+            try {
+                app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+                    espacios: [$this->espacio('biblioteca', 45.0, $materiales)], sanitarios: [], numeroAulas: 6, superficieAulasM2: 240.0,
+                ));
+                $this->fail("Se esperaba DatosInvalidos ({$caso}).");
+            } catch (DatosInvalidos $e) {
+                $this->assertArrayHasKey($clave, $e->errores, $caso);
+            }
+        }
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+    }
+
+    public function test_un_espacio_ya_capturado_sin_superficie_no_se_vuelve_a_exigir(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        DB::table('instalaciones_espacios')->insert(['plantel_id' => $this->plantel->id, 'tipo_espacio_id' => $this->idTipo('areas_verdes'), 'cantidad' => 1]);
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInfraestructuraNivel(
+            espacios: [$this->espacio('areas_verdes', null)], sanitarios: [], numeroAulas: 6, superficieAulasM2: 240.0,
+        ));
+
+        $this->assertDatabaseHas('aulas_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'numero_aulas' => 6]);
     }
 
     public function test_rechaza_numeros_negativos(): void

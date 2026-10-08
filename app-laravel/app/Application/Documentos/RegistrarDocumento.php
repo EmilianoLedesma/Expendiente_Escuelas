@@ -8,6 +8,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
+use App\Application\Tramite\TramiteEditable;
 use App\Domain\Captura\Formatos;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\AcreditacionOcupacionLegal;
@@ -45,12 +46,13 @@ class RegistrarDocumento
         private readonly ?TipoPersonaDeEscuela $tipoPersonaDeEscuela = null,
         private readonly ?DocumentosNivelCompletos $documentosNivelCompletos = null,
         private readonly ?EstadoPaso24 $estadoPaso24 = null,
+        private readonly ?TramiteEditable $tramiteEditable = null,
     ) {}
 
     /**
      * @param  int|null  $escuelaNivelId  nivel dueño del documento en Paso 2.4 (ámbito escuela_nivel); null en Paso 2.2.
      *
-     * @throws PrecondicionIncumplida si no hay responsable legal; en Paso 2.4 además si Paso 2 no está completo o si se sube el Formato antes de turno y tipo de alumnado.
+     * @throws PrecondicionIncumplida si no hay responsable legal; en Paso 2.4 además si Paso 2 no está completo o si se sube el Formato antes de turno y tipo de alumnado; si el trámite (o, para documentos del plantel, cualquier trámite del plantel) ya se envió (WS-7a).
      */
     public function ejecutar(int $escuelaId, string $tipoDocumentoClave, UploadedFile $archivo, DatosDocumento $datos, ?int $escuelaNivelId = null): void
     {
@@ -135,9 +137,10 @@ class RegistrarDocumento
         // DB::transaction() es la transacción real o solo un savepoint
         // anidado de un caller externo.
         $confirmado = false;
+        $tramiteEditable = $this->tramiteEditable ?? app(TramiteEditable::class);
 
         try {
-            DB::transaction(function () use ($tipo, $modelo, $columna, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, $datosNivelVerificados, &$confirmado) {
+            DB::transaction(function () use ($tipo, $modelo, $columna, $ownerId, $ruta, $rutaAnterior, $datos, $fechaVigencia, $almacen, $datosNivelVerificados, $escuelaId, $tramiteEditable, &$confirmado) {
                 $atributos = [
                     'archivo_path' => $ruta,
                     'fecha_emision' => $datos->fechaEmision,
@@ -160,6 +163,15 @@ class RegistrarDocumento
                     if ($tipo->clave === 'formato_solicitud' && (in_array(null, $datosActuales, true) || $datosActuales !== $datosNivelVerificados)) {
                         throw new PrecondicionIncumplida(EstadoPaso24::DATOS, 'El turno o el tipo de alumnado cambiaron; vuelve a descargar y firmar el Formato de Solicitud.');
                     }
+                }
+
+                // WS-7a: después del bloqueo del nivel de arriba (orden escuela_niveles →
+                // escuelas). Los documentos del plantel se comparten: se rechazan mientras
+                // cualquier escuela del plantel esté enviada (spec §5.4).
+                if ($tipo->ambito === 'plantel') {
+                    $tramiteEditable->asegurarPlantel((int) $ownerId);
+                } else {
+                    $tramiteEditable->asegurarEscuela($escuelaId);
                 }
 
                 $documento = $modelo->newQuery()->updateOrCreate(

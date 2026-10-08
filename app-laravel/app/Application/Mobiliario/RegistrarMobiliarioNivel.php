@@ -62,6 +62,9 @@ class RegistrarMobiliarioNivel
         }
 
         DB::transaction(function () use ($escuelaNivelId, $cantidadesPorConcepto) {
+            // WS-7a: orden escuela_niveles → escuelas; la guarda de MarcarPasoCompletado bloquea la escuela al final.
+            EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
+
             foreach ($cantidadesPorConcepto as $conceptoId => $cantidad) {
                 // ponytail: updateOrCreate sobre el UNIQUE(escuela_nivel_id, concepto_id)
                 // hace que reenviar el formulario corrija cantidades en vez de fallar.

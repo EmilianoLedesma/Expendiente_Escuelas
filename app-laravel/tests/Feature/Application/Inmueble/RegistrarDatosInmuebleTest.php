@@ -179,6 +179,21 @@ class RegistrarDatosInmuebleTest extends TestCase
     // formulario no pueda escribir datos que violan un CHECK del DDL o un
     // invariante de negocio.
 
+    // WS-7a §3.1: feeds preescolar.superficie.construida_total and Inmueble is written once.
+    public function test_exige_los_metros_construidos(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, new DatosInmueble(metrosTotales: 900.0));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertSame('Captura la superficie construida.', $e->errores['metrosConstruidos'] ?? null);
+        }
+
+        $this->assertNull($this->plantel->fresh()->metros_totales);
+    }
+
     public function test_rechaza_metros_totales_cero_o_negativos(): void
     {
         $escuelaNivel = $this->escuelaNivel('primaria');

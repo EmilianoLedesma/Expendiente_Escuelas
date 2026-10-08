@@ -27,7 +27,7 @@
                 <x-ui.field id="metrosTotales" label="Superficie del predio (m²)">
                     <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosTotales" />
                 </x-ui.field>
-                <x-ui.field id="metrosConstruidos" label="Superficie construida (m²)" optional>
+                <x-ui.field id="metrosConstruidos" label="Superficie construida (m²)">
                     <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosConstruidos" />
                 </x-ui.field>
                 <x-ui.field id="areaCivicaM2" label="Área cívica (m²)" optional>

@@ -79,6 +79,7 @@ class AuditoriaIntegridadTest extends TestCase
         Livewire::test(InfraestructuraNivel::class, ['escuelaNivel' => $en])
             ->set("espacios.$verdes.superficieM2", '120')
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $fila = InstalacionEspacio::where('plantel_id', $res->plantelId)->where('tipo_espacio_id', $verdes)->first();

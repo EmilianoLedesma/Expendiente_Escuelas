@@ -11,6 +11,7 @@ use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
 use App\Application\Tramite\ResumenTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
@@ -97,7 +98,7 @@ class InfraestructuraNivel extends Component
 
         return [
             'numeroAulas' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT, min: 1, requerido: true),
-            'superficieAulasM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
+            'superficieAulasM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2, requerido: true),
             'espacios.*.cantidad' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
             'espacios.*.superficieM2' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
             'espacios.*.capacidadPromedio' => ReglasCaptura::entero(ReglasCaptura::MAX_SMALLINT),
@@ -140,7 +141,14 @@ class InfraestructuraNivel extends Component
             }
 
             return;
-        } catch (PrecondicionIncumplida) {
+        } catch (PrecondicionIncumplida $e) {
+            // WS-7a §5.4: otro trámite del plantel ya se envió; los datos compartidos no cambian.
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->addError('plantel', $e->getMessage());
+
+                return;
+            }
+
             // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
             $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'infraestructura');
 

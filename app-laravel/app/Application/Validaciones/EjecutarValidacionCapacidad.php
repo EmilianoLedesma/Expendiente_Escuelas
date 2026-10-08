@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Runs the capacity engine for one escuela_nivel: its reglas_validacion
- * rows against what Paso 3 captured, plus Inicial furniture. Blocks
- * nothing (PRD: "sin bloquear el guardado", the expediente may stay "con
- * observaciones").
+ * rows against what Paso 3 captured, plus Inicial furniture. Since WS-7a
+ * (ADR-010 P3) a no_cumple, or a no_evaluable caused by a missing capture,
+ * blocks the send (ValidacionFinal::bloqueantes); rules whose input the
+ * wizard never captures are marked sin_dato and do not.
  */
 class EjecutarValidacionCapacidad
 {

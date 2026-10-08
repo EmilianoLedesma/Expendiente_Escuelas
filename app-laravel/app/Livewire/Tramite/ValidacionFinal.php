@@ -3,6 +3,8 @@
 namespace App\Livewire\Tramite;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Tramite\EnviarTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Application\Validaciones\UltimaValidacionFinal;
 use App\Models\Escuela;
@@ -10,10 +12,13 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /**
- * Last step of the wizard (ADR-007): runs the documental validation over
- * everything uploaded, stores it as a PDF and points at each document to
- * fix. Presentation only — the rules and the send gate live in
- * EjecutarValidacionFinal.
+ * Last step of the wizard (ADR-007): runs the final validation, stores it as a
+ * PDF and points at each thing to fix; when nothing blocks, offers "Enviar a
+ * SEDEQ" (WS-7a). Presentation only — the ready rule lives in
+ * EjecutarValidacionFinal and the send in EnviarTramite, which re-evaluates
+ * instead of trusting what this page shows. Only the owner reaches enviar():
+ * the route's can:update,escuela is re-applied on every Livewire round trip,
+ * and a responsable del nivel never holds it (ADR-015).
  */
 #[Layout('layouts.tramite')]
 class ValidacionFinal extends Component
@@ -33,6 +38,23 @@ class ValidacionFinal extends Component
     public function validarDeNuevo(EjecutarValidacionFinal $ejecutarValidacionFinal): void
     {
         $this->validar($ejecutarValidacionFinal);
+    }
+
+    public function enviar(EnviarTramite $enviarTramite): void
+    {
+        try {
+            $enviarTramite->ejecutar($this->escuela->id, (int) auth()->id());
+        } catch (PrecondicionIncumplida $e) {
+            // The page may show an older "lista" result: point at re-validating, except when already sent.
+            $this->addError('envio', $e->etapaFaltante === TramiteEditable::ENVIADO
+                ? $e->getMessage()
+                : $e->getMessage().' Pulsa «Validar de nuevo» para actualizar el resultado.');
+
+            return;
+        }
+
+        session()->flash('status', 'Trámite enviado a SEDEQ.');
+        $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 
     private function validar(EjecutarValidacionFinal $ejecutarValidacionFinal): void

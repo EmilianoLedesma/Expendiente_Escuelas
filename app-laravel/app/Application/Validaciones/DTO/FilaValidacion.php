@@ -9,7 +9,7 @@ namespace App\Application\Validaciones\DTO;
 final readonly class FilaValidacion
 {
     /**
-     * @param  string  $estado  cumple|advertencia|no_cumple|no_evaluable
+     * @param  string  $estado  cumple|advertencia|no_cumple|no_evaluable, or no_verificable for capacity rows the wizard never captures (WS-7a)
      * @param  array<string, string>  $documentos  tipos_documentos.clave => nombre, the uploads to fix
      * @param  list<string>  $lineas  what was compared, one line per value
      * @param  string|null  $pasoCorreccion  Paso 3 sub-step (pasos_captura.clave) where a capacity result is fixed

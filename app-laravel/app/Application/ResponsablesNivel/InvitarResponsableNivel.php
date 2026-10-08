@@ -3,7 +3,7 @@
 namespace App\Application\ResponsablesNivel;
 
 use App\Application\Excepciones\DatosInvalidos;
-use App\Application\Tramite\EliminarTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use App\Models\ResponsableNivel;
 use App\Models\User;
@@ -46,7 +46,7 @@ class InvitarResponsableNivel
             if ($nivel === null || (int) $nivel->escuela->solicitante_id !== $solicitanteId) {
                 throw new DatosInvalidos(['escuelaNivelId' => 'Elige un nivel de tus trámites.']);
             }
-            if ((int) $nivel->estado_id !== EliminarTramite::idEnCaptura()) {
+            if ((int) $nivel->estado_id !== TramiteEditable::idEnCaptura()) {
                 throw new DatosInvalidos(['escuelaNivelId' => 'Solo puedes asignar responsables a niveles en captura.']);
             }
 
@@ -84,7 +84,7 @@ class InvitarResponsableNivel
             DB::afterCommit(fn () => rescue(fn () => $usuario->notify(new InvitacionResponsableNivel(
                 $quien,
                 $nivel->nivelEducativo->nombre,
-                $esNueva ? Password::broker()->createToken($usuario) : null,
+                $esNueva ? Password::createToken($usuario) : null,
             )), report: true));
 
             return $acceso;

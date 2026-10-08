@@ -81,10 +81,21 @@ class ValidacionPorNivelTest extends TestCase
         $this->assertSame($this->folio($propio), $this->valor($contexto->hechos, TipoHecho::FolioRecibo, 'recibo_pago_derechos'));
         $this->assertSame([], $contexto->foliosAjenos, 'Solo se traen los folios ajenos que coinciden con el propio.');
         $this->assertSame('300', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, 'acervo_bibliografico_primaria'));
-        $this->assertSame('250', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, null), 'Solo cuentan los libros de la biblioteca.');
+        $this->assertSame('290', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, null), 'Cuenta todo el material de la biblioteca (ADR-010 P6), no solo los libros.');
         $this->assertSame('0', $this->valor($contexto->hechos, TipoHecho::LaboratoriosDeclarados, null));
         $this->assertSame(['formato_solicitud', 'recibo_pago_derechos', 'acervo_bibliografico_primaria'], $contexto->clavesRequeridas);
         $this->assertSame($contexto->clavesRequeridas, $contexto->clavesPresentes);
+    }
+
+    public function test_una_biblioteca_con_solo_material_que_no_es_libros_declara_titulos(): void
+    {
+        $propio = $this->tramiteCompleto();
+        $this->declararEspacio($propio, 'biblioteca', 1, ['videos' => 120, 'revistas_especializadas' => 180]);
+
+        $contexto = app(ConstruirContextoValidacion::class)->paraNivel($propio->id);
+
+        $this->assertSame('300', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, null));
+        $this->assertSame('300', $this->valor($contexto->hechos, TipoHecho::TitulosAcervo, 'acervo_bibliografico_primaria'));
     }
 
     public function test_el_contexto_trae_solo_los_folios_ajenos_que_coinciden_ignorando_mayusculas_y_espacios(): void

@@ -10,7 +10,6 @@ use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\EvaluacionValidacion;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,40 +24,21 @@ use Illuminate\Support\Facades\Log;
  */
 class EliminarTramite
 {
-    public const EN_CAPTURA = 'en_captura';
-
     public function __construct(
         private readonly AlmacenDocumentos $almacen,
         private readonly ReporteValidacionPdf $reportes,
     ) {}
 
-    public static function idEnCaptura(): ?int
-    {
-        $id = DB::table('estados_expediente')->where('clave', self::EN_CAPTURA)->value('id');
-
-        return $id === null ? null : (int) $id;
-    }
-
-    /**
-     * La regla de borrado, compartida con ResumenTramite (puedeEliminar). Sin niveles también es true.
-     *
-     * @param  Collection<array-key, mixed>  $estadoIds  estado_id de cada escuela_nivel
-     * @param  int|null  $enCapturaId  idEnCaptura(); quien evalúa muchos trámites lo busca una vez y lo pasa
-     */
-    public static function todosEnCaptura(Collection $estadoIds, ?int $enCapturaId): bool
-    {
-        return $estadoIds->every(fn ($estadoId) => (int) $estadoId === $enCapturaId);
-    }
-
     /** @throws PrecondicionIncumplida si algún nivel ya no está en captura. */
     public function ejecutar(int $escuelaId): void
     {
         DB::transaction(function () use ($escuelaId) {
+            // WS-7a: orden de bloqueo de TramiteEditable — escuela_niveles antes que escuelas.
+            $niveles = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->pluck('estado_id', 'id');
             $escuela = Escuela::lockForUpdate()->findOrFail($escuelaId);
-            $niveles = EscuelaNivel::where('escuela_id', $escuelaId)->lockForUpdate()->pluck('estado_id', 'id');
 
-            if (! self::todosEnCaptura($niveles, self::idEnCaptura())) {
-                throw new PrecondicionIncumplida(self::EN_CAPTURA, 'Solo se puede eliminar un trámite mientras todos sus niveles estén en captura.');
+            if (! TramiteEditable::todosEnCaptura($niveles, TramiteEditable::idEnCaptura())) {
+                throw new PrecondicionIncumplida(TramiteEditable::EN_CAPTURA, 'Solo se puede eliminar un trámite mientras todos sus niveles estén en captura.');
             }
 
             // Rutas reunidas ANTES del borrado: después, el cascade ya se llevó las filas.

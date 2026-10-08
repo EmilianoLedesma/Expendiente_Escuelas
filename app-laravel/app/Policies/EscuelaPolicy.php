@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Application\Escuelas\VerificarAccesoResponsable;
 use App\Application\Escuelas\VerificarPropietarioEscuela;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\Escuela;
 use App\Models\User;
 
@@ -22,6 +23,7 @@ class EscuelaPolicy
     public function __construct(
         private readonly VerificarPropietarioEscuela $verificar,
         private readonly VerificarAccesoResponsable $accesoResponsable,
+        private readonly TramiteEditable $editable,
     ) {}
 
     public function view(User $user, Escuela $escuela): bool
@@ -36,9 +38,10 @@ class EscuelaPolicy
             || $this->accesoResponsable->aLaEscuela($user->getKey(), $escuela->getKey());
     }
 
+    /** Solo el dueño y solo mientras el trámite sea editable (WS-7a): tras el envío toda página que escribe responde 403. */
     public function update(User $user, Escuela $escuela): bool
     {
-        return $this->esDueno($user, $escuela);
+        return $this->esDueno($user, $escuela) && $this->editable->esEditable($escuela->getKey());
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Application\EscuelaNiveles;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,10 @@ use InvalidArgumentException;
  */
 class RegistrarNivelesSeleccionados
 {
-    public function __construct(private readonly EstadoPaso2 $estadoPaso2) {}
+    public function __construct(
+        private readonly EstadoPaso2 $estadoPaso2,
+        private readonly TramiteEditable $tramiteEditable = new TramiteEditable,
+    ) {}
 
     /** @throws PrecondicionIncumplida si Paso 2 (responsable + documentos vigentes) no está completo. */
     public function ejecutar(int $escuelaId, array $nivelesEducativosIds): void
@@ -41,6 +45,9 @@ class RegistrarNivelesSeleccionados
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
         DB::transaction(function () use ($escuelaId, $nivelesEducativosIds, $estadoId) {
+            // WS-7a: no se agrega un nivel a un trámite enviado.
+            $this->tramiteEditable->asegurarEscuela($escuelaId);
+
             foreach ($nivelesEducativosIds as $nivelEducativoId) {
                 // ponytail: firstOrCreate makes a repeated submit of the same nivel a no-op
                 // instead of tripping the UNIQUE(escuela_id, nivel_educativo_id) constraint.
