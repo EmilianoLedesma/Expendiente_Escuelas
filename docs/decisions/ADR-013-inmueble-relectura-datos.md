@@ -1,6 +1,12 @@
 # PENDIENTE — Relectura de datos de inmueble ya capturados
 
-**Estado:** abierto
+**Estado:** resuelto el 2026-10-07: absorbido por WS-7. Antes `PENDIENTE-inmueble-relectura-datos.md`.
+
+## Resolución (2026-10-07)
+
+Se resuelve dentro de WS-7 ("edición hasta el envío", `PENDIENTE-edicion-hasta-envio.md`): Datos del inmueble debe poder leerse y corregirse hasta el envío, con la misma rama de solo lectura/edición que ya tiene Infraestructura del nivel. No se hace nada por separado.
+
+---
 **Abierto:** 2026-09-21
 **Requiere:** decisión del dueño del proyecto (arquitectónica)
 **Bloquea:** nada hoy en el flujo feliz. Sí impide corregir un dato mal

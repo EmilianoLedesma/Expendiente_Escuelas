@@ -1,7 +1,19 @@
 # PENDIENTE — Cardinalidad entre Plantel y Solicitante
 
-**Estado: abierto.** No adjudicado por el agente. Requiere confirmación de SEDEQ o
-una decisión de producto una vez que se observen patrones reales de captura.
+**Estado: resuelto el 2026-10-07** (decisión del dueño del proyecto). Antes `PENDIENTE-plantel-solicitante-cardinalidad.md`.
+
+## Resolución (2026-10-07)
+
+**1 plantel : 1 solicitante.** Un solicitante puede tener varias escuelas en su propio plantel, nunca en el plantel de otro solicitante.
+
+- Es lo que la interfaz ya hace (`ListarPlantelesDisponibles` solo ofrece planteles propios; `IniciarTramiteNuevo` rechaza adjuntar una escuela a un plantel sin escuelas propias). Ahora es regla explícita.
+- Hay que hacerla cumplir también en el caso de uso y limpiar el plantel de desarrollo heredado que tiene escuelas de más de un solicitante. Con ello se descarta el contraejemplo "turno matutino de un dueño y vespertino de otro"; si SEDEQ lo exigiera después, se reabre.
+- Consecuencia: desaparece el efecto secundario de P2 descrito en `ADR-010` (la suma de matrícula del plantel ya no puede incluir a otro solicitante) y `documentos_plantel` pertenece sin ambigüedad a un solo solicitante.
+- Trabajo derivado: ver `ADR-014-decisiones-de-producto-2026-10-07.md`.
+
+---
+
+El resto del documento conserva el razonamiento original.
 
 ## Por qué existe este documento
 
