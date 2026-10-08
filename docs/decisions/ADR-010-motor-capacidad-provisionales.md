@@ -1,6 +1,25 @@
 # PENDIENTE — Elecciones provisionales del Motor de Capacidad Instalada y del Paso 3
 
-**Estado:** abierto. El agente tuvo que elegir para que el motor y los sub-pasos 4–6 funcionen; cada punto se puede revertir sin rediseño. Requiere confirmación del owner (P2–P10) y de SEDEQ (P1).
+**Estado:** resuelto el 2026-10-07 (dueño del proyecto) salvo P1, que pasó a la consulta a SEDEQ (`docs/reports/2026-10-07-consulta-a-sedeq.md`). Antes `PENDIENTE-motor-capacidad-provisionales.md`.
+
+## Resolución (2026-10-07)
+
+Revisadas una por una con el dueño del proyecto:
+
+- **P1 (matrícula vs capacidad)**: sigue abierto, es de SEDEQ; incluido en la consulta. Mientras tanto se usa la matrícula.
+- **P2 (predio con varios niveles)**: se confirma sumar la matrícula de todos los niveles del plantel. Con 1 plantel : 1 solicitante (`ADR-009`) desaparece el efecto sobre otros dueños.
+- **P3 (¿la capacidad bloquea el envío?)**: **CAMBIA. Sí bloquea.** Una regla de capacidad que falla impide enviar el trámite. Falta decidir en el plan de WS-7 si una regla `no_evaluable` (faltan datos) también bloquea o solo la que claramente falla. Esto revierte la elección provisional ("solo observaciones").
+- **P4 (áreas compartidas)**: se confirma comparar cada nivel contra el área total del plantel. Limitación conocida y aceptada para el MVP.
+- **P5 (mobiliario de Inicial)**: se confirma redondear hacia arriba; los conceptos de la sala de usos múltiples siguen como "no verificados".
+- **P6 (acervo bibliográfico)**: **CAMBIA.** Cuenta **todo el material** de las bibliotecas del plantel, no solo los títulos de tipo `libros`.
+- **P7 (plan de estudios y plataforma)** y **P8 (plantilla docente y matrícula)**: se confirman como están.
+- **P9 (enlace a Datos del inmueble)**: lo resuelve WS-7 al abrir la edición del inmueble (`ADR-013`).
+- **P10 (Educación Física en Secundaria)**: se confirma contar docentes titulares de Educación Física, pero **la coincidencia debe ser por una clave estable, no por el nombre** de la asignatura (hoy un cambio de redacción deja el conteo en 0 sin error y, con P3, bloquearía envíos indebidamente).
+- Trabajo derivado: ver `ADR-014-decisiones-de-producto-2026-10-07.md`.
+
+---
+
+El resto del documento conserva el texto original de cada punto.
 **Fecha:** 2026-09-30
 **Origen:** `docs/reports/2026-09-30-motor-capacidad-instalada.md`
 **Rama:** `feat/motor-capacidad-instalada` (mergeada a `master` en `df9ce33`, PR #2)

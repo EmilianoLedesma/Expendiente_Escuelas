@@ -1,6 +1,14 @@
 # PENDIENTE — Origen de la magnitud y composición de reglas
 
-**Estado: diseño abierto.** Documento para el arquitecto — no implementado aquí, a
+**Estado: resuelto el 2026-10-07** (dueño del proyecto). Antes `PENDIENTE-origen-de-magnitud.md`.
+
+## Resolución (2026-10-07)
+
+Se adopta la **opción C**, ya construida y probada en PR #2: el código resuelve la magnitud de cada regla por su `clave` (`ConstruirDatosCapacidad`). No hay cambio de esquema ni columna `origen_magnitud`; se reconsidera solo si el número de reglas crece al punto de que resolver por clave en código deje de ser mantenible.
+
+---
+
+Texto original del análisis: Documento para el arquitecto — no implementado aquí, a
 propósito. `CalculadoraRequerimiento` (ver
 `docs/reports/2026-09-07-reglas-validacion-schema.md`, §10) recibe `magnitud` como
 parámetro escalar; este documento cubre de dónde debe salir ese escalar para cada una

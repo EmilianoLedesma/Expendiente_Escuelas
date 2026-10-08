@@ -1,6 +1,19 @@
 # PENDIENTE — Personal condicionado por grado ofertado (Inglés/Computación)
 
-**Estado: abierto.** Requiere decisión del owner/arquitecto (y, para el detalle
+**Estado: resuelto el 2026-10-07** (dueño del proyecto). Antes `PENDIENTE-personal-condicionado-por-grado.md`.
+
+## Resolución (2026-10-07)
+
+Se elige la **opción 1**: columna nueva `condicion_grado SMALLINT NULL` en `reglas_validacion` ("grado mínimo ofertado para que la regla aplique"; `NULL` = sin condición). Cambio de esquema autorizado por el dueño; va en una migración nueva (nunca editando las existentes) y se refleja en el DDL.
+
+- Se siembran tres reglas: Docente de Inglés en Preescolar (desde 3.º), Docente de Inglés en Primaria (todos los grados) y Docente de Computación en Primaria (desde 3.º).
+- "Grado ofertado" se deriva de los grados que tienen matrícula capturada (`matricula_grados`); no hay captura nueva.
+- El motor y `ConstruirDatosCapacidad` reciben los grados ofertados por escuela.
+- Trabajo derivado: ver `ADR-014-decisiones-de-producto-2026-10-07.md`.
+
+---
+
+Texto original: Requiere decisión del owner/arquitecto (y, para el detalle
 normativo exacto de "a partir de qué grado", confirmación de SEDEQ si hiciera
 falta precisión adicional a la ya documentada en COMPENDIO).
 
