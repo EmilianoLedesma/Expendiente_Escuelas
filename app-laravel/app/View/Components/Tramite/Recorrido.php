@@ -26,7 +26,7 @@ class Recorrido extends Component
         public readonly ?string $seccionActual = null,
     ) {
         $this->resumen = $resumen
-            ?? app(ResumenTramite::class)->paraEscuela($escuelaId ?? throw new InvalidArgumentException('Recorrido requiere resumen o escuelaId.'));
+            ?? app(ResumenTramite::class)->paraEscuela($escuelaId ?? throw new InvalidArgumentException('Recorrido requiere resumen o escuelaId.'), auth()->id());
     }
 
     public function render(): View

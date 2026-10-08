@@ -10,5 +10,6 @@ class RolesSeeder extends Seeder
     public function run(): void
     {
         Role::firstOrCreate(['name' => 'sedeq', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'responsable_nivel', 'guard_name' => 'web']);
     }
 }

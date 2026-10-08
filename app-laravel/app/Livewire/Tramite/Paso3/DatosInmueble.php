@@ -19,7 +19,9 @@ use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -46,6 +48,10 @@ class DatosInmueble extends Component
     use CompuertaPaso3;
 
     public EscuelaNivel $escuelaNivel;
+
+    /** El responsable de un nivel no edita el inmueble: es del plantel, compartido. */
+    #[Locked]
+    public bool $soloLectura = false;
 
     public float|int|string $metrosTotales = '';
 
@@ -90,6 +96,8 @@ class DatosInmueble extends Component
             $marcarPasoCompletado->ejecutar($escuelaNivel->id, 'inmueble');
             $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]);
         }
+
+        $this->soloLectura = ! Gate::allows('updateInmueble', $escuelaNivel);
     }
 
     public function agregarServicio(): void
@@ -147,6 +155,8 @@ class DatosInmueble extends Component
 
     public function guardar(RegistrarDatosInmueble $registrarDatosInmueble): void
     {
+        abort_unless(Gate::allows('updateInmueble', $this->escuelaNivel), 403);
+
         $this->validate();
 
         try {

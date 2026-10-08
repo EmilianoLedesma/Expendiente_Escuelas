@@ -6,6 +6,7 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Tramite\Concerns\RedirigeAPaso2;
 use App\Models\EscuelaNivel;
 
 /**
@@ -17,6 +18,8 @@ use App\Models\EscuelaNivel;
  */
 trait CompuertaPaso3
 {
+    use RedirigeAPaso2;
+
     private const RUTA_PROXIMOS_PASOS = 'tramite.paso3-proximos-pasos';
 
     /**
@@ -26,7 +29,7 @@ trait CompuertaPaso3
     protected function redirigirSiNoAlcanzable(EscuelaNivel $escuelaNivel, string $clave): bool
     {
         if (! app(EstadoPaso2::class)->puedeSeleccionarNiveles($escuelaNivel->escuela_id)) {
-            $this->redirectRoute('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]);
+            $this->redirigirAPaso2($escuelaNivel->escuela_id);
 
             return true;
         }

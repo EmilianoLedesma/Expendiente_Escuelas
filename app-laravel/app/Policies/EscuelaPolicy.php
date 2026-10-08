@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Application\Escuelas\VerificarAccesoResponsable;
 use App\Application\Escuelas\VerificarPropietarioEscuela;
 use App\Models\Escuela;
 use App\Models\User;
@@ -18,11 +19,21 @@ use App\Models\User;
  */
 class EscuelaPolicy
 {
-    public function __construct(private readonly VerificarPropietarioEscuela $verificar) {}
+    public function __construct(
+        private readonly VerificarPropietarioEscuela $verificar,
+        private readonly VerificarAccesoResponsable $accesoResponsable,
+    ) {}
 
     public function view(User $user, Escuela $escuela): bool
     {
         return $this->esDueno($user, $escuela);
+    }
+
+    /** Hub "Resumen del trámite": el dueño, o un responsable con algún nivel de esta escuela (el DTO se acota a sus niveles). `view` NO cambia: protege descargas de documentos de la escuela. */
+    public function verResumen(User $user, Escuela $escuela): bool
+    {
+        return $this->esDueno($user, $escuela)
+            || $this->accesoResponsable->aLaEscuela($user->getKey(), $escuela->getKey());
     }
 
     public function update(User $user, Escuela $escuela): bool

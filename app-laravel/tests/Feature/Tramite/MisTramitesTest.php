@@ -68,7 +68,8 @@ class MisTramitesTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('tramite.index'))
             ->assertOk()
-            ->assertSee('Iniciar nuevo trámite');
+            ->assertSee('Este sistema te guía')
+            ->assertDontSee('Iniciar nuevo trámite');
     }
 
     public function test_una_escuela_sin_niveles_esta_en_captura(): void

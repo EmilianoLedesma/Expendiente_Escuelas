@@ -11,6 +11,8 @@ use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
+use App\Models\ResponsableNivel;
+use App\Models\Solicitante;
 use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -79,15 +81,23 @@ class ResumenTramite
         private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
     ) {}
 
-    public function paraEscuela(int $escuelaId): ResumenTramiteDTO
+    /**
+     * `$usuarioId = null` es un contexto de confianza/solo dueño (vista completa);
+     * quien actúa por un usuario autenticado DEBE pasar su id.
+     */
+    public function paraEscuela(int $escuelaId, ?int $usuarioId = null): ResumenTramiteDTO
     {
         $escuela = Escuela::with(['plantel', 'escuelaNiveles.nivelEducativo', 'ternasNombres'])->findOrFail($escuelaId);
         $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
+        $soloNivelIds = $usuarioId === null ? null : $this->nivelesVisibles($escuela, $usuarioId);
 
-        $generales = $this->generales($escuela, $etapaFaltante);
+        $generales = $soloNivelIds === null ? $this->generales($escuela, $etapaFaltante) : [];
 
         /** @var Collection<int, EscuelaNivel> $escuelaNiveles */
         $escuelaNiveles = $escuela->escuelaNiveles->sortBy('id')->values();
+        if ($soloNivelIds !== null) {
+            $escuelaNiveles = $escuelaNiveles->whereIn('id', $soloNivelIds)->values();
+        }
         $niveles = $escuelaNiveles
             ->map(fn (EscuelaNivel $escuelaNivel) => new NivelDelTramite(
                 escuelaNivelId: $escuelaNivel->id,
@@ -111,13 +121,29 @@ class ResumenTramite
             plantel: self::datosPlantel($plantel),
             generales: $generales,
             niveles: $niveles,
-            completo: $niveles !== [] && collect($todas)->every(
+            completo: $soloNivelIds === null && $niveles !== [] && collect($todas)->every(
                 fn (SeccionTramite $s) => in_array($s->estado, ['completado', 'no_disponible', 'no_aplica'], true)
             ),
             nombre: $escuela->nombre_aprobado ?? $ternasNombres->sortBy('numero_propuesta')->first()?->nombre_propuesto,
             iniciadoEl: $escuela->created_at,
-            puedeEliminar: EliminarTramite::todosEnCaptura($escuelaNiveles->pluck('estado_id'), $this->enCapturaId ??= EliminarTramite::idEnCaptura()),
+            puedeEliminar: $soloNivelIds === null && EliminarTramite::todosEnCaptura($escuelaNiveles->pluck('estado_id'), $this->enCapturaId ??= EliminarTramite::idEnCaptura()),
         );
+    }
+
+    /**
+     * null = vista completa (el dueño); lista = solo esos escuela_nivel (un responsable).
+     *
+     * @return list<int>|null
+     */
+    private function nivelesVisibles(Escuela $escuela, int $usuarioId): ?array
+    {
+        if ((int) Solicitante::whereKey($escuela->solicitante_id)->value('user_id') === $usuarioId) {
+            return null;
+        }
+
+        return ResponsableNivel::where('user_id', $usuarioId)
+            ->whereIn('escuela_nivel_id', $escuela->escuelaNiveles->pluck('id'))
+            ->pluck('escuela_nivel_id')->map(fn ($id) => (int) $id)->all();
     }
 
     /** @return array{paso: int, total: int}|null null si la sección no cuenta (no aplica / no disponible / desconocida). */

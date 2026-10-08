@@ -10,6 +10,6 @@ class ResumenTramiteController
 {
     public function __invoke(Escuela $escuela, ResumenTramite $resumenTramite): View
     {
-        return view('tramite.resumen', ['resumen' => $resumenTramite->paraEscuela($escuela->id)]);
+        return view('tramite.resumen', ['resumen' => $resumenTramite->paraEscuela($escuela->id, auth()->id())]);
     }
 }

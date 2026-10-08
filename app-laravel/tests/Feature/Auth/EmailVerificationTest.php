@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,7 +71,7 @@ class EmailVerificationTest extends TestCase
 
     public function test_verified_user_reaches_the_tramite(): void
     {
-        $user = User::factory()->create();
+        $user = Solicitante::factory()->create()->user;
 
         $this->actingAs($user)->get('/tramite/preregistro')->assertOk();
     }

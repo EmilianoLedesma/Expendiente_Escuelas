@@ -25,23 +25,25 @@
             </div>
         @endif
 
-        <x-ui.section title="Información general">
-            <ol class="divide-y divide-hairline">
-                @foreach ($resumen->generales as $seccion)
-                    @if ($seccion->clave === 'plantel')
-                        <li class="py-md first:pt-0" data-clave="plantel" data-estado="{{ $seccion->estado }}">
-                            <div class="flex flex-wrap items-center justify-between gap-sm">
-                                <h3 class="text-body-md font-semibold text-ink">{{ $seccion->paso }}. {{ $seccion->nombre }}</h3>
-                                <x-ui.status-tag :estado="$seccion->estado" />
-                            </div>
-                            <x-ui.summary-list :filas="$resumen->plantel" class="mt-sm" />
-                        </li>
-                    @else
-                        <x-tramite.task-row :seccion="$seccion" numerado />
-                    @endif
-                @endforeach
-            </ol>
-        </x-ui.section>
+        @if ($resumen->generales !== [])
+            <x-ui.section title="Información general">
+                <ol class="divide-y divide-hairline">
+                    @foreach ($resumen->generales as $seccion)
+                        @if ($seccion->clave === 'plantel')
+                            <li class="py-md first:pt-0" data-clave="plantel" data-estado="{{ $seccion->estado }}">
+                                <div class="flex flex-wrap items-center justify-between gap-sm">
+                                    <h3 class="text-body-md font-semibold text-ink">{{ $seccion->paso }}. {{ $seccion->nombre }}</h3>
+                                    <x-ui.status-tag :estado="$seccion->estado" />
+                                </div>
+                                <x-ui.summary-list :filas="$resumen->plantel" class="mt-sm" />
+                            </li>
+                        @else
+                            <x-tramite.task-row :seccion="$seccion" numerado />
+                        @endif
+                    @endforeach
+                </ol>
+            </x-ui.section>
+        @endif
 
         @foreach ($resumen->niveles as $nivel)
             <x-ui.section :title="$nivel->nombre">

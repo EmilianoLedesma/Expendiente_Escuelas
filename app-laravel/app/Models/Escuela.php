@@ -23,6 +23,7 @@ class Escuela extends Model
         'nombre_aprobado',
     ];
 
+    /** @return BelongsTo<Plantel, $this> */
     public function plantel(): BelongsTo
     {
         return $this->belongsTo(Plantel::class);

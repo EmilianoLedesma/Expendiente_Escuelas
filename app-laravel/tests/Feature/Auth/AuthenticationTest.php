@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
@@ -103,7 +104,7 @@ class AuthenticationTest extends TestCase
 
     public function test_tramite_top_nav_shows_a_logout_button(): void
     {
-        $user = User::factory()->create();
+        $user = Solicitante::factory()->create()->user;
         $this->actingAs($user);
 
         $response = $this->get(route('tramite.preregistro'));
