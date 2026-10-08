@@ -15,6 +15,7 @@ use App\Application\Tramite\EstadoPaso24;
 use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\ReciboPagoForm;
+use App\Livewire\Tramite\Concerns\RedirigeAPaso2;
 use App\Models\EscuelaNivel;
 use App\Models\TipoDocumento;
 use Livewire\Attributes\Layout;
@@ -32,6 +33,7 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.tramite')]
 class Paso24DocumentosNivel extends Component
 {
+    use RedirigeAPaso2;
     use ValidaEnConjunto;
     use WithFileUploads;
 
@@ -64,7 +66,7 @@ class Paso24DocumentosNivel extends Component
         $this->escuelaNivel = $escuelaNivel;
 
         if (! $estadoPaso2->puedeSeleccionarNiveles($escuelaNivel->escuela_id)) {
-            $this->redirectRoute('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]);
+            $this->redirigirAPaso2($escuelaNivel->escuela_id);
 
             return;
         }
@@ -100,7 +102,7 @@ class Paso24DocumentosNivel extends Component
             $registrarDatosNivel->ejecutar($this->escuelaNivel->id, $this->turno, $this->tipoAlumnado);
         } catch (PrecondicionIncumplida) {
             // DatosInvalidos no puede ocurrir aquí: validate() ya aplica las mismas listas que el caso de uso.
-            $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuelaNivel->escuela_id]);
+            $this->redirigirAPaso2($this->escuelaNivel->escuela_id);
         }
     }
 
@@ -167,7 +169,7 @@ class Paso24DocumentosNivel extends Component
             if ($e->etapaFaltante === EstadoPaso24::DATOS) {
                 $this->addError('turno', $e->getMessage());
             } else {
-                $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuelaNivel->escuela_id]);
+                $this->redirigirAPaso2($this->escuelaNivel->escuela_id);
             }
 
             return false;

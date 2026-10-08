@@ -17,6 +17,7 @@ use App\Livewire\Tramite\Paso3\Matricula;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Livewire\Tramite\Paso3\PlanEstudios;
 use App\Livewire\Tramite\Paso3\PlantillaDocente;
+use App\Livewire\Tramite\ResponsablesNivel;
 use App\Livewire\Tramite\ValidacionFinal;
 use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\Route;
@@ -26,11 +27,13 @@ Route::view('/', 'welcome');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite', MisTramitesController::class)->name('tramite.index');
 
-    Route::get('/tramite/preregistro', Paso1Preregistro::class)->name('tramite.preregistro');
+    Route::get('/tramite/preregistro', Paso1Preregistro::class)->middleware('solicitante')->name('tramite.preregistro');
+
+    Route::get('/tramite/responsables', ResponsablesNivel::class)->middleware('solicitante')->name('tramite.responsables');
 
     Route::get('/tramite/{escuela}', ResumenTramiteController::class)
         ->whereNumber('escuela')
-        ->middleware('can:view,escuela')
+        ->middleware('can:verResumen,escuela')
         ->name('tramite.resumen');
 
     // Un segundo envío (trámite ya borrado) vuelve a Mis trámites en vez de un 404.

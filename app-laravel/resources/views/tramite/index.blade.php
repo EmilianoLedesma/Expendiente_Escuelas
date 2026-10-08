@@ -3,10 +3,12 @@
         <x-ui.page-header title="Mis trámites">
             <x-slot:intro>Solicitudes de incorporación que has iniciado. Cada una corresponde a una escuela.</x-slot:intro>
         </x-ui.page-header>
-        <x-ui.button-primary :href="route('tramite.preregistro')" class="shrink-0 sm:mt-lg">
-            <x-ui.icon nombre="plus" class="h-5 w-5" />
-            Iniciar nuevo trámite
-        </x-ui.button-primary>
+        @if ($puedeIniciar)
+            <x-ui.button-primary :href="route('tramite.preregistro')" class="shrink-0 sm:mt-lg">
+                <x-ui.icon nombre="plus" class="h-5 w-5" />
+                Iniciar nuevo trámite
+            </x-ui.button-primary>
+        @endif
     </div>
 
     @if (session('status'))

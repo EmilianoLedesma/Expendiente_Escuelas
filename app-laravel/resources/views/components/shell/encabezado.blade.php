@@ -47,9 +47,19 @@
                     </a>
                     <span class="h-6 w-px bg-hairline" aria-hidden="true"></span>
                     {{-- Alpine llega con Livewire donde lo hay (perfil); sin él, el nombre queda como texto estático. --}}
-                    <span class="hidden px-sm normal-case tracking-normal text-muted sm:inline"
-                          x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name"
-                          x-on:profile-updated.window="name = $event.detail.name">{{ auth()->user()->name }}</span>
+                    @php($puedeAsignar = auth()->user()->solicitante !== null)
+                    @if ($puedeAsignar)
+                        <a href="{{ route('tramite.responsables') }}" title="Responsables por nivel"
+                           class="inline-flex min-h-11 items-center px-sm normal-case tracking-normal text-primary underline underline-offset-4 hover:no-underline">
+                            <span x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name"
+                                  x-on:profile-updated.window="name = $event.detail.name">{{ auth()->user()->name }}</span>
+                            <span class="sr-only"> — Responsables por nivel</span>
+                        </a>
+                    @else
+                        <span class="hidden px-sm normal-case tracking-normal text-muted sm:inline"
+                              x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name"
+                              x-on:profile-updated.window="name = $event.detail.name">{{ auth()->user()->name }}</span>
+                    @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="inline-flex min-h-11 items-center px-sm uppercase tracking-wide text-primary underline underline-offset-4 hover:no-underline">

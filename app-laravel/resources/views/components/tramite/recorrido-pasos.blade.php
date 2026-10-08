@@ -16,6 +16,7 @@
     </a>
 
     @foreach ($grupos as [$nivelId, $nivelClave, $titulo, $secciones])
+        @continue($secciones === [])
         <p class="mb-sm mt-lg flex items-center gap-xs text-section-eyebrow font-semibold uppercase text-muted" aria-hidden="true">
             @if ($nivelClave)
                 <x-tramite.nivel :clave="$nivelClave" como="marca" />

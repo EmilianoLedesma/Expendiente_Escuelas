@@ -13,6 +13,12 @@
         ], fn ($valor) => $valor !== null)" />
     </x-ui.section>
 
+    @if ($soloLectura)
+        <x-ui.alert tipo="warning" class="mt-xl" titulo="Falta capturar el inmueble">
+            El solicitante debe capturar los datos del inmueble antes de que puedas continuar con este nivel.
+            <a href="{{ route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]) }}" class="mt-xs inline-flex min-h-11 items-center text-primary underline underline-offset-4 hover:no-underline">Volver al resumen</a>
+        </x-ui.alert>
+    @else
     <form novalidate wire:submit="guardar" class="mt-xl">
         <x-ui.error-summary />
 
@@ -123,4 +129,5 @@
 
         <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
     </form>
+    @endif
 </div>

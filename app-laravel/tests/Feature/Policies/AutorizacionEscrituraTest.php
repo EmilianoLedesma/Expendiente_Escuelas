@@ -69,7 +69,7 @@ class AutorizacionEscrituraTest extends TestCase
             'descarga documento (solo lectura)' => ['tramite.paso2-documentos.descargar', 'can:view,escuela'],
             'formato solicitud pdf por nivel (solo lectura)' => ['tramite.paso2-nivel-documentos.formato-solicitud', 'can:view,escuelaNivel'],
             'descarga documento por nivel (solo lectura)' => ['tramite.paso2-nivel-documentos.descargar', 'can:view,escuelaNivel'],
-            'resumen del trámite (solo lectura)' => ['tramite.resumen', 'can:view,escuela'],
+            'resumen del trámite (solo lectura)' => ['tramite.resumen', 'can:verResumen,escuela'],
         ];
     }
 
