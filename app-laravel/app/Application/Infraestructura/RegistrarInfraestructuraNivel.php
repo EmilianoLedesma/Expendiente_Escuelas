@@ -9,6 +9,8 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\TramiteEditable;
+use App\Application\Validaciones\ConstruirDatosCapacidad;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
@@ -28,15 +30,18 @@ use Illuminate\Support\Facades\DB;
  */
 class RegistrarInfraestructuraNivel
 {
+    private const FALTA_SUPERFICIE = 'Captura la superficie: la revisión de capacidad instalada la usa.';
+
     public function __construct(
         private readonly InfraestructuraYaCapturada $yaCapturada,
         private readonly MarcarPasoCompletado $marcarPasoCompletado,
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
         private readonly CategoriasSanitariosPorNivel $categoriasSanitariosPorNivel = new CategoriasSanitariosPorNivel,
+        private readonly TramiteEditable $tramiteEditable = new TramiteEditable,
     ) {}
 
-    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso "infraestructura" aún no es alcanzable. */
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo, el sub-paso "infraestructura" aún no es alcanzable o el trámite (o, para espacios y sanitarios nuevos, un trámite del mismo plantel) ya se envió (WS-7a). */
     public function ejecutar(int $plantelId, int $escuelaNivelId, DatosInfraestructuraNivel $datos): void
     {
         $escuelaNivel = EscuelaNivel::with('nivelEducativo')->findOrFail($escuelaNivelId);
@@ -44,8 +49,9 @@ class RegistrarInfraestructuraNivel
         $this->validar($plantelId, $escuelaNivel, $datos);
 
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
-            $this->escribirEspacios($plantelId, $datos);
-            $this->escribirSanitarios($plantelId, $datos);
+            // WS-7a: orden escuela_niveles → escuelas; las guardas del plantel y de
+            // MarcarPasoCompletado bloquean escuelas después.
+            EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
 
             // ponytail: aulas_nivel no tiene índice único sobre escuela_nivel_id,
             // así que updateOrCreate sobre esa clave es lo que evita filas dobles
@@ -54,6 +60,9 @@ class RegistrarInfraestructuraNivel
                 ['escuela_nivel_id' => $escuelaNivelId],
                 ['numero_aulas' => $datos->numeroAulas, 'superficie_m2' => $datos->superficieAulasM2],
             );
+
+            $this->escribirEspacios($plantelId, $datos);
+            $this->escribirSanitarios($plantelId, $datos);
 
             $this->marcarPasoCompletado->ejecutar($escuelaNivelId, 'infraestructura');
         });
@@ -84,6 +93,9 @@ class RegistrarInfraestructuraNivel
             if (! $this->tieneDatosSignificativos($espacio)) {
                 continue;
             }
+
+            // WS-7a §5.4: los espacios son del plantel y alimentan la capacidad de cualquier trámite enviado en él.
+            $this->tramiteEditable->asegurarPlantel($plantelId);
 
             $fila = InstalacionEspacio::create([
                 'plantel_id' => $plantelId,
@@ -173,6 +185,8 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
+            $this->tramiteEditable->asegurarPlantel($plantelId);
+
             $fila = Sanitario::create([
                 'plantel_id' => $plantelId,
                 'categoria' => $sanitario['categoria'],
@@ -223,11 +237,25 @@ class RegistrarInfraestructuraNivel
             $errores['numeroAulas'] = 'El número de aulas no debe ser mayor que '.ReglasCaptura::MAX_SMALLINT.'.';
         }
 
-        if ($datos->superficieAulasM2 !== null && $datos->superficieAulasM2 < 0) {
+        if ($datos->superficieAulasM2 === null) {
+            // WS-7a §3.1: alimenta las reglas de capacidad *.superficie.aula(s).
+            $errores['superficieAulasM2'] = 'Captura la superficie total de las aulas.';
+        } elseif ($datos->superficieAulasM2 < 0) {
             $errores['superficieAulasM2'] = 'La superficie de aulas no puede ser negativa.';
         } elseif ($fueraDeRango($datos->superficieAulasM2, ReglasCaptura::MAX_NUMERIC_10_2)) {
             $errores['superficieAulasM2'] = 'La superficie de aulas no debe ser mayor que '.ReglasCaptura::MAX_NUMERIC_10_2.'.';
         }
+
+        // WS-7a §3.1: espacios y sanitarios se escriben una sola vez (ADR-005). Si el dato
+        // que lee una regla de capacidad queda vacío, la regla queda "falta capturar" para
+        // siempre y bloquearía el envío sin forma de corregirlo: se exige solo en lo que
+        // de verdad se va a escribir.
+        $tiposConSuperficie = DB::table('tipos_espacios')
+            ->where('categoria', ConstruirDatosCapacidad::CATEGORIA_RECREATIVA)
+            ->orWhere('clave', ConstruirDatosCapacidad::CLAVE_USOS_MULTIPLES)
+            ->pluck('id')
+            ->all();
+        $tiposBiblioteca = DB::table('tipos_espacios')->where('permite_material_biblioteca', true)->pluck('id')->all();
 
         $tiposAplicables = DB::table('niveles_tipos_espacios')
             ->where('nivel_educativo_id', $escuelaNivel->nivel_educativo_id)
@@ -256,10 +284,22 @@ class RegistrarInfraestructuraNivel
                 }
             }
 
+            if ($this->tieneDatosSignificativos($espacio)) {
+                if ($espacio['superficieM2'] === null && in_array($espacio['tipoEspacioId'], $tiposConSuperficie, true)) {
+                    $errores["{$prefijo}.superficieM2"] = self::FALTA_SUPERFICIE;
+                }
+
+                if ($espacio['materialesBiblioteca'] === [] && in_array($espacio['tipoEspacioId'], $tiposBiblioteca, true)) {
+                    $errores['materialesBiblioteca'] = 'Captura el acervo de la biblioteca: al menos un tipo de material con su número de títulos.';
+                }
+            }
+
             foreach ($espacio['materialesBiblioteca'] as $material) {
                 $prefijoMaterial = "materialesBiblioteca.{$material['tipoMaterialId']}";
 
-                if ($material['numeroTitulos'] !== null && $material['numeroTitulos'] < 0) {
+                if ($material['numeroTitulos'] === null) {
+                    $errores["{$prefijoMaterial}.numeroTitulos"] = 'Captura el número de títulos.';
+                } elseif ($material['numeroTitulos'] < 0) {
                     $errores["{$prefijoMaterial}.numeroTitulos"] = 'No puede ser negativo.';
                 } elseif ($fueraDeRango($material['numeroTitulos'], ReglasCaptura::MAX_INTEGER)) {
                     $errores["{$prefijoMaterial}.numeroTitulos"] = 'No debe ser mayor que '.ReglasCaptura::MAX_INTEGER.'.';
@@ -301,6 +341,12 @@ class RegistrarInfraestructuraNivel
                 $errores["{$prefijo}.superficieM2"] = 'No puede ser negativo.';
             } elseif ($fueraDeRango($sanitario['superficieM2'], ReglasCaptura::MAX_NUMERIC_8_2)) {
                 $errores["{$prefijo}.superficieM2"] = 'No debe ser mayor que '.ReglasCaptura::MAX_NUMERIC_8_2.'.';
+            }
+
+            if ($sanitario['superficieM2'] === null
+                && str_starts_with($sanitario['categoria'], ConstruirDatosCapacidad::PREFIJO_SANITARIOS_ALUMNOS)
+                && $this->tieneDatosSignificativosSanitario($sanitario)) {
+                $errores["{$prefijo}.superficieM2"] = self::FALTA_SUPERFICIE;
             }
         }
 

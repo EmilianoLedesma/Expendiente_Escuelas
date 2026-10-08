@@ -2,7 +2,7 @@
 
 namespace App\Application\ResponsablesNivel;
 
-use App\Application\Tramite\EliminarTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use App\Models\ResponsableNivel;
 
@@ -17,7 +17,7 @@ final class ListarResponsablesNivel
             ->orderBy('escuela_id')->orderBy('id')
             ->get();
         $accesos = ResponsableNivel::with('user')->whereIn('escuela_nivel_id', $niveles->pluck('id'))->orderBy('id')->get()->groupBy('escuela_nivel_id');
-        $enCaptura = EliminarTramite::idEnCaptura();
+        $enCaptura = TramiteEditable::idEnCaptura();
 
         return $niveles->map(fn (EscuelaNivel $nivel) => [
             'escuelaNivelId' => $nivel->id,

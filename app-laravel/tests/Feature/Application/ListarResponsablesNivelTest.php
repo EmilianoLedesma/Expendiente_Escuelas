@@ -52,6 +52,7 @@ class ListarResponsablesNivelTest extends TestCase
             'escuelaNivelId' => $nivelA->id,
             'nivel' => 'Primaria',
             'etiqueta' => 'Nº '.str_pad((string) $nivelA->escuela_id, 4, '0', STR_PAD_LEFT).' — '.$nivelA->escuela->plantel->calle,
+            'enviado' => false,
         ]], $niveles);
     }
 }

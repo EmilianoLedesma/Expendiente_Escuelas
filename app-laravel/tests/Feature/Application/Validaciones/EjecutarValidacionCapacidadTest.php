@@ -153,9 +153,24 @@ class EjecutarValidacionCapacidadTest extends TestCase
         $datos = app(ConstruirDatosCapacidad::class)->paraNivel($escuelaNivel->id);
 
         $this->assertSame(230.0, $datos->superficieRecreativa);
-        $this->assertSame(320, $datos->acervoTitulos);
+        $this->assertSame(370, $datos->acervoTitulos);
         $this->assertSame(22.0, $datos->superficieSanitariosAlumnos);
         $this->assertNull($datos->superficieUsosMultiples);
+    }
+
+    // ADR-010 P6: the acervo counts every material of the plantel's libraries, not only "libros".
+    public function test_el_acervo_cuenta_todo_el_material_de_la_biblioteca(): void
+    {
+        $escuelaNivel = $this->nivel('primaria');
+        $biblioteca = InstalacionEspacio::create(['plantel_id' => $escuelaNivel->escuela->plantel_id, 'tipo_espacio_id' => $this->tipoEspacio('biblioteca'), 'cantidad' => 1, 'superficie_m2' => 40]);
+        $material = fn (string $clave) => DB::table('tipos_material_biblioteca')->where('clave', $clave)->value('id');
+        DB::table('biblioteca_materiales')->insert([
+            ['instalacion_espacio_id' => $biblioteca->id, 'tipo_material_id' => $material('libros'), 'numero_titulos' => 200],
+            ['instalacion_espacio_id' => $biblioteca->id, 'tipo_material_id' => $material('videos'), 'numero_titulos' => 30],
+            ['instalacion_espacio_id' => $biblioteca->id, 'tipo_material_id' => $material('revistas_especializadas'), 'numero_titulos' => 20],
+        ]);
+
+        $this->assertSame(250, app(ConstruirDatosCapacidad::class)->paraNivel($escuelaNivel->id)->acervoTitulos);
     }
 
     public function test_secundaria_cuenta_educacion_fisica_por_asignatura(): void
@@ -167,6 +182,21 @@ class EjecutarValidacionCapacidadTest extends TestCase
         ]);
 
         $this->assertSame(1, app(ConstruirDatosCapacidad::class)->paraNivel($escuelaNivel->id)->docentesEducacionFisica);
+    }
+
+    // ADR-010 P10: a reworded catalog row must fail loudly, never count 0 docentes in silence.
+    public function test_sin_la_asignatura_de_educacion_fisica_en_el_catalogo_falla_en_vez_de_contar_cero(): void
+    {
+        $escuelaNivel = $this->nivel('secundaria');
+        $asignatura = (int) DB::table('asignaturas')->where('nombre', 'Educación Física')->value('id');
+        app(RegistrarPlantillaDocente::class)->ejecutar($escuelaNivel->id, [
+            $this->persona($this->cargoId('secundaria', 'Docente Titular'), asignaturaId: $asignatura),
+        ]);
+        DB::table('asignaturas')->where('id', $asignatura)->update(['nombre' => 'Educacion fisica']);
+
+        $this->expectException(\LogicException::class);
+
+        app(ConstruirDatosCapacidad::class)->paraNivel($escuelaNivel->id);
     }
 
     public function test_inicial_salas_asistentes_y_mobiliario(): void

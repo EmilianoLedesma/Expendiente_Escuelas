@@ -237,4 +237,20 @@ class ValidacionCapacidadServiceTest extends TestCase
 
         $this->assertSame(3, $reporte->contar(EstadoResultado::NoEvaluable));
     }
+
+    public function test_las_reglas_sin_dato_capturable_se_marcan_y_las_que_esperan_captura_no(): void
+    {
+        $reporte = $this->evaluar([
+            $this->regla('primaria.infraestructura.altura_aulas', 'minimo_fijo', 'aula', 2.70),
+            $this->regla('primaria.superficie.aulas', 'ratio_por_alumno', 'aula', 0.90),
+            $this->regla('primaria.superficie.regla_sin_motor', 'minimo_fijo', 'aula', 1.0),
+        ], new DatosCapacidadNivel(matriculaNivel: 50));
+
+        $this->assertTrue($reporte->resultado('primaria.infraestructura.altura_aulas')?->detalles['sin_dato'] ?? false);
+        $this->assertSame(EstadoResultado::NoEvaluable, $reporte->resultado('primaria.superficie.aulas')?->estado);
+        $this->assertArrayNotHasKey('sin_dato', $reporte->resultado('primaria.superficie.aulas')?->detalles ?? []);
+        // Owner decision (WS-7a): a rule the engine has no arm for stays blocking (fail closed).
+        $this->assertSame(EstadoResultado::NoEvaluable, $reporte->resultado('primaria.superficie.regla_sin_motor')?->estado);
+        $this->assertArrayNotHasKey('sin_dato', $reporte->resultado('primaria.superficie.regla_sin_motor')?->detalles ?? []);
+    }
 }

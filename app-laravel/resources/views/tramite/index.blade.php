@@ -76,12 +76,12 @@
                             </td>
                             <td class="mt-sm block md:mt-0 md:table-cell md:px-lg md:py-md">
                                 <x-ui.status-tag
-                                    :estado="$tramite->completo ? 'completado' : 'en_curso'"
-                                    :texto="$tramite->completo ? 'Captura inicial completa' : 'En captura'"
+                                    :estado="$tramite->enviado || $tramite->completo ? 'completado' : 'en_curso'"
+                                    :texto="$tramite->enviado ? 'En revisión por SEDEQ' : ($tramite->completo ? 'Captura inicial completa' : 'En captura')"
                                 />
                             </td>
                             <td class="mt-sm block whitespace-nowrap md:mt-0 md:table-cell md:px-lg md:py-md md:text-right">
-                                @if ($tramite->completo)
+                                @if ($tramite->enviado || $tramite->completo)
                                     <x-ui.button-secondary :href="route('tramite.resumen', ['escuela' => $tramite->escuelaId])" class="whitespace-nowrap">
                                         Ver trámite<span class="sr-only">: {{ $nombre }}, Nº {{ $tramite->numero() }}</span>
                                     </x-ui.button-secondary>

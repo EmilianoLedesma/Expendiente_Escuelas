@@ -69,9 +69,11 @@
         </table>
     @endforeach
 
+    @php($etiquetasCapacidad = ['cumple' => 'Correcto', 'no_cumple' => 'Bloquea el envío', 'no_evaluable' => 'Falta capturar: bloquea el envío', 'no_verificable' => 'No verificable por el sistema'])
+    @php($clasesCapacidad = ['cumple' => 'cumple', 'no_cumple' => 'no_cumple', 'no_evaluable' => 'no_cumple', 'no_verificable' => 'no_evaluable'])
     @foreach ($capacidad as $seccion)
         <h2 style="font-size: 14px; margin: 18px 0 4px;">Capacidad instalada · {{ $seccion->nivel }}</h2>
-        <p class="meta">Observaciones para SEDEQ: no impiden enviar la solicitud.</p>
+        <p class="meta">Lo que no se cumple, o lo que falta capturar, bloquea el envío. «No verificable por el sistema»: el asistente no captura ese dato; lo revisará SEDEQ.</p>
         <table>
             <thead>
                 <tr><th>Revisión</th><th>Resultado</th><th>Detalle</th></tr>
@@ -80,7 +82,7 @@
                 @foreach ($seccion->filas as $fila)
                     <tr>
                         <td>{{ $fila->titulo }}</td>
-                        <td class="estado {{ $fila->estado === 'no_cumple' ? 'advertencia' : $fila->estado }}">{{ $fila->estado === 'no_cumple' ? 'Observación' : ($etiquetas[$fila->estado] ?? $fila->estado) }}</td>
+                        <td class="estado {{ $clasesCapacidad[$fila->estado] ?? $fila->estado }}">{{ $etiquetasCapacidad[$fila->estado] ?? $fila->estado }}</td>
                         <td>
                             @if ($fila->lineas !== [])
                                 @foreach ($fila->lineas as $linea)

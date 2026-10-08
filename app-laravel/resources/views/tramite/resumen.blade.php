@@ -4,8 +4,19 @@
             <x-slot:intro><span class="break-words">{{ $resumen->domicilio }}</span></x-slot:intro>
         </x-ui.page-header>
 
+        @if (session('status'))
+            <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
+        @endif
+
         @php($siguiente = $resumen->siguiente())
-        @if ($siguiente)
+        @if ($resumen->enviado)
+            <x-ui.alert tipo="info" :titulo="'Enviado el '.$resumen->fechaEnvio?->format('d/m/Y').' — en revisión por SEDEQ'" class="mb-lg">
+                El trámite ya no puede modificarse.
+                @if ($puedeDescargarReporte && $resumen->reporteEnviadoId !== null)
+                    <a href="{{ route('tramite.validacion.reporte', ['escuela' => $resumen->escuelaId, 'evaluacion' => $resumen->reporteEnviadoId]) }}" target="_blank" class="font-semibold underline underline-offset-4 hover:no-underline">Descargar el reporte de validación enviado</a>
+                @endif
+            </x-ui.alert>
+        @elseif ($siguiente)
             <div class="mb-lg rounded-lg bg-surface-card p-lg">
                 <p class="text-section-eyebrow font-semibold uppercase text-muted">Siguiente paso</p>
                 <p class="mt-xs text-title-md font-semibold text-ink">{{ $siguiente->nombre }}</p>

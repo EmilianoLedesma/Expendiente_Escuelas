@@ -36,6 +36,9 @@
     </x-ui.section>
 
     <x-ui.section title="Responsables asignados">
+        @error('revocar')
+            <x-ui.alert tipo="error" class="mb-md">{{ $message }}</x-ui.alert>
+        @enderror
         @forelse ($filas as $fila)
             <div wire:key="nivel-{{ $fila['escuelaNivelId'] }}" class="border-b border-hairline py-md first:pt-0 last:border-0">
                 <h3 class="break-words text-body-md font-semibold text-ink">{{ $fila['etiqueta'] }}</h3>

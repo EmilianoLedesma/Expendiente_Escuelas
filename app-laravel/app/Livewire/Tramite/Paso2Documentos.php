@@ -12,6 +12,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
@@ -296,7 +297,14 @@ class Paso2Documentos extends Component
             }
 
             return false;
-        } catch (PrecondicionIncumplida) {
+        } catch (PrecondicionIncumplida $e) {
+            // WS-7a §5.4: un documento del plantel no se reemplaza si otro trámite del plantel ya se envió.
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->addError("archivos.{$clave}", $e->getMessage());
+
+                return false;
+            }
+
             $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
 
             return false;

@@ -4,6 +4,7 @@ namespace App\Application\ResponsableLegal;
 
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
+use App\Application\Tramite\TramiteEditable;
 use App\Domain\Captura\Formatos;
 use App\Models\Gestor;
 use App\Models\PersonaFisica;
@@ -21,6 +22,8 @@ use InvalidArgumentException;
  */
 class RegistrarResponsableLegal
 {
+    public function __construct(private readonly TramiteEditable $tramiteEditable = new TramiteEditable) {}
+
     public function ejecutar(int $escuelaId, DatosResponsableLegal $datos): void
     {
         if (! in_array($datos->tipoPersona, ['fisica', 'fisica_con_gestor', 'moral'], true)) {
@@ -29,14 +32,17 @@ class RegistrarResponsableLegal
 
         $this->validar($datos);
 
-        // ponytail: idempotency guard — a repeated submit for an escuela that already
-        // has a responsable_legal (escuela_id is NOT NULL UNIQUE) is treated as a no-op
-        // rather than a QueryException.
-        if (ResponsableLegalModel::where('escuela_id', $escuelaId)->exists()) {
-            return;
-        }
-
         DB::transaction(function () use ($escuelaId, $datos) {
+            // WS-7a: before the idempotency check, so a sent trámite says so instead of a silent no-op.
+            $this->tramiteEditable->asegurarEscuela($escuelaId);
+
+            // ponytail: idempotency guard — a repeated submit for an escuela that already
+            // has a responsable_legal (escuela_id is NOT NULL UNIQUE) is treated as a no-op
+            // rather than a QueryException.
+            if (ResponsableLegalModel::where('escuela_id', $escuelaId)->exists()) {
+                return;
+            }
+
             $responsable = ResponsableLegalModel::create([
                 'escuela_id' => $escuelaId,
                 'tipo_persona' => $datos->tipoPersona,

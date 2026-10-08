@@ -5,6 +5,7 @@ namespace App\Application\EscuelaNiveles;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
+use App\Application\Tramite\TramiteEditable;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\EscuelaNivel;
@@ -29,9 +30,10 @@ class RegistrarDatosNivel
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly AlmacenDocumentos $almacen,
+        private readonly TramiteEditable $tramiteEditable = new TramiteEditable,
     ) {}
 
-    /** @throws PrecondicionIncumplida si Paso 2 no está completo. */
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el trámite ya se envió (WS-7a). */
     public function ejecutar(int $escuelaNivelId, string $turno, string $tipoAlumnado): void
     {
         $errores = [];
@@ -52,6 +54,8 @@ class RegistrarDatosNivel
             // Lock: la comparación "¿cambian los datos?" y el descarte del
             // Formato deben ver la misma fila que se actualiza.
             $escuelaNivel = EscuelaNivel::lockForUpdate()->findOrFail($escuelaNivelId);
+            // WS-7a: después del bloqueo del nivel (orden escuela_niveles → escuelas).
+            $this->tramiteEditable->asegurarEscuela((int) $escuelaNivel->escuela_id);
 
             $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
             if ($etapaFaltante !== null) {

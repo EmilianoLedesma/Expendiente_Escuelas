@@ -132,7 +132,7 @@ class DatosInmueble extends Component
     {
         return [
             'metrosTotales' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2, min: 0.01, requerido: true),
-            'metrosConstruidos' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2),
+            'metrosConstruidos' => ReglasCaptura::decimal(ReglasCaptura::MAX_NUMERIC_10_2, requerido: true),
             'colindanciaNorte' => ReglasCaptura::texto(max: 150),
             'colindanciaSur' => ReglasCaptura::texto(max: 150),
             'colindanciaEste' => ReglasCaptura::texto(max: 150),

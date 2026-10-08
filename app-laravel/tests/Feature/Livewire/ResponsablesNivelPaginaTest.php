@@ -94,6 +94,21 @@ class ResponsablesNivelPaginaTest extends TestCase
         $this->assertFalse(User::whereKey($mio->id)->exists());
     }
 
+    public function test_revocar_en_un_tramite_enviado_muestra_el_error_y_no_borra(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $responsable = $this->responsableDe($this->nivelDe($dueno, 'primaria', 'en_revision'));
+        $acceso = ResponsableNivel::where('user_id', $responsable->id)->firstOrFail();
+
+        Livewire::actingAs($dueno->user)->test(ResponsablesNivel::class)
+            ->call('revocar', $acceso->id)
+            ->assertHasErrors('revocar')
+            ->assertSee('El trámite ya se envió a SEDEQ y no puede modificarse.')
+            ->assertDontSee('Acceso revocado');
+
+        $this->assertTrue(ResponsableNivel::whereKey($acceso->id)->exists());
+    }
+
     public function test_los_avisos_no_se_filtran_a_la_siguiente_peticion(): void
     {
         $dueno = Solicitante::factory()->create();

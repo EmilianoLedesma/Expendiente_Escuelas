@@ -189,6 +189,44 @@ class ValidacionFinalTest extends TestCase
             ->assertSee('Superficie de aulas')
             ->assertSee('Requerido: 22.50 m² · Declarado: 10 m²')
             ->assertSee(route('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]), false)
-            ->assertSee('Tu expediente no tiene errores que impidan enviarlo');
+            ->assertSee('Bloquea el envío')
+            ->assertSee('Hay errores que debes corregir antes de enviar')
+            ->assertDontSee('Estas observaciones no impiden enviar');
+    }
+
+    /** WS-7a: a missing capture blocks and links to its sub-step; a structural rule only says "No verificable por el sistema". */
+    public function test_una_captura_faltante_se_enlaza_y_lo_estructural_no_bloquea(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $escuelaNivel = $this->completarTramite($escuela);
+        (new ReglasValidacionSeeder)->run();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
+            ->assertSee('Falta capturar: bloquea el envío')
+            ->assertSee(route('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]), false)
+            ->assertSee('No verificable por el sistema')
+            ->assertSee('Capacidad instalada · Primaria');
+    }
+
+    /** Review Focus 5: a row stored before the ready rule (no regla_envio) said "lista"; opening the page re-runs it. */
+    public function test_una_evaluacion_sin_regla_de_envio_se_vuelve_a_validar_al_abrir(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        (new ReglasValidacionSeeder)->run();
+        $this->actingAs($escuela->solicitante->user);
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela]);
+        $vieja = EvaluacionValidacion::sole();
+        $vieja->update([
+            'lista_para_envio' => true,
+            'resultados' => array_diff_key($vieja->resultados, ['regla_envio' => true]),
+        ]);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
+            ->assertSee('Hay errores que debes corregir antes de enviar')
+            ->assertDontSee('Tu expediente no tiene errores que impidan enviarlo');
+
+        $this->assertSame(2, EvaluacionValidacion::count());
     }
 }

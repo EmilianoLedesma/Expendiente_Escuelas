@@ -130,6 +130,7 @@ class Paso3InfraestructuraNivelHttpRoundTripTest extends TestCase
         $response = $this->llamarGuardar($csrfToken, $snapshotJson, $sessionCookieValue, [
             "espacios.{$direccionId}.superficieM2" => '18.5',
             'numeroAulas' => 6,
+            'superficieAulasM2' => '240',
         ]);
 
         $response->assertOk();
@@ -150,6 +151,7 @@ class Paso3InfraestructuraNivelHttpRoundTripTest extends TestCase
         $response = $this->llamarGuardar($csrfToken, $snapshotJson, $sessionCookieValue, [
             "espacios.{$direccionId}.ventilacionNatural" => false,
             'numeroAulas' => 6,
+            'superficieAulasM2' => '240',
         ]);
 
         $response->assertOk();

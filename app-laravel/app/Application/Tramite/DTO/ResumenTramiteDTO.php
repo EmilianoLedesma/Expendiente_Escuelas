@@ -23,6 +23,12 @@ final class ResumenTramiteDTO
         public readonly DateTimeInterface $iniciadoEl,
         /** Todos los niveles siguen en captura: el dueño puede eliminar el trámite (EliminarTramite). */
         public readonly bool $puedeEliminar = false,
+        /** WS-7a: se envió a SEDEQ (al menos un nivel y ninguno en captura); ninguna sección ofrece acción. Igual en la vista restringida del responsable. */
+        public readonly bool $enviado = false,
+        /** Último paso a en_revision en historial_estados_expediente; null si no se ha enviado. */
+        public readonly ?DateTimeInterface $fechaEnvio = null,
+        /** evaluaciones_validacion.id guardado al enviar (el último); null si no se ha enviado. */
+        public readonly ?int $reporteEnviadoId = null,
     ) {}
 
     /** Número visible del trámite (id de la escuela a 4 dígitos). No es folio_expediente: ese es por nivel y lo asigna SEDEQ. */

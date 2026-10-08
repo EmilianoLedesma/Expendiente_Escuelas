@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\DB;
  * Per escuela_nivel (paraNivel, Paso 2.4 documents):
  * - Recibo folio from recibos_pago_derechos; every other level's folio, of
  *   any trámite, as foliosAjenos.
- * - Acervo titles: declared = "libros" titles in the plantel's library
+ * - Acervo titles: declared = titles of all material in the plantel's library (ADR-010 P6)
  *   (Paso 3 infraestructura, shared by its levels per ADR-005); document =
  *   the relation's captured count.
  * - Laboratories declared = sum of laboratorio_polifuncional in the plantel.
@@ -56,8 +56,6 @@ use Illuminate\Support\Facades\DB;
 class ConstruirContextoValidacion
 {
     public const ESPACIO_LABORATORIO = 'laboratorio_polifuncional';
-
-    public const MATERIAL_ACERVO = 'libros';
 
     public function __construct(
         private readonly DocumentosCompletos $documentosCompletos,
@@ -95,9 +93,7 @@ class ConstruirContextoValidacion
 
         $biblioteca = DB::table('biblioteca_materiales')
             ->join('instalaciones_espacios', 'instalaciones_espacios.id', '=', 'biblioteca_materiales.instalacion_espacio_id')
-            ->join('tipos_material_biblioteca', 'tipos_material_biblioteca.id', '=', 'biblioteca_materiales.tipo_material_id')
             ->where('instalaciones_espacios.plantel_id', $escuela->plantel_id)
-            ->where('tipos_material_biblioteca.clave', self::MATERIAL_ACERVO)
             ->whereNotNull('biblioteca_materiales.numero_titulos')
             ->selectRaw('COUNT(*) AS filas, COALESCE(SUM(biblioteca_materiales.numero_titulos), 0) AS titulos')
             ->first();

@@ -14,6 +14,9 @@ use App\Models\TipoDocumento;
  */
 class PresentadorValidacion
 {
+    /** WS-7a: capacity row the wizard can never fill (engine detalles['sin_dato']); shown as "No verificable por el sistema", never blocks. */
+    public const NO_VERIFICABLE = 'no_verificable';
+
     private const TITULOS = [
         'documentos_requeridos_presentes' => 'Documentos requeridos',
         'nombre_identidad_coincide' => 'Nombre en la identificación y la Constancia de CURP',
@@ -85,7 +88,7 @@ class PresentadorValidacion
             return new FilaValidacion(
                 clave: $resultado->clave,
                 titulo: $conceptos[$resultado->clave] ?? $resultado->clave,
-                estado: $resultado->estado->value,
+                estado: ($d['sin_dato'] ?? false) ? self::NO_VERIFICABLE : $resultado->estado->value,
                 mensaje: $resultado->mensaje,
                 documentos: [],
                 lineas: $lineas,

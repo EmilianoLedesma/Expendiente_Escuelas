@@ -40,6 +40,9 @@ class RegistrarDatosInmueble
         $this->verificarPrecondicion($escuelaNivelId);
 
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
+            // WS-7a: orden escuela_niveles → escuelas; la guarda de MarcarPasoCompletado bloquea la escuela al final.
+            EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
+
             if (! $this->yaCapturados->ejecutar($plantelId)) {
                 Plantel::where('id', $plantelId)->update([
                     'metros_totales' => $datos->metrosTotales,
@@ -110,6 +113,11 @@ class RegistrarDatosInmueble
 
         if ($datos->metrosTotales <= 0) {
             $errores['metrosTotales'] = 'Los metros totales deben ser mayores a cero.';
+        }
+
+        // WS-7a §3.1: alimenta preescolar.superficie.construida_total y el inmueble se escribe una sola vez.
+        if ($datos->metrosConstruidos === null) {
+            $errores['metrosConstruidos'] = 'Captura la superficie construida.';
         }
 
         // Precisión de la columna (NUMERIC(10,2)): fuera de rango sería un error de base de datos.

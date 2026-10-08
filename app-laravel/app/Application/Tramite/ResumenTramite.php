@@ -9,11 +9,13 @@ use App\Application\Tramite\DTO\ResumenTramiteDTO;
 use App\Application\Tramite\DTO\SeccionTramite;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
+use App\Models\EvaluacionValidacion;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableNivel;
 use App\Models\Solicitante;
 use App\Models\TernaNombre;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -46,7 +48,7 @@ class ResumenTramite
     /**
      * Secciones completadas cuya página se puede volver a abrir hoy. Responsable,
      * Documentos, Niveles e Inmueble redirigen hacia adelante al estar completas;
-     * revisarlas llega con WS-7 (docs/decisions/PENDIENTE-edicion-hasta-envio.md).
+     * revisarlas llega con WS-7b (docs/decisions/PENDIENTE-edicion-hasta-envio.md). Tras el envío (WS-7a) ninguna se ofrece.
      * Documentos del nivel no redirige: el Formato firmado se puede reemplazar.
      */
     private const REVISABLES = ['documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
@@ -73,6 +75,9 @@ class ResumenTramite
     /** Memo por instancia: "Mis trámites" arma un resumen por escuela con la misma instancia. */
     private ?int $enCapturaId = null;
 
+    /** WS-7a: el trámite que se está resumiendo ya se envió; se fija al inicio de cada paraEscuela() y seccion() lo lee. */
+    private bool $enviado = false;
+
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
@@ -88,6 +93,9 @@ class ResumenTramite
     public function paraEscuela(int $escuelaId, ?int $usuarioId = null): ResumenTramiteDTO
     {
         $escuela = Escuela::with(['plantel', 'escuelaNiveles.nivelEducativo', 'ternasNombres'])->findOrFail($escuelaId);
+        $enCapturaId = $this->enCapturaId ??= TramiteEditable::idEnCaptura();
+        // Estado del trámite completo, también en la vista restringida: un responsable pierde sus acciones igual que el dueño.
+        $this->enviado = TramiteEditable::enviado($escuela->escuelaNiveles->pluck('estado_id'), $enCapturaId);
         $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
         $soloNivelIds = $usuarioId === null ? null : $this->nivelesVisibles($escuela, $usuarioId);
 
@@ -115,6 +123,8 @@ class ResumenTramite
         /** @var Collection<int, TernaNombre> $ternasNombres */
         $ternasNombres = $escuela->ternasNombres;
 
+        $reporte = $this->enviado ? EvaluacionValidacion::where('escuela_id', $escuela->id)->latest('id')->value('id') : null;
+
         return new ResumenTramiteDTO(
             escuelaId: $escuela->id,
             domicilio: self::domicilio($plantel),
@@ -126,8 +136,23 @@ class ResumenTramite
             ),
             nombre: $escuela->nombre_aprobado ?? $ternasNombres->sortBy('numero_propuesta')->first()?->nombre_propuesto,
             iniciadoEl: $escuela->created_at,
-            puedeEliminar: $soloNivelIds === null && EliminarTramite::todosEnCaptura($escuelaNiveles->pluck('estado_id'), $this->enCapturaId ??= EliminarTramite::idEnCaptura()),
+            puedeEliminar: $soloNivelIds === null && TramiteEditable::todosEnCaptura($escuelaNiveles->pluck('estado_id'), $enCapturaId),
+            enviado: $this->enviado,
+            fechaEnvio: $this->enviado ? $this->fechaEnvio($escuela->escuelaNiveles->pluck('id')) : null,
+            reporteEnviadoId: $reporte === null ? null : (int) $reporte,
         );
+    }
+
+    /** @param Collection<array-key, mixed> $escuelaNivelIds */
+    private function fechaEnvio(Collection $escuelaNivelIds): ?Carbon
+    {
+        $fecha = DB::table('historial_estados_expediente')
+            ->join('estados_expediente', 'estados_expediente.id', '=', 'historial_estados_expediente.estado_id')
+            ->whereIn('historial_estados_expediente.escuela_nivel_id', $escuelaNivelIds)
+            ->where('estados_expediente.clave', EnviarTramite::EN_REVISION)
+            ->max('historial_estados_expediente.fecha');
+
+        return $fecha === null ? null : Carbon::parse($fecha);
     }
 
     /**
@@ -315,8 +340,15 @@ class ResumenTramite
     {
         [$nombre, $descripcion] = self::GENERALES[$clave] ?? self::PASO3[$clave] ?? [$nombreCatalogo, ''];
 
+        // Enviado = todo estaba completo al enviar (EnviarTramite lo exige). Se congela: una vigencia
+        // que vence después (ValidarVigenciaDocumentos compara con hoy) no reabre ni bloquea secciones.
+        if ($this->enviado) {
+            $motivoBloqueo = null;
+            $estado = in_array($estado, ['no_disponible', 'no_aplica'], true) ? $estado : 'completado';
+        }
+
         $accion = match (true) {
-            $href === null || $motivoBloqueo !== null => null,
+            $this->enviado, $href === null || $motivoBloqueo !== null => null,
             $estado === 'completado' => in_array($clave, self::REVISABLES, true) ? 'revisar' : null,
             $estado === 'en_curso' => 'continuar',
             $estado === 'pendiente' => 'comenzar',

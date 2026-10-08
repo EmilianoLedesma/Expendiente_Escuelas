@@ -5,6 +5,7 @@ namespace App\Application\EscuelaNiveles;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -21,9 +22,10 @@ class MarcarPasoCompletado
     public function __construct(
         private readonly ?EstadoPaso3 $estadoPaso3 = null,
         private readonly ?EstadoPaso2 $estadoPaso2 = null,
+        private readonly ?TramiteEditable $tramiteEditable = null,
     ) {}
 
-    /** @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso $pasoClave aún no es alcanzable (WS-2.4b, Minor 7). Idempotente: re-marcar un paso ya completado siempre pasa, porque su predecesor ya lo estaba. */
+    /** @throws PrecondicionIncumplida si Paso 2 no está completo, el sub-paso $pasoClave aún no es alcanzable (WS-2.4b, Minor 7) o el trámite ya se envió (WS-7a). Idempotente: re-marcar un paso ya completado siempre pasa, porque su predecesor ya lo estaba. */
     public function ejecutar(int $escuelaNivelId, string $pasoClave): void
     {
         $pasoCapturaId = DB::table('pasos_captura')->where('clave', $pasoClave)->value('id');
@@ -48,7 +50,15 @@ class MarcarPasoCompletado
             throw new PrecondicionIncumplida($pasoClave, "El paso \"{$pasoClave}\" no es alcanzable todavía.");
         }
 
-        DB::transaction(function () use ($escuelaNivelId, $pasoCapturaId) {
+        $tramiteEditable = $this->tramiteEditable ?? app(TramiteEditable::class);
+
+        DB::transaction(function () use ($escuelaNivelId, $pasoCapturaId, $escuelaId, $tramiteEditable) {
+            // WS-7a, orden escuela_niveles → escuelas: el nivel se bloquea antes de
+            // cualquier escritura y antes de la guarda (que bloquea la escuela). Un
+            // UPDATE de escuela_nivel_pasos no bloquea al nivel por la FK, así que se
+            // pide explícito.
+            EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
+
             // ponytail: updateOrInsert porque RegistrarNivelesSeleccionados crea
             // escuela_niveles sin crear sus filas de escuela_nivel_pasos — en la
             // primera llamada no hay nada que actualizar. created_at tiene DEFAULT
@@ -57,6 +67,12 @@ class MarcarPasoCompletado
                 ['escuela_nivel_id' => $escuelaNivelId, 'paso_captura_id' => $pasoCapturaId],
                 ['estado' => 'completado', 'completado_at' => now(), 'updated_at' => now()],
             );
+
+            // WS-7a: los seis casos de uso de Paso 3 llaman aquí dentro de su propia
+            // transacción, así que una sola guarda los revierte a todos.
+            if ($escuelaId !== null) {
+                $tramiteEditable->asegurarEscuela((int) $escuelaId);
+            }
         });
     }
 }

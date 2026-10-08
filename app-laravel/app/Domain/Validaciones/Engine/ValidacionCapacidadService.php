@@ -26,7 +26,11 @@ final class ValidacionCapacidadService
 {
     private const COMPUESTA = 'superficie.espacio_maestro';
 
-    /** Rows whose declared value the wizard does not capture. */
+    /**
+     * Rows whose declared value the wizard does not capture. Their result is marked
+     * detalles['sin_dato'] = true: "no verificable por el sistema", which the send's
+     * ready rule never counts as blocking (WS-7a), unlike a capture still missing.
+     */
     private const SIN_DATO = [
         'infraestructura.altura_aulas' => 'la altura de las aulas no se captura',
         'superficie.aula_usos_multiples' => 'la superficie del aula mayor no se captura',
@@ -60,7 +64,7 @@ final class ValidacionCapacidadService
         $slug = $regla->slug();
 
         if (isset(self::SIN_DATO[$slug])) {
-            return $this->noEvaluable($regla, 'No verificable: '.self::SIN_DATO[$slug].'.');
+            return $this->noEvaluable($regla, 'No verificable: '.self::SIN_DATO[$slug].'.', ['sin_dato' => true]);
         }
 
         return match (true) {
@@ -195,9 +199,10 @@ final class ValidacionCapacidadService
         );
     }
 
-    private function noEvaluable(ReglaCapacidad $regla, string $motivo): ResultadoRegla
+    /** @param array<string, mixed> $detalles */
+    private function noEvaluable(ReglaCapacidad $regla, string $motivo, array $detalles = []): ResultadoRegla
     {
-        return new ResultadoRegla($regla->clave, EstadoResultado::NoEvaluable, "{$regla->concepto}. {$motivo}");
+        return new ResultadoRegla($regla->clave, EstadoResultado::NoEvaluable, "{$regla->concepto}. {$motivo}", $detalles);
     }
 
     private static function numero(int|float $valor): string

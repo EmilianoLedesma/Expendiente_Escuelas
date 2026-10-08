@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Asignatura;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +28,7 @@ class AsignaturasSeeder extends Seeder
             ['nombre' => 'Música'],
             ['nombre' => 'Teatro'],
             ['nombre' => 'Informática'],
-            ['nombre' => 'Educación Física'],
+            ['nombre' => Asignatura::EDUCACION_FISICA],
             ['nombre' => 'Asignaturas Extracurriculares'],
         ]);
     }

@@ -113,6 +113,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->set("espacios.{$direccionId}.cantidad", 1)
             ->set("espacios.{$direccionId}.superficieM2", 18.5)
             ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
+            ->set('sanitarios.alumnado_masculino.superficieM2', 12)
             ->set('numeroAulas', 6)
             ->set('superficieAulasM2', 240)
             ->call('guardar')
@@ -135,9 +136,60 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$direccionId}.cantidad", 1)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $this->assertSame(1, DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->count());
+    }
+
+    public function test_la_etiqueta_de_superficie_de_aulas_ya_no_dice_opcional(): void
+    {
+        $html = Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $this->escuelaNivel('primaria')])
+            ->html();
+
+        preg_match('/<label for="superficieAulasM2".*?<\/label>/s', $html, $etiqueta);
+        $this->assertStringContainsString('Superficie total (m²)', $etiqueta[0] ?? '');
+        $this->assertStringNotContainsString('(opcional)', $etiqueta[0]);
+    }
+
+    public function test_el_conjunto_de_biblioteca_es_el_ancla_del_error_de_acervo(): void
+    {
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $this->escuelaNivel('primaria')])
+            ->assertSeeHtml('<fieldset id="materialesBiblioteca"');
+    }
+
+    public function test_la_superficie_de_aulas_es_obligatoria(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+
+        $prueba = Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set('numeroAulas', 4)
+            ->call('guardar')
+            ->assertHasErrors(['superficieAulasM2' => 'required']);
+
+        $this->assertSame('El campo superficie total de aulas es obligatorio.', $prueba->errors()->first('superficieAulasM2'));
+        $this->assertDatabaseCount('aulas_nivel', 0);
+    }
+
+    // WS-7a §3.1: the use case's per-row requirement reaches the field through addError().
+    public function test_un_espacio_recreativo_sin_superficie_marca_su_campo(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $verdesId = $this->idTipo('areas_verdes');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$verdesId}.cantidad", 1)
+            ->set('numeroAulas', 4)
+            ->set('superficieAulasM2', 120)
+            ->call('guardar')
+            ->assertHasErrors(["espacios.{$verdesId}.superficieM2"])
+            ->assertNoRedirect();
+
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
     }
 
     public function test_numero_de_aulas_es_obligatorio(): void
@@ -162,7 +214,9 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$direccionId}.cantidad", 1)
             ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
+            ->set('sanitarios.alumnado_masculino.superficieM2', 12)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $preescolar = $this->escuelaNivel('preescolar');
@@ -174,6 +228,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $this->assertNotContains('alumnado_masculino', $testable->instance()->categoriasSanitarios());
 
         $testable->set('numeroAulas', 3)
+            ->set('superficieAulasM2', 120)
             ->call('guardar')
             ->assertRedirect(route('tramite.paso3-mobiliario', ['escuelaNivel' => $preescolar->id]));
 
@@ -190,7 +245,9 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$direccionId}.cantidad", 1)
             ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
+            ->set('sanitarios.alumnado_masculino.superficieM2', 12)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $inicial = $this->escuelaNivel('inicial');
@@ -201,8 +258,10 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->assertSee('Filtro / Recepción')
             ->set("espacios.{$filtroId}.cantidad", 1)
             ->set('sanitarios.alumnado_maternal.cantidadRetretes', 2)
+            ->set('sanitarios.alumnado_maternal.superficieM2', 8)
             ->set('sanitarios.alumnado_maternal.cantidadBacinicas', 3)
             ->set('numeroAulas', 2)
+            ->set('superficieAulasM2', 60)
             ->call('guardar');
 
         $this->assertDatabaseHas('instalaciones_espacios', [
@@ -228,6 +287,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->set("espacios.{$bodegaId}.cantidad", 1)
             ->set("espacios.{$bodegaId}.destinadoA", 'limpieza')
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $this->assertDatabaseHas('instalaciones_espacios', [
@@ -247,13 +307,14 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->set("espacios.{$bodegaId}.cantidad", 1)
             ->set("espacios.{$bodegaId}.destinadoA", 'otra-cosa-no-valida')
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar')
             ->assertHasErrors("espacios.{$bodegaId}.destinadoA");
 
         $this->assertDatabaseCount('instalaciones_espacios', 0);
     }
 
-    public function test_material_biblioteca_con_id_inexistente_no_causa_error_500_ni_escribe_nada(): void
+    public function test_biblioteca_con_solo_un_material_de_id_inexistente_se_rechaza_por_falta_de_acervo(): void
     {
         $primaria = $this->escuelaNivel('primaria');
         $bibliotecaId = $this->idTipo('biblioteca');
@@ -263,9 +324,31 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->set("espacios.{$bibliotecaId}.cantidad", 1)
             ->set('materialesBiblioteca.9999.numeroTitulos', 1)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
+        // El id inexistente se ignora: la biblioteca queda sin acervo y se rechaza (no hay 500).
         $this->assertDatabaseCount('biblioteca_materiales', 0);
+        $this->assertDatabaseCount('instalaciones_espacios', 0);
+    }
+
+    public function test_un_material_de_id_inexistente_se_ignora_si_hay_un_material_valido(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $bibliotecaId = $this->idTipo('biblioteca');
+        $librosId = (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$bibliotecaId}.cantidad", 1)
+            ->set("materialesBiblioteca.{$librosId}.numeroTitulos", 300)
+            ->set('materialesBiblioteca.9999.numeroTitulos', 1)
+            ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
+            ->call('guardar');
+
+        $this->assertDatabaseCount('biblioteca_materiales', 1);
+        $this->assertDatabaseHas('biblioteca_materiales', ['tipo_material_id' => $librosId, 'numero_titulos' => 300]);
     }
 
     // WS-2.1 — materials entered without a biblioteca cantidad must not vanish:
@@ -281,6 +364,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("materialesBiblioteca.$librosId.numeroTitulos", 300)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $bibliotecaEspacioId = DB::table('instalaciones_espacios')
@@ -308,6 +392,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->set("espacios.{$direccionId}.ventilacionNatural", false)
             ->set("espacios.{$direccionId}.iluminacionNatural", false)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $this->assertDatabaseMissing('instalaciones_espacios', [
@@ -327,7 +412,9 @@ class Paso3InfraestructuraNivelTest extends TestCase
         Livewire::actingAs($this->solicitante->user)
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$campoFutbolId}.campoFutbolFormato", '7')
+            ->set("espacios.{$campoFutbolId}.superficieM2", 800)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar');
 
         $this->assertDatabaseHas('instalaciones_espacios', [
@@ -364,6 +451,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$direccionId}.cantidad", 1)
             ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
             ->call('guardar')
             ->assertHasErrors('numeroAulas');
 
