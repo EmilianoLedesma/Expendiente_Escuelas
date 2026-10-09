@@ -82,6 +82,27 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $response->assertDontSee('Filtro / Recepción', false);
     }
 
+    public function test_reparte_la_captura_en_pasos_y_solo_el_ultimo_guarda(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+
+        $html = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $primaria->id]))
+            ->getContent();
+
+        $this->assertStringContainsString('data-stepper-nav', $html);
+        $this->assertStringContainsString('data-paso="0"', $html);
+        preg_match_all('/data-paso="(\d+)"/', $html, $m);
+        $ultimo = max(array_map('intval', $m[1]));
+        $this->assertGreaterThanOrEqual(3, $ultimo);
+
+        $inicioUltimo = strpos($html, 'data-paso="'.$ultimo.'"');
+        $this->assertSame(1, substr_count($html, 'Guardar y continuar'));
+        $this->assertGreaterThan($inicioUltimo, strpos($html, 'Guardar y continuar'));
+        // El último panel es "Aulas del nivel" (obligatorio, lleva Guardar).
+        $this->assertGreaterThan($inicioUltimo, strpos($html, 'Número de aulas'));
+    }
+
     public function test_inicial_ve_filtro_recepcion_y_no_biblioteca(): void
     {
         $inicial = $this->escuelaNivel('inicial');

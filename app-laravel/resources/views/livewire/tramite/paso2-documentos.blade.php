@@ -34,10 +34,18 @@
             'constancia_curp' => 'Constancia de CURP',
             'constancia_situacion_fiscal' => 'Constancia de Situación Fiscal',
         ];
+
+        // Un sub-paso por documento aplicable, en el orden del catálogo.
+        $clavesAplicables = array_values($clavesAplicables);
+        $etiquetasPasos = array_map(fn ($c) => $titulos[$c] ?? $nombres[$c] ?? $c, $clavesAplicables);
+        $completosPasos = array_map(fn ($c) => $capturados->has($c), $clavesAplicables);
     @endphp
 
-    <ul class="mt-lg divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
-        @foreach ($clavesAplicables as $clave)
+    <x-ui.stepper :pasos="$etiquetasPasos" :completos="$completosPasos" compacto class="mt-lg">
+    @foreach ($clavesAplicables as $indicePaso => $claveDelPaso)
+    <x-ui.stepper-panel :indice="$indicePaso" :total="count($clavesAplicables)" :titulo="$etiquetasPasos[$indicePaso]">
+    <ul class="divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
+        @foreach ([$claveDelPaso] as $clave)
             @php
                 $fila = [
                     'clave' => $clave,
@@ -121,6 +129,9 @@
             @endif
         @endforeach
     </ul>
+    </x-ui.stepper-panel>
+    @endforeach
+    </x-ui.stepper>
 
     <div class="mt-xl border-t border-hairline pt-lg">
         <a href="{{ route('tramite.resumen', ['escuela' => $escuela->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">Volver al resumen</a>

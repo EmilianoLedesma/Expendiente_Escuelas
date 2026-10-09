@@ -7,8 +7,10 @@
         <x-ui.error-summary />
 
         {{-- id="cantidades": ancla del error "declara al menos un concepto" (D9). --}}
-        <div id="cantidades" class="space-y-xl">
+        <div id="cantidades">
+            <x-ui.stepper :pasos="$grupos->map(fn ($g) => $g->nombre)->all()">
             @foreach ($grupos as $grupo)
+                <x-ui.stepper-panel :indice="$loop->index" :total="$grupos->count()" :titulo="$grupo->nombre">
                 <div class="overflow-hidden rounded-lg border border-hairline">
                     <table class="w-full border-collapse text-left">
                         <caption class="border-b border-hairline bg-surface-soft px-lg py-sm text-left text-title-sm font-semibold text-ink">{{ $grupo->nombre }}</caption>
@@ -35,9 +37,12 @@
                         </tbody>
                     </table>
                 </div>
+                @if ($loop->last)
+                    <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
+                @endif
+                </x-ui.stepper-panel>
             @endforeach
+            </x-ui.stepper>
         </div>
-
-        <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
     </form>
 </div>

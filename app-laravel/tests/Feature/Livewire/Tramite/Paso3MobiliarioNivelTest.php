@@ -65,6 +65,25 @@ class Paso3MobiliarioNivelTest extends TestCase
         }
     }
 
+    public function test_inicial_reparte_las_salas_en_pasos_y_solo_el_ultimo_guarda(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuelaNivel = $this->crearEscuelaNivel($solicitante, 'inicial');
+
+        $html = $this->actingAs($solicitante->user)
+            ->get(route('tramite.paso3-mobiliario', ['escuelaNivel' => $escuelaNivel->id]))
+            ->getContent();
+
+        $this->assertStringContainsString('data-stepper-nav', $html);
+        // 5 salas + Sala de Usos Múltiples = 6 pasos (0..5).
+        foreach (range(0, 5) as $i) {
+            $this->assertStringContainsString('data-paso="'.$i.'"', $html);
+        }
+        $this->assertStringNotContainsString('data-paso="6"', $html);
+        $this->assertSame(1, substr_count($html, 'Guardar y continuar'));
+        $this->assertGreaterThan(strpos($html, 'data-paso="5"'), strpos($html, 'Guardar y continuar'));
+    }
+
     public function test_un_nivel_distinto_de_inicial_se_salta_y_queda_completado(): void
     {
         $solicitante = Solicitante::factory()->create();
