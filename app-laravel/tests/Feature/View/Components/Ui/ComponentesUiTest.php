@@ -97,7 +97,9 @@ class ComponentesUiTest extends TestCase
         $view->assertSee('Revisa los siguientes datos')
             ->assertSee('role="alert"', false)
             ->assertSee('tabindex="-1"', false)
-            ->assertSee('x-init="$el.focus()"', false)
+            ->assertSee('$el.focus();', false)
+            // Avisa a un x-ui.stepper (si lo hay) para que cambie al panel del primer error.
+            ->assertSee("\$dispatch('stepper-ir-a'", false)
             ->assertSee('href="#calle"', false)
             ->assertSee('Falta la calle.')
             ->assertDontSee('Vencido.');
