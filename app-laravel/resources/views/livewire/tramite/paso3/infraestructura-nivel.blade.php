@@ -6,6 +6,22 @@
         ->all();
     $columnas = 'md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]';
     $etiqueta = 'block text-body-sm font-semibold text-ink';
+
+    // Un sub-paso por bloque, en el orden en que se renderizan los paneles de abajo.
+    $etiquetasCategoria = ['administrativo' => 'Administrativos', 'cubiculo' => 'Cubículos', 'recreativo_deportivo' => 'Actividades físicas', 'especial' => 'Instalaciones especiales'];
+    $pasos = [];
+    if ($yaCapturado !== []) {
+        $pasos[] = 'Ya registrada';
+    }
+    foreach ($tipos->groupBy('categoria') as $categoria => $_) {
+        $pasos[] = $etiquetasCategoria[$categoria] ?? $categoria;
+    }
+    if (count($categorias) > 0) {
+        $pasos[] = 'Sanitarios';
+    }
+    $pasos[] = 'Aulas del nivel';
+    $totalPasos = count($pasos);
+    $indice = 0;
 @endphp
 
 <div class="max-w-3xl">
@@ -16,14 +32,18 @@
     <form novalidate wire:submit="guardar">
         <x-ui.error-summary />
 
+        <x-ui.stepper :pasos="$pasos">
         @if ($yaCapturado !== [])
+            <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Infraestructura del plantel (ya registrada)">
             <x-ui.section title="Infraestructura del plantel (ya registrada)">
                 <p class="text-body-sm text-muted">Estos datos son del plantel y ya fueron capturados. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
                 <x-ui.summary-list :filas="$yaCapturado" />
             </x-ui.section>
+            </x-ui.stepper-panel>
         @endif
 
         @foreach ($tipos->groupBy('categoria') as $categoria => $tiposCategoria)
+            <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" :titulo="$nombresCategoria[$categoria] ?? $categoria">
             <x-ui.section :title="$nombresCategoria[$categoria] ?? $categoria">
                 <div class="hidden gap-sm text-body-sm font-semibold text-muted md:grid {{ $columnas }}" aria-hidden="true">
                     <span>Espacio</span><span>Cantidad</span><span>Superficie (m²)</span><span>Capacidad</span>
@@ -102,9 +122,11 @@
                     </div>
                 @endforeach
             </x-ui.section>
+            </x-ui.stepper-panel>
         @endforeach
 
         @if (count($categorias) > 0)
+            <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Sanitarios">
             <x-ui.section title="Sanitarios">
                 @foreach ($categorias as $categoria)
                     <div wire:key="sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
@@ -126,8 +148,10 @@
                     </div>
                 @endforeach
             </x-ui.section>
+            </x-ui.stepper-panel>
         @endif
 
+        <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Aulas del nivel">
         <x-ui.section title="Aulas del nivel">
             <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 <x-ui.field id="numeroAulas" label="Número de aulas">
@@ -140,5 +164,7 @@
         </x-ui.section>
 
         <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
+        </x-ui.stepper-panel>
+        </x-ui.stepper>
     </form>
 </div>

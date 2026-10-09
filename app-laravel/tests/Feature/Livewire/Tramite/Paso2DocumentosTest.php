@@ -12,6 +12,7 @@ use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Models\DocumentoEscuela;
+use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Solicitante;
@@ -63,6 +64,45 @@ class Paso2DocumentosTest extends TestCase
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertSee("3 de {$total} documentos completos");
+    }
+
+    public function test_cada_documento_aplicable_tiene_su_propio_paso(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable('moral');
+        $this->actingAs($escuela->solicitante->user);
+
+        $total = count(app(DocumentosCompletos::class)->clavesAplicables('moral'));
+        $html = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])->html();
+
+        $this->assertStringContainsString('data-stepper-nav', $html);
+        $this->assertSame($total, preg_match_all('/<div role="group"[^>]*data-paso="\d+"/', $html));
+        $this->assertStringContainsString('data-paso="'.($total - 1).'"', $html);
+        $this->assertStringNotContainsString('data-paso="'.$total.'"', $html);
+    }
+
+    public function test_un_paso_con_su_documento_subido_se_marca_completo(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        $inmueble = ['escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'visto_bueno_proteccion_civil', 'plano_inmueble', 'certificado_numero_oficial'];
+        $aplicables = app(DocumentosCompletos::class)->clavesAplicables('fisica');
+
+        $this->assertStringNotContainsString('(paso completo)', Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])->html());
+
+        foreach (array_intersect($inmueble, $aplicables) as $clave) {
+            $tipo = DB::table('tipos_documentos')->where('clave', $clave)->first();
+            $fila = ['tipo_documento_id' => $tipo->id, 'ruta_archivo' => "x/{$clave}.pdf", 'nombre_original' => "{$clave}.pdf"];
+            // Los documentos de ámbito plantel se guardan en documentos_plantel, los demás en documentos_escuela.
+            $tipo->ambito === 'plantel'
+                ? DocumentoPlantel::create($fila + ['plantel_id' => $escuela->plantel_id])
+                : DocumentoEscuela::create($fila + ['escuela_id' => $escuela->id]);
+        }
+
+        $subidos = count(array_intersect($inmueble, $aplicables));
+        $this->assertGreaterThan(0, $subidos);
+        $this->assertSame($subidos, substr_count(Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])->html(), '(paso completo)'));
     }
 
     public function test_una_seccion_ya_subida_se_muestra_de_solo_lectura_con_boton_reemplazar(): void

@@ -6,7 +6,7 @@
 @endphp
 
 @if ($errores->isNotEmpty())
-    <div role="alert" tabindex="-1" x-data x-init="$el.focus()" aria-labelledby="resumen-errores-titulo" class="mb-lg rounded-sm border-2 border-error-ink bg-error-soft p-md">
+    <div role="alert" tabindex="-1" x-data x-init="$el.focus(); $dispatch('stepper-ir-a', { id: ($el.querySelector('a') || {getAttribute: () => ''}).getAttribute('href').slice(1), enfocar: false })" aria-labelledby="resumen-errores-titulo" class="mb-lg rounded-sm border-2 border-error-ink bg-error-soft p-md">
         <h2 id="resumen-errores-titulo" class="flex items-center gap-xs text-title-md font-semibold text-error-ink">
             <x-ui.icon nombre="exclamation-triangle" class="h-6 w-6" />
             Revisa los siguientes datos
