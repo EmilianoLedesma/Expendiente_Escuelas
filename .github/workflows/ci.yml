@@ -43,7 +43,10 @@ jobs:
         # if this tag doesn't exist on Docker Hub, fall back to
         # `postgres:16` (the PRD's original pinned version) instead of
         # guessing at an untested tag.
-        image: postgres:18
+        # Pulled from the AWS ECR Public mirror of the official image: Docker Hub's
+        # unauthenticated pull limit made the runners fail at "Initialize containers"
+        # (2026-10-09).
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: sedeq_app
           POSTGRES_PASSWORD: sedeq_app_pw
@@ -206,7 +209,10 @@ jobs:
         # if this tag doesn't exist on Docker Hub, fall back to
         # `postgres:16` (the PRD's original pinned version) instead of
         # guessing at an untested tag.
-        image: postgres:18
+        # Pulled from the AWS ECR Public mirror of the official image: Docker Hub's
+        # unauthenticated pull limit made the runners fail at "Initialize containers"
+        # (2026-10-09).
+        image: public.ecr.aws/docker/library/postgres:18
         env:
           POSTGRES_USER: sedeq_app
           POSTGRES_PASSWORD: sedeq_app_pw
