@@ -17,6 +17,7 @@ use App\Models\ConstanciaCurp;
 use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\ConstanciaSituacionFiscal;
 use App\Models\CredencialIne;
+use App\Models\DictamenUsoSuelo;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
@@ -178,6 +179,17 @@ class RegistrarDocumento
                     [$columna => $ownerId, 'tipo_documento_id' => $tipo->id],
                     $atributos,
                 );
+
+                if ($tipo->clave === 'dictamen_uso_suelo') {
+                    DictamenUsoSuelo::updateOrCreate(
+                        ['documento_plantel_id' => $documento->getKey()],
+                        [
+                            'autoridad_expide' => $datos->autoridadExpide,
+                            'folio_dictamen' => $datos->folioDictamen,
+                            'giro_autorizado' => $datos->giroAutorizado,
+                        ],
+                    );
+                }
 
                 if ($tipo->clave === 'constancia_seguridad_estructural') {
                     ConstanciaSeguridadEstructural::updateOrCreate(

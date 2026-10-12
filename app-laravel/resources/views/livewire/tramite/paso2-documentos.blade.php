@@ -117,7 +117,10 @@
                 </x-tramite.documento-row>
             @elseif ($clave === 'dictamen_uso_suelo')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarDictamen">
+                    <x-ui.field id="dictamenForm.autoridadExpide" label="Autoridad que expide"><x-ui.input maxlength="200" wire:model.blur="dictamenForm.autoridadExpide" /></x-ui.field>
+                    <x-ui.field id="dictamenForm.folioDictamen" label="Folio del dictamen"><x-ui.input maxlength="50" wire:model.blur="dictamenForm.folioDictamen" /></x-ui.field>
                     <x-ui.field id="dictamenForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="dictamenForm.fechaEmision" /></x-ui.field>
+                    <x-ui.field id="dictamenForm.giroAutorizado" label="Giro que autoriza"><x-ui.input maxlength="200" wire:model.blur="dictamenForm.giroAutorizado" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'visto_bueno_proteccion_civil')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarProteccionCivil">

@@ -149,6 +149,9 @@ class Paso2Documentos extends Component
 
         if (! $this->intentarRegistrar($registrarDocumento, 'dictamen_uso_suelo', new DatosDocumento(
             fechaEmision: $this->dictamenForm->fechaEmision,
+            autoridadExpide: $this->dictamenForm->autoridadExpide,
+            folioDictamen: $this->dictamenForm->folioDictamen,
+            giroAutorizado: $this->dictamenForm->giroAutorizado,
         ))) {
             return;
         }

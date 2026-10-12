@@ -86,6 +86,26 @@ class RegistrarDocumentoTest extends TestCase
         ]);
     }
 
+    public function test_registra_la_extension_de_dictamen_de_uso_de_suelo(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 50, 'application/pdf'), new DatosDocumento(
+            fechaEmision: '2026-09-01',
+            autoridadExpide: 'Dirección de Desarrollo Urbano',
+            folioDictamen: 'DUS-2026-001',
+            giroAutorizado: 'Escuela de educación básica',
+        ));
+
+        $this->assertDatabaseHas('dictamenes_uso_suelo', [
+            'autoridad_expide' => 'Dirección de Desarrollo Urbano',
+            'folio_dictamen' => 'DUS-2026-001',
+            'giro_autorizado' => 'Escuela de educación básica',
+        ]);
+    }
+
     public function test_registra_la_extension_de_constancia_seguridad(): void
     {
         Storage::fake('documentos');
