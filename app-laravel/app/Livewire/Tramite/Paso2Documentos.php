@@ -190,6 +190,7 @@ class Paso2Documentos extends Component
             peritoRegistroDro: $this->constanciaForm->peritoRegistroDro,
             peritoRegistroAutoridad: $this->constanciaForm->peritoRegistroAutoridad !== '' ? $this->constanciaForm->peritoRegistroAutoridad : null,
             peritoRegistroVigencia: $this->constanciaForm->peritoRegistroVigencia !== '' ? $this->constanciaForm->peritoRegistroVigencia : null,
+            vigenciaConstancia: $this->constanciaForm->vigenciaConstancia,
         ))) {
             return;
         }

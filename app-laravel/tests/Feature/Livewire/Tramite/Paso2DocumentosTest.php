@@ -353,6 +353,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('constanciaForm.fechaEmision', now()->toDateString())
             ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
             ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->set('constanciaForm.vigenciaConstancia', now()->addYear()->toDateString())
             ->call('guardarConstancia')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez']);
@@ -591,6 +592,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('constanciaForm.fechaEmision', now()->toDateString())
             ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
             ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->set('constanciaForm.vigenciaConstancia', now()->addYear()->toDateString())
             ->set('constanciaForm.peritoCedulaProfesional', '1234567')
             ->set('constanciaForm.peritoRegistroAutoridad', 'Colegio de Ingenieros')
             ->call('guardarConstancia')
@@ -644,6 +646,34 @@ class Paso2DocumentosTest extends TestCase
             ->assertSeeHtml('id="acreditacionForm.fechaEscritura"')
             ->set('acreditacionForm.tipo', 'arrendamiento')
             ->assertDontSeeHtml('id="acreditacionForm.fechaEscritura"');
+    }
+
+    public function test_constancia_pide_vigencia_de_la_constancia_y_la_guarda(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        $vigencia = now()->addYear()->toDateString();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="constanciaForm.vigenciaConstancia"')
+            ->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
+            ->set('constanciaForm.fechaEmision', now()->toDateString())
+            ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
+            ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.vigenciaConstancia']);
+        $this->assertDatabaseCount('constancias_seguridad_estructural', 0);
+
+        $component->set('constanciaForm.vigenciaConstancia', $vigencia)
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['vigencia_constancia' => $vigencia]);
     }
 
     public function test_acreditacion_no_muestra_campo_observaciones(): void

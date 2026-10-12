@@ -19,6 +19,7 @@ final readonly class DatosDocumento
         public ?string $peritoRegistroDro = null,
         public ?string $peritoRegistroAutoridad = null,
         public ?string $peritoRegistroVigencia = null,
+        public ?string $vigenciaConstancia = null,
         // escritura_inmueble (acreditacion_ocupacion_legal), 4 variantes
         public ?string $tipoAcreditacion = null,
         public ?string $numeroEscritura = null,

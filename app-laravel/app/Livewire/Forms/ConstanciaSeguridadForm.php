@@ -19,6 +19,8 @@ class ConstanciaSeguridadForm extends Form
 
     public string $peritoRegistroVigencia = '';
 
+    public string $vigenciaConstancia = '';
+
     public function rules(): array
     {
         return [
@@ -28,6 +30,7 @@ class ConstanciaSeguridadForm extends Form
             'peritoRegistroDro' => ReglasCaptura::texto(requerido: true, max: 50),
             'peritoRegistroAutoridad' => ReglasCaptura::texto(max: 150),
             'peritoRegistroVigencia' => ReglasCaptura::fecha(),
+            'vigenciaConstancia' => ReglasCaptura::fecha(requerido: true),
         ];
     }
 
@@ -40,6 +43,7 @@ class ConstanciaSeguridadForm extends Form
             'peritoRegistroDro' => 'número de registro DRO',
             'peritoRegistroAutoridad' => 'autoridad del registro',
             'peritoRegistroVigencia' => 'vigencia del registro',
+            'vigenciaConstancia' => 'vigencia de la constancia',
         ];
     }
 }
