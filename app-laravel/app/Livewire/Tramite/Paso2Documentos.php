@@ -209,6 +209,7 @@ class Paso2Documentos extends Component
         if (! $this->intentarRegistrar($registrarDocumento, 'escritura_inmueble', new DatosDocumento(
             tipoAcreditacion: $this->acreditacionForm->tipo,
             numeroEscritura: $this->acreditacionForm->numeroEscritura !== '' ? $this->acreditacionForm->numeroEscritura : null,
+            fechaEscritura: $this->acreditacionForm->fechaEscritura !== '' ? $this->acreditacionForm->fechaEscritura : null,
             notarioNombre: $this->acreditacionForm->notarioNombre !== '' ? $this->acreditacionForm->notarioNombre : null,
             notarioNumero: $this->acreditacionForm->notarioNumero !== '' ? $this->acreditacionForm->notarioNumero : null,
             notarioLocalidad: $this->acreditacionForm->notarioLocalidad !== '' ? $this->acreditacionForm->notarioLocalidad : null,

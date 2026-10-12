@@ -13,6 +13,8 @@ class AcreditacionOcupacionForm extends Form
 
     public string $numeroEscritura = '';
 
+    public string $fechaEscritura = '';
+
     public string $notarioNombre = '';
 
     public string $notarioNumero = '';
@@ -54,6 +56,7 @@ class AcreditacionOcupacionForm extends Form
         return [
             'tipo' => ['required', 'in:escritura_publica,arrendamiento,comodato,otro'],
             'numeroEscritura' => ReglasCaptura::texto(requerido: $escritura, max: 50),
+            'fechaEscritura' => ReglasCaptura::fechaPasada(requerido: $escritura),
             'notarioNombre' => ReglasCaptura::nombrePersona(requerido: $escritura, max: 150),
             'notarioNumero' => ReglasCaptura::texto(max: 20),
             'notarioLocalidad' => ReglasCaptura::texto(max: 100),
@@ -75,6 +78,7 @@ class AcreditacionOcupacionForm extends Form
         return [
             'tipo' => 'tipo de acreditación',
             'numeroEscritura' => 'número de escritura',
+            'fechaEscritura' => 'fecha de la escritura',
             'notarioNombre' => 'nombre del notario',
             'notarioNumero' => 'número del notario',
             'notarioLocalidad' => 'localidad del notario',

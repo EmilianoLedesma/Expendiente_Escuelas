@@ -116,12 +116,14 @@ class RegistrarDocumentoTest extends TestCase
         (new RegistrarDocumento)->ejecutar($escuela->id, 'escritura_inmueble', UploadedFile::fake()->create('e.pdf', 50, 'application/pdf'), new DatosDocumento(
             tipoAcreditacion: 'escritura_publica',
             numeroEscritura: 'E-500',
+            fechaEscritura: '2024-03-15',
             notarioNombre: 'Lic. Ana Notaria',
         ));
 
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
             'tipo' => 'escritura_publica',
             'numero_escritura' => 'E-500',
+            'fecha_escritura' => '2024-03-15',
         ]);
     }
 

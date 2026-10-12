@@ -19,6 +19,7 @@ class AcreditacionOcupacionLegal extends Model
         'documento_plantel_id',
         'tipo',
         'numero_escritura',
+        'fecha_escritura',
         'notario_nombre',
         'notario_numero',
         'notario_localidad',
