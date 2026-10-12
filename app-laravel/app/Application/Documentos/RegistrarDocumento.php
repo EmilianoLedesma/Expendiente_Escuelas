@@ -119,9 +119,13 @@ class RegistrarDocumento
         // metadatos viejos ni destruir el archivo previo antes de confirmar.
         $ruta = $almacen->guardar($tipo->ambito, $ownerId, $tipoDocumentoClave, $archivo);
 
-        $fechaVigencia = $datos->fechaEmision !== null && $tipo->vigencia_max_dias !== null
-            ? date('Y-m-d', strtotime("{$datos->fechaEmision} +{$tipo->vigencia_max_dias} days"))
-            : null;
+        // La constancia de seguridad estructural declara su propia vigencia (no hay
+        // vigencia_max_dias): esa fecha alimenta el control de vencimiento genérico.
+        $fechaVigencia = match (true) {
+            $datos->vigenciaConstancia !== null => $datos->vigenciaConstancia,
+            $datos->fechaEmision !== null && $tipo->vigencia_max_dias !== null => date('Y-m-d', strtotime("{$datos->fechaEmision} +{$tipo->vigencia_max_dias} days")),
+            default => null,
+        };
 
         // WS-2 item 2 — confirmado solo se pone en true DENTRO del callback
         // afterCommit, no como última instrucción del closure de
