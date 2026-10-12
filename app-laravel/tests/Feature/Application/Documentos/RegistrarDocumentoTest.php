@@ -71,6 +71,21 @@ class RegistrarDocumentoTest extends TestCase
         ]);
     }
 
+    public function test_visto_bueno_proteccion_civil_vence_a_los_30_dias(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'visto_bueno_proteccion_civil', UploadedFile::fake()->create('pc.pdf', 50, 'application/pdf'), new DatosDocumento(fechaEmision: '2026-09-01'));
+
+        $this->assertDatabaseHas('documentos_plantel', [
+            'plantel_id' => $escuela->plantel_id,
+            'fecha_emision' => '2026-09-01',
+            'fecha_vigencia' => '2026-10-01',
+        ]);
+    }
+
     public function test_registra_la_extension_de_constancia_seguridad(): void
     {
         Storage::fake('documentos');

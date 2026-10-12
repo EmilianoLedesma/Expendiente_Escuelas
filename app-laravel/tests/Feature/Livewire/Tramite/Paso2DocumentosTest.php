@@ -218,11 +218,47 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertSee('Visto Bueno / Dictamen de Protección Civil')
             ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
-            ->call('guardarDocumentoSimple', 'visto_bueno_proteccion_civil')
+            ->set('proteccionCivilForm.fechaEmision', now()->toDateString())
+            ->call('guardarProteccionCivil')
             ->assertHasNoErrors();
 
         $this->assertDatabaseCount('documentos_plantel', 1);
         $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    public function test_proteccion_civil_pide_fecha_de_emision_y_vence_a_los_30_dias(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $fecha = now()->subDays(5);
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="proteccionCivilForm.fechaEmision"')
+            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.fechaEmision']);
+        $this->assertDatabaseCount('documentos_plantel', 0);
+
+        $component->set('proteccionCivilForm.fechaEmision', $fecha->toDateString())
+            ->call('guardarProteccionCivil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('documentos_plantel', [
+            'fecha_emision' => $fecha->toDateString(),
+            'fecha_vigencia' => $fecha->copy()->addDays(30)->toDateString(),
+        ]);
+    }
+
+    public function test_proteccion_civil_ya_no_se_sube_por_la_via_generica(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'visto_bueno_proteccion_civil')
+            ->assertForbidden();
     }
 
     public function test_poder_gestor_y_acta_constitutiva_no_aplican_a_otros_tipos_de_persona(): void

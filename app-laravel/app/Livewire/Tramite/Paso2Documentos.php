@@ -19,6 +19,7 @@ use App\Livewire\Forms\ConstanciaSeguridadForm;
 use App\Livewire\Forms\DictamenUsoSueloForm;
 use App\Livewire\Forms\IdentidadDocumentoForm;
 use App\Livewire\Forms\NumeroOficialForm;
+use App\Livewire\Forms\ProteccionCivilForm;
 use App\Livewire\Forms\SituacionFiscalForm;
 use App\Models\Escuela;
 use App\Models\TipoDocumento;
@@ -44,7 +45,7 @@ class Paso2Documentos extends Component
 
     /** Claves con campos estructurados y método propio; toda otra clave aplicable va por guardarDocumentoSimple() (WS-5a M1). */
     public const CON_DATOS_ESTRUCTURADOS = [
-        'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural',
+        'escritura_inmueble', 'dictamen_uso_suelo', 'constancia_seguridad_estructural', 'visto_bueno_proteccion_civil',
         // ADR-007: captured with the data the validation engine compares
         'ine', 'constancia_curp', 'constancia_situacion_fiscal', 'certificado_numero_oficial',
     ];
@@ -60,6 +61,8 @@ class Paso2Documentos extends Component
     public array $reemplazando = [];
 
     public DictamenUsoSueloForm $dictamenForm;
+
+    public ProteccionCivilForm $proteccionCivilForm;
 
     public ConstanciaSeguridadForm $constanciaForm;
 
@@ -151,6 +154,24 @@ class Paso2Documentos extends Component
         }
         $this->archivos['dictamen_uso_suelo'] = null;
         $this->reemplazando['dictamen_uso_suelo'] = false;
+
+        $this->avanzar($documentosCompletos);
+    }
+
+    public function guardarProteccionCivil(RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
+    {
+        $this->validarEnConjunto(
+            fn () => $this->validate(['archivos.visto_bueno_proteccion_civil' => self::REGLAS_ARCHIVO]),
+            fn () => $this->proteccionCivilForm->validate(),
+        );
+
+        if (! $this->intentarRegistrar($registrarDocumento, 'visto_bueno_proteccion_civil', new DatosDocumento(
+            fechaEmision: $this->proteccionCivilForm->fechaEmision,
+        ))) {
+            return;
+        }
+        $this->archivos['visto_bueno_proteccion_civil'] = null;
+        $this->reemplazando['visto_bueno_proteccion_civil'] = false;
 
         $this->avanzar($documentosCompletos);
     }

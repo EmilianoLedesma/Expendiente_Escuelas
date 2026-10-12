@@ -32,6 +32,19 @@ class ValidarVigenciaDocumentos
             $violaciones['dictamen_uso_suelo'] = 'Dictamen de Uso de Suelo: ha superado su vigencia máxima, debe resubirse.';
         }
 
+        // Todo otro documento del plantel con vigencia calculada al subirlo
+        // (hoy, Protección Civil): sin esto vencería sin que nada lo notara.
+        $vencidos = DocumentoPlantel::query()
+            ->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_plantel.tipo_documento_id')
+            ->where('documentos_plantel.plantel_id', $escuela->plantel_id)
+            ->where('tipos_documentos.clave', '!=', 'dictamen_uso_suelo')
+            ->whereNotNull('documentos_plantel.fecha_vigencia')
+            ->where('documentos_plantel.fecha_vigencia', '<', now()->toDateString())
+            ->pluck('tipos_documentos.nombre', 'tipos_documentos.clave');
+        foreach ($vencidos as $clave => $nombre) {
+            $violaciones[$clave] = "{$nombre}: ha superado su vigencia máxima, debe resubirse.";
+        }
+
         $constanciaTipo = TipoDocumento::where('clave', 'constancia_seguridad_estructural')->first();
         $constancia = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)
             ->where('tipo_documento_id', $constanciaTipo?->id)

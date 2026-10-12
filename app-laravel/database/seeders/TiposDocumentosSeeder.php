@@ -45,7 +45,7 @@ class TiposDocumentosSeeder extends Seeder
             ['clave' => 'formato_solicitud', 'nombre' => 'Formato de Solicitud', 'aplica_persona' => 'ambas', 'ambito' => 'escuela_nivel', 'vigencia_max_dias' => null],
             ['clave' => 'acta_constitutiva', 'nombre' => 'Acta constitutiva', 'aplica_persona' => 'moral', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
             ['clave' => 'poder_gestor', 'nombre' => 'Poder general para actos de administración (gestor)', 'aplica_persona' => 'fisica_con_gestor', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
-            ['clave' => 'visto_bueno_proteccion_civil', 'nombre' => 'Visto Bueno / Dictamen de Protección Civil', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
+            ['clave' => 'visto_bueno_proteccion_civil', 'nombre' => 'Visto Bueno / Dictamen de Protección Civil', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => 30],
             ['clave' => 'plano_inmueble', 'nombre' => 'Plano o croquis del inmueble', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'certificado_numero_oficial', 'nombre' => 'Certificado de número oficial', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             // ADR-007 (owner decision): sources for the CURP and RFC checks.

@@ -57,6 +57,33 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $this->assertStringContainsString('Dictamen de Uso de Suelo', $violaciones['dictamen_uso_suelo']);
     }
 
+    public function test_detecta_visto_bueno_de_proteccion_civil_vencido(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'visto_bueno_proteccion_civil', UploadedFile::fake()->create('pc.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(60)->toDateString(),
+        ));
+
+        $violaciones = (new ValidarVigenciaDocumentos)->ejecutar($escuela->id);
+
+        $this->assertSame(['visto_bueno_proteccion_civil'], array_keys($violaciones));
+        $this->assertStringContainsString('Protección Civil', $violaciones['visto_bueno_proteccion_civil']);
+    }
+
+    public function test_acepta_visto_bueno_de_proteccion_civil_vigente(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'visto_bueno_proteccion_civil', UploadedFile::fake()->create('pc.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(5)->toDateString(),
+        ));
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
+
     public function test_acepta_dictamen_de_uso_de_suelo_vigente(): void
     {
         Storage::fake('documentos');
