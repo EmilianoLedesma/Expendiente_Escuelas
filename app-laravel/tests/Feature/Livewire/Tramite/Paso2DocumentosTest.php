@@ -528,6 +528,15 @@ class Paso2DocumentosTest extends TestCase
         ]);
     }
 
+    public function test_acreditacion_no_muestra_campo_observaciones(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertDontSeeHtml('id="acreditacionForm.observaciones"');
+    }
+
     public function test_variante_arrendamiento_sin_datos_de_contrato_falla_validacion(): void
     {
         Storage::fake('documentos');
