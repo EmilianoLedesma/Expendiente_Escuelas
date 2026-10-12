@@ -106,6 +106,26 @@ class RegistrarDocumentoTest extends TestCase
         ]);
     }
 
+    public function test_la_vigencia_de_la_constancia_es_la_fecha_de_vigencia_del_documento(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->create('c.pdf', 50, 'application/pdf'), new DatosDocumento(
+            fechaEmision: '2025-12-01',
+            peritoNombre: 'Ing. Juan Pérez',
+            peritoRegistroDro: 'DRO-100',
+            vigenciaConstancia: '2026-01-15',
+        ));
+
+        $this->assertDatabaseHas('documentos_plantel', [
+            'plantel_id' => $escuela->plantel_id,
+            'fecha_emision' => '2025-12-01',
+            'fecha_vigencia' => '2026-01-15',
+        ]);
+    }
+
     public function test_registra_la_extension_de_constancia_seguridad(): void
     {
         Storage::fake('documentos');

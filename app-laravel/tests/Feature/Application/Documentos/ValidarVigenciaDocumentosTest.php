@@ -96,6 +96,39 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
     }
 
+    public function test_detecta_constancia_de_seguridad_estructural_con_vigencia_vencida(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->create('c.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subYear()->toDateString(),
+            peritoNombre: 'Ing. Juan Pérez',
+            peritoRegistroDro: 'DRO-100',
+            vigenciaConstancia: now()->subDay()->toDateString(),
+        ));
+
+        $violaciones = (new ValidarVigenciaDocumentos)->ejecutar($escuela->id);
+
+        $this->assertSame(['constancia_seguridad_estructural'], array_keys($violaciones));
+        $this->assertStringContainsString('ha superado su vigencia máxima', $violaciones['constancia_seguridad_estructural']);
+    }
+
+    public function test_acepta_constancia_de_seguridad_estructural_con_vigencia_futura(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->create('c.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->toDateString(),
+            peritoNombre: 'Ing. Juan Pérez',
+            peritoRegistroDro: 'DRO-100',
+            vigenciaConstancia: now()->addYear()->toDateString(),
+        ));
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
+
     public function test_detecta_perito_registro_ano_distinto_de_emision(): void
     {
         Storage::fake('documentos');
