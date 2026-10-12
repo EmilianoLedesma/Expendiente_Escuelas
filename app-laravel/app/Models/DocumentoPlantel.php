@@ -51,6 +51,12 @@ class DocumentoPlantel extends Model
         return $this->hasOne(ConstanciaSeguridadEstructural::class);
     }
 
+    /** @return HasOne<DictamenUsoSuelo, $this> */
+    public function dictamenUsoSuelo(): HasOne
+    {
+        return $this->hasOne(DictamenUsoSuelo::class);
+    }
+
     /** @return HasOne<AcreditacionOcupacionLegal, $this> */
     public function acreditacionOcupacionLegal(): HasOne
     {

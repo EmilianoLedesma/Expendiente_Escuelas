@@ -13,6 +13,10 @@ final readonly class DatosDocumento
 {
     public function __construct(
         public ?string $fechaEmision = null,
+        // dictamen_uso_suelo (dictamenes_uso_suelo)
+        public ?string $autoridadExpide = null,
+        public ?string $folioDictamen = null,
+        public ?string $giroAutorizado = null,
         // constancia_seguridad_estructural
         public ?string $peritoNombre = null,
         public ?string $peritoCedulaProfesional = null,

@@ -333,6 +333,9 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
             ->set('dictamenForm.fechaEmision', now()->toDateString())
+            ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
+            ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
+            ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -374,6 +377,9 @@ class Paso2DocumentosTest extends TestCase
         // Upload dictamen BEFORE acreditacion to prove order independence
         $component->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
             ->set('dictamenForm.fechaEmision', now()->toDateString())
+            ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
+            ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
+            ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -674,6 +680,35 @@ class Paso2DocumentosTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('constancias_seguridad_estructural', ['vigencia_constancia' => $vigencia]);
+    }
+
+    public function test_dictamen_pide_autoridad_folio_y_giro_y_los_guarda(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="dictamenForm.autoridadExpide"')
+            ->assertSeeHtml('id="dictamenForm.folioDictamen"')
+            ->assertSeeHtml('id="dictamenForm.giroAutorizado"')
+            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
+            ->set('dictamenForm.fechaEmision', now()->toDateString())
+            ->call('guardarDictamen')
+            ->assertHasErrors(['dictamenForm.autoridadExpide', 'dictamenForm.folioDictamen', 'dictamenForm.giroAutorizado']);
+        $this->assertDatabaseCount('dictamenes_uso_suelo', 0);
+
+        $component->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
+            ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
+            ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->call('guardarDictamen')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('dictamenes_uso_suelo', [
+            'autoridad_expide' => 'Dirección de Desarrollo Urbano',
+            'folio_dictamen' => 'DUS-2026-001',
+            'giro_autorizado' => 'Escuela de educación básica',
+        ]);
     }
 
     public function test_acreditacion_no_muestra_campo_observaciones(): void
