@@ -14,7 +14,7 @@
         @else
             <form novalidate wire:submit="invitar">
                 <x-ui.error-summary />
-                <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                <div class="grid grid-cols-1 gap-md sm:grid-cols-2 sm:items-end">
                     <x-ui.field id="escuelaNivelId" label="Nivel" class="sm:col-span-2">
                         <x-ui.select wire:model.blur="escuelaNivelId">
                             <option value="">Selecciona un nivel…</option>
@@ -23,7 +23,7 @@
                             @endforeach
                         </x-ui.select>
                     </x-ui.field>
-                    <x-ui.field id="nombre" label="Nombre completo">
+                    <x-ui.field id="nombre" label="Nombre completo" hint="Nombre y apellidos de la persona.">
                         <x-ui.input maxlength="255" wire:model.blur="nombre" autocomplete="off" />
                     </x-ui.field>
                     <x-ui.field id="correo" label="Correo electrónico" hint="Le llegará un enlace para definir su contraseña.">
