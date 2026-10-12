@@ -16,6 +16,7 @@ Se mantienen a nivel plantel (Paso 2.2). WS-5b solo movió al nivel los document
 ## Preguntas relacionadas para SEDEQ
 
 - `certificado_numero_oficial` sigue como documento obligatorio del plantel en 2.2 para todos los niveles, pero Requisitos Básica §16 lo hace condicional; la condición depende de niveles elegidos después de 2.2. Se suma a la pregunta existente "condición del número oficial".
+- `ratificado_notario` (comodato, `acreditaciones_ocupacion_legal`): `COMPENDIO_MAESTRO` confirma que el comodato debe ratificarse ante Notario Público **solo para Básica** (diferencia real frente a Inicial). Pero `escritura_inmueble` se captura a nivel plantel, igual que `dictamen_uso_suelo` y `visto_bueno_proteccion_civil`: un mismo comodato cubre todos los niveles que solicita la escuela. Si una escuela solicita Preescolar + Primaria bajo un mismo comodato, ¿la ratificación aplica por ser Básica, o depende de cómo se resuelva este mismo PENDIENTE? `ratificado_notario` existe hoy en el Form y en la BD pero sin control en la UI; no habrá regla de obligatoriedad condicional hasta resolverlo.
 
 ## Si la respuesta es "por nivel"
 
