@@ -106,6 +106,10 @@
                         <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado" optional><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
                     @endif
 
+                    @if ($acreditacionForm->tipo === 'comodato')
+                        <x-ui.checkbox id="acreditacionForm.ratificadoNotario" wire:model.blur="acreditacionForm.ratificadoNotario">Comodato ratificado ante notario público</x-ui.checkbox>
+                    @endif
+
                     @if ($acreditacionForm->tipo === 'otro')
                         <x-ui.field id="acreditacionForm.otroEspecifique" label="Especifique"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroEspecifique" /></x-ui.field>
                     @endif
@@ -118,7 +122,9 @@
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarConstancia">
                     <x-ui.field id="constanciaForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="constanciaForm.fechaEmision" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoNombre" label="Nombre del perito"><x-ui.input maxlength="200" wire:model.blur="constanciaForm.peritoNombre" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoCedulaProfesional" label="Cédula profesional del perito" optional><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoCedulaProfesional" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro DRO"><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoRegistroDro" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoRegistroAutoridad" label="Autoridad del registro" optional><x-ui.input maxlength="150" wire:model.blur="constanciaForm.peritoRegistroAutoridad" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroVigencia" label="Vigencia del registro" optional><x-ui.input type="date" wire:model.blur="constanciaForm.peritoRegistroVigencia" /></x-ui.field>
                 </x-tramite.documento-row>
             @else

@@ -528,6 +528,75 @@ class Paso2DocumentosTest extends TestCase
         ]);
     }
 
+    public function test_constancia_muestra_cedula_y_autoridad_del_perito(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="constanciaForm.peritoCedulaProfesional"')
+            ->assertSeeHtml('id="constanciaForm.peritoRegistroAutoridad"');
+    }
+
+    public function test_constancia_guarda_cedula_y_autoridad_del_perito(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
+            ->set('constanciaForm.fechaEmision', now()->toDateString())
+            ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
+            ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->set('constanciaForm.peritoCedulaProfesional', '1234567')
+            ->set('constanciaForm.peritoRegistroAutoridad', 'Colegio de Ingenieros')
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('constancias_seguridad_estructural', [
+            'perito_cedula_profesional' => '1234567',
+            'perito_registro_autoridad' => 'Colegio de Ingenieros',
+        ]);
+    }
+
+    public function test_acreditacion_muestra_ratificado_notario_solo_en_comodato(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertDontSeeHtml('id="acreditacionForm.ratificadoNotario"')
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"');
+    }
+
+    public function test_comodato_guarda_ratificado_notario(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
+
+        $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('contrato.pdf', 10, 'application/pdf'))
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->set('acreditacionForm.arrendadorComodante', 'Juan Comodante')
+            ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
+            ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
+            ->set('acreditacionForm.ratificadoNotario', true)
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['tipo' => 'comodato', 'ratificado_notario' => true]);
+    }
+
     public function test_acreditacion_no_muestra_campo_observaciones(): void
     {
         $escuela = $this->crearEscuelaConResponsable();
