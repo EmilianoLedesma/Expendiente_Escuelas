@@ -130,6 +130,7 @@
                     <x-ui.field id="constanciaForm.peritoCedulaProfesional" label="Cédula profesional del perito" optional><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoCedulaProfesional" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro DRO"><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoRegistroDro" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroAutoridad" label="Autoridad del registro" optional><x-ui.input maxlength="150" wire:model.blur="constanciaForm.peritoRegistroAutoridad" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.vigenciaConstancia" label="Vigencia de la constancia"><x-ui.input type="date" wire:model.blur="constanciaForm.vigenciaConstancia" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroVigencia" label="Vigencia del registro" optional><x-ui.input type="date" wire:model.blur="constanciaForm.peritoRegistroVigencia" /></x-ui.field>
                 </x-tramite.documento-row>
             @else

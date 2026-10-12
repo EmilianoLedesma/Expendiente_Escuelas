@@ -97,6 +97,7 @@ class RegistrarDocumentoTest extends TestCase
             peritoNombre: 'Ing. Juan Pérez',
             peritoCedulaProfesional: '1234567',
             peritoRegistroDro: 'DRO-100',
+            vigenciaConstancia: '2027-06-30',
             peritoRegistroAutoridad: 'Municipio de Querétaro',
             peritoRegistroVigencia: '2026-01-01',
         ));
@@ -104,6 +105,7 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertDatabaseHas('constancias_seguridad_estructural', [
             'perito_nombre' => 'Ing. Juan Pérez',
             'perito_registro_dro' => 'DRO-100',
+            'vigencia_constancia' => '2027-06-30',
         ]);
     }
 

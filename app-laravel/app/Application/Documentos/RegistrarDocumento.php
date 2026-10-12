@@ -188,6 +188,7 @@ class RegistrarDocumento
                             'perito_registro_dro' => $datos->peritoRegistroDro,
                             'perito_registro_autoridad' => $datos->peritoRegistroAutoridad,
                             'perito_registro_vigencia' => $datos->peritoRegistroVigencia,
+                            'vigencia_constancia' => $datos->vigenciaConstancia,
                         ],
                     );
                 }

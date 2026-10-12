@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $perito_registro_dro
  * @property string|null $perito_registro_autoridad
  * @property string|null $perito_registro_vigencia
+ * @property string|null $vigencia_constancia
  */
 class ConstanciaSeguridadEstructural extends Model
 {
@@ -30,6 +31,7 @@ class ConstanciaSeguridadEstructural extends Model
         'perito_registro_dro',
         'perito_registro_autoridad',
         'perito_registro_vigencia',
+        'vigencia_constancia',
     ];
 
     public function documentoPlantel(): BelongsTo
