@@ -43,10 +43,13 @@ jobs:
         # if this tag doesn't exist on Docker Hub, fall back to
         # `postgres:16` (the PRD's original pinned version) instead of
         # guessing at an untested tag.
-        # Pulled from the AWS ECR Public mirror of the official image: Docker Hub's
-        # unauthenticated pull limit made the runners fail at "Initialize containers"
-        # (2026-10-09).
-        image: public.ecr.aws/docker/library/postgres:18
+        # Pulled from Docker Hub with a read-only access token: unauthenticated pulls
+        # (Docker Hub, and the ECR Public mirror tried on 2026-10-09) hit rate limits
+        # and failed the runners at "Initialize containers" (2026-10-09, 2026-10-12).
+        image: postgres:18
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
         env:
           POSTGRES_USER: sedeq_app
           POSTGRES_PASSWORD: sedeq_app_pw
@@ -209,10 +212,13 @@ jobs:
         # if this tag doesn't exist on Docker Hub, fall back to
         # `postgres:16` (the PRD's original pinned version) instead of
         # guessing at an untested tag.
-        # Pulled from the AWS ECR Public mirror of the official image: Docker Hub's
-        # unauthenticated pull limit made the runners fail at "Initialize containers"
-        # (2026-10-09).
-        image: public.ecr.aws/docker/library/postgres:18
+        # Pulled from Docker Hub with a read-only access token: unauthenticated pulls
+        # (Docker Hub, and the ECR Public mirror tried on 2026-10-09) hit rate limits
+        # and failed the runners at "Initialize containers" (2026-10-09, 2026-10-12).
+        image: postgres:18
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
         env:
           POSTGRES_USER: sedeq_app
           POSTGRES_PASSWORD: sedeq_app_pw
