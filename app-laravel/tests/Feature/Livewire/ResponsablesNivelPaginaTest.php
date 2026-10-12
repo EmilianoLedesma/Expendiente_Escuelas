@@ -31,6 +31,16 @@ class ResponsablesNivelPaginaTest extends TestCase
             ->assertDontSeeHtml('<option value="'.$ajeno->id.'">');
     }
 
+    public function test_nombre_y_correo_tienen_la_misma_estructura_para_que_los_campos_queden_alineados(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $this->nivelDe($dueno, 'primaria');
+
+        Livewire::actingAs($dueno->user)->test(ResponsablesNivel::class)
+            ->assertSeeHtml('id="nombre-hint"')
+            ->assertSeeHtml('id="correo-hint"');
+    }
+
     public function test_los_bucles_llevan_wire_key(): void
     {
         $dueno = Solicitante::factory()->create();
