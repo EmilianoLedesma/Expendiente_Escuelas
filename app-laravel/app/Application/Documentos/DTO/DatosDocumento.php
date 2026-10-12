@@ -22,6 +22,7 @@ final readonly class DatosDocumento
         // escritura_inmueble (acreditacion_ocupacion_legal), 4 variantes
         public ?string $tipoAcreditacion = null,
         public ?string $numeroEscritura = null,
+        public ?string $fechaEscritura = null,
         public ?string $notarioNombre = null,
         public ?string $notarioNumero = null,
         public ?string $notarioLocalidad = null,

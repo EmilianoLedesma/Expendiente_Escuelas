@@ -313,10 +313,11 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->set('acreditacionForm.fechaEscritura', '2024-03-15')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->call('guardarAcreditacion')
             ->assertHasNoErrors();
-        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500', 'fecha_escritura' => '2024-03-15']);
     }
 
     public function test_sube_dictamen_de_forma_independiente(): void
@@ -380,10 +381,11 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->set('acreditacionForm.fechaEscritura', '2024-03-15')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->call('guardarAcreditacion')
             ->assertHasNoErrors();
-        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500']);
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500', 'fecha_escritura' => '2024-03-15']);
     }
 
     public function test_subir_el_ultimo_documento_simple_redirige_a_paso2(): void
@@ -532,7 +534,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('escritura.pdf', 10, 'application/pdf'))
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->call('guardarAcreditacion')
-            ->assertHasErrors(['acreditacionForm.numeroEscritura', 'acreditacionForm.notarioNombre']);
+            ->assertHasErrors(['acreditacionForm.numeroEscritura', 'acreditacionForm.fechaEscritura', 'acreditacionForm.notarioNombre']);
 
         $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
     }
@@ -631,6 +633,17 @@ class Paso2DocumentosTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['tipo' => 'comodato', 'ratificado_notario' => true]);
+    }
+
+    public function test_escritura_publica_muestra_fecha_de_la_escritura_y_arrendamiento_no(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="acreditacionForm.fechaEscritura"')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertDontSeeHtml('id="acreditacionForm.fechaEscritura"');
     }
 
     public function test_acreditacion_no_muestra_campo_observaciones(): void

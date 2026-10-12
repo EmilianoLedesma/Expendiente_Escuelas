@@ -91,6 +91,7 @@
 
                     @if ($acreditacionForm->tipo === 'escritura_publica')
                         <x-ui.field id="acreditacionForm.numeroEscritura" label="Número de escritura"><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.numeroEscritura" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaEscritura" label="Fecha de la escritura"><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaEscritura" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.notarioNombre" label="Nombre del notario"><x-ui.input maxlength="150" wire:model.blur="acreditacionForm.notarioNombre" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.notarioNumero" label="Número del notario" optional><x-ui.input maxlength="20" wire:model.blur="acreditacionForm.notarioNumero" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.notarioLocalidad" label="Localidad del notario" optional><x-ui.input maxlength="100" wire:model.blur="acreditacionForm.notarioLocalidad" /></x-ui.field>

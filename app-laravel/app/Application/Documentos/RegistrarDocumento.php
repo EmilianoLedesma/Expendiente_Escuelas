@@ -198,6 +198,7 @@ class RegistrarDocumento
                         [
                             'tipo' => $datos->tipoAcreditacion,
                             'numero_escritura' => $datos->numeroEscritura,
+                            'fecha_escritura' => $datos->fechaEscritura,
                             'notario_nombre' => $datos->notarioNombre,
                             'notario_numero' => $datos->notarioNumero,
                             'notario_localidad' => $datos->notarioLocalidad,
