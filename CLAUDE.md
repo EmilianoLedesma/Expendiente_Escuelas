@@ -14,39 +14,11 @@ All application commands below run from `app-laravel/`.
 
 ## Stack
 
-Laravel 13 (PHP 8.4) · Livewire 3 · Filament 4 · PostgreSQL 18 · `spatie/laravel-permission` · `barryvdh/laravel-dompdf` · Laravel Breeze · Vite + Tailwind.
-
-(The PRD specified Laravel 11 / Livewire 3 / Filament 3 / PostgreSQL 16 — bumped to current stable at setup time because the originals weren't installable together. See `docs/progress.md` Decisions Log for the full reasoning.)
+The PRD specified Laravel 11 / Filament 3 / PostgreSQL 16; the project runs current stable (Laravel 13, PHP 8.4, Filament 4, PostgreSQL 18) because the originals weren't installable together. See `docs/progress.md` Decisions Log. Admin panel is at `/admin`.
 
 ## Commands
 
-```bash
-# install
-composer install
-npm install
-
-# run
-php artisan serve       # app at http://127.0.0.1:8000, admin panel at /admin
-npm run dev              # Vite dev server (or `composer run dev` for both together)
-
-# build frontend assets
-npm run build
-
-# tests (full suite)
-composer test             # clears config cache, then `php artisan test`
-php artisan test
-
-# single test file / single test
-php artisan test tests/Feature/Auth/AuthenticationTest.php
-php artisan test --filter=test_method_name
-
-# migrations
-php artisan migrate
-php artisan migrate:fresh   # drops all tables, re-runs everything — never run against a DB you haven't checked first (see below)
-
-# autoload after moving/renaming classes
-composer dump-autoload
-```
+Standard Laravel/Composer/npm commands, run from `app-laravel/`. Two non-obvious points: `composer test` clears the config cache before `php artisan test`, and `php artisan migrate:fresh` drops all tables — never run it against a DB you haven't checked first (see below).
 
 Tests run against PostgreSQL (`phpunit.xml` configures `DB_CONNECTION=pgsql` with database `sedeq_incorporacion_testing` on `127.0.0.1:5432`) — requires a reachable Postgres instance. Migrations run raw Postgres DDL, so sqlite cannot work.
 
@@ -65,55 +37,7 @@ Catalog seed data is ported to Seeder classes: RolesSeeder, CatalogoMinimoSeeder
 
 Domain-first / modular-monolith `app/` layout — **not** the Controllers/Services/Repositories/Models split, and business logic does not live in Controllers, Livewire components, Filament Resources, or Eloquent models:
 
-```
-app/
-├── Domain/            # framework-agnostic business rules, per bounded concern
-│   ├── Personal/
-│   └── Validaciones/  # Motor de Validación de Capacidad Instalada
-│       ├── Engine/    # (Validaciones-specific rules plugged here, not scattered)
-│       └── Regla/
-├── Application/       # transactional use cases (one Action per operation), DTOs,
-│   │                  # ownership decision classes; called by Livewire/Http,
-│   │                  # never the reverse (per ADR-001 frontera-de-capas)
-│   ├── Captura/
-│   ├── Documentos/
-│   ├── EscuelaNiveles/
-│   ├── Escuelas/
-│   ├── Excepciones/
-│   ├── Infraestructura/
-│   ├── Inmueble/
-│   ├── Matricula/
-│   ├── Mobiliario/
-│   ├── Personal/
-│   ├── PlanEstudios/
-│   ├── Preregistro/
-│   ├── ResponsableLegal/
-│   ├── Tramite/
-│   └── Validaciones/
-├── Infrastructure/    # concrete implementations the domain depends on
-│   ├── Documentos/    # document/checklist handling
-│   └── Pdf/           # Formato de Solicitud PDF generation (dompdf)
-├── Http/
-│   └── Controllers/
-├── Livewire/          # Livewire components — presentation only, thin:
-│   ├── Actions/       # component method should call into Application/,
-│   ├── Forms/         # not contain business logic; never import Domain directly
-│   └── Tramite/       # wizard page components: Paso1Preregistro, Paso2Documentos,
-│                      # Paso2Responsable, Paso24DocumentosNivel, Paso3/{DatosInmueble,
-│                      # InfraestructuraNivel,MobiliarioNivel,PlanEstudios,
-│                      # PlantillaDocente,Matricula}
-│                      # (próximos-pasos is now a redirect to the hub, no component)
-├── Filament/
-│   └── Resources/     # SEDEQ admin panel (id: 'admin', path: /admin)
-├── Models/            # Eloquent persistence layer (39 models)
-├── Policies/          # authorization policies (2 policies)
-├── View/
-│   └── Components/    # class-based layouts (App/Guest/TramiteLayout) and
-│                      # Tramite/Recorrido (journey sidebar fed by
-│                      # Application\Tramite\ResumenTramite); anonymous
-│                      # x-ui.* / x-tramite.* components live in resources/views
-└── Providers/
-```
+Layer roles (the directory listing is in the code): `app/Domain/` is framework-agnostic business rules; `app/Application/` holds one transactional Action per operation plus DTOs and ownership decision classes, called by Livewire/Http and never the reverse (ADR-001); `app/Infrastructure/` holds the concrete implementations the domain depends on (document handling, dompdf PDFs); `app/Livewire/` is presentation only — a component method calls into `Application/` and never imports Domain directly; wizard pages live in `app/Livewire/Tramite/`. The capacity engine is fed by `app/Application/Validaciones/ConstruirDatosCapacidad` and run by `EjecutarValidacionCapacidad`.
 
 Rules for this layout (from the architecture doc, already applied — keep following them for new code):
 
@@ -123,8 +47,6 @@ Rules for this layout (from the architecture doc, already applied — keep follo
 - Single Laravel app / single repo is the deliberate choice (confirmed via architecture review, see `docs/progress.md` Decisions Log) — no independent deploy needs, one DB as shared contract. Don't introduce microservices or split repos preemptively; only if real scaling/team-isolation needs appear later.
 - As of this writing, `app/Services/*` (Domain root was `app/Domain/Validacion/`) is the **old** location — code has since moved to `app/Infrastructure/*`, `app/Domain/Validaciones/Engine/`. If you see references to the old paths anywhere (docs, comments), they're stale.
 - Livewire components live under `app/Livewire/`, Livewire 3's own auto-discovered convention — **not** `app/Http/Livewire/`. They briefly lived under `app/Http/Livewire/` (2026-09-03 to 2026-09-08); that path broke every Livewire AJAX round-trip with a misleading "page expired" 419, because Livewire's `ComponentRegistry` looks a component up by a name it auto-derives from the class's namespace, and that lookup only resolves under Livewire's own convention. Do not move Livewire components back under `app/Http/` — see `docs/decisions/ADR-003-namespace-livewire.md` and `docs/reports/2026-09-08-namespace-livewire.md` before reconsidering this.
-
-app/Domain and app/Infrastructure are populated: Domain has Captura (shared input formats), Personal (RegistroPersonalCompleto), and Validaciones with Documental, Engine (capacity engine), Regla, and Resultado subfolders. Infrastructure has Documentos and Pdf implementations (FormatoSolicitudPdf, ReporteValidacionPdf). Application has 65 classes coordinating transactional use cases per feature. The capacity engine is implemented and fed by `app/Application/Validaciones/ConstruirDatosCapacidad`, run by `EjecutarValidacionCapacidad`.
 
 ## Ways of working
 
