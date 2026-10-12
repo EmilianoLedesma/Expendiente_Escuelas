@@ -58,7 +58,7 @@ class TiposDocumentosSeederTest extends TestCase
 
         $conVigencia = DB::table('tipos_documentos')->whereIn('ambito', ['plantel', 'escuela'])->whereNotNull('vigencia_max_dias')->pluck('clave')->all();
 
-        $this->assertSame(['dictamen_uso_suelo'], $conVigencia, 'control: el catálogo sí tiene una clave con vigencia');
+        $this->assertEqualsCanonicalizing(['dictamen_uso_suelo', 'visto_bueno_proteccion_civil'], $conVigencia, 'control: el catálogo sí tiene claves con vigencia');
         $this->assertSame([], array_values(array_diff($conVigencia, Paso2Documentos::CON_DATOS_ESTRUCTURADOS)));
     }
 
