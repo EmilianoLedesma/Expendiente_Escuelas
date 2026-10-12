@@ -109,8 +109,6 @@
                     @if ($acreditacionForm->tipo === 'otro')
                         <x-ui.field id="acreditacionForm.otroEspecifique" label="Especifique"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroEspecifique" /></x-ui.field>
                     @endif
-
-                    <x-ui.field id="acreditacionForm.observaciones" label="Observaciones" optional><x-ui.textarea maxlength="1000" wire:model.blur="acreditacionForm.observaciones" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'dictamen_uso_suelo')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarDictamen">
