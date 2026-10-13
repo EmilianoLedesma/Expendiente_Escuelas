@@ -30,7 +30,8 @@ class PasswordResetTest extends TestCase
 
         Volt::test('pages.auth.forgot-password')
             ->set('email', $user->email)
-            ->call('sendPasswordResetLink');
+            ->call('sendPasswordResetLink')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Enlace enviado');
 
         Notification::assertSentTo($user, ResetPassword::class);
     }

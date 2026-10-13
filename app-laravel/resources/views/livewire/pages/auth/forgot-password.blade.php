@@ -35,7 +35,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         $this->reset('email');
 
-        session()->flash('status', __($status));
+        $this->dispatch('toast', tipo: 'success', titulo: 'Enlace enviado', descripcion: __($status));
     }
 }; ?>
 
@@ -43,10 +43,6 @@ new #[Layout('layouts.guest')] class extends Component
     <x-ui.page-header title="Recuperar contraseña">
         <x-slot:intro>Indica tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</x-slot:intro>
     </x-ui.page-header>
-
-    @if (session('status'))
-        <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
-    @endif
 
     <form novalidate wire:submit="sendPasswordResetLink" class="space-y-md">
         <x-ui.error-summary />

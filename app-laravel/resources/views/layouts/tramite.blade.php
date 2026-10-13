@@ -36,6 +36,8 @@
 
         <x-shell.pie />
 
+        <x-ui.toast-region />
+
         @livewireScripts
     </body>
 </html>

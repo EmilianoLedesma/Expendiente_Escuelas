@@ -23,5 +23,7 @@
         </main>
 
         <x-shell.pie />
+
+        <x-ui.toast-region />
     </body>
 </html>

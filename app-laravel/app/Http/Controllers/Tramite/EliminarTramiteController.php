@@ -14,9 +14,9 @@ class EliminarTramiteController
         try {
             $eliminar->ejecutar($escuela->id);
         } catch (PrecondicionIncumplida $e) {
-            return redirect()->route('tramite.index')->with('error', $e->getMessage());
+            return redirect()->route('tramite.index')->with('toast', ['tipo' => 'error', 'titulo' => 'No se pudo eliminar el trámite', 'descripcion' => $e->getMessage()]);
         }
 
-        return redirect()->route('tramite.index')->with('status', 'Trámite eliminado.');
+        return redirect()->route('tramite.index')->with('toast', ['tipo' => 'success', 'titulo' => 'Trámite eliminado', 'descripcion' => 'Se borraron sus datos y archivos.']);
     }
 }

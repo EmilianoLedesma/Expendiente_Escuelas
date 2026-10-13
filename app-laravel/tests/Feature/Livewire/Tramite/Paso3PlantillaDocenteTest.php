@@ -49,6 +49,7 @@ class Paso3PlantillaDocenteTest extends TestCase
             ])
             ->call('guardar')
             ->assertHasNoErrors()
+            ->assertSessionHas('toast.titulo', 'Plantilla docente guardada')
             ->assertRedirect(route('tramite.paso3-matricula', ['escuelaNivel' => $escuelaNivel->id]));
 
         $this->assertSame(2, Personal::where('escuela_nivel_id', $escuelaNivel->id)->count());

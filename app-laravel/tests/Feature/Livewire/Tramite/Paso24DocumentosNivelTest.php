@@ -136,6 +136,7 @@ class Paso24DocumentosNivelTest extends TestCase
             ->set('turno', 'vespertino')
             ->set('tipoAlumnado', 'femenino')
             ->call('guardarDatos')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Datos del nivel guardados')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('escuela_niveles', ['id' => $escuelaNivel->id, 'turno' => 'vespertino', 'tipo_alumnado' => 'femenino']);
@@ -176,6 +177,7 @@ class Paso24DocumentosNivelTest extends TestCase
         Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel])
             ->set('archivos.formato_solicitud', $this->pdf('firmado.pdf'))
             ->call('guardarDocumento', 'formato_solicitud')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Documento guardado')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $escuelaNivel->id]);
@@ -189,6 +191,7 @@ class Paso24DocumentosNivelTest extends TestCase
             ->set('archivos.formato_solicitud', $this->pdf('firmado.pdf'))
             ->call('guardarDocumento', 'formato_solicitud')
             ->assertHasErrors('turno')
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó')
             ->assertNoRedirect();
 
         $this->assertDatabaseCount('documentos_escuela_nivel', 0);
@@ -204,6 +207,7 @@ class Paso24DocumentosNivelTest extends TestCase
             ->set('recibo.monto', '1800.00')
             ->set('recibo.fechaPago', now()->toDateString())
             ->call('guardarRecibo')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Recibo de pago guardado')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('recibos_pago_derechos', ['folio' => 'F-900', 'monto' => '1800.00']);

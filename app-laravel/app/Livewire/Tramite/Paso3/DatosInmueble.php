@@ -10,6 +10,7 @@ use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
@@ -46,6 +47,7 @@ use Livewire\Component;
 class DatosInmueble extends Component
 {
     use CompuertaPaso3;
+    use NotificaToast;
 
     public EscuelaNivel $escuelaNivel;
 
@@ -182,6 +184,7 @@ class DatosInmueble extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         } catch (PrecondicionIncumplida) {
@@ -191,6 +194,7 @@ class DatosInmueble extends Component
             return;
         }
 
+        $this->toastAlRedirigir('Datos del inmueble guardados', 'Continúa con la infraestructura.');
         $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 

@@ -12,6 +12,7 @@ use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Tramite\TramiteEditable;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
@@ -47,6 +48,7 @@ use Livewire\Component;
 class InfraestructuraNivel extends Component
 {
     use CompuertaPaso3;
+    use NotificaToast;
 
     public EscuelaNivel $escuelaNivel;
 
@@ -139,12 +141,14 @@ class InfraestructuraNivel extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         } catch (PrecondicionIncumplida $e) {
             // WS-7a §5.4: otro trámite del plantel ya se envió; los datos compartidos no cambian.
             if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
                 $this->addError('plantel', $e->getMessage());
+                $this->toast('No se guardó', $e->getMessage(), 'error');
 
                 return;
             }
@@ -155,6 +159,7 @@ class InfraestructuraNivel extends Component
             return;
         }
 
+        $this->toastAlRedirigir('Infraestructura guardada', 'Continúa con el mobiliario.');
         $this->redirectRoute('tramite.paso3-mobiliario', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 

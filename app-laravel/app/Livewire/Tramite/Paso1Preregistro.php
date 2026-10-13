@@ -11,6 +11,7 @@ use App\Application\Preregistro\IniciarTramiteNuevo;
 use App\Application\Preregistro\ListarPlantelesDisponibles;
 use App\Application\Preregistro\PlantelNoDisponible;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -23,6 +24,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class Paso1Preregistro extends Component
 {
+    use NotificaToast;
+
     public string $bifurcacion = 'nuevo';
 
     public ?int $plantelId = null;
@@ -98,20 +101,24 @@ class Paso1Preregistro extends Component
             $resultado = $iniciarTramiteNuevo->ejecutar($dto, auth()->user()->solicitante->getKey());
         } catch (PlantelNoDisponible $e) {
             $this->addError('plantelId', $e->getMessage());
+            $this->toast('No se pudo guardar', $e->getMessage(), 'error');
 
             return;
         } catch (DatosInvalidos $e) {
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         } catch (InvalidArgumentException $e) {
             $this->addError('bifurcacion', $e->getMessage());
+            $this->toast('No se pudo guardar', $e->getMessage(), 'error');
 
             return;
         }
 
+        $this->toastAlRedirigir('Plantel guardado', 'Continúa con los datos del responsable legal.');
         $this->redirectRoute('tramite.paso2', ['escuela' => $resultado->escuelaId]);
     }
 

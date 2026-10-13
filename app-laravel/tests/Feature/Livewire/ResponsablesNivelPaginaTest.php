@@ -64,6 +64,7 @@ class ResponsablesNivelPaginaTest extends TestCase
             ->set('correo', 'ana@example.test')
             ->call('invitar')
             ->assertHasNoErrors()
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Invitación enviada')
             ->assertSet('correo', '');
 
         $usuario = User::where('email', 'ana@example.test')->firstOrFail();
@@ -114,12 +115,13 @@ class ResponsablesNivelPaginaTest extends TestCase
             ->call('revocar', $acceso->id)
             ->assertHasErrors('revocar')
             ->assertSee('El trámite ya se envió a SEDEQ y no puede modificarse.')
-            ->assertDontSee('Acceso revocado');
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se pudo revocar')
+            ->assertNotDispatched('toast', tipo: 'success');
 
         $this->assertTrue(ResponsableNivel::whereKey($acceso->id)->exists());
     }
 
-    public function test_los_avisos_no_se_filtran_a_la_siguiente_peticion(): void
+    public function test_revocar_avisa_con_un_toast_y_no_deja_nada_en_la_sesion(): void
     {
         $dueno = Solicitante::factory()->create();
         $mio = $this->responsableDe($this->nivelDe($dueno));
@@ -127,10 +129,10 @@ class ResponsablesNivelPaginaTest extends TestCase
 
         Livewire::actingAs($dueno->user)->test(ResponsablesNivel::class)
             ->call('revocar', $acceso->id)
-            ->assertSee('Acceso revocado');
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Acceso revocado');
 
-        // now() lo marca como viejo: el guardado de sesión lo descarta y no llega a la siguiente petición.
-        $this->assertNotContains('status', session()->get('_flash.new', []));
+        // El aviso viaja por el evento del navegador: no se filtra a la siguiente petición por la sesión.
+        $this->assertNotContains('toast', session()->get('_flash.new', []));
     }
 
     public function test_la_navbar_describe_el_destino_del_enlace(): void
