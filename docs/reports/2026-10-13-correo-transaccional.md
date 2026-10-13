@@ -30,3 +30,14 @@ Rama `correo-mailtrap`. Los correos de invitación, restablecer contraseña y ve
 - **Enlace de invitación:** sigue caducando a los 60 minutos (ADR-015); con la cola, un worker detenido puede hacer que el enlace llegue ya caducado.
 - **`composer require` avisó de 3 advisories en 2 paquetes**; no se revisó si ya existían antes de este cambio.
 - **Producción:** falta verificar un dominio en Mailtrap y definir `MAIL_FROM_ADDRESS`; el valor actual es el placeholder `hello@example.com`.
+
+## Diseño del correo (segunda parte)
+
+Los cuatro correos (restablecer, verificar, invitación con enlace de contraseña e invitación sin enlace) comparten una sola plantilla con la marca de SEDEQ, sin textos por defecto de Laravel.
+
+- **Vistas publicadas** en `resources/views/vendor/mail` y `vendor/notifications` (`php artisan vendor:publish --tag=laravel-mail` y `laravel-notifications`). Encabezado "Sistema de Incorporación de Escuelas" sobre una barra `#266fb6` (azul institucional), sin el logo de Laravel; pie con `config('sedeq.institucion')` y aviso de mensaje automático; saludo "Hola, {nombre}", despedida "Saludos, Sistema de Incorporación de Escuelas — SEDEQ" y el texto alterno del botón en español.
+- **Colores** tomados de los tokens de `tailwind.config.js`: botón y enlaces `#242B57` (primary), texto `#374151` (body), fondo `#f5f7fa` (surface-card), bordes `#e5e7eb` (hairline), pie `#4B5563` (muted, contraste ≥ 4.5:1).
+- **Sin logo en imagen.** Un `<img>` necesita una URL pública; con `APP_URL` en `localhost` saldría roto. Cuando exista dominio público se puede añadir `layout_set_logo.png` al encabezado.
+- **Tipografía:** pila del sistema (Arial/Helvetica); Hanken Grotesk no se carga en clientes de correo.
+- **Pruebas:** `CorreoDisenoTest` (5) comprueba en los cuatro correos el saludo con nombre, la marca, el color y la ausencia de "Laravel", "Hello", "Regards", "trouble clicking" y "All rights reserved".
+- **Evidencia:** Auth + Application + Livewire 698/698, PHPStan 0, Pint limpio. El aspecto en un cliente de correo real no se revisó desde el código; el dueño lo ve en el sandbox de Mailtrap.

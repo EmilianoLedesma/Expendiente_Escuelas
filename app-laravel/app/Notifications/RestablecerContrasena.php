@@ -18,6 +18,7 @@ class RestablecerContrasena extends ResetPassword implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Restablece tu contraseña')
+            ->greeting("Hola, {$notifiable->name}")
             ->line('Recibimos una solicitud para restablecer la contraseña de tu cuenta.')
             ->action('Restablecer contraseña', $this->resetUrl($notifiable))
             ->line("Este enlace caduca en {$minutos} minutos.")
