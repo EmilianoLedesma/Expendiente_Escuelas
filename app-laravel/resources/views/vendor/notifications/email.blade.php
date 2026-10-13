@@ -40,7 +40,7 @@
 {{ $salutation }}
 @else
 Saludos,<br>
-Sistema de Incorporación de Escuelas — SEDEQ
+Sistema de Incorporación de Escuelas Particulares
 @endif
 
 {{-- Subcopy --}}

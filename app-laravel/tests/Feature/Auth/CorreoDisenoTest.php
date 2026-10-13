@@ -42,6 +42,32 @@ class CorreoDisenoTest extends TestCase
         }
     }
 
+    public function test_el_correo_lleva_los_logos_institucionales_con_texto_alternativo(): void
+    {
+        $usuario = User::factory()->create();
+
+        $html = (string) (new RestablecerContrasena('tok'))->toMail($usuario)->render();
+
+        $this->assertStringContainsString(asset('img/layout_set_logo.png'), $html);
+        $this->assertStringContainsString(asset('img/formato-logo.png'), $html);
+        $this->assertStringContainsString('alt="Gobierno del Estado de Querétaro"', $html);
+        $this->assertStringContainsString('alt="Secretaría de Educación"', $html);
+    }
+
+    public function test_la_invitacion_destaca_quien_asigno_y_el_nivel(): void
+    {
+        $usuario = User::factory()->create();
+
+        foreach (['tok', null] as $token) {
+            $html = (string) (new InvitacionResponsableNivel('Ana Gómez', 'Primaria', $token))->toMail($usuario)->render();
+
+            $this->assertStringContainsString('class="panel"', $html);
+            $this->assertMatchesRegularExpression('/Asignado por.*Ana Gómez/s', $html);
+            $this->assertMatchesRegularExpression('/Nivel educativo.*Primaria/s', $html);
+            $this->assertStringContainsString('Si tienes problemas con el botón', $html);
+        }
+    }
+
     public function test_el_enlace_alterno_va_en_espanol(): void
     {
         $usuario = User::factory()->create();
