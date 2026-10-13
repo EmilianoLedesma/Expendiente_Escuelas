@@ -28,6 +28,7 @@ class InvitacionResponsableNivel extends Notification implements ShouldQueue
     {
         $mensaje = (new MailMessage)
             ->subject('Te asignaron un nivel en el trámite de incorporación')
+            ->greeting("Hola, {$notifiable->name}")
             ->line("{$this->solicitante} te asignó como responsable del nivel {$this->nivel}.");
 
         return $this->token === null

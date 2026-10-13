@@ -18,6 +18,7 @@ class VerificarCorreo extends VerifyEmail implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Verifica tu correo electrónico')
+            ->greeting("Hola, {$notifiable->name}")
             ->line('Confirma tu correo para continuar con el trámite de incorporación.')
             ->action('Verificar correo', $this->verificationUrl($notifiable))
             ->line("Este enlace caduca en {$minutos} minutos.")
