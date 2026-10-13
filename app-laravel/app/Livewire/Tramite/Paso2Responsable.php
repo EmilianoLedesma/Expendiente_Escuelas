@@ -10,6 +10,7 @@ use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
@@ -34,6 +35,7 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class Paso2Responsable extends Component
 {
+    use NotificaToast;
     use ValidaEnConjunto;
 
     public Escuela $escuela;
@@ -220,6 +222,7 @@ class Paso2Responsable extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         }
@@ -228,12 +231,14 @@ class Paso2Responsable extends Component
         // aquí también, porque antes guardarResponsable() saltaba directo a
         // 'niveles' sin pasar por Documentos (Paso 2.2) en la misma visita.
         if ($estadoPaso2->etapaFaltante($this->escuela->id) !== null) {
+            $this->toastAlRedirigir('Responsable legal guardado', 'Ahora sube los documentos.');
             $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $this->escuela->id]);
 
             return;
         }
 
         $this->fase = 'niveles';
+        $this->toast('Responsable legal guardado', 'Ahora elige los niveles.');
     }
 
     public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados): void
@@ -250,10 +255,12 @@ class Paso2Responsable extends Component
             return;
         } catch (InvalidArgumentException $e) {
             $this->addError('nivelesSeleccionados', $e->getMessage());
+            $this->toast('No se guardó', $e->getMessage(), 'error');
 
             return;
         }
 
+        $this->toastAlRedirigir('Niveles guardados', 'Ya puedes capturar los datos de cada nivel.');
         $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 

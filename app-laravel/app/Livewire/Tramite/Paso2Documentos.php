@@ -13,6 +13,7 @@ use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Tramite\TramiteEditable;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\AcreditacionOcupacionForm;
 use App\Livewire\Forms\ConstanciaSeguridadForm;
@@ -40,6 +41,7 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.tramite')]
 class Paso2Documentos extends Component
 {
+    use NotificaToast;
     use ValidaEnConjunto;
     use WithFileUploads;
 
@@ -321,12 +323,14 @@ class Paso2Documentos extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return false;
         } catch (PrecondicionIncumplida $e) {
             // WS-7a §5.4: un documento del plantel no se reemplaza si otro trámite del plantel ya se envió.
             if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
                 $this->addError("archivos.{$clave}", $e->getMessage());
+                $this->toast('No se guardó', $e->getMessage(), 'error');
 
                 return false;
             }
@@ -361,6 +365,7 @@ class Paso2Documentos extends Component
     private function avanzar(DocumentosCompletos $documentosCompletos): void
     {
         if ($this->corregir !== null) {
+            $this->toastAlRedirigir('Documento guardado', 'Vuelve a la validación final para revisarlo.');
             $this->redirectRoute('tramite.validacion', ['escuela' => $this->escuela->id]);
 
             return;
@@ -370,6 +375,8 @@ class Paso2Documentos extends Component
         $pendientes = $documentosCompletos->clavesPendientes($this->escuela->id, $tipoPersona);
 
         if ($pendientes !== []) {
+            $this->toast('Documento guardado');
+
             return;
         }
 
@@ -377,10 +384,12 @@ class Paso2Documentos extends Component
 
         if ($violaciones !== []) {
             $this->addError('vigencia', implode(' ', $violaciones));
+            $this->toast('Documento guardado', 'Hay documentos vencidos: revisa el aviso.', 'info');
 
             return;
         }
 
+        $this->toastAlRedirigir('Documentos completos', 'Continúa con la selección de niveles.');
         $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
     }
 

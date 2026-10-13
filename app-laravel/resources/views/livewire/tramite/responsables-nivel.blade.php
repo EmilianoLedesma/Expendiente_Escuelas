@@ -3,10 +3,6 @@
         <x-slot:intro>Opcional. Asigna a otra persona para que capture la información de un nivel de tus trámites: solo verá ese nivel. Si no la necesitas, sigue tu trámite como siempre.</x-slot:intro>
     </x-ui.page-header>
 
-    @if (session('status'))
-        <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
-    @endif
-
     <x-ui.section title="Asignar un responsable">
         @php($asignables = array_filter($filas, fn ($f) => $f['asignable']))
         @if ($asignables === [])

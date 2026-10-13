@@ -105,7 +105,8 @@ class ValidacionFinalTest extends TestCase
         $this->completarTramite($escuela);
         $this->actingAs($escuela->solicitante->user);
 
-        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])->call('validarDeNuevo');
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])->call('validarDeNuevo')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Validación actualizada');
 
         $this->assertSame(2, EvaluacionValidacion::count());
     }

@@ -112,6 +112,7 @@ class Paso3MobiliarioNivelTest extends TestCase
             ->test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
             ->set("cantidades.{$conceptoId}", 5)
             ->call('guardar')
+            ->assertSessionHas('toast.titulo', 'Mobiliario guardado')
             ->assertRedirect(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]));
 
         $this->assertDatabaseHas('mobiliario_nivel', [

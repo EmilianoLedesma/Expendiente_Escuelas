@@ -6,6 +6,7 @@ use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Livewire\Tramite\Paso2Responsable;
@@ -201,6 +202,7 @@ class Paso2ResponsableTest extends TestCase
             ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
+            ->assertSessionHas('toast.titulo', 'Responsable legal guardado')
             ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
 
         $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
@@ -231,6 +233,7 @@ class Paso2ResponsableTest extends TestCase
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
             ->assertSet('fase', 'niveles')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Responsable legal guardado')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
@@ -526,7 +529,26 @@ class Paso2ResponsableTest extends TestCase
 
         $this->assertDatabaseHas('escuela_niveles', ['escuela_id' => $escuela->id, 'nivel_educativo_id' => $preescolar->id]);
         EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
-        $component->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
+        $component->assertSessionHas('toast.titulo', 'Niveles guardados')
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
+    }
+
+    public function test_si_el_caso_de_uso_rechaza_el_responsable_avisa_con_un_toast_de_error(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuela = $this->crearEscuelaPara($solicitante);
+        $this->actingAs($solicitante->user);
+        $this->mock(RegistrarResponsableLegal::class)->shouldReceive('ejecutar')->andThrow(new DatosInvalidos(['personaFisicaForm.nombre' => 'Dato rechazado.']));
+
+        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+            ->set('tipoPersona', 'fisica')
+            ->set('domicilioNotificaciones', 'Calle Falsa 123, Centro')
+            ->set('nombrePropuesto1', 'Colegio Reforma')
+            ->set('nombrePropuesto2', 'Instituto Reforma')
+            ->set('nombrePropuesto3', 'Escuela Reforma')
+            ->set('personaFisicaForm.nombre', 'Juana Pérez')
+            ->call('guardarResponsable')
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
     }
 
     public function test_con_gestor_se_captura_la_curp_del_gestor(): void

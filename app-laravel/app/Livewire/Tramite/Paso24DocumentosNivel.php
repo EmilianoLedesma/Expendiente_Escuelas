@@ -13,6 +13,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Concerns\ValidaEnConjunto;
 use App\Livewire\Forms\ReciboPagoForm;
 use App\Livewire\Tramite\Concerns\RedirigeAPaso2;
@@ -33,6 +34,7 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.tramite')]
 class Paso24DocumentosNivel extends Component
 {
+    use NotificaToast;
     use RedirigeAPaso2;
     use ValidaEnConjunto;
     use WithFileUploads;
@@ -103,7 +105,11 @@ class Paso24DocumentosNivel extends Component
         } catch (PrecondicionIncumplida) {
             // DatosInvalidos no puede ocurrir aquí: validate() ya aplica las mismas listas que el caso de uso.
             $this->redirigirAPaso2($this->escuelaNivel->escuela_id);
+
+            return;
         }
+
+        $this->toast('Datos del nivel guardados');
     }
 
     public function guardarDocumento(string $clave, RegistrarDocumento $registrarDocumento, DocumentosNivelCompletos $documentosNivelCompletos): void
@@ -123,6 +129,7 @@ class Paso24DocumentosNivel extends Component
             $this->archivos[$clave] = null;
             $this->reemplazando[$clave] = false;
             unset($this->acervoTitulos[$clave]);
+            $this->toast('Documento guardado');
         }
     }
 
@@ -142,6 +149,7 @@ class Paso24DocumentosNivel extends Component
             $this->archivos['recibo_pago_derechos'] = null;
             $this->reemplazando['recibo_pago_derechos'] = false;
             $this->recibo->reset();
+            $this->toast('Recibo de pago guardado');
         }
     }
 
@@ -163,11 +171,13 @@ class Paso24DocumentosNivel extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return false;
         } catch (PrecondicionIncumplida $e) {
             if ($e->etapaFaltante === EstadoPaso24::DATOS) {
                 $this->addError('turno', $e->getMessage());
+                $this->toast('No se guardó', $e->getMessage(), 'error');
             } else {
                 $this->redirigirAPaso2($this->escuelaNivel->escuela_id);
             }

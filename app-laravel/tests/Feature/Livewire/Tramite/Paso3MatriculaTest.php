@@ -41,6 +41,7 @@ class Paso3MatriculaTest extends TestCase
             ])
             ->call('guardar')
             ->assertHasNoErrors()
+            ->assertSessionHas('toast.titulo', 'Matrícula guardada')
             ->assertRedirect(route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]));
 
         $this->assertSame(55, (int) DB::table('matricula_grados')->where('escuela_nivel_id', $escuelaNivel->id)->sum('cantidad_alumnos'));
@@ -69,7 +70,8 @@ class Paso3MatriculaTest extends TestCase
         Livewire::test(Matricula::class, ['escuelaNivel' => $escuelaNivel])
             ->set('grupos', [['gradoId' => $this->gradoId('primaria', 1), 'grupo' => 'A', 'alumnos' => '0']])
             ->call('guardar')
-            ->assertHasErrors(['matricula']);
+            ->assertHasErrors(['matricula'])
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
     }
 
     public function test_la_etiqueta_depende_del_tipo_de_tramite_y_al_volver_precarga(): void

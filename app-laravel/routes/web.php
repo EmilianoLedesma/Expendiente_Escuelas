@@ -43,7 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/tramite/{escuela}', EliminarTramiteController::class)
         ->whereNumber('escuela')
         ->middleware('can:delete,escuela')
-        ->missing(fn () => redirect()->route('tramite.index')->with('status', 'El trámite ya no existe.'))
+        ->missing(fn () => redirect()->route('tramite.index')->with('toast', ['tipo' => 'info', 'titulo' => 'El trámite ya no existe']))
         ->name('tramite.eliminar');
 
     Route::get('/tramite/paso2/{escuela}', Paso2Responsable::class)

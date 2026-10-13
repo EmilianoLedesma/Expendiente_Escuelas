@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Livewire\Volt\Volt;
@@ -43,7 +44,8 @@ class EmailVerificationTest extends TestCase
 
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect(route('tramite.index', absolute: false).'?verified=1');
+        $response->assertRedirect(route('tramite.index', absolute: false).'?verified=1')
+            ->assertSessionHas('toast.titulo', 'Correo verificado');
     }
 
     public function test_email_is_not_verified_with_invalid_hash(): void
@@ -95,5 +97,15 @@ class EmailVerificationTest extends TestCase
         Volt::test('pages.auth.verify-email')
             ->call('sendVerification')
             ->assertRedirect(route('tramite.index', absolute: false));
+    }
+
+    public function test_resend_when_unverified_avisa_con_un_toast(): void
+    {
+        Notification::fake();
+        $this->actingAs(User::factory()->unverified()->create());
+
+        Volt::test('pages.auth.verify-email')
+            ->call('sendVerification')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Enlace enviado');
     }
 }

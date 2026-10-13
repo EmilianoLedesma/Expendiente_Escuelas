@@ -86,7 +86,7 @@ class EnvioTramiteTest extends TestCase
             ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
 
         $this->assertSame('en_revision', $this->estadoDe($nivel));
-        $this->assertSame('Trámite enviado a SEDEQ.', session('status'));
+        $this->assertSame('Trámite enviado a SEDEQ', session('toast.titulo'));
     }
 
     public function test_si_el_envio_se_rechaza_el_motivo_va_al_resumen_de_errores(): void
@@ -101,6 +101,7 @@ class EnvioTramiteTest extends TestCase
 
         $pagina->call('enviar')
             ->assertHasErrors(['envio'])
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se pudo enviar el trámite')
             ->assertNoRedirect()
             ->assertSee('Revisa los siguientes datos')
             ->assertSee('href="#envio"', false);

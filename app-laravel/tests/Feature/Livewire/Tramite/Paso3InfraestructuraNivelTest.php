@@ -138,6 +138,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->set('numeroAulas', 6)
             ->set('superficieAulasM2', 240)
             ->call('guardar')
+            ->assertSessionHas('toast.titulo', 'Infraestructura guardada')
             ->assertRedirect(route('tramite.paso3-mobiliario', ['escuelaNivel' => $primaria->id]));
 
         $this->assertDatabaseHas('instalaciones_espacios', [

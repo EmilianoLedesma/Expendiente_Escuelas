@@ -4,10 +4,6 @@
             <x-slot:intro><span class="break-words">{{ $resumen->domicilio }}</span></x-slot:intro>
         </x-ui.page-header>
 
-        @if (session('status'))
-            <x-ui.alert tipo="success" class="mb-lg">{{ session('status') }}</x-ui.alert>
-        @endif
-
         @php($siguiente = $resumen->siguiente())
         @if ($resumen->enviado)
             <x-ui.alert tipo="info" :titulo="'Enviado el '.$resumen->fechaEnvio?->format('d/m/Y').' — en revisión por SEDEQ'" class="mb-lg">
