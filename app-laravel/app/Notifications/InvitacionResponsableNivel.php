@@ -26,15 +26,17 @@ class InvitacionResponsableNivel extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mensaje = (new MailMessage)
+        return (new MailMessage)
             ->subject('Te asignaron un nivel en el trámite de incorporación')
-            ->greeting("Hola, {$notifiable->name}")
-            ->line("{$this->solicitante} te asignó como responsable del nivel {$this->nivel}.");
-
-        return $this->token === null
-            ? $mensaje->action('Entrar al sistema', route('login'))
-            : $mensaje
-                ->line('Define tu contraseña para entrar y capturar la información de ese nivel.')
-                ->action('Definir contraseña', route('password.reset', ['token' => $this->token, 'email' => $notifiable->email]));
+            ->markdown('correo.invitacion-nivel', [
+                'nombre' => $notifiable->name,
+                'solicitante' => $this->solicitante,
+                'nivel' => $this->nivel,
+                'conToken' => $this->token !== null,
+                'textoBoton' => $this->token === null ? 'Entrar al sistema' : 'Definir contraseña',
+                'url' => $this->token === null
+                    ? route('login')
+                    : route('password.reset', ['token' => $this->token, 'email' => $notifiable->email]),
+            ]);
     }
 }

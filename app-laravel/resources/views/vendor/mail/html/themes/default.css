@@ -39,7 +39,7 @@ a img {
 
 h1 {
     color: #242B57;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: bold;
     margin-top: 0;
     text-align: start;
@@ -98,27 +98,48 @@ img {
 /* Header */
 
 .header {
-    padding: 25px 0;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    border-top: 6px solid #266fb6;
+    padding: 22px 16px 16px;
     text-align: center;
 }
 
 .header a {
     color: #242B57;
-    font-size: 19px;
+    font-size: 17px;
     font-weight: bold;
+    letter-spacing: 0.02em;
     text-decoration: none;
+}
+
+.header-titulo {
+    color: #242B57;
+    font-size: 17px;
+    font-weight: bold;
+    letter-spacing: 0.02em;
+    margin: 12px 0 0;
+    text-align: center;
 }
 
 /* Logo */
 
 .logo {
-    height: 75px;
-    margin-top: 15px;
-    margin-bottom: 10px;
-    max-height: 75px;
-    width: 75px;
+    border: 0;
+    display: block;
+    height: auto;
+    margin: 0 auto;
+    max-width: 460px;
+    width: 100%;
 }
 
+.logo-pie {
+    border: 0;
+    display: block;
+    height: auto;
+    margin: 0 auto 12px;
+    width: 160px;
+}
 /* Body */
 
 .body {
@@ -299,4 +320,48 @@ img {
 /* SEDEQ: barra institucional sobre el encabezado */
 .header {
     border-top: 6px solid #266fb6;
+}
+
+.button {
+    border-radius: 6px;
+}
+
+.inner-body {
+    border-radius: 8px;
+}
+
+/* Panel de asignación: etiqueta pequeña y valor destacado */
+
+.panel {
+    margin: 24px 0;
+}
+
+.panel-content {
+    border-left: 4px solid #266fb6;
+    border-radius: 0 8px 8px 0;
+    padding: 18px 20px;
+}
+
+.panel-item p {
+    color: #242B57;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1.4;
+    margin: 0 0 16px;
+}
+
+.panel-item p:nth-of-type(odd) {
+    margin-bottom: 2px;
+}
+
+.panel-item p:last-of-type {
+    margin-bottom: 0;
+}
+
+.panel-item strong {
+    color: #4B5563;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
