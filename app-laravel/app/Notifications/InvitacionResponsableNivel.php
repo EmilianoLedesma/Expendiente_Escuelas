@@ -2,12 +2,16 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /** Aviso al responsable: con $token (cuenta nueva) el enlace le deja definir su contraseña; sin él, solo entra. */
-class InvitacionResponsableNivel extends Notification
+class InvitacionResponsableNivel extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public readonly string $solicitante,
         public readonly string $nivel,

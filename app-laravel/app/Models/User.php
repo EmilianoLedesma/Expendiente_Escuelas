@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Notifications\RestablecerContrasena;
+use App\Notifications\VerificarCorreo;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -48,5 +50,15 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->hasRole('sedeq');
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new RestablecerContrasena($token));
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerificarCorreo);
     }
 }
