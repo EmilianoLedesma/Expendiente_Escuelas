@@ -83,6 +83,15 @@ class PerfilTest extends TestCase
             ->assertDontSee('wire:submit="eliminarCuenta"', false);
     }
 
+    public function test_tras_mantener_presionado_se_ofrece_deshacer_y_la_cuenta_se_borra_al_expirar(): void
+    {
+        $this->actingAs($this->solicitante())->get('/profile')
+            ->assertSee('Deshacer')
+            ->assertSee('Se eliminará tu cuenta')
+            ->assertSee("etapa = 'deshacer'")
+            ->assertSee('$wire.eliminarCuenta()', false);
+    }
+
     public function test_muestra_el_correo_sin_permitir_editarlo(): void
     {
         $usuario = $this->solicitante();
@@ -163,7 +172,7 @@ class PerfilTest extends TestCase
 
         Livewire::actingAs($usuario)->test(Perfil::class)
             ->call('eliminarCuenta')
-            ->assertRedirect('/');
+            ->assertRedirect(route('login'));
 
         $this->assertNull(User::find($usuario->id));
         $this->assertGuest();
@@ -195,7 +204,7 @@ class PerfilTest extends TestCase
 
         Livewire::actingAs($delegado)->test(Perfil::class)
             ->call('eliminarCuenta')
-            ->assertRedirect('/');
+            ->assertRedirect(route('login'));
 
         $this->assertNull(User::find($delegado->id));
         $this->assertSame(0, ResponsableNivel::count());

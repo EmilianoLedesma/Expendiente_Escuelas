@@ -37,11 +37,18 @@
             @error('cuenta')
                 <x-ui.alert tipo="error">{{ $message }}</x-ui.alert>
             @enderror
-            <p id="eliminar-cuenta-ayuda" class="text-body-sm text-muted">Mantén presionado el botón rojo (o Enter / Espacio) casi 2 segundos. Si lo sueltas antes, no pasa nada.</p>
-            <x-ui.hold-button accion="$wire.eliminarCuenta()" aria-describedby="eliminar-cuenta-ayuda">
-                <x-ui.icon nombre="trash" class="h-5 w-5" />
-                Mantén presionado para eliminar
-            </x-ui.hold-button>
+            {{-- Tras mantener presionado hay 5 s para deshacer; la cuenta se borra solo si el tiempo se agota. --}}
+            <div x-data="{ etapa: 'reposo' }">
+                <template x-if="etapa === 'reposo'">
+                    <x-ui.hold-button accion="etapa = 'deshacer'">
+                        <x-ui.icon nombre="trash" class="h-5 w-5" />
+                        Mantén presionado para eliminar
+                    </x-ui.hold-button>
+                </template>
+                <template x-if="etapa === 'deshacer'">
+                    <x-ui.undo-notice mensaje="Se eliminará tu cuenta" expira="etapa = 'reposo'; $wire.eliminarCuenta()" deshacer="etapa = 'reposo'" />
+                </template>
+            </div>
         </x-ui.section>
     @endif
 </div>

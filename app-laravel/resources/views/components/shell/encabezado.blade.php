@@ -28,7 +28,7 @@
     {{-- Encabezado con logotipo (flujo normal: ni sticky ni fixed) --}}
     <div class="bg-canvas shadow-md">
         <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-lg gap-y-xs px-md py-sm sm:px-xl">
-            <div class="flex min-w-0 flex-wrap items-center gap-x-md gap-y-xs">
+            <div class="flex min-w-0 flex-wrap items-center gap-x-md gap-y-xs lg:flex-1">
                 <a href="{{ auth()->check() ? route('dashboard') : route('login') }}" class="shrink-0">
                     <img src="{{ asset('img/layout_set_logo.png') }}" alt="SEDEQ - Secretaría de Educación del Estado de Querétaro"
                          width="2359" height="444" class="h-10 w-auto sm:h-[60px]">
@@ -39,23 +39,30 @@
             </div>
 
             @auth
-                @php($enMisTramites = request()->routeIs('tramite.index'))
-                <nav aria-label="Cuenta" class="flex flex-wrap items-center gap-xs text-body-sm font-semibold uppercase tracking-wide">
+                {{-- Solo la página actual lleva la barra azul inferior; el resto es texto sin subrayado. --}}
+                @php
+                    $enMisTramites = request()->routeIs('tramite.index');
+                    $enPerfil = request()->routeIs('profile');
+                    $pestana = 'inline-flex min-h-11 items-center border-b-[3px] px-sm text-ink transition-colors duration-150 ';
+                    $activa = 'border-brand-blue';
+                    $inactiva = 'border-transparent hover:border-hairline';
+                @endphp
+                <nav aria-label="Cuenta" class="flex flex-wrap items-center gap-xs lg:shrink-0 text-body-sm font-semibold uppercase tracking-wide">
                     <a href="{{ route('tramite.index') }}" @if ($enMisTramites) aria-current="page" @endif
-                       @class(['inline-flex min-h-11 items-center border-b-[3px] px-sm transition-colors duration-150', 'border-brand-blue text-ink' => $enMisTramites, 'border-transparent text-muted hover:border-hairline hover:text-ink' => ! $enMisTramites])>
+                       class="{{ $pestana.($enMisTramites ? $activa : $inactiva) }}">
                         Mis trámites
                     </a>
                     <span class="h-6 w-px bg-hairline" aria-hidden="true"></span>
                     {{-- Alpine llega con Livewire donde lo hay (perfil); sin él, el nombre queda como texto estático. --}}
-                    <a href="{{ route('profile') }}" title="Mi perfil"
-                       class="inline-flex min-h-11 items-center px-sm normal-case tracking-normal text-primary hover:text-ink">
+                    <a href="{{ route('profile') }}" title="Mi perfil" @if ($enPerfil) aria-current="page" @endif
+                       class="{{ $pestana.($enPerfil ? $activa : $inactiva) }} normal-case tracking-normal">
                         <span x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name"
                               x-on:profile-updated.window="name = $event.detail.name">{{ auth()->user()->name }}</span>
                         <span class="sr-only"> — Mi perfil</span>
                     </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="inline-flex min-h-11 items-center px-sm uppercase tracking-wide text-primary">
+                        <button type="submit" class="{{ $pestana.$inactiva }} cursor-pointer uppercase tracking-wide">
                             Cerrar sesión
                         </button>
                     </form>
