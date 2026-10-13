@@ -19,6 +19,7 @@ class VerifyEmailController extends Controller
 
         $request->fulfill();
 
-        return redirect()->intended(route('tramite.index', absolute: false).'?verified=1');
+        return redirect()->intended(route('tramite.index', absolute: false).'?verified=1')
+            ->with('toast', ['tipo' => 'success', 'titulo' => 'Correo verificado', 'descripcion' => 'Ya puedes iniciar tu trámite.']);
     }
 }

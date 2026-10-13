@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsablesNivel\InvitarResponsableNivel;
 use App\Application\ResponsablesNivel\ListarResponsablesNivel;
 use App\Application\ResponsablesNivel\RevocarResponsableNivel;
+use App\Livewire\Concerns\NotificaToast;
 use Illuminate\Auth\Access\AuthorizationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -15,6 +16,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class ResponsablesNivel extends Component
 {
+    use NotificaToast;
+
     public string $escuelaNivelId = '';
 
     public string $nombre = '';
@@ -50,12 +53,13 @@ class ResponsablesNivel extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         }
 
         $this->reset('escuelaNivelId', 'nombre', 'correo');
-        session()->now('status', 'Listo: le enviamos un correo a la persona asignada.');
+        $this->toast('Invitación enviada', 'Le enviamos un correo a la persona asignada.');
     }
 
     public function revocar(int $accesoId, RevocarResponsableNivel $revocar): void
@@ -66,11 +70,12 @@ class ResponsablesNivel extends Component
             abort(403);
         } catch (PrecondicionIncumplida $e) {
             $this->addError('revocar', $e->getMessage());
+            $this->toast('No se pudo revocar', $e->getMessage(), 'error');
 
             return;
         }
 
-        session()->now('status', 'Acceso revocado. Lo que ya capturó se conserva.');
+        $this->toast('Acceso revocado', 'Lo que ya capturó se conserva.');
     }
 
     private function solicitanteId(): int

@@ -32,6 +32,7 @@ class Paso3PlanEstudiosTest extends TestCase
             ->set('planEstudiosReferencia', 'Plan de estudio 2022 (SEP)')
             ->call('guardar')
             ->assertHasNoErrors()
+            ->assertSessionHas('toast.titulo', 'Plan de estudios guardado')
             ->assertRedirect(route('tramite.paso3-plantilla', ['escuelaNivel' => $escuelaNivel->id]));
 
         $this->assertSame('Plan de estudio 2022 (SEP)', $escuelaNivel->refresh()->plan_estudios_referencia);

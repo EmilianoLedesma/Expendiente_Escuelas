@@ -8,6 +8,7 @@ use App\Application\Personal\DTO\DatosPersona;
 use App\Application\Personal\PlantillaCapturada;
 use App\Application\Personal\RegistrarPlantillaDocente;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
@@ -23,6 +24,7 @@ use Livewire\Component;
 class PlantillaDocente extends Component
 {
     use CompuertaPaso3;
+    use NotificaToast;
 
     private const FILA_VACIA = [
         'cargoPuestoId' => '', 'nombre' => '', 'nacionalidad' => 'Mexicana', 'sexo' => '',
@@ -79,6 +81,7 @@ class PlantillaDocente extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         } catch (PrecondicionIncumplida) {
@@ -87,6 +90,7 @@ class PlantillaDocente extends Component
             return;
         }
 
+        $this->toastAlRedirigir('Plantilla docente guardada', 'Continúa con la matrícula.');
         $this->redirectRoute('tramite.paso3-matricula', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 

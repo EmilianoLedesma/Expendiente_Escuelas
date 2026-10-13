@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\PlanEstudios\DTO\DatosPlanEstudios;
 use App\Application\PlanEstudios\RegistrarPlanEstudios;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
@@ -18,6 +19,7 @@ use Livewire\Component;
 class PlanEstudios extends Component
 {
     use CompuertaPaso3;
+    use NotificaToast;
 
     #[Locked]
     public EscuelaNivel $escuelaNivel;
@@ -57,6 +59,7 @@ class PlanEstudios extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         } catch (PrecondicionIncumplida) {
@@ -65,6 +68,7 @@ class PlanEstudios extends Component
             return;
         }
 
+        $this->toastAlRedirigir('Plan de estudios guardado', 'Continúa con la plantilla docente.');
         $this->redirectRoute('tramite.paso3-plantilla', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 

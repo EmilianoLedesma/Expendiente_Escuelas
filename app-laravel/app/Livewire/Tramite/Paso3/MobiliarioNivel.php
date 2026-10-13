@@ -7,6 +7,7 @@ use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use App\Models\MobiliarioConcepto;
@@ -31,6 +32,7 @@ use Livewire\Component;
 class MobiliarioNivel extends Component
 {
     use CompuertaPaso3;
+    use NotificaToast;
 
     public EscuelaNivel $escuelaNivel;
 
@@ -74,6 +76,7 @@ class MobiliarioNivel extends Component
 
         if ($declaradas === []) {
             $this->addError('cantidades', 'Declara la cantidad de al menos un concepto de mobiliario.');
+            $this->toast('No se guardó', 'Declara la cantidad de al menos un concepto de mobiliario.', 'error');
 
             return;
         }
@@ -87,6 +90,7 @@ class MobiliarioNivel extends Component
             return;
         }
 
+        $this->toastAlRedirigir('Mobiliario guardado', 'Continúa con el plan de estudios.');
         $this->redirectRoute('tramite.paso3-plan-estudios', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 

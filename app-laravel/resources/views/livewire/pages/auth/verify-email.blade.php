@@ -2,7 +2,6 @@
 
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -21,7 +20,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::user()->sendEmailVerificationNotification();
 
-        Session::flash('status', 'verification-link-sent');
+        $this->dispatch('toast', tipo: 'success', titulo: 'Enlace enviado', descripcion: 'Enviamos un nuevo enlace de verificación al correo que registraste.');
     }
 
     /**
@@ -39,10 +38,6 @@ new #[Layout('layouts.guest')] class extends Component
     <x-ui.page-header title="Verifica tu correo electrónico">
         <x-slot:intro>Gracias por registrarte. Antes de continuar, abre el enlace de verificación que enviamos a tu correo electrónico. Si no lo recibiste, podemos enviarte otro.</x-slot:intro>
     </x-ui.page-header>
-
-    @if (session('status') == 'verification-link-sent')
-        <x-ui.alert tipo="success" class="mb-lg">Enviamos un nuevo enlace de verificación al correo que registraste.</x-ui.alert>
-    @endif
 
     <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
         <button wire:click="logout" type="button" class="inline-flex min-h-11 items-center font-semibold text-primary">Cerrar sesión</button>

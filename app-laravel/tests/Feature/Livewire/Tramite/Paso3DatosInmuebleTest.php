@@ -118,6 +118,7 @@ class Paso3DatosInmuebleTest extends TestCase
             ->set('metrosConstruidos', 640)
             ->set('tieneAstaBandera', true)
             ->call('guardar')
+            ->assertSessionHas('toast.titulo', 'Datos del inmueble guardados')
             ->assertRedirect(route('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]));
 
         $this->assertEquals(1200.5, (float) $this->plantel->fresh()->metros_totales);
