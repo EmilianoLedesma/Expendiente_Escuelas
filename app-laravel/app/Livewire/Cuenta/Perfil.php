@@ -76,7 +76,7 @@ class Perfil extends Component
         }
 
         $cerrarSesion();
-        $this->redirect('/');
+        $this->redirectRoute('login');
     }
 
     public function render()
