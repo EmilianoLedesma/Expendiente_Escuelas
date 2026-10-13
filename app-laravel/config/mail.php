@@ -65,6 +65,11 @@ return [
             'transport' => 'resend',
         ],
 
+        // API de Mailtrap (producción). Lee MAILTRAP_API_KEY y MAILTRAP_HOST del entorno.
+        'mailtrap-sdk' => [
+            'transport' => 'mailtrap-sdk',
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
