@@ -8,6 +8,7 @@ use App\Application\Matricula\DTO\DatosMatricula;
 use App\Application\Matricula\MatriculaCapturada;
 use App\Application\Matricula\RegistrarMatricula;
 use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
@@ -23,6 +24,7 @@ use Livewire\Component;
 class Matricula extends Component
 {
     use CompuertaPaso3;
+    use NotificaToast;
 
     #[Locked]
     public EscuelaNivel $escuelaNivel;
@@ -85,6 +87,7 @@ class Matricula extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->toastDatosInvalidos();
 
             return;
         } catch (PrecondicionIncumplida) {
@@ -93,6 +96,7 @@ class Matricula extends Component
             return;
         }
 
+        $this->toastAlRedirigir('Matrícula guardada', 'Ya puedes revisar el resumen del trámite.');
         $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuelaNivel->escuela_id]);
     }
 

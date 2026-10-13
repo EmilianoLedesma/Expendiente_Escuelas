@@ -7,6 +7,7 @@ use App\Application\Tramite\EnviarTramite;
 use App\Application\Tramite\TramiteEditable;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Application\Validaciones\UltimaValidacionFinal;
+use App\Livewire\Concerns\NotificaToast;
 use App\Models\Escuela;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -23,6 +24,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class ValidacionFinal extends Component
 {
+    use NotificaToast;
+
     public Escuela $escuela;
 
     /** A GET must not write: it validates only the first time (or over a pre-capacity row); later runs are the "validar de nuevo" action. */
@@ -38,6 +41,7 @@ class ValidacionFinal extends Component
     public function validarDeNuevo(EjecutarValidacionFinal $ejecutarValidacionFinal): void
     {
         $this->validar($ejecutarValidacionFinal);
+        $this->toast('Validación actualizada');
     }
 
     public function enviar(EnviarTramite $enviarTramite): void
@@ -49,11 +53,12 @@ class ValidacionFinal extends Component
             $this->addError('envio', $e->etapaFaltante === TramiteEditable::ENVIADO
                 ? $e->getMessage()
                 : $e->getMessage().' Pulsa «Validar de nuevo» para actualizar el resultado.');
+            $this->toast('No se pudo enviar el trámite', $e->getMessage(), 'error');
 
             return;
         }
 
-        session()->flash('status', 'Trámite enviado a SEDEQ.');
+        $this->toastAlRedirigir('Trámite enviado a SEDEQ', 'Ya no puedes editar la información capturada.');
         $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 

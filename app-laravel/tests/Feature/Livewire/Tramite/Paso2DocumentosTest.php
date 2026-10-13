@@ -812,6 +812,48 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseCount('documentos_escuela', 0);
     }
 
+    public function test_guardar_un_documento_con_otros_pendientes_avisa_con_un_toast(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 50, 'application/pdf'))
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Documento guardado');
+    }
+
+    public function test_el_ultimo_documento_deja_un_toast_para_la_pagina_siguiente_en_vez_de_despacharlo(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['plano_inmueble']) as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'plano_inmueble')
+            ->assertSessionHas('toast.titulo', 'Documentos completos')
+            ->assertNotDispatched('toast');
+    }
+
+    public function test_si_el_caso_de_uso_rechaza_el_documento_avisa_con_un_toast_de_error(): void
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $this->mock(RegistrarDocumento::class)->shouldReceive('ejecutar')->andThrow(new DatosInvalidos(['archivos.ine' => 'El archivo debe ser un PDF.']));
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))
+            ->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne')
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
+    }
+
     // WS-2.4b — un PrecondicionIncumplida lanzado por el caso de uso (p. ej. un
     // caller que llegue a este punto sin responsable legal) debe redirigir a
     // Paso 2, no producir un 500.

@@ -48,6 +48,34 @@ class Paso1PreregistroTest extends TestCase
             ->assertRedirect(route('tramite.paso2', ['escuela' => 42]));
     }
 
+    public function test_al_redirigir_deja_un_aviso_de_exito_para_el_paso_siguiente(): void
+    {
+        $this->actingAs(Solicitante::factory()->create()->user);
+        $this->mock(IniciarTramiteNuevo::class)->shouldReceive('ejecutar')->andReturn(new ResultadoPreregistro(escuelaId: 42, plantelId: 7));
+
+        Livewire::test(Paso1Preregistro::class)
+            ->set('calle', 'Av. Reforma 100')
+            ->set('colonia', 'Centro')
+            ->set('municipio', 'Querétaro')
+            ->set('codigoPostal', '76000')
+            ->call('guardar')
+            ->assertSessionHas('toast.tipo', 'success');
+    }
+
+    public function test_si_el_caso_de_uso_rechaza_los_datos_avisa_con_un_toast_de_error(): void
+    {
+        $ajeno = app(IniciarTramiteNuevo::class)->ejecutar(new DatosPreregistro(
+            bifurcacion: 'nuevo', calle: 'Calle', colonia: 'Col', municipio: 'Querétaro', codigoPostal: '76000',
+        ), Solicitante::factory()->create()->id);
+        $this->actingAs(Solicitante::factory()->create()->user);
+
+        Livewire::test(Paso1Preregistro::class)
+            ->set('bifurcacion', 'existente')
+            ->set('plantelId', $ajeno->plantelId)
+            ->call('guardar')
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se pudo guardar', descripcion: 'El plantel seleccionado no está disponible.');
+    }
+
     public function test_bifurcacion_nuevo_sin_campos_requeridos_no_llama_al_caso_de_uso(): void
     {
         $solicitante = Solicitante::factory()->create();

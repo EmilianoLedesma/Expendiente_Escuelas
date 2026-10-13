@@ -284,7 +284,7 @@ class EliminarTramiteTest extends TestCase
         $this->actingAs($this->dueno($escuela))
             ->delete(route('tramite.eliminar', ['escuela' => $escuela->id]))
             ->assertRedirect(route('tramite.index'))
-            ->assertSessionHas('status', 'Trámite eliminado.');
+            ->assertSessionHas('toast.titulo', 'Trámite eliminado');
 
         $this->assertNull(Escuela::find($escuela->id));
     }
@@ -298,7 +298,7 @@ class EliminarTramiteTest extends TestCase
         $this->actingAs($dueno)
             ->delete(route('tramite.eliminar', ['escuela' => $escuela->id]))
             ->assertRedirect(route('tramite.index'))
-            ->assertSessionHas('status', 'El trámite ya no existe.');
+            ->assertSessionHas('toast.titulo', 'El trámite ya no existe');
     }
 
     public function test_otro_solicitante_recibe_403(): void
@@ -339,7 +339,7 @@ class EliminarTramiteTest extends TestCase
         $this->actingAs($this->dueno($escuela))
             ->delete(route('tramite.eliminar', ['escuela' => $escuela->id]))
             ->assertRedirect(route('tramite.index'))
-            ->assertSessionHas('error');
+            ->assertSessionHas('toast.tipo', 'error');
 
         $this->assertNotNull(Escuela::find($escuela->id));
     }
@@ -387,6 +387,6 @@ class EliminarTramiteTest extends TestCase
             ->followingRedirects()
             ->delete(route('tramite.eliminar', ['escuela' => $escuela->id]))
             ->assertOk()
-            ->assertSee('Trámite eliminado.');
+            ->assertSee('Trámite eliminado', false);
     }
 }
