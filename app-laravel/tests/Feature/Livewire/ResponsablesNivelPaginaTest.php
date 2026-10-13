@@ -133,14 +133,35 @@ class ResponsablesNivelPaginaTest extends TestCase
         $this->assertNotContains('status', session()->get('_flash.new', []));
     }
 
-    public function test_la_navbar_describe_el_destino_del_enlace(): void
+    public function test_la_navbar_enlaza_el_nombre_al_perfil_y_lo_describe(): void
     {
         $responsable = $this->responsableDe($this->nivelDe(Solicitante::factory()->create()));
 
-        $this->actingAs(Solicitante::factory()->create()->user)->get(route('tramite.index'))
-            ->assertSee('<span class="sr-only"> — Responsables por nivel</span>', false);
-        $this->actingAs($responsable)->get(route('tramite.index'))
-            ->assertDontSee('— Responsables por nivel', false);
+        foreach ([Solicitante::factory()->create()->user, $responsable] as $usuario) {
+            $this->actingAs($usuario)->get(route('tramite.index'))
+                ->assertSee('href="'.route('profile').'"', false)
+                ->assertSee('<span class="sr-only"> — Mi perfil</span>', false)
+                ->assertDontSee('href="'.route('tramite.responsables').'"', false);
+        }
+    }
+
+    public function test_revocar_acceso_es_un_boton_con_confirmacion_y_sin_subrayado(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $this->responsableDe($this->nivelDe($solicitante));
+
+        $this->actingAs($solicitante->user)->get(route('tramite.responsables'))
+            ->assertSee('<button type="button" wire:click="revocar(', false)
+            ->assertSee('wire:confirm=', false)
+            ->assertDontSee('<summary', false)
+            ->assertDontSee('underline-offset', false);
+    }
+
+    public function test_la_pagina_no_trae_enlace_a_mi_perfil(): void
+    {
+        $this->actingAs(Solicitante::factory()->create()->user)->get(route('tramite.responsables'))
+            ->assertOk()
+            ->assertDontSee('>Mi perfil</a>', false);
     }
 
     public function test_la_ruta_es_solo_del_solicitante(): void
@@ -149,16 +170,5 @@ class ResponsablesNivelPaginaTest extends TestCase
 
         $this->actingAs($responsable)->get(route('tramite.responsables'))->assertRedirect(route('tramite.index'));
         $this->actingAs(Solicitante::factory()->create()->user)->get(route('tramite.responsables'))->assertOk()->assertSee('Responsables por nivel');
-    }
-
-    public function test_la_navbar_enlaza_el_nombre_solo_para_el_solicitante(): void
-    {
-        $solicitante = Solicitante::factory()->create();
-        $responsable = $this->responsableDe($this->nivelDe(Solicitante::factory()->create()));
-
-        $this->actingAs($solicitante->user)->get(route('tramite.index'))
-            ->assertSee('href="'.route('tramite.responsables').'"', false);
-        $this->actingAs($responsable)->get(route('tramite.index'))
-            ->assertDontSee('href="'.route('tramite.responsables').'"', false);
     }
 }

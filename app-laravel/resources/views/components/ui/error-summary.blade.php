@@ -14,7 +14,7 @@
         <ul class="mt-xs list-disc space-y-xxs pl-lg text-error-ink">
             @foreach ($errores as $clave => $mensajes)
                 <li>
-                    <a href="#{{ $clave }}" class="font-semibold underline underline-offset-4 hover:no-underline">{{ $mensajes[0] }}</a>
+                    <a href="#{{ $clave }}" class="font-semibold">{{ $mensajes[0] }}</a>
                 </li>
             @endforeach
         </ul>

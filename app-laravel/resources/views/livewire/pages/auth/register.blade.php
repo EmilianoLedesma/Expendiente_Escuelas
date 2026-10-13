@@ -61,7 +61,7 @@ new #[Layout('layouts.guest')] class extends Component
         <x-ui.field id="password_confirmation" label="Confirmar contraseña"><x-ui.input type="password" wire:model.blur="password_confirmation" autocomplete="new-password" /></x-ui.field>
 
         <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
-            <a class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline" href="{{ route('login') }}" wire:navigate>¿Ya tienes cuenta?</a>
+            <a class="inline-flex min-h-11 items-center font-semibold text-primary" href="{{ route('login') }}" wire:navigate>¿Ya tienes cuenta?</a>
             <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="register">Crear cuenta</x-ui.button-primary>
         </div>
     </form>

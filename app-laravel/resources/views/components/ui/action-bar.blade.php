@@ -2,7 +2,7 @@
 
 <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
     @if ($backHref)
-        <a href="{{ $backHref }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary underline underline-offset-4 hover:no-underline">{{ $backLabel }}</a>
+        <a href="{{ $backHref }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">{{ $backLabel }}</a>
     @else
         <span></span>
     @endif

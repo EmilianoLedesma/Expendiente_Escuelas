@@ -51,7 +51,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
             @if (Route::has('password.request'))
-                <a class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline" href="{{ route('password.request') }}" wire:navigate>¿Olvidaste tu contraseña?</a>
+                <a class="inline-flex min-h-11 items-center font-semibold text-primary" href="{{ route('password.request') }}" wire:navigate>¿Olvidaste tu contraseña?</a>
             @else
                 <span></span>
             @endif
@@ -61,6 +61,6 @@ new #[Layout('layouts.guest')] class extends Component
 
     <p class="mt-lg text-body-md text-body">
         ¿No tienes cuenta?
-        <a class="font-semibold text-primary underline underline-offset-4 hover:no-underline" href="{{ route('register') }}" wire:navigate>Regístrate</a>
+        <a class="font-semibold text-primary" href="{{ route('register') }}" wire:navigate>Regístrate</a>
     </p>
 </div>

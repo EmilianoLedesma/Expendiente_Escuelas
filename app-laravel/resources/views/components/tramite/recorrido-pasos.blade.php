@@ -11,7 +11,7 @@
 
 <nav aria-label="Secciones del trámite" {{ $attributes }}>
     <a href="{{ route('tramite.resumen', ['escuela' => $resumen->escuelaId]) }}" @if ($enResumen) aria-current="page" @endif
-       @class(['flex min-h-11 items-center rounded-md px-sm text-body-sm font-semibold', 'bg-surface-card text-ink' => $enResumen, 'text-primary underline underline-offset-4 hover:no-underline' => ! $enResumen])>
+       @class(['flex min-h-11 items-center rounded-md px-sm text-body-sm font-semibold', 'bg-surface-card text-ink' => $enResumen, 'text-primary' => ! $enResumen])>
         Resumen del trámite
     </a>
 
@@ -63,7 +63,7 @@
                             @endif
                         </span>
                         <span class="min-w-0 text-body-sm">
-                            <span @class(['block', 'font-semibold text-ink' => $esActual, 'text-ink' => ! $esActual && ! $inactivo && ! $bloqueado, 'text-muted' => $inactivo || $bloqueado, 'underline underline-offset-4' => $seccion->href && ! $esActual])>{{ $seccion->nombre }}</span>
+                            <span @class(['block', 'font-semibold text-ink' => $esActual, 'text-ink' => ! $esActual && ! $inactivo && ! $bloqueado, 'text-muted' => $inactivo || $bloqueado])>{{ $seccion->nombre }}</span>
                             @if ($hecho)
                                 <span class="sr-only">(completado)</span>
                             @endif

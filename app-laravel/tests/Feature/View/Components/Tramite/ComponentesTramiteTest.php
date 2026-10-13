@@ -72,7 +72,8 @@ class ComponentesTramiteTest extends TestCase
         $this->blade('<ol><x-tramite.task-row :seccion="$s" numerado /></ol>', ['s' => $this->seccion('pendiente', 'comenzar', '/tramite/paso2/1')])
             ->assertSee('2. Responsable legal')
             ->assertSee('href="/tramite/paso2/1"', false)
-            ->assertSee('text-primary underline', false)
+            ->assertSee('text-primary', false)
+            ->assertDontSee('underline', false)
             ->assertSee('Comenzar')
             ->assertSee('<span class="sr-only">: Responsable legal</span>', false)
             ->assertSee('data-estado="pendiente"', false);

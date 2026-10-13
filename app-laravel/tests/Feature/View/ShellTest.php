@@ -267,10 +267,9 @@ class ShellTest extends TestCase
             array_map(fn ($svg) => $svg->getAttribute('data-icono'), iterator_to_array($iconos)),
         );
 
-        // «Aviso de privacidad» con subrayado permanente (1.4.1: no se distingue solo por color), más marcado al pasar el cursor.
+        // «Aviso de privacidad» sin subrayado (decisión del dueño, 2026-10-13: ningún enlace de la app se subraya).
         $clases = ' '.$x->query('//footer//a[@href="'.config('sedeq.aviso_privacidad').'"]')->item(0)->getAttribute('class').' ';
-        $this->assertStringContainsString(' underline ', $clases);
-        $this->assertStringContainsString(' hover:decoration-white ', $clases);
+        $this->assertStringNotContainsString(' underline ', $clases);
     }
 
     public function test_las_redes_tienen_icono_chico_en_la_barra_y_grande_en_el_pie(): void

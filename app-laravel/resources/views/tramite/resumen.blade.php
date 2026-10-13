@@ -13,7 +13,7 @@
             <x-ui.alert tipo="info" :titulo="'Enviado el '.$resumen->fechaEnvio?->format('d/m/Y').' — en revisión por SEDEQ'" class="mb-lg">
                 El trámite ya no puede modificarse.
                 @if ($puedeDescargarReporte && $resumen->reporteEnviadoId !== null)
-                    <a href="{{ route('tramite.validacion.reporte', ['escuela' => $resumen->escuelaId, 'evaluacion' => $resumen->reporteEnviadoId]) }}" target="_blank" class="font-semibold underline underline-offset-4 hover:no-underline">Descargar el reporte de validación enviado</a>
+                    <a href="{{ route('tramite.validacion.reporte', ['escuela' => $resumen->escuelaId, 'evaluacion' => $resumen->reporteEnviadoId]) }}" target="_blank" class="font-semibold">Descargar el reporte de validación enviado</a>
                 @endif
             </x-ui.alert>
         @elseif ($siguiente)

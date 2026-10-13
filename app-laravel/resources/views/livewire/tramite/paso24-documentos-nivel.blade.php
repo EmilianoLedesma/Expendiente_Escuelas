@@ -42,7 +42,7 @@
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$clave" :titulo="$fila['titulo']" :escuela-id="$escuelaNivel->escuela_id" :capturado="$fila['capturado']" :editable="$fila['editable']" :descargar-href="$fila['descargarHref']" :vencido="$fila['vencido']" accion="guardarDocumento('formato_solicitud')" etiqueta-archivo="Subir Formato de Solicitud firmado">
                     <x-slot:extra>
                         @if ($datosCapturados)
-                            <a href="{{ route('tramite.paso2-nivel-documentos.formato-solicitud', ['escuelaNivel' => $escuelaNivel->id]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                            <a href="{{ route('tramite.paso2-nivel-documentos.formato-solicitud', ['escuelaNivel' => $escuelaNivel->id]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary">
                                 <x-ui.icon nombre="arrow-down-tray" class="h-5 w-5" />
                                 Generar y descargar Formato de Solicitud
                             </a>
@@ -66,6 +66,6 @@
         @if ($completo)
             <x-ui.button-primary :href="route('tramite.paso3-inmueble', ['escuelaNivel' => $escuelaNivel->id])">Continuar a Datos del inmueble</x-ui.button-primary>
         @endif
-        <a href="{{ route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">Volver al resumen</a>
+        <a href="{{ route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">Volver al resumen</a>
     </div>
 </div>

@@ -13,7 +13,7 @@
                     <div class="flex items-center justify-between gap-sm">
                         <h2 class="text-title-sm font-semibold text-ink">Persona {{ $i + 1 }}</h2>
                         @if (count($personas) > 1)
-                            <button type="button" wire:click="quitarPersona({{ $i }})" class="min-h-11 font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                            <button type="button" wire:click="quitarPersona({{ $i }})" class="min-h-11 font-semibold text-primary">
                                 Quitar<span class="sr-only"> persona {{ $i + 1 }}</span>
                             </button>
                         @endif
