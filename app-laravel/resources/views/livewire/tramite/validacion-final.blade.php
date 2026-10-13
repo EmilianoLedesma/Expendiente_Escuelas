@@ -69,7 +69,7 @@
                                     <ul class="mt-sm flex flex-wrap gap-sm">
                                         @foreach ($fila->documentos as $clave => $nombre)
                                             <li>
-                                                <a href="{{ $seccion['corregir']($clave) }}" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                                                <a href="{{ $seccion['corregir']($clave) }}" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary">
                                                     Corregir: {{ $nombre }}
                                                 </a>
                                             </li>
@@ -106,7 +106,7 @@
                                         <p class="mt-xxs text-body-sm text-muted">{{ $fila->mensaje }}</p>
                                     @endif
                                     @if (in_array($fila->estado, ['no_cumple', 'no_evaluable'], true) && isset(\App\Application\Tramite\ResumenTramite::RUTAS_PASO3[$fila->pasoCorreccion]))
-                                        <a href="{{ route(\App\Application\Tramite\ResumenTramite::RUTAS_PASO3[$fila->pasoCorreccion], ['escuelaNivel' => $seccion->escuelaNivelId]) }}" class="mt-sm inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                                        <a href="{{ route(\App\Application\Tramite\ResumenTramite::RUTAS_PASO3[$fila->pasoCorreccion], ['escuelaNivel' => $seccion->escuelaNivelId]) }}" class="mt-sm inline-flex min-h-11 items-center font-semibold text-primary">
                                             Revisar la captura
                                         </a>
                                     @endif
@@ -120,7 +120,7 @@
 
         <div class="mt-lg flex flex-wrap items-center gap-md">
             <x-ui.button-primary type="button" wire:click="validarDeNuevo">Validar de nuevo</x-ui.button-primary>
-            <a href="{{ route('tramite.validacion.reporte', ['escuela' => $escuela->id, 'evaluacion' => $validacion->evaluacionId]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary underline underline-offset-4 hover:no-underline">
+            <a href="{{ route('tramite.validacion.reporte', ['escuela' => $escuela->id, 'evaluacion' => $validacion->evaluacionId]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary">
                 <x-ui.icon nombre="arrow-down-tray" class="h-5 w-5" />
                 Descargar reporte en PDF
             </a>
@@ -163,6 +163,6 @@
     @endif
 
     <div class="mt-xl border-t border-hairline pt-lg">
-        <a href="{{ route('tramite.resumen', ['escuela' => $escuela->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">Volver al resumen</a>
+        <a href="{{ route('tramite.resumen', ['escuela' => $escuela->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">Volver al resumen</a>
     </div>
 </div>

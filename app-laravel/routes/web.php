@@ -7,6 +7,7 @@ use App\Http\Controllers\Tramite\EliminarTramiteController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
+use App\Livewire\Cuenta\Perfil;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso24DocumentosNivel;
 use App\Livewire\Tramite\Paso2Documentos;
@@ -25,6 +26,8 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/profile', Perfil::class)->name('profile');
+
     Route::get('/tramite', MisTramitesController::class)->name('tramite.index');
 
     Route::get('/tramite/preregistro', Paso1Preregistro::class)->middleware('solicitante')->name('tramite.preregistro');
@@ -115,9 +118,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('dashboard', fn () => redirect(auth()->user()->hasRole('sedeq') ? '/admin' : route('tramite.index')))
     ->middleware('auth')
     ->name('dashboard');
-
-Route::view('profile', 'profile')
-    ->middleware(['auth'])
-    ->name('profile');
 
 require __DIR__.'/auth.php';

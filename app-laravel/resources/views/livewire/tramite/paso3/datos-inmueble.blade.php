@@ -16,7 +16,7 @@
     @if ($soloLectura)
         <x-ui.alert tipo="warning" class="mt-xl" titulo="Falta capturar el inmueble">
             El solicitante debe capturar los datos del inmueble antes de que puedas continuar con este nivel.
-            <a href="{{ route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]) }}" class="mt-xs inline-flex min-h-11 items-center text-primary underline underline-offset-4 hover:no-underline">Volver al resumen</a>
+            <a href="{{ route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]) }}" class="mt-xs inline-flex min-h-11 items-center text-primary">Volver al resumen</a>
         </x-ui.alert>
     @else
     <form novalidate wire:submit="guardar" class="mt-xl">
@@ -83,7 +83,7 @@
                         </x-ui.field>
                         <x-ui.checkbox id="serviciosCercanos.{{ $indice }}.esPublico" wire:model.blur="serviciosCercanos.{{ $indice }}.esPublico">Institución pública</x-ui.checkbox>
                     </div>
-                    <button type="button" wire:click="quitarServicio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink underline underline-offset-4 hover:no-underline">
+                    <button type="button" wire:click="quitarServicio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink">
                         <x-ui.icon nombre="x-mark" class="h-5 w-5" />
                         Quitar<span class="sr-only"> institución {{ $indice + 1 }}</span>
                     </button>
@@ -115,7 +115,7 @@
                             <x-ui.input type="number" inputmode="numeric" min="0" wire:model.blur="estudiosActuales.{{ $indice }}.numeroAlumnos" />
                         </x-ui.field>
                     </div>
-                    <button type="button" wire:click="quitarEstudio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink underline underline-offset-4 hover:no-underline">
+                    <button type="button" wire:click="quitarEstudio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink">
                         <x-ui.icon nombre="x-mark" class="h-5 w-5" />
                         Quitar<span class="sr-only"> estudio {{ $indice + 1 }}</span>
                     </button>

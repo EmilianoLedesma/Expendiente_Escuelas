@@ -28,6 +28,14 @@
                     {{ $slot }}
                 </main>
             </div>
+        @elseif (isset($cuenta))
+            {{-- Cuenta (Mi perfil): menú lateral por rol. --}}
+            <div class="mx-auto grid w-full max-w-7xl flex-1 px-md sm:px-xl lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-xl">
+                <x-cuenta.menu class="pt-lg lg:border-r lg:border-hairline lg:py-xl lg:pr-xl" />
+                <main id="contenido" tabindex="-1" class="min-w-0 py-lg lg:py-xl">
+                    {{ $slot }}
+                </main>
+            </div>
         @else
             <main id="contenido" tabindex="-1" class="mx-auto w-full max-w-7xl flex-1 px-md py-xl sm:px-xl">
                 {{ $slot }}

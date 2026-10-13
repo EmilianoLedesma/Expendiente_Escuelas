@@ -16,7 +16,7 @@
     <div class="flex flex-wrap items-center gap-md sm:justify-end">
         <x-ui.status-tag :estado="$seccion->estado" />
         @if ($seccion->accion !== null && $seccion->href !== null)
-            <a href="{{ $seccion->href }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">
+            <a href="{{ $seccion->href }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
                 {{ ['comenzar' => 'Comenzar', 'continuar' => 'Continuar', 'revisar' => 'Revisar'][$seccion->accion] }}<span class="sr-only">: {{ $seccion->nombre }}</span>
             </a>
         @endif

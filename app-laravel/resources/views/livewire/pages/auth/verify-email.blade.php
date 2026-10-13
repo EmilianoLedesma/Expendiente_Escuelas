@@ -45,7 +45,7 @@ new #[Layout('layouts.guest')] class extends Component
     @endif
 
     <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
-        <button wire:click="logout" type="button" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">Cerrar sesión</button>
+        <button wire:click="logout" type="button" class="inline-flex min-h-11 items-center font-semibold text-primary">Cerrar sesión</button>
         <x-ui.button-primary type="button" wire:click="sendVerification" wire:loading.attr="disabled" wire:target="sendVerification">Reenviar correo de verificación</x-ui.button-primary>
     </div>
 </div>

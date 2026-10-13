@@ -45,11 +45,11 @@
                 @forelse ($fila['responsables'] as $responsable)
                     <div wire:key="acceso-{{ $responsable['id'] }}" class="mt-sm flex flex-wrap items-center justify-between gap-sm">
                         <p class="break-words text-body-sm"><span class="font-semibold text-ink">{{ $responsable['nombre'] }}</span> · {{ $responsable['correo'] }}</p>
-                        <details>
-                            <summary class="min-h-11 cursor-pointer text-body-sm text-primary underline underline-offset-4">Revocar acceso</summary>
-                            <p class="mt-xs text-caption text-muted">Se elimina su acceso a este nivel (y su cuenta, si no tiene otros). Lo que ya capturó se conserva.</p>
-                            <x-ui.button-secondary type="button" class="mt-xs" wire:click="revocar({{ $responsable['id'] }})">Confirmar revocación</x-ui.button-secondary>
-                        </details>
+                        <button type="button" wire:click="revocar({{ $responsable['id'] }})"
+                                wire:confirm="¿Revocar el acceso de {{ $responsable['nombre'] }} a este nivel? Se elimina su cuenta si no tiene otros accesos. Lo que ya capturó se conserva."
+                                class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-error-ink bg-canvas px-md text-body-sm font-semibold text-error-ink hover:bg-error-soft">
+                            Revocar acceso<span class="sr-only"> de {{ $responsable['nombre'] }}</span>
+                        </button>
                     </div>
                 @empty
                     <p class="mt-xs text-caption text-muted">Sin responsable asignado.</p>
@@ -60,5 +60,4 @@
         @endforelse
     </x-ui.section>
 
-    <p class="mt-lg text-body-sm"><a href="{{ route('profile') }}" class="text-primary underline underline-offset-4 hover:no-underline">Mi perfil</a></p>
 </div>

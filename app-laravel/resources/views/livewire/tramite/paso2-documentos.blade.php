@@ -147,6 +147,6 @@
     </x-ui.stepper>
 
     <div class="mt-xl border-t border-hairline pt-lg">
-        <a href="{{ route('tramite.resumen', ['escuela' => $escuela->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 hover:no-underline">Volver al resumen</a>
+        <a href="{{ route('tramite.resumen', ['escuela' => $escuela->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">Volver al resumen</a>
     </div>
 </div>

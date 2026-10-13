@@ -46,7 +46,7 @@
             <div>
                 <p>
                     <a href="{{ config('sedeq.aviso_privacidad') }}" target="_blank" rel="noopener noreferrer"
-                       class="-mx-xs inline-flex min-h-11 items-center px-xs text-white underline decoration-white/60 underline-offset-4 hover:decoration-white">
+                       class="-mx-xs inline-flex min-h-11 items-center px-xs text-white">
                         Aviso de privacidad<span class="sr-only"> (abre en una pestaña nueva)</span>
                     </a>
                 </p>

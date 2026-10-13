@@ -56,7 +56,7 @@
                         <x-ui.field id="grupos.{{ $i }}.grupo" label="Grupo"><x-ui.input wire:model.blur="grupos.{{ $i }}.grupo" maxlength="5" class="uppercase" /></x-ui.field>
                         <x-ui.field id="grupos.{{ $i }}.alumnos" :label="$etiquetaAlumnos"><x-ui.input type="number" inputmode="numeric" min="0" wire:model.blur="grupos.{{ $i }}.alumnos" /></x-ui.field>
                         @if (count($grupos) > 1)
-                            <button type="button" wire:click="quitarGrupo({{ $i }})" class="min-h-11 self-end font-semibold text-primary underline underline-offset-4 hover:no-underline">
+                            <button type="button" wire:click="quitarGrupo({{ $i }})" class="min-h-11 self-end font-semibold text-primary">
                                 Quitar<span class="sr-only"> grupo {{ $i + 1 }}</span>
                             </button>
                         @endif
