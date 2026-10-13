@@ -5,6 +5,7 @@ namespace App\Livewire\Cuenta;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EliminarCuenta;
 use App\Livewire\Actions\Logout;
+use App\Livewire\Concerns\NotificaToast;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
@@ -14,6 +15,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite', ['cuenta' => true, 'title' => 'Mi perfil'])]
 class Perfil extends Component
 {
+    use NotificaToast;
+
     public string $nombre = '';
 
     public string $contrasenaActual = '';
@@ -37,7 +40,7 @@ class Perfil extends Component
         Auth::user()->update(['name' => $datos['nombre']]);
 
         $this->dispatch('profile-updated', name: $datos['nombre']);
-        $this->avisar('Nombre actualizado');
+        $this->toast('Nombre actualizado');
     }
 
     public function cambiarContrasena(): void
@@ -58,7 +61,7 @@ class Perfil extends Component
 
         Auth::user()->update(['password' => $datos['contrasenaNueva']]);
 
-        $this->avisar('Contraseña actualizada');
+        $this->toast('Contraseña actualizada');
     }
 
     public function eliminarCuenta(Logout $cerrarSesion, EliminarCuenta $eliminarCuenta): void
@@ -67,19 +70,13 @@ class Perfil extends Component
             $eliminarCuenta->ejecutar(Auth::id());
         } catch (PrecondicionIncumplida $e) {
             $this->addError('cuenta', $e->getMessage());
-            $this->avisar('No se pudo eliminar la cuenta', $e->getMessage(), 'error');
+            $this->toast('No se pudo eliminar la cuenta', $e->getMessage(), 'error');
 
             return;
         }
 
         $cerrarSesion();
         $this->redirect('/');
-    }
-
-    // ponytail: dispara el evento del contrato de toasts directo; usar el trait NotificaToast al integrar esa rama.
-    private function avisar(string $titulo, ?string $descripcion = null, string $tipo = 'success'): void
-    {
-        $this->dispatch('toast', tipo: $tipo, titulo: $titulo, descripcion: $descripcion);
     }
 
     public function render()
