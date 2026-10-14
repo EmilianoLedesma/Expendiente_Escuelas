@@ -49,3 +49,13 @@ Este archivo se renombra a `ADR-00N-edicion-hasta-envio.md` en el mismo commit q
 
 ## Actualización (2026-10-01)
 La lista "Estado actual" de arriba (`master` en `ce3a154`) es anterior a varios cambios: ya existen el Paso 2.4 (documentos por nivel, WS-5b) y los sub-pasos 4–6 de Paso 3 (Plan de estudios, Plantilla docente y Matrícula, PR #2), además de la página de Validación final (PR #1), que vuelve a ejecutarse con "Validar de nuevo" y que el envío deberá volver a ejecutar en lugar de confiar en una fila anterior. Sigue sin existir el paso de envío ni la transición de estado. El alcance y las preguntas abiertas de este archivo no cambian.
+
+## Respuestas (WS-7b-1, 2026-10-14) — Paso 1 y Paso 2
+
+- **Cambio de tipo de persona con documentos subidos:** los documentos que dejan de aplicar se conservan, ocultos y sin contar; al volver al tipo anterior cuentan otra vez. No se exige volver a subir INE/CURP (D2); la página avisa y la validación final detecta una identidad que no corresponde.
+- **Quitar un nivel:** permitido. Con datos, una confirmación lista lo que se elimina; sin datos, sin diálogo. Quitar el último nivel se rechaza (para descartar todo: «Eliminar trámite»).
+- **Terna de nombres:** editable sin restricción, en el lugar.
+- **Datos del plantel:** solo teléfono y correo; el domicilio sigue de solo lectura. Se rechaza si cualquier trámite del plantel ya se envió.
+- **Datos del plantel compartidos:** ver ADR-009.
+- **Formato de Solicitud (D1):** un cambio en lo que imprime descarta el Formato firmado de cada nivel.
+- Queda abierto para 7b-2: guardas de una sola escritura de Paso 3 y filas antiguas que no pueden enviarse. Este archivo se renombra a ADR cuando 7b-2 cierre el flujo de trabajo.

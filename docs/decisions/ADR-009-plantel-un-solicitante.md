@@ -132,7 +132,7 @@ vinculación autorizada por el titular, con su propio control de acceso a
 `documentos_plantel`), no retirar esta compuerta. **La pregunta de cardinalidad
 de este documento sigue abierta.**
 
-**Dato heredado (2026-09-23):** una consulta de solo lectura a la base de desarrollo halló 1 plantel con escuelas de más de un solicitante; sigue pasando la compuerta y ambos dueños pueden leer/sobrescribir los documentos del plantel del otro. Requiere decisión de limpieza del dueño (reasignar o separar el plantel) antes de producción.
+**Dato heredado (2026-09-23):** una consulta de solo lectura a la base de desarrollo halló 1 plantel con escuelas de más de un solicitante; sigue pasando la compuerta y ambos dueños pueden leer/sobrescribir los documentos del plantel del otro. Requiere decisión de limpieza del dueño (reasignar o separar el plantel) antes de producción. Con WS-7b-1, cualquiera de los dos dueños de un plantel compartido podría sobrescribir el teléfono y el correo del plantel del otro (`ActualizarContactoPlantel`): otra razón por la que importa la pregunta de cardinalidad.
 
 **WS-5a (2026-09-29):** cuatro documentos más con ámbito plantel (Protección Civil, plano, número oficial y recibo de derechos) quedan visibles/sobrescribibles por ambos dueños de un plantel compartido; misma clase de problema, sin ampliar el mecanismo.
 
