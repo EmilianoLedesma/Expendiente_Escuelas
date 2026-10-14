@@ -33,12 +33,6 @@ new #[Layout('layouts.guest')] class extends Component
 
         $user = User::create($validated);
 
-        // Local only: no mail domain yet, so skip the verification email.
-        // Registered's SendEmailVerificationNotification listener does nothing for a verified user.
-        if (app()->environment('local')) {
-            $user->markEmailAsVerified();
-        }
-
         event(new Registered($user));
 
         Auth::login($user);
