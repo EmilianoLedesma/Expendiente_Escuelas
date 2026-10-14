@@ -43,7 +43,7 @@ class ResponsablesNivel extends Component
         ];
     }
 
-    public function invitar(InvitarResponsableNivel $invitar): void
+    public function invitar(InvitarResponsableNivel $invitar): bool
     {
         $this->validate();
 
@@ -55,11 +55,14 @@ class ResponsablesNivel extends Component
             }
             $this->toastDatosInvalidos();
 
-            return;
+            return false;
         }
 
         $this->reset('escuelaNivelId', 'nombre', 'correo');
         $this->toast('Invitación enviada', 'Le enviamos un correo a la persona asignada.');
+
+        // true = el acceso se creó y el aviso quedó en cola (no confirma que el correo llegó).
+        return true;
     }
 
     public function revocar(int $accesoId, RevocarResponsableNivel $revocar): void

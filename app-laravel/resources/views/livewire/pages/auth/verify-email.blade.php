@@ -10,17 +10,20 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Send an email verification notification to the user.
      */
-    public function sendVerification(): void
+    public function sendVerification(): bool
     {
         if (Auth::user()->hasVerifiedEmail()) {
             $this->redirectIntended(default: route('tramite.index', absolute: false), navigate: true);
 
-            return;
+            return true;
         }
 
         Auth::user()->sendEmailVerificationNotification();
 
         $this->dispatch('toast', tipo: 'success', titulo: 'Enlace enviado', descripcion: 'Enviamos un nuevo enlace de verificación al correo que registraste.');
+
+        // true = el envío quedó en cola (no confirma que el correo llegó).
+        return true;
     }
 
     /**
@@ -41,6 +44,6 @@ new #[Layout('layouts.guest')] class extends Component
 
     <div class="flex flex-col-reverse gap-md border-t border-hairline pt-lg sm:flex-row sm:items-center sm:justify-between">
         <button wire:click="logout" type="button" class="inline-flex min-h-11 items-center font-semibold text-primary">Cerrar sesión</button>
-        <x-ui.button-primary type="button" wire:click="sendVerification" wire:loading.attr="disabled" wire:target="sendVerification">Reenviar correo de verificación</x-ui.button-primary>
+        <x-ui.stateful-button action="sendVerification" label="Reenviar correo de verificación" success-label="Solicitud de envío realizada" error-label="No se pudo enviar. Reintentar" :reset-after="4000" />
     </div>
 </div>
