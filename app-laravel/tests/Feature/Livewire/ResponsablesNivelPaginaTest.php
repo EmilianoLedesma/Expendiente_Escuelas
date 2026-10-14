@@ -41,6 +41,19 @@ class ResponsablesNivelPaginaTest extends TestCase
             ->assertSeeHtml('id="correo-hint"');
     }
 
+    public function test_la_pagina_comparte_el_menu_lateral_de_la_cuenta_sin_mis_tramites(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $this->nivelDe($dueno, 'primaria');
+
+        $html = $this->actingAs($dueno->user)->get(route('tramite.responsables'))->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match('#<nav aria-label="Mi cuenta".*?</nav>#s', $html, $menu));
+        $this->assertStringContainsString('Mi perfil', $menu[0]);
+        $this->assertMatchesRegularExpression('#href="[^"]*/tramite/responsables"\s+aria-current="page"#', $menu[0]);
+        $this->assertStringNotContainsString('Mis trámites', $menu[0]);
+    }
+
     public function test_los_bucles_llevan_wire_key(): void
     {
         $dueno = Solicitante::factory()->create();
