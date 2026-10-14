@@ -106,7 +106,8 @@ class ResumenTramiteTest extends TestCase
 
         $this->assertSame(['plantel', 'responsable', 'documentos', 'niveles'], array_keys($g));
         $this->assertSame(['completado', 'pendiente', 'pendiente', 'pendiente'], array_map(fn (SeccionTramite $s) => $s->estado, $resumen->generales));
-        $this->assertNull($g['plantel']->accion);
+        $this->assertSame('revisar', $g['plantel']->accion, 'WS-7b-1: teléfono y correo del plantel se editan hasta el envío.');
+        $this->assertSame(route('tramite.plantel', ['escuela' => $escuela->id]), $g['plantel']->href);
         $this->assertSame('comenzar', $g['responsable']->accion);
         $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id]), $g['responsable']->href);
         // Migrado de ProgresoTest::test_sin_responsable_documentos_no_es_enlace.
@@ -131,7 +132,8 @@ class ResumenTramiteTest extends TestCase
         $g = $this->porClave($this->resumen($escuela)->generales);
 
         $this->assertSame('completado', $g['responsable']->estado);
-        $this->assertNull($g['responsable']->accion, 'Responsable completo no se puede reabrir hoy (D1).');
+        $this->assertSame('revisar', $g['responsable']->accion, 'WS-7b-1: el responsable se edita hasta el envío.');
+        $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'responsable']), $g['responsable']->href);
         $this->assertSame('pendiente', $g['documentos']->estado);
         $this->assertSame('comenzar', $g['documentos']->accion);
         $this->assertSame(route('tramite.paso2-documentos', ['escuela' => $escuela->id]), $g['documentos']->href);
@@ -181,7 +183,7 @@ class ResumenTramiteTest extends TestCase
         $this->assertNull($g['documentos']->accion);
         $this->assertSame('pendiente', $g['niveles']->estado);
         $this->assertSame('comenzar', $g['niveles']->accion);
-        $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id]), $g['niveles']->href);
+        $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'niveles']), $g['niveles']->href);
     }
 
     /** Migrado de ProgresoTest::test_con_escuela_niveles_pero_documentos_incompletos_no_es_completado. */
@@ -195,6 +197,7 @@ class ResumenTramiteTest extends TestCase
 
         $this->assertNotSame('completado', $g['documentos']->estado);
         $this->assertSame('completado', $g['niveles']->estado);
+        $this->assertSame('revisar', $g['niveles']->accion, 'WS-7b-1: los niveles se agregan y quitan hasta el envío.');
     }
 
     public function test_un_nivel_primaria_recien_seleccionado_empieza_por_sus_documentos(): void

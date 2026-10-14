@@ -194,4 +194,31 @@ class ValidarVigenciaDocumentosTest extends TestCase
 
         $this->assertSame([], (new ValidarVigenciaDocumentos)->paraEscuelaNivel($primaria->id));
     }
+
+    /** WS-7b-1 U4: un documento vencido que dejó de aplicar al tipo de persona no bloquea. */
+    public function test_un_documento_vencido_que_ya_no_aplica_se_ignora(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        DB::table('tipos_documentos')->insert([
+            'clave' => 'solo_moral_con_vigencia', 'nombre' => 'Documento solo moral',
+            'aplica_persona' => 'moral', 'ambito' => 'plantel', 'vigencia_max_dias' => 30,
+        ]);
+        $escuela = $this->crearEscuela();
+        ResponsableLegal::where('escuela_id', $escuela->id)->update(['tipo_persona' => 'moral']);
+        DB::table('documentos_plantel')->insert([
+            'plantel_id' => $escuela->plantel_id,
+            'tipo_documento_id' => DB::table('tipos_documentos')->where('clave', 'solo_moral_con_vigencia')->value('id'),
+            'archivo_path' => 'plantel/x/solo-moral.pdf',
+            'fecha_emision' => now()->subDays(60)->toDateString(),
+            'fecha_vigencia' => now()->subDays(30)->toDateString(),
+            'estado_validacion' => 'pendiente',
+        ]);
+
+        // Control: como moral, el vencimiento sí cuenta.
+        $this->assertArrayHasKey('solo_moral_con_vigencia', (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+
+        ResponsableLegal::where('escuela_id', $escuela->id)->update(['tipo_persona' => 'fisica']);
+
+        $this->assertArrayNotHasKey('solo_moral_con_vigencia', (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
 }

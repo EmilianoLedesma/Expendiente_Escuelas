@@ -134,7 +134,8 @@ class Paso2ResponsableTest extends TestCase
             ->assertSee('Persona física');
     }
 
-    public function test_redirige_a_documentos_si_responsable_legal_existe_pero_documentos_incompletos(): void
+    /** WS-7b-1: con responsable y documentos pendientes ya no redirige; el formulario prellenado es alcanzable. */
+    public function test_con_responsable_y_documentos_pendientes_muestra_el_formulario_prellenado(): void
     {
         (new TiposDocumentosSeeder)->run();
         $solicitante = Solicitante::factory()->create();
@@ -143,10 +144,13 @@ class Paso2ResponsableTest extends TestCase
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('fase', 'responsable')
+            ->assertSet('personaFisicaForm.nombre', 'Juana Pérez');
     }
 
-    public function test_redirige_a_documentos_si_el_dictamen_de_uso_de_suelo_esta_vencido(): void
+    /** WS-7b-1: una vigencia vencida tampoco saca del formulario (Documentos la sigue pidiendo). */
+    public function test_con_el_dictamen_vencido_tambien_muestra_el_formulario_prellenado(): void
     {
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
@@ -163,10 +167,12 @@ class Paso2ResponsableTest extends TestCase
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('fase', 'responsable');
     }
 
-    public function test_redirige_al_resumen_cuando_la_escuela_ya_tiene_niveles(): void
+    /** WS-7b-1: con niveles ya elegidos ya no salta al resumen; muestra el formulario prellenado. */
+    public function test_con_niveles_ya_elegidos_muestra_el_formulario_prellenado(): void
     {
         (new CatalogoMinimoSeeder)->run();
         $solicitante = Solicitante::factory()->create();
@@ -178,7 +184,9 @@ class Paso2ResponsableTest extends TestCase
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('fase', 'responsable')
+            ->assertSet('personaFisicaForm.nombre', 'Juana Pérez');
     }
 
     /**
@@ -496,8 +504,8 @@ class Paso2ResponsableTest extends TestCase
         $this->assertDatabaseCount('escuela_niveles', 0);
     }
 
-    /** Handler de PrecondicionIncumplida: guardarNiveles() sin Paso 2 completo manda de vuelta a /tramite/paso2 sin escribir. */
-    public function test_guardar_niveles_con_paso2_incompleto_redirige_a_paso2_sin_escribir(): void
+    /** Handler de PrecondicionIncumplida: guardarNiveles() sin Paso 2 completo explica el motivo en la página sin escribir (WS-7b-1). */
+    public function test_guardar_niveles_con_paso2_incompleto_avisa_sin_escribir(): void
     {
         (new CatalogoMinimoSeeder)->run();
         $solicitante = Solicitante::factory()->create();
@@ -508,7 +516,8 @@ class Paso2ResponsableTest extends TestCase
             ->assertNoRedirect()
             ->set('nivelesSeleccionados', [NivelEducativo::where('clave', 'preescolar')->value('id')])
             ->call('guardarNiveles')
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
 
         $this->assertDatabaseCount('escuela_niveles', 0);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Application\Documentos;
 
+use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
@@ -23,12 +24,18 @@ class ValidarVigenciaDocumentos
         $escuela = Escuela::findOrFail($escuelaId);
         $violaciones = [];
 
+        // WS-7b-1 U4: un documento que dejó de aplicar al tipo de persona no cuenta. Sin
+        // responsable no hay tipo con qué filtrar: se revisa todo, como antes.
+        $tipoPersona = app(TipoPersonaDeEscuela::class)->ejecutar($escuelaId);
+        $aplicables = $tipoPersona === null ? null : app(DocumentosCompletos::class)->clavesAplicables($tipoPersona);
+        $aplica = fn (string $clave): bool => $aplicables === null || in_array($clave, $aplicables, true);
+
         $dictamenTipo = TipoDocumento::where('clave', 'dictamen_uso_suelo')->first();
         $dictamen = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)
             ->where('tipo_documento_id', $dictamenTipo?->id)
             ->first();
 
-        if ($dictamen !== null && $dictamen->fecha_vigencia !== null && now()->toDateString() > $dictamen->fecha_vigencia) {
+        if ($aplica('dictamen_uso_suelo') && $dictamen !== null && $dictamen->fecha_vigencia !== null && now()->toDateString() > $dictamen->fecha_vigencia) {
             $violaciones['dictamen_uso_suelo'] = 'Dictamen de Uso de Suelo: ha superado su vigencia máxima, debe resubirse.';
         }
 
@@ -38,6 +45,7 @@ class ValidarVigenciaDocumentos
             ->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_plantel.tipo_documento_id')
             ->where('documentos_plantel.plantel_id', $escuela->plantel_id)
             ->where('tipos_documentos.clave', '!=', 'dictamen_uso_suelo')
+            ->when($aplicables !== null, fn ($consulta) => $consulta->whereIn('tipos_documentos.clave', $aplicables))
             ->whereNotNull('documentos_plantel.fecha_vigencia')
             ->where('documentos_plantel.fecha_vigencia', '<', now()->toDateString())
             ->pluck('tipos_documentos.nombre', 'tipos_documentos.clave');
@@ -52,7 +60,7 @@ class ValidarVigenciaDocumentos
             ->first();
 
         $extension = $constancia?->constanciaSeguridadEstructural;
-        if ($extension !== null && $extension->perito_registro_vigencia !== null && $constancia->fecha_emision !== null) {
+        if ($aplica('constancia_seguridad_estructural') && $extension !== null && $extension->perito_registro_vigencia !== null && $constancia->fecha_emision !== null) {
             $anioRegistro = date('Y', strtotime($extension->perito_registro_vigencia));
             $anioEmision = date('Y', strtotime($constancia->fecha_emision));
 

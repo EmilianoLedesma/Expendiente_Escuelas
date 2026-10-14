@@ -4,6 +4,7 @@ namespace App\Livewire\Tramite;
 
 use App\Application\Captura\ReglasCaptura;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
+use App\Application\EscuelaNiveles\ResumenEliminacionNivel;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
@@ -16,21 +17,26 @@ use App\Livewire\Forms\GestorForm;
 use App\Livewire\Forms\PersonaFisicaForm;
 use App\Livewire\Forms\PersonaMoralForm;
 use App\Models\Escuela;
+use App\Models\Gestor;
 use App\Models\NivelEducativo;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
 use App\Models\ResponsableLegal;
+use App\Models\TernaNombre;
 use Closure;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
  * Presentación pura: dos fases ('responsable', 'niveles') sobre una sola
  * visita de /tramite/paso2/{escuela}. Ninguna regla de negocio ni acceso
  * a Eloquent de escritura vive aquí (ADR-001) — RegistrarResponsableLegal
- * y RegistrarNivelesSeleccionados (Task 10) son las únicas escrituras.
+ * y RegistrarNivelesSeleccionados son las únicas escrituras.
+ * Desde WS-7b-1 el responsable se edita hasta el envío: con responsable la
+ * página nunca redirige; `?seccion=responsable|niveles` elige la fase.
  */
 #[Layout('layouts.tramite')]
 class Paso2Responsable extends Component
@@ -64,56 +70,115 @@ class Paso2Responsable extends Component
 
     public array $nivelesSeleccionados = [];
 
+    /** WS-7b-1: niveles ya guardados (nivel_educativo_id); la diferencia con la selección es agregar/quitar. @var list<int> */
+    #[Locked]
+    public array $nivelesGuardados = [];
+
+    /** Conteos a confirmar antes de quitar niveles con datos (ResumenEliminacionNivel). @var array<int, array<string, int>> */
+    #[Locked]
+    public array $porEliminar = [];
+
+    /** Cambia con cada apertura del diálogo para que Alpine lo vuelva a abrir. */
+    #[Locked]
+    public int $confirmaciones = 0;
+
+    /** WS-7b-1: `?seccion=responsable|niveles` (enlaces del hub y del resumen); sin él, mount() elige. */
+    #[Url]
+    public ?string $seccion = null;
+
+    /** Ya existe responsable: guardar es una edición y no avanza el asistente. */
+    #[Locked]
+    public bool $editando = false;
+
+    #[Locked]
+    public ?string $tipoPersonaGuardado = null;
+
+    /** D2: tras un cambio de tipo, aviso de revisar documentos. */
+    public bool $avisoCambioTipo = false;
+
     /**
-     * Resumen de solo lectura de lo que ya se envió, para cuando fase es
-     * 'niveles' por un responsable ya capturado (por ejemplo, al volver por
-     * el enlace de navegación). No hay edición: RegistrarResponsableLegal
-     * es un no-op si escuela_id ya tiene fila (guardián de idempotencia),
-     * así que prellenar el formulario de captura sería un formulario que
-     * silenciosamente no guarda los cambios. Mismo patrón que
-     * InfraestructuraNivel: mostrar, no re-capturar; cambiarlo es una
-     * decisión normativa aparte (¿requiere autorización de SEDEQ?), no
-     * resuelta aquí.
+     * Resumen de solo lectura del responsable en la fase 'niveles', con enlace para editarlo.
      *
-     * @var array{}|array{tipo: string, nombre: ?string, domicilio: ?string}
+     * @var array{}|array{tipo: string, nombre: ?string, gestor: ?string, domicilio: ?string, autorizada: ?string, terna: list<string>}
      */
     public array $responsableCapturado = [];
 
     public function mount(Escuela $escuela, EstadoPaso2 $estadoPaso2): void
     {
         $this->escuela = $escuela;
+        $responsable = ResponsableLegal::where('escuela_id', $escuela->id)->first();
 
-        // EstadoPaso2 va ANTES del salto al resumen: una escuela_niveles creada
-        // sin Paso 2 completo (bypass previo a WS-1.2) no debe atorar al
-        // usuario en Paso 3 — vuelve a la etapa que le falta. Una vigencia
-        // vencida también es incompletitud: 2.2 vuelve a pedir el documento.
-        $etapaFaltante = $estadoPaso2->etapaFaltante($escuela->id);
-
-        if ($etapaFaltante === EstadoPaso2::RESPONSABLE) {
+        // Sin responsable (EstadoPaso2::RESPONSABLE), el formulario vacío. Con responsable
+        // (WS-7b-1) nunca se redirige: el formulario prellenado es alcanzable también con
+        // documentos pendientes o vencidos y con niveles ya elegidos.
+        if ($responsable === null) {
             $this->fase = 'responsable';
 
             return;
         }
 
-        if ($etapaFaltante === EstadoPaso2::DOCUMENTOS) {
-            $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $escuela->id]);
+        $this->prellenar($responsable);
+        $this->nivelesGuardados = $escuela->escuelaNiveles()->orderBy('id')->pluck('nivel_educativo_id')->map(fn ($id) => (int) $id)->all();
+        $this->nivelesSeleccionados = $this->nivelesGuardados;
+        $this->responsableCapturado = $this->resumenResponsable($responsable);
+        $sinNiveles = ! $escuela->escuelaNiveles()->exists();
 
-            return;
-        }
-
-        if ($escuela->escuelaNiveles()->exists()) {
-            // WS-5b (decisión del dueño): con niveles ya elegidos, al hub; su
-            // "Siguiente paso" es Documentos del nivel del primer nivel.
-            $this->redirectRoute('tramite.resumen', ['escuela' => $escuela->id]);
-
-            return;
-        }
-
-        $this->responsableCapturado = $this->resumenResponsable(ResponsableLegal::where('escuela_id', $escuela->id)->firstOrFail());
-        $this->fase = 'niveles';
+        $this->fase = match (true) {
+            $this->seccion === 'niveles' => 'niveles',
+            $this->seccion === 'responsable' => 'responsable',
+            // Primera vez con Paso 2 completo: el siguiente paso natural es elegir niveles.
+            $sinNiveles && $estadoPaso2->etapaFaltante($escuela->id) === null => 'niveles',
+            default => 'responsable',
+        };
     }
 
-    /** @return array{tipo: string, nombre: ?string, domicilio: ?string} */
+    /** Lectura de presentación (ADR-006 §2): lo ya capturado, en los campos del formulario. */
+    private function prellenar(ResponsableLegal $responsable): void
+    {
+        $this->editando = true;
+        $this->tipoPersona = $responsable->tipo_persona;
+        $this->tipoPersonaGuardado = $responsable->tipo_persona;
+        $this->domicilioNotificaciones = (string) $responsable->domicilio_notificaciones;
+        $this->personaAutorizadaRecoger = (string) $responsable->persona_autorizada_recoger;
+
+        $terna = TernaNombre::where('escuela_id', $responsable->escuela_id)->pluck('nombre_propuesto', 'numero_propuesta');
+        $this->nombrePropuesto1 = (string) ($terna[1] ?? '');
+        $this->nombrePropuesto2 = (string) ($terna[2] ?? '');
+        $this->nombrePropuesto3 = (string) ($terna[3] ?? '');
+
+        $fisica = PersonaFisica::find($responsable->id);
+        if ($fisica !== null) {
+            $this->personaFisicaForm->nombre = (string) $fisica->nombre;
+            $this->personaFisicaForm->fechaNacimiento = (string) $fisica->fecha_nacimiento;
+            $this->personaFisicaForm->rfc = (string) $fisica->rfc;
+            $this->personaFisicaForm->curp = (string) $fisica->curp;
+        }
+
+        $gestor = Gestor::find($responsable->id);
+        if ($gestor !== null) {
+            $this->gestorForm->nombre = (string) $gestor->nombre;
+            $this->gestorForm->numeroPoder = (string) $gestor->numero_poder;
+            $this->gestorForm->notarioNombre = (string) $gestor->notario_nombre;
+            $this->gestorForm->notarioNumero = (string) $gestor->notario_numero;
+            $this->gestorForm->fechaPoder = (string) $gestor->fecha_poder;
+            $this->gestorForm->curp = (string) $gestor->curp;
+        }
+
+        $moral = PersonaMoral::find($responsable->id);
+        if ($moral !== null) {
+            $this->personaMoralForm->razonSocial = (string) $moral->razon_social;
+            $this->personaMoralForm->numeroEscrituraConstitutiva = (string) $moral->numero_escritura_constitutiva;
+            $this->personaMoralForm->fechaEscrituraConstitutiva = (string) $moral->fecha_escritura_constitutiva;
+            $this->personaMoralForm->notarioNombre = (string) $moral->notario_nombre;
+            $this->personaMoralForm->notarioNumero = (string) $moral->notario_numero;
+            $this->personaMoralForm->notarioCiudad = (string) $moral->notario_ciudad;
+            $this->personaMoralForm->folioRegistroPublico = (string) $moral->folio_registro_publico;
+            $this->personaMoralForm->fechaInscripcionRpp = (string) $moral->fecha_inscripcion_rpp;
+            $this->personaMoralForm->nombreRepresentanteLegal = (string) $moral->nombre_representante_legal;
+        }
+    }
+
+    /** @return array{tipo: string, nombre: ?string, gestor: ?string, domicilio: ?string, autorizada: ?string, terna: list<string>} */
     private function resumenResponsable(ResponsableLegal $responsableLegal): array
     {
         $nombre = match ($responsableLegal->tipo_persona) {
@@ -125,7 +190,10 @@ class Paso2Responsable extends Component
         return [
             'tipo' => $responsableLegal->tipo_persona,
             'nombre' => $nombre,
+            'gestor' => $responsableLegal->tipo_persona === 'fisica_con_gestor' ? Gestor::find($responsableLegal->id)?->nombre : null,
             'domicilio' => $responsableLegal->domicilio_notificaciones,
+            'autorizada' => $responsableLegal->persona_autorizada_recoger,
+            'terna' => TernaNombre::where('escuela_id', $responsableLegal->escuela_id)->orderBy('numero_propuesta')->pluck('nombre_propuesto')->map(fn ($n) => (string) $n)->all(),
         ];
     }
 
@@ -170,11 +238,10 @@ class Paso2Responsable extends Component
     private function propuestaDistintaDe(array $anteriores): Closure
     {
         return function (string $atributo, mixed $valor, Closure $fallar) use ($anteriores): void {
-            $propuesta = mb_strtolower((string) $valor);
-
             foreach ($anteriores as $anterior) {
-                if ($propuesta !== '' && $propuesta === mb_strtolower($this->{$anterior})) {
-                    $fallar('Las tres propuestas de nombre deben ser distintas.');
+                // Misma comparación que el caso de uso (una sola regla); aquí solo da aviso al salir del campo.
+                if (RegistrarResponsableLegal::propuestaRepetida((string) $valor, (string) $this->{$anterior})) {
+                    $fallar(RegistrarResponsableLegal::TERNA_REPETIDA);
 
                     return;
                 }
@@ -225,11 +292,31 @@ class Paso2Responsable extends Component
             $this->toastDatosInvalidos();
 
             return;
+        } catch (PrecondicionIncumplida $e) {
+            // WS-7a: el trámite ya se envió; no se edita, se muestra el motivo sin redirigir.
+            $this->addError('domicilioNotificaciones', $e->getMessage());
+            $this->toast('No se guardó', $e->getMessage(), 'error');
+
+            return;
         }
 
-        // Mismo gate que mount() (EstadoPaso2: completitud Y vigencia) — aplicado
-        // aquí también, porque antes guardarResponsable() saltaba directo a
-        // 'niveles' sin pasar por Documentos (Paso 2.2) en la misma visita.
+        $responsable = ResponsableLegal::where('escuela_id', $this->escuela->id)->firstOrFail();
+        $this->responsableCapturado = $this->resumenResponsable($responsable);
+
+        // WS-7b-1: una edición no avanza el asistente; se queda en la página con su aviso.
+        if ($this->editando) {
+            $cambioDeTipo = $this->tipoPersonaGuardado !== $this->tipoPersona;
+            $this->tipoPersonaGuardado = $this->tipoPersona;
+            $this->avisoCambioTipo = $this->avisoCambioTipo || $cambioDeTipo;
+            $this->toast('Cambios guardados', $cambioDeTipo ? 'Revisa tus documentos.' : null);
+
+            return;
+        }
+
+        $this->editando = true;
+        $this->tipoPersonaGuardado = $this->tipoPersona;
+
+        // Primera captura: mismo gate que antes (EstadoPaso2: completitud Y vigencia).
         if ($estadoPaso2->etapaFaltante($this->escuela->id) !== null) {
             $this->toastAlRedirigir('Responsable legal guardado', 'Ahora sube los documentos.');
             $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $this->escuela->id]);
@@ -241,26 +328,94 @@ class Paso2Responsable extends Component
         $this->toast('Responsable legal guardado', 'Ahora elige los niveles.');
     }
 
-    public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados): void
+    public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados, ResumenEliminacionNivel $resumenEliminacion): void
     {
         $this->validate($this->reglasNiveles());
+        [$agregar, $quitar] = $this->cambiosDeNiveles();
 
+        if ($agregar === [] && $quitar === []) {
+            $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
+
+            return;
+        }
+
+        $conteos = $quitar === [] ? [] : $resumenEliminacion->ejecutar($this->escuela->id, $quitar);
+
+        // Spec U3: con datos capturados se confirma primero; sin datos, sin diálogo.
+        if (ResumenEliminacionNivel::conDatos($conteos)) {
+            $this->abrirConfirmacion($conteos);
+
+            return;
+        }
+
+        $this->aplicarNiveles($registrarNivelesSeleccionados, $resumenEliminacion, $agregar, $quitar, $conteos);
+    }
+
+    public function confirmarQuitarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados, ResumenEliminacionNivel $resumenEliminacion): void
+    {
+        [$agregar, $quitar] = $this->cambiosDeNiveles();
+
+        $this->aplicarNiveles($registrarNivelesSeleccionados, $resumenEliminacion, $agregar, $quitar, $this->porEliminar);
+    }
+
+    public function cancelarQuitarNiveles(): void
+    {
+        $this->porEliminar = [];
+    }
+
+    /** @return array{0: list<int>, 1: list<int>} agregar, quitar (nivel_educativo_id) */
+    private function cambiosDeNiveles(): array
+    {
+        $seleccion = array_map('intval', $this->nivelesSeleccionados);
+
+        return [
+            array_values(array_diff($seleccion, $this->nivelesGuardados)),
+            array_values(array_diff($this->nivelesGuardados, $seleccion)),
+        ];
+    }
+
+    /** @param array<int, array<string, int>> $conteos */
+    private function abrirConfirmacion(array $conteos): void
+    {
+        $this->porEliminar = $conteos;
+        $this->confirmaciones++;
+    }
+
+    /**
+     * @param  list<int>  $agregar
+     * @param  list<int>  $quitar
+     * @param  array<int, array<string, int>>  $confirmado
+     */
+    private function aplicarNiveles(RegistrarNivelesSeleccionados $registrar, ResumenEliminacionNivel $resumenEliminacion, array $agregar, array $quitar, array $confirmado): void
+    {
         try {
-            $registrarNivelesSeleccionados->ejecutar($this->escuela->id, $this->nivelesSeleccionados);
+            $registrar->ejecutar($this->escuela->id, agregar: $agregar, quitar: $quitar, confirmado: $confirmado);
         } catch (PrecondicionIncumplida $e) {
-            // mount() de /tramite/paso2 re-deriva la etapa faltante y manda al
-            // formulario de responsable o a Documentos según corresponda.
-            $this->redirectRoute($e->etapaFaltante === EstadoPaso2::DOCUMENTOS ? 'tramite.paso2-documentos' : 'tramite.paso2', ['escuela' => $this->escuela->id]);
+            if ($e->etapaFaltante === RegistrarNivelesSeleccionados::CONFIRMACION) {
+                // Los datos crecieron desde la confirmación: se vuelve a preguntar con conteos frescos.
+                $this->abrirConfirmacion($resumenEliminacion->ejecutar($this->escuela->id, $quitar));
+                $this->addError('nivelesSeleccionados', $e->getMessage());
+
+                return;
+            }
+
+            // Paso 2 pendiente (p. ej. agregar y quitar a la vez) o trámite enviado:
+            // no se aplica nada y se explica el motivo sin salir de la página.
+            $this->porEliminar = [];
+            $this->addError('nivelesSeleccionados', $e->getMessage());
+            $this->toast('No se guardó', $e->getMessage(), 'error');
 
             return;
         } catch (InvalidArgumentException $e) {
+            $this->porEliminar = [];
             $this->addError('nivelesSeleccionados', $e->getMessage());
             $this->toast('No se guardó', $e->getMessage(), 'error');
 
             return;
         }
 
-        $this->toastAlRedirigir('Niveles guardados', 'Ya puedes capturar los datos de cada nivel.');
+        $this->porEliminar = [];
+        $this->toastAlRedirigir('Niveles guardados', $quitar === [] ? 'Ya puedes capturar los datos de cada nivel.' : 'Se quitaron los niveles que desmarcaste.');
         $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 
@@ -269,6 +424,8 @@ class Paso2Responsable extends Component
         return view('livewire.tramite.paso2-responsable', [
             'nivelesDisponibles' => $this->fase === 'niveles' ? NivelEducativo::educacionBasica()->get() : collect(),
             'encabezado' => ResumenTramite::encabezado($this->fase === 'niveles' ? 'niveles' : 'responsable'),
+            'tieneNiveles' => $this->escuela->escuelaNiveles()->exists(),
+            'etiquetasEliminacion' => ResumenEliminacionNivel::ETIQUETAS,
         ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => $this->fase === 'niveles' ? 'niveles' : 'responsable']);
     }
 }

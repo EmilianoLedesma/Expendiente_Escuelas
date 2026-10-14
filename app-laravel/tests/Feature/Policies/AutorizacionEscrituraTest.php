@@ -55,6 +55,7 @@ class AutorizacionEscrituraTest extends TestCase
     {
         return [
             'paso2 responsable' => ['tramite.paso2', 'can:update,escuela'],
+            'datos del plantel' => ['tramite.plantel', 'can:update,escuela'],
             'paso2 documentos' => ['tramite.paso2-documentos', 'can:update,escuela'],
             'paso2.4 documentos por nivel' => ['tramite.paso2-nivel-documentos', 'can:update,escuelaNivel'],
             'paso3 inmueble' => ['tramite.paso3-inmueble', 'can:update,escuelaNivel'],

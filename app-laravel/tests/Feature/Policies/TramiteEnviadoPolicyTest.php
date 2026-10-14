@@ -96,6 +96,7 @@ class TramiteEnviadoPolicyTest extends TestCase
     {
         return [
             'paso2 responsable' => ['tramite.paso2', 'escuela'],
+            'datos del plantel' => ['tramite.plantel', 'escuela'],
             'paso2 documentos' => ['tramite.paso2-documentos', 'escuela'],
             'validacion final' => ['tramite.validacion', 'escuela'],
             'paso2.4 documentos por nivel' => ['tramite.paso2-nivel-documentos', 'escuelaNivel'],

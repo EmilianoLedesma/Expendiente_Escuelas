@@ -46,12 +46,13 @@ class ResumenTramite
     public const NIVEL_CON_MOBILIARIO = 'inicial';
 
     /**
-     * Secciones completadas cuya página se puede volver a abrir hoy. Responsable,
-     * Documentos, Niveles e Inmueble redirigen hacia adelante al estar completas;
-     * revisarlas llega con WS-7b (docs/decisions/PENDIENTE-edicion-hasta-envio.md). Tras el envío (WS-7a) ninguna se ofrece.
-     * Documentos del nivel no redirige: el Formato firmado se puede reemplazar.
+     * Secciones completadas cuya página se puede volver a abrir. Datos del plantel
+     * (teléfono y correo), Responsable legal y Niveles educativos se editan hasta el
+     * envío (WS-7b-1); Documentos e Inmueble siguen redirigiendo hacia adelante al estar
+     * completos (7b-2). Tras el envío (WS-7a) ninguna se ofrece. Documentos del nivel no
+     * redirige: el Formato firmado se puede reemplazar.
      */
-    private const REVISABLES = ['documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
+    private const REVISABLES = ['plantel', 'responsable', 'niveles', 'documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
 
     /** @var array<string, array{string, string}> */
     private const GENERALES = [
@@ -241,10 +242,16 @@ class ResumenTramite
     {
         $tipoPersona = $this->tipoPersonaDeEscuela->ejecutar($escuela->id);
         $rutaPaso2 = route('tramite.paso2', ['escuela' => $escuela->id]);
+        $rutaNiveles = route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'niveles']);
 
         return [
-            $this->seccion('plantel', 'completado', null, null),
-            $this->seccion('responsable', $tipoPersona !== null ? 'completado' : 'pendiente', $rutaPaso2, null),
+            $this->seccion('plantel', 'completado', route('tramite.plantel', ['escuela' => $escuela->id]), null),
+            $this->seccion(
+                'responsable',
+                $tipoPersona !== null ? 'completado' : 'pendiente',
+                $tipoPersona !== null ? route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'responsable']) : $rutaPaso2,
+                null,
+            ),
             $this->seccion(
                 'documentos',
                 $this->estadoDocumentos($escuela->id, $tipoPersona, $etapaFaltante),
@@ -252,8 +259,8 @@ class ResumenTramite
                 $tipoPersona === null ? self::completaPrimero('responsable') : null,
             ),
             $escuela->escuelaNiveles->isNotEmpty()
-                ? $this->seccion('niveles', 'completado', $rutaPaso2, null)
-                : $this->seccion('niveles', 'pendiente', $rutaPaso2, $etapaFaltante === null ? null : self::completaPrimero($etapaFaltante)),
+                ? $this->seccion('niveles', 'completado', $rutaNiveles, null)
+                : $this->seccion('niveles', 'pendiente', $rutaNiveles, $etapaFaltante === null ? null : self::completaPrimero($etapaFaltante)),
         ];
     }
 
