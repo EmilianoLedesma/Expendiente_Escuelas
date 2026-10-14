@@ -13,7 +13,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /** Presentación pura de "Responsables por nivel"; las reglas viven en Application/ResponsablesNivel (ADR-001, ADR-015). */
-#[Layout('layouts.tramite')]
+#[Layout('layouts.tramite', ['cuenta' => true])]
 class ResponsablesNivel extends Component
 {
     use NotificaToast;

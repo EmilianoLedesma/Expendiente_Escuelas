@@ -6,8 +6,7 @@
     if ($usuario->hasRole('sedeq')) {
         $opciones[] = ['Panel de administración', url('/admin'), false];
     } elseif ($usuario->solicitante !== null) {
-        $opciones[] = ['Responsables por nivel', route('tramite.responsables'), false];
-        $opciones[] = ['Mis trámites', route('tramite.index'), false];
+        $opciones[] = ['Responsables por nivel', route('tramite.responsables'), request()->routeIs('tramite.responsables')];
     } else {
         $opciones[] = ['Mis niveles', route('tramite.index'), false];
     }
