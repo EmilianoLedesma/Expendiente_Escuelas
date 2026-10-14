@@ -57,7 +57,8 @@ class Paso2ResponsableHttpRoundTripTest extends TestCase
         $response->assertSeeLivewire('tramite.paso2-responsable');
     }
 
-    public function test_escuela_atorada_con_responsable_sin_documentos_va_a_documentos_no_paso3(): void
+    /** WS-7b-1: con responsable, la página responde 200 con el formulario prellenado (antes redirigía a Documentos). */
+    public function test_escuela_atorada_con_responsable_sin_documentos_muestra_el_formulario(): void
     {
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->escuelaAtorada($solicitante);
@@ -65,7 +66,9 @@ class Paso2ResponsableHttpRoundTripTest extends TestCase
 
         $response = $this->actingAs($solicitante->user)->get(route('tramite.paso2', ['escuela' => $escuela->id]));
 
-        $response->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+        $response->assertOk();
+        $response->assertSeeLivewire('tramite.paso2-responsable');
+        $response->assertSee('Responsable legal');
     }
 
     /**

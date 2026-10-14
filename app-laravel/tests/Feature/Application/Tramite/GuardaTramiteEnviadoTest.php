@@ -7,6 +7,7 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
+use App\Application\EscuelaNiveles\ResumenEliminacionNivel;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
@@ -15,6 +16,7 @@ use App\Application\Inmueble\RegistrarDatosInmueble;
 use App\Application\Matricula\DTO\DatosMatricula;
 use App\Application\Matricula\RegistrarMatricula;
 use App\Application\Mobiliario\RegistrarMobiliarioNivel;
+use App\Application\Preregistro\ActualizarContactoPlantel;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EliminarTramite;
@@ -66,7 +68,14 @@ class GuardaTramiteEnviadoTest extends TestCase
         return [
             'MarcarPasoCompletado (cubre los seis Paso 3)' => [fn (Escuela $e, EscuelaNivel $n) => app(MarcarPasoCompletado::class)->ejecutar($n->id, 'plan_estudios')],
             'RegistrarResponsableLegal' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarResponsableLegal::class)->ejecutar($e->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'))],
-            'RegistrarNivelesSeleccionados' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarNivelesSeleccionados::class)->ejecutar($e->id, [(int) NivelEducativo::where('clave', 'secundaria')->value('id')])],
+            'ActualizarContactoPlantel' => [fn (Escuela $e, EscuelaNivel $n) => app(ActualizarContactoPlantel::class)->ejecutar($e->id, (int) $e->solicitante_id, '4421234567', null)],
+            'RegistrarNivelesSeleccionados agregar' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarNivelesSeleccionados::class)->ejecutar($e->id, agregar: [(int) NivelEducativo::where('clave', 'secundaria')->value('id')])],
+            'RegistrarNivelesSeleccionados quitar' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarNivelesSeleccionados::class)->ejecutar(
+                $e->id,
+                agregar: [(int) NivelEducativo::where('clave', 'secundaria')->value('id')],
+                quitar: [(int) $n->nivel_educativo_id],
+                confirmado: app(ResumenEliminacionNivel::class)->ejecutar($e->id, [(int) $n->nivel_educativo_id]),
+            )],
             'RegistrarDocumento ámbito escuela' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'acta_nacimiento', $pdf('acta.pdf'), new DatosDocumento)],
             'RegistrarDocumento ámbito nivel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'formato_solicitud', $pdf('formato.pdf'), new DatosDocumento, $n->id)],
             'RegistrarDocumento ámbito plantel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'plano_inmueble', $pdf('plano.pdf'), new DatosDocumento)],

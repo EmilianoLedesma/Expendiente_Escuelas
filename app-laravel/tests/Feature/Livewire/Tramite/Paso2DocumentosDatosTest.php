@@ -156,17 +156,21 @@ class Paso2DocumentosDatosTest extends TestCase
             ->assertRedirect(route('tramite.validacion', ['escuela' => $escuela->id]));
     }
 
-    public function test_sin_corregir_un_paso_completo_sigue_redirigiendo(): void
+    /** WS-7b-1: un paso completo se abre para revisar; un `corregir` desconocido no abre ningún reemplazo. */
+    public function test_sin_corregir_un_paso_completo_se_abre_sin_reemplazos(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
         $this->completarTramite($escuela);
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('reemplazando', []);
 
         Livewire::withQueryParams(['corregir' => 'no_existe'])
             ->test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('corregir', null)
+            ->assertSet('reemplazando', []);
     }
 }

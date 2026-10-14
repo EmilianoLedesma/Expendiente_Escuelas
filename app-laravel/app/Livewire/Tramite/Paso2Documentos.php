@@ -113,17 +113,13 @@ class Paso2Documentos extends Component
             return;
         }
 
-        // Los documentos aplicables existen: o una vigencia venció (se vuelve a pedir
-        // ese documento) o el paso ya terminó y esto es back-navigation.
+        // Los documentos aplicables existen: si una vigencia venció se vuelve a pedir ese
+        // documento; si no, la checklist se abre para revisar o reemplazar (WS-7b-1: hub, aviso D2).
         $violaciones = $validarVigencia->ejecutar($escuela->id);
 
-        if ($violaciones === []) {
-            $this->redirectRoute('tramite.paso2', ['escuela' => $escuela->id]);
-
-            return;
+        if ($violaciones !== []) {
+            $this->addError('vigencia', implode(' ', $violaciones));
         }
-
-        $this->addError('vigencia', implode(' ', $violaciones));
     }
 
     public function guardarDocumentoSimple(string $clave, RegistrarDocumento $registrarDocumento, DocumentosCompletos $documentosCompletos): void
@@ -385,6 +381,14 @@ class Paso2Documentos extends Component
         if ($violaciones !== []) {
             $this->addError('vigencia', implode(' ', $violaciones));
             $this->toast('Documento guardado', 'Hay documentos vencidos: revisa el aviso.', 'info');
+
+            return;
+        }
+
+        // Con niveles ya elegidos, /tramite/paso2 abriría el formulario del responsable: se vuelve al resumen.
+        if ($this->escuela->escuelaNiveles()->exists()) {
+            $this->toastAlRedirigir('Documentos completos', 'Continúa desde el resumen de tu trámite.');
+            $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
 
             return;
         }

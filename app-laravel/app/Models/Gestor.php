@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property string $nombre
+ * @property string|null $numero_poder
+ * @property string|null $notario_nombre
+ * @property string|null $notario_numero
+ * @property string|null $fecha_poder
  * @property string|null $curp
  */
 class Gestor extends Model

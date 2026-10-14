@@ -8,6 +8,7 @@ use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
+use App\Livewire\Tramite\DatosPlantel;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso24DocumentosNivel;
 use App\Livewire\Tramite\Paso2Documentos;
@@ -45,6 +46,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:delete,escuela')
         ->missing(fn () => redirect()->route('tramite.index')->with('toast', ['tipo' => 'info', 'titulo' => 'El trámite ya no existe']))
         ->name('tramite.eliminar');
+
+    // WS-7b-1 U1: teléfono y correo del plantel, editables hasta el envío (el domicilio no).
+    Route::get('/tramite/{escuela}/plantel', DatosPlantel::class)
+        ->whereNumber('escuela')
+        ->middleware('can:update,escuela')
+        ->name('tramite.plantel');
 
     Route::get('/tramite/paso2/{escuela}', Paso2Responsable::class)
         ->middleware('can:update,escuela')

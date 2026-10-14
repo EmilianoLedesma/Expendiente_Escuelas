@@ -150,7 +150,7 @@ class ConstruirContextoValidacion
             tipoPersona: $tipoPersona,
             hechos: [
                 ...$this->declarados($responsable, $plantel),
-                ...$this->deDocumentosDeEscuela($escuelaId),
+                ...$this->deDocumentosDeEscuela($escuelaId, $requeridas),
                 ...$this->deCertificadoNumeroOficial($plantel->id),
             ],
             clavesRequeridas: $requeridas,
@@ -205,12 +205,19 @@ class ConstruirContextoValidacion
         return $hechos;
     }
 
-    /** @return list<Hecho> */
-    private function deDocumentosDeEscuela(int $escuelaId): array
+    /**
+     * Solo documentos que aplican hoy al tipo de persona: uno guardado de un tipo anterior
+     * queda oculto (WS-7b-1 U4) y sus datos no se comparan.
+     *
+     * @param  list<string>  $aplicables
+     * @return list<Hecho>
+     */
+    private function deDocumentosDeEscuela(int $escuelaId, array $aplicables): array
     {
         $documentos = DocumentoEscuela::query()
             ->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_escuela.tipo_documento_id')
             ->where('documentos_escuela.escuela_id', $escuelaId)
+            ->whereIn('tipos_documentos.clave', $aplicables)
             ->pluck('tipos_documentos.clave', 'documentos_escuela.id');
 
         $hechos = [];

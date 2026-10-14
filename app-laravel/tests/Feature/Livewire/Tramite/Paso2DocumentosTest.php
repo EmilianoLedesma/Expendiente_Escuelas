@@ -14,8 +14,11 @@ use App\Livewire\Tramite\Paso2Documentos;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
+use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -495,18 +498,49 @@ class Paso2DocumentosTest extends TestCase
             ->assertHasErrors('vigencia');
     }
 
-    public function test_reentrar_con_todo_completo_y_vigente_redirige_a_paso2(): void
+    /** WS-7b-1: con todo completo y vigente la checklist se abre para revisar o reemplazar (hub, aviso D2). */
+    public function test_reentrar_con_todo_completo_y_vigente_muestra_la_checklist_para_revisar(): void
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
         $registrar = new RegistrarDocumento;
-        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
+        $aplicables = app(DocumentosCompletos::class)->clavesAplicables('fisica');
+        foreach ($aplicables as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
+        $total = count($aplicables);
+
+        $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))
+            ->assertOk()
+            ->assertSee("{$total} de {$total} documentos completos")
+            ->assertSee('Reemplazar');
+    }
+
+    /** WS-7b-1: con niveles ya elegidos, completar los documentos vuelve al resumen, no al formulario del responsable. */
+    public function test_completar_los_documentos_con_niveles_ya_elegidos_vuelve_al_resumen(): void
+    {
+        Storage::fake('documentos');
+        (new CatalogoMinimoSeeder)->run();
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['plano_inmueble']) as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+        EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+            ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
+            ->call('guardarDocumentoSimple', 'plano_inmueble')
+            ->assertSessionHas('toast.titulo', 'Documentos completos')
+            ->assertSessionHas('toast.descripcion', 'Continúa desde el resumen de tu trámite.')
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
     }
 
     public function test_bloquea_el_avance_final_si_dictamen_esta_vencido(): void

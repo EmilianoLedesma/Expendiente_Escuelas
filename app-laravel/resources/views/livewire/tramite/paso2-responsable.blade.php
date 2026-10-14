@@ -4,6 +4,17 @@
             <x-slot:intro>Persona física o moral que solicita la incorporación, su domicilio para notificaciones y la terna de nombres propuestos para la escuela.</x-slot:intro>
         </x-ui.page-header>
 
+        @if ($avisoCambioTipo)
+            <x-ui.alert tipo="warning" titulo="Cambiaste el tipo de persona" class="mt-md">
+                Revisa tus documentos: algunos dejaron de aplicar y tu identificación debe corresponder a la nueva persona.
+                <a href="{{ route('tramite.paso2-documentos', ['escuela' => $escuela->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline">Ir a Documentos</a>
+            </x-ui.alert>
+        @endif
+
+        @if ($editando && $tieneNiveles)
+            <x-ui.alert tipo="warning" class="mt-md">El Formato de Solicitud firmado de cada nivel depende de los datos del responsable legal que se imprimen en el Formato (los datos de la persona, el domicilio para notificaciones y la persona autorizada). Si cambias alguno, se descartará el Formato de Solicitud firmado y tendrás que descargarlo, firmarlo y subirlo de nuevo.</x-ui.alert>
+        @endif
+
         <form novalidate wire:submit="guardarResponsable">
             <x-ui.error-summary />
 
@@ -13,6 +24,10 @@
                 wire:model.live="tipoPersona"
                 :opciones="['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral']"
             />
+
+            @if ($editando)
+                <p class="mt-xs text-body-sm text-muted">Si cambias el tipo de persona, se borrarán los datos capturados de la persona o del gestor anterior; tus documentos se conservan.</p>
+            @endif
 
             @if ($tipoPersona !== 'moral')
                 <x-ui.section title="Datos personales">
@@ -115,12 +130,20 @@
 
         @if ($responsableCapturado !== [])
             <x-ui.section title="Responsable legal (ya registrado)">
-                <p class="text-body-sm text-muted">Estos datos ya se capturaron. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
-                <x-ui.summary-list :filas="[
-                    'Tipo' => ['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral'][$responsableCapturado['tipo']] ?? $responsableCapturado['tipo'],
-                    'Nombre' => $responsableCapturado['nombre'],
-                    'Domicilio para notificaciones' => $responsableCapturado['domicilio'],
-                ]" />
+                @php
+                    $filasResponsable = [
+                        'Tipo' => ['fisica' => 'Persona física', 'fisica_con_gestor' => 'Persona física con gestor', 'moral' => 'Persona moral'][$responsableCapturado['tipo']] ?? $responsableCapturado['tipo'],
+                        'Nombre' => $responsableCapturado['nombre'],
+                    ];
+                    if ($responsableCapturado['tipo'] === 'fisica_con_gestor') {
+                        $filasResponsable['Gestor'] = $responsableCapturado['gestor'];
+                    }
+                    $filasResponsable['Domicilio para notificaciones'] = $responsableCapturado['domicilio'];
+                    $filasResponsable['Persona autorizada para recoger notificaciones'] = $responsableCapturado['autorizada'];
+                    $filasResponsable['Terna de nombres'] = implode(' · ', $responsableCapturado['terna']);
+                @endphp
+                <x-ui.summary-list :filas="$filasResponsable" />
+                <a href="{{ route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'responsable']) }}" class="mt-sm inline-flex min-h-11 items-center text-body-sm font-semibold text-primary underline">Editar responsable legal</a>
             </x-ui.section>
         @endif
 
@@ -145,6 +168,35 @@
                     @endforeach
                 </div>
             </fieldset>
+
+            {{-- WS-7b-1 U3: confirmación al quitar niveles con datos. Alpine lo abre al insertarse; la clave cambia con cada apertura. --}}
+            @if ($porEliminar !== [])
+                <dialog id="quitar-niveles" wire:key="quitar-niveles-{{ $confirmaciones }}" x-init="$el.showModal()" aria-labelledby="quitar-niveles-titulo" class="modal rounded-lg border border-error-ink bg-canvas p-lg text-left text-body-md text-ink">
+                    <h2 id="quitar-niveles-titulo" class="text-title-md font-semibold text-error-ink">¿Quitar niveles con datos capturados?</h2>
+                    <p class="mt-sm">Se eliminará de forma definitiva lo siguiente. Esta acción no se puede deshacer.</p>
+                    @error('nivelesSeleccionados')
+                        <p class="mt-xs text-body-sm font-semibold text-error-ink">{{ $message }}</p>
+                    @enderror
+                    @foreach ($porEliminar as $nivelId => $conteos)
+                        <h3 class="mt-md text-body-md font-semibold text-ink">{{ $nivelesDisponibles->firstWhere('id', $nivelId)?->nombre }}</h3>
+                        <ul class="mt-xxs list-disc space-y-xxs pl-lg text-body-sm text-ink">
+                            @foreach ($conteos as $concepto => $cantidad)
+                                @if ($cantidad > 0)
+                                    <li>{{ $etiquetasEliminacion[$concepto] ?? $concepto }}: {{ $cantidad }}</li>
+                                @endif
+                            @endforeach
+                        </ul>
+                    @endforeach
+                    <div class="mt-lg flex flex-wrap justify-end gap-sm">
+                        <button type="button" wire:click="cancelarQuitarNiveles" class="inline-flex min-h-11 items-center justify-center rounded-md border border-control bg-canvas px-lg text-body-md font-semibold text-ink transition duration-150 hover:border-ink hover:bg-surface-card active:bg-surface-soft">
+                            Cancelar
+                        </button>
+                        <button type="button" wire:click="confirmarQuitarNiveles" wire:loading.attr="disabled" class="inline-flex min-h-11 items-center justify-center rounded-md bg-error-ink px-lg text-body-md font-semibold text-on-primary transition duration-150 hover:brightness-90 hover:shadow-md active:brightness-75 disabled:cursor-wait disabled:opacity-70">
+                            Sí, quitar y eliminar sus datos
+                        </button>
+                    </div>
+                </dialog>
+            @endif
 
             <x-ui.action-bar accion="guardarNiveles" :back-href="route('tramite.resumen', ['escuela' => $escuela->id])" />
         </form>
