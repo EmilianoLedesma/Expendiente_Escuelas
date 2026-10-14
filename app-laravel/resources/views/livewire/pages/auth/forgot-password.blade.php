@@ -14,7 +14,7 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Send a password reset link to the provided email address.
      */
-    public function sendPasswordResetLink(): void
+    public function sendPasswordResetLink(): bool
     {
         $this->validate([
             'email' => ['required', 'string', 'email'],
@@ -30,12 +30,15 @@ new #[Layout('layouts.guest')] class extends Component
         if ($status != Password::RESET_LINK_SENT) {
             $this->addError('email', __($status));
 
-            return;
+            return false;
         }
 
         $this->reset('email');
 
         $this->dispatch('toast', tipo: 'success', titulo: 'Enlace enviado', descripcion: __($status));
+
+        // true = el enlace quedó en cola (no confirma que el correo llegó).
+        return true;
     }
 }; ?>
 
@@ -44,11 +47,11 @@ new #[Layout('layouts.guest')] class extends Component
         <x-slot:intro>Indica tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</x-slot:intro>
     </x-ui.page-header>
 
-    <form novalidate wire:submit="sendPasswordResetLink" class="space-y-md">
+    <form novalidate class="space-y-md">
         <x-ui.error-summary />
         <x-ui.field id="email" label="Correo electrónico"><x-ui.input type="email" wire:model.blur="email" autofocus autocomplete="username" /></x-ui.field>
         <div class="flex justify-end border-t border-hairline pt-lg">
-            <x-ui.button-primary type="submit" wire:loading.attr="disabled" wire:target="sendPasswordResetLink">Enviar enlace</x-ui.button-primary>
+            <x-ui.stateful-button type="submit" action="sendPasswordResetLink" label="Enviar enlace" success-label="Solicitud de envío realizada" error-label="No se pudo enviar. Reintentar" :reset-after="4000" />
         </div>
     </form>
 </div>

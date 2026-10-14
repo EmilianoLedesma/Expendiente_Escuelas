@@ -8,7 +8,7 @@
         @if ($asignables === [])
             <p class="text-body-md text-muted">No tienes niveles en captura para asignar. Selecciona los niveles de tu trámite en el Paso 2 y vuelve aquí.</p>
         @else
-            <form novalidate wire:submit="invitar">
+            <form novalidate>
                 <x-ui.error-summary />
                 <div class="grid grid-cols-1 gap-md sm:grid-cols-2 sm:items-end">
                     <x-ui.field id="escuelaNivelId" label="Nivel" class="sm:col-span-2">
@@ -26,7 +26,7 @@
                         <x-ui.input type="email" maxlength="255" wire:model.blur="correo" autocomplete="off" />
                     </x-ui.field>
                 </div>
-                <x-ui.button-primary type="submit" class="mt-md">Enviar invitación</x-ui.button-primary>
+                <x-ui.stateful-button type="submit" action="invitar" label="Enviar invitación" success-label="Invitación enviada" error-label="No se pudo enviar. Reintentar" :reset-after="4000" class="mt-md" />
             </form>
         @endif
     </x-ui.section>
