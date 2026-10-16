@@ -7,7 +7,8 @@
          contando: false,
          temporizador: null,
          init() {
-             requestAnimationFrame(() => this.contando = true);
+             {{-- Dos cuadros: con uno solo el navegador a veces aún no pintó el estado inicial y la transición no arranca. --}}
+             requestAnimationFrame(() => requestAnimationFrame(() => this.contando = true));
              this.temporizador = setTimeout(() => { {{ $expira }}; }, {{ (int) $duracion }});
          },
          deshacerAccion() {
