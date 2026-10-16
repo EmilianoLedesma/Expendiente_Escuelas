@@ -65,7 +65,7 @@ class AutorizacionEscrituraTest extends TestCase
             'paso3 plantilla docente' => ['tramite.paso3-plantilla', 'can:update,escuelaNivel'],
             'paso3 matricula' => ['tramite.paso3-matricula', 'can:update,escuelaNivel'],
             'validacion final' => ['tramite.validacion', 'can:update,escuela'],
-            'reporte de validacion (solo lectura)' => ['tramite.validacion.reporte', 'can:view,escuela'],
+            'reporte de validacion (solo dueño)' => ['tramite.validacion.reporte', 'can:verReporte,escuela'],
             'paso3 proximos pasos (solo lectura)' => ['tramite.paso3-proximos-pasos', 'can:view,escuelaNivel'],
             'descarga documento (solo lectura)' => ['tramite.paso2-documentos.descargar', 'can:view,escuela'],
             'formato solicitud pdf por nivel (solo lectura)' => ['tramite.paso2-nivel-documentos.formato-solicitud', 'can:view,escuelaNivel'],

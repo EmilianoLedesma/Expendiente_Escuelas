@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Revision\RutaInicio;
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
 use App\Http\Controllers\Tramite\DescargarDocumentoNivelController;
 use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
@@ -8,6 +9,10 @@ use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
+use App\Livewire\Sedeq\ColaRevisor;
+use App\Livewire\Sedeq\Revisores;
+use App\Livewire\Sedeq\TableroSupervisor;
+use App\Livewire\Sedeq\TramiteLectura;
 use App\Livewire\Tramite\DatosPlantel;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso24DocumentosNivel;
@@ -28,6 +33,18 @@ Route::view('/', 'welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', Perfil::class)->name('profile');
+
+    Route::get('/sedeq', TableroSupervisor::class)->middleware('rol:supervisor')->name('sedeq.tablero');
+
+    Route::get('/sedeq/cola', ColaRevisor::class)->middleware('rol:revisor')->name('sedeq.cola');
+
+    Route::get('/sedeq/revisores', Revisores::class)->middleware('rol:supervisor')->name('sedeq.revisores');
+
+    // Solo lectura: `view` admite a SEDEQ (AccesoSedeq) y ConsultarTramiteSedeq lo revalida.
+    Route::get('/sedeq/tramite/{escuela}', TramiteLectura::class)
+        ->whereNumber('escuela')
+        ->middleware(['rol:supervisor|revisor', 'can:view,escuela'])
+        ->name('sedeq.tramite');
 
     Route::get('/tramite', MisTramitesController::class)->name('tramite.index');
 
@@ -88,7 +105,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/tramite/{escuela}/validacion/{evaluacion}/reporte.pdf', DescargarReporteValidacionController::class)
         ->whereNumber(['escuela', 'evaluacion'])
-        ->middleware('can:view,escuela')
+        ->middleware('can:verReporte,escuela')
         ->name('tramite.validacion.reporte');
 
     Route::get('/tramite/paso3/{escuelaNivel}', DatosInmueble::class)
@@ -122,7 +139,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Breeze views still link to 'dashboard'; it only routes by role (WS-1.7).
-Route::get('dashboard', fn () => redirect(auth()->user()->hasRole('sedeq') ? '/admin' : route('tramite.index')))
+Route::get('dashboard', fn () => redirect(RutaInicio::para(auth()->user())))
     ->middleware('auth')
     ->name('dashboard');
 

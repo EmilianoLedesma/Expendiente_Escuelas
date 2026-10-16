@@ -3,15 +3,18 @@
 namespace Tests\Feature\Application\Tramite;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Revision\RolesSedeq;
 use App\Application\Tramite\EliminarCuenta;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\Plantel;
 use App\Models\ResponsableNivel;
+use App\Models\Revisor;
 use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\TestCase;
@@ -124,16 +127,36 @@ class EliminarCuentaTest extends TestCase
         $this->assertNull(User::find($delegado->id));
     }
 
-    public function test_no_borra_cuentas_de_sedeq(): void
+    /** @return array<string, array{string}> */
+    public static function rolesSedeq(): array
+    {
+        return array_combine(RolesSedeq::TODOS, array_map(fn ($r) => [$r], RolesSedeq::TODOS));
+    }
+
+    #[DataProvider('rolesSedeq')]
+    public function test_no_borra_cuentas_de_sedeq(string $rol): void
     {
         $admin = User::factory()->create();
-        $admin->assignRole(Role::findOrCreate('sedeq'));
+        $admin->assignRole(Role::findOrCreate($rol));
 
         try {
             app(EliminarCuenta::class)->ejecutar($admin->id);
             $this->fail('Debió rechazar la eliminación.');
         } catch (PrecondicionIncumplida) {
             $this->assertNotNull(User::find($admin->id));
+        }
+    }
+
+    public function test_no_borra_a_un_revisor_revocado(): void
+    {
+        $usuario = User::factory()->create();
+        Revisor::create(['user_id' => $usuario->id, 'revocado_at' => now()]);
+
+        try {
+            app(EliminarCuenta::class)->ejecutar($usuario->id);
+            $this->fail('Debió rechazar la eliminación.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertNotNull(User::find($usuario->id));
         }
     }
 }

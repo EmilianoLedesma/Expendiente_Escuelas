@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Revision\RutaInicio;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -29,7 +30,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         session(['auth.password_confirmed_at' => time()]);
 
-        $this->redirectIntended(default: route('tramite.index', absolute: false), navigate: true);
+        $this->redirectIntended(default: RutaInicio::para(Auth::user()), navigate: true);
     }
 }; ?>
 

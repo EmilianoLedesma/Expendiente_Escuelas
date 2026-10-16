@@ -13,8 +13,8 @@ class ResumenTramiteController
     {
         return view('tramite.resumen', [
             'resumen' => $resumenTramite->paraEscuela($escuela->id, $request->user()->id),
-            // El reporte enviado se descarga por `view` (hoy solo el dueño): a un responsable no se le muestra un enlace que daría 403.
-            'puedeDescargarReporte' => $request->user()->can('view', $escuela),
+            // El reporte enviado se descarga por `verReporte` (solo el dueño): a un responsable no se le muestra un enlace que daría 403.
+            'puedeDescargarReporte' => $request->user()->can('verReporte', $escuela),
         ]);
     }
 }

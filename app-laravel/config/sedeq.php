@@ -36,5 +36,8 @@ return [
         'atencion' => 'Preguntas dudas, comentarios sobre el contenido del portal.',
     ],
 
+    // Tope de trámites en revisión por revisor; el valor no es definitivo.
+    'revision' => ['limite_por_revisor' => 5],
+
     'aviso_privacidad' => 'https://queretaro.gob.mx/web/aviso-de-privacidad',
 ];

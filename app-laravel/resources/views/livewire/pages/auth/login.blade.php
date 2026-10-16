@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Revision\RutaInicio;
 use App\Livewire\Forms\LoginForm;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -21,11 +22,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        $default = Auth::user()->hasRole('sedeq')
-            ? '/admin'
-            : route('tramite.index', absolute: false);
-
-        $this->redirectIntended(default: $default, navigate: true);
+        $this->redirectIntended(default: RutaInicio::para(Auth::user()), navigate: true);
     }
 }; ?>
 

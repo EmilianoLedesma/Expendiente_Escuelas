@@ -7,6 +7,7 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "pdfjs-dist": "6.3.289",
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/vite": "^4.0.0",
         "autoprefixer": "^10.4.2",

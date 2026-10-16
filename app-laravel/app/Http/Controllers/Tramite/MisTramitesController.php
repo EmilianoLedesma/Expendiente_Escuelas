@@ -3,15 +3,22 @@
 namespace App\Http\Controllers\Tramite;
 
 use App\Application\ResponsablesNivel\ListarNivelesDelResponsable;
+use App\Application\Revision\RolesSedeq;
+use App\Application\Revision\RutaInicio;
 use App\Application\Tramite\ListarTramitesDelSolicitante;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class MisTramitesController
 {
-    public function __invoke(Request $request, ListarTramitesDelSolicitante $listar, ListarNivelesDelResponsable $listarNiveles): View
+    public function __invoke(Request $request, ListarTramitesDelSolicitante $listar, ListarNivelesDelResponsable $listarNiveles): View|RedirectResponse
     {
         $usuario = $request->user();
+
+        if (RolesSedeq::esSedeqOperativo($usuario)) {
+            return redirect(RutaInicio::para($usuario));
+        }
         $solicitante = $usuario->solicitante;
 
         if ($solicitante === null && ($niveles = $listarNiveles->ejecutar($usuario->id)) !== []) {

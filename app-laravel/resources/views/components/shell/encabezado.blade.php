@@ -33,8 +33,11 @@
                     <img src="{{ asset('img/layout_set_logo.png') }}" alt="SEDEQ - Secretaría de Educación del Estado de Querétaro"
                          width="2359" height="444" class="h-10 w-auto sm:h-[60px]">
                 </a>
+                @php
+                    $rolSedeq = auth()->user()?->hasRole('supervisor') ? 'Supervisor' : (auth()->user()?->hasRole('revisor') ? 'Revisor' : null);
+                @endphp
                 <p class="border-hairline text-title-md font-semibold leading-tight text-ink sm:border-l sm:pl-md">
-                    Trámite de Incorporación de Escuelas Particulares
+                    {{ $rolSedeq ? 'Revisión de incorporación' : 'Trámite de Incorporación de Escuelas Particulares' }}
                 </p>
             </div>
 
@@ -48,9 +51,16 @@
                     $inactiva = 'border-transparent hover:border-hairline';
                 @endphp
                 <nav aria-label="Cuenta" class="flex flex-wrap items-center gap-xs lg:shrink-0 text-body-sm font-semibold uppercase tracking-wide">
-                    <a href="{{ route('tramite.index') }}" @if ($enMisTramites) aria-current="page" @endif
-                       class="{{ $pestana.($enMisTramites ? $activa : $inactiva) }}">
-                        Mis trámites
+                    @php
+                        [$inicio, $inicioUrl, $enInicio] = match ($rolSedeq) {
+                            'Supervisor' => ['Tablero', route('sedeq.tablero'), request()->routeIs('sedeq.tablero', 'sedeq.tramite')],
+                            'Revisor' => ['Mis Revisiones', route('sedeq.cola'), request()->routeIs('sedeq.*')],
+                            default => ['Mis trámites', route('tramite.index'), $enMisTramites],
+                        };
+                    @endphp
+                    <a href="{{ $inicioUrl }}" @if ($enInicio) aria-current="page" @endif
+                       class="{{ $pestana.($enInicio ? $activa : $inactiva) }}">
+                        {{ $inicio }}
                     </a>
                     <span class="h-6 w-px bg-hairline" aria-hidden="true"></span>
                     {{-- Alpine llega con Livewire donde lo hay (perfil); sin él, el nombre queda como texto estático. --}}

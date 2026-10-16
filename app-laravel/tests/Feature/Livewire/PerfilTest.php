@@ -2,15 +2,18 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Application\Revision\RolesSedeq;
 use App\Livewire\Cuenta\Perfil;
 use App\Models\Escuela;
 use App\Models\ResponsableNivel;
+use App\Models\Revisor;
 use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\TestCase;
@@ -71,6 +74,41 @@ class PerfilTest extends TestCase
             ->assertOk()
             ->assertSee('Panel de administración')
             ->assertDontSee('Eliminar cuenta');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function rolesSedeq(): array
+    {
+        return array_combine(RolesSedeq::TODOS, array_map(fn ($r) => [$r], RolesSedeq::TODOS));
+    }
+
+    #[DataProvider('rolesSedeq')]
+    public function test_los_roles_de_sedeq_no_pueden_eliminar_su_cuenta(string $rol): void
+    {
+        $usuario = User::factory()->create();
+        $usuario->assignRole(Role::findOrCreate($rol));
+
+        $this->actingAs($usuario);
+        Livewire::test(Perfil::class)
+            ->assertDontSee('Eliminar cuenta')
+            ->call('eliminarCuenta')
+            ->assertHasErrors('cuenta');
+
+        $this->assertNotNull(User::find($usuario->id));
+    }
+
+    public function test_un_revisor_revocado_no_puede_eliminar_su_cuenta(): void
+    {
+        $usuario = User::factory()->create();
+        Revisor::create(['user_id' => $usuario->id, 'revocado_at' => now()]);
+
+        $this->actingAs($usuario);
+        Livewire::test(Perfil::class)
+            ->assertDontSee('Eliminar cuenta')
+            ->call('eliminarCuenta')
+            ->assertHasErrors('cuenta');
+
+        $this->assertNotNull(User::find($usuario->id));
     }
 
     public function test_eliminar_cuenta_exige_mantener_presionado_y_no_se_envia_con_enter(): void
