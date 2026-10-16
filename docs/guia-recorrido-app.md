@@ -25,7 +25,8 @@ npm run build          # o `npm run dev`; sin esto los estilos nuevos no aparece
 ### Cuentas y roles
 - **Solicitante:** cualquier cuenta registrada en `/register`. Al registrarse se crea su registro de solicitante automáticamente.
 - **SEDEQ:** una cuenta con el rol `sedeq` entra a `/admin`. Desde la limpieza de la base de desarrollo (2026-09-25) **no existe ninguna**: registra una cuenta y asígnale el rol `sedeq` (o vuelve a correr la parte de `test@example.com` de `DatabaseSeeder`).
-- **`/dashboard`:** ya no es una página; redirige según el rol (SEDEQ → `/admin`, solicitante → **Mis trámites** `/tramite`). Al iniciar sesión, registrarte o verificar el correo también llegas a Mis trámites.
+- **Supervisor y revisor (HUD de SEDEQ, rama `hud-sedeq-1`):** dos roles nuevos, distintos de `sedeq`. El primer supervisor se crea con `php artisan sedeq:crear-supervisor` (no por registro) y recibe un correo para fijar su contraseña; el supervisor invita después a los revisores por correo desde la página Revisores. Ver sección 3.
+- **`/dashboard`:** ya no es una página; redirige según el rol (SEDEQ → `/admin`, solicitante → **Mis trámites** `/tramite`, supervisor → `/sedeq`, revisor → `/sedeq/cola`). Al iniciar sesión, registrarte o verificar el correo llegas a la misma pantalla de inicio de tu rol. Supervisor y revisor que abren `/tramite` son redirigidos a su HUD.
 
 ---
 
@@ -109,6 +110,40 @@ La antigua pantalla "Próximos pasos" ya no existe: su URL redirige al **Resumen
 
 ---
 
+## 3. Recorrido de SEDEQ: supervisor y revisor
+
+Proyecto 1 del HUD (roles y asignación). **Solo reparte el trabajo y deja leer los trámites**; la revisión en sí (hallazgos, aceptar / rechazar / devolver) llega en proyectos posteriores. No se ha visto en un navegador; lo descrito sale del código y de las pruebas automáticas.
+
+### Crear al primer supervisor
+Desde `app-laravel/`: `php artisan sedeq:crear-supervisor correo@sedeq.gob.mx "Nombre"` (el correo y el nombre son obligatorios; no pregunta nada) (crea la cuenta, le asigna el rol y le envía un correo para fijar su contraseña). Si el correo ya existe, el comando termina con error y no cambia nada. Si falla el envío del correo, la cuenta queda con una contraseña aleatoria y repetir el comando se rechaza.
+
+### Encabezado y menú de los roles SEDEQ
+- El encabezado de supervisor y revisor se llama **"Revisión de incorporación"** (sin etiqueta de rol); el solicitante conserva "Trámite de Incorporación de Escuelas Particulares". El enlace de inicio es "Tablero" (supervisor) o "Mis Revisiones" (revisor); ninguno ve "Mis trámites".
+- **No hay barra lateral** en `/sedeq`, `/sedeq/cola` ni `/sedeq/tramite/{escuela}`: son páginas a todo el ancho. La barra lateral solo aparece en las páginas de cuenta: supervisor = **Mi perfil** y **Revisores**; revisor = **Mi perfil** y **Mis Revisiones**.
+
+### Tablero del supervisor (`/sedeq`)
+- Arriba, un resumen de carga por revisor ("Ana 1/5", en rojo con " · llena" al tope) para saber quién tiene lugar. Ya no hay barras, formulario de invitación ni "Revocar" aquí.
+- Debajo, la tabla de trámites en revisión (casilla, N.º, plantel con su nivel, prioridad Alta / Media / Baja, días de espera, revisor o "Sin asignar"). Cambias la prioridad con el selector de cada fila. Marca filas, elige un revisor en "Asignar a…" y pulsa "Asignar seleccionados". Si no hay trámites: "No hay trámites en revisión."
+- **Tope por revisor:** 5 (un valor de configuración). Si asignas uno más aparecen dos avisos: un **aviso emergente** ("<nombre> llegó a su límite de 5 trámites") y una **ventana modal** "Tope de trámites alcanzado" con "Cancelar" (foco inicial; Escape también cancela) y "Asignar de todos modos". Al confirmar, el sistema devuelve a "Sin asignar" uno de los trámites de ese revisor (el de menos avance, luego de menor prioridad, luego el asignado más recientemente), conserva su avance de revisión y lo registra. Una selección mayor que el tope no se puede confirmar (error en línea, sin ventana).
+- Un clic en cualquier parte de una fila marca o desmarca su casilla (el selector de prioridad, el enlace del plantel y la propia casilla funcionan normal, sin alternar la fila); la fila resalta al pasar el cursor y, si está marcada, además lleva un fondo azul tenue.
+- Un revisor, `sedeq` o un solicitante que abren `/sedeq` reciben 403.
+
+### Revisores (`/sedeq/revisores`, solo supervisor)
+Una página con la barra de cada revisor ("N de 5", " · llena" al tope, y secciones revisadas), el formulario **"+ Invitar revisor"** (nombre y correo; el revisor recibe un correo para fijar su contraseña) y el botón **"Revocar"**. Cada fila de revisor se expande con **"Trámites asignados (N)"** (botón con flecha, operable con teclado) y muestra sus trámites por prioridad y antigüedad, cada uno como enlace al trámite en solo lectura con plantel, nivel, prioridad y días de espera; si no tiene, dice "Sin trámites asignados.". Revocar abre una ventana modal que nombra al revisor y avisa que sus trámites regresan a "Sin asignar"; se confirma con "Revocar acceso" o se cancela con "Cancelar" o Escape. Revocar quita el rol, devuelve sus trámites a "Sin asignar" y le quita el acceso al HUD (403). La cuenta no se borra y puede reinvitarse. Limitación: el revisor revocado todavía puede iniciar sesión; llega a `/tramite` y ve un "Mis trámites" vacío, y no puede eliminar su propia cuenta (una vista de "acceso revocado" queda como mejora posible).
+
+### Mis Revisiones (`/sedeq/cola`)
+Lista solo los trámites **asignados** a esa persona, ordenados por prioridad (Alta, Media, Baja) y luego por envío más antiguo, con la barra "N de 5 asignados". Al elegir uno, el panel derecho muestra su resumen y el enlace "Ver trámite (solo lectura)"; la sección "Hallazgos del motor" está vacía (llega con el proyecto 2). Un supervisor o `sedeq` que abren `/sedeq/cola` reciben 403.
+
+### Trámite en solo lectura (`/sedeq/tramite/{escuela}`)
+Muestra plantel, responsable legal, documentos y los niveles visibles con su estado y folio. No tiene formularios ni enlaces de edición. Las secciones sin datos lo dicen: "Sin datos del responsable legal", "Sin documentos del plantel", "Sin documentos del nivel". El supervisor ve los niveles que no estén en captura; el revisor, solo los niveles que se le asignaron. Las rutas de escritura del solicitante responden 403 para ambos roles. El **reporte de validación** sigue siendo solo del solicitante.
+
+**Vista previa de documentos:** cada documento (PDF) se abre en una ventana modal con la **primera página** como portada; al pasar el cursor o enfocar se abren en abanico hasta 4 páginas más, y un botón **"Abrir en pantalla completa"** abre el PDF completo en otra pestaña. pdf.js se descarga solo la primera vez que se abre una vista previa. Sin JavaScript, o si falla la carga ("No se pudo cargar el documento."), el documento sigue siendo un enlace de descarga normal (protegido por la misma política `view`).
+
+### Cuenta
+Ambos roles usan `/profile` (nombre y contraseña). **No pueden eliminar su cuenta** (tampoco `sedeq`). No pueden abrir `/admin`.
+
+---
+
 ## 4. Qué sigue bloqueado y qué lo desbloquea
 
 | Bloque | Qué desbloquea | Qué necesita antes |
@@ -131,7 +166,7 @@ La antigua pantalla "Próximos pasos" ya no existe: su URL redirige al **Resumen
 ### No está en ningún bloque de esta remediación
 - **Paso 3.5 Plantilla docente** y **Paso 3.6 Matrícula:** siguen siendo esqueletos; faltan definiciones de SEDEQ. Los catálogos de cargos y perfiles que usarán ya están completos tras WS-3.
 - **Motor de Validación** (revisión automática de capacidad instalada): solo existe la calculadora de reglas; no se ejecuta desde el asistente. Está pensado para correr una sola vez al terminar todo Paso 3, que hoy no está completo.
-- **Envío del trámite, folio y revisión humana de SEDEQ:** fuera del MVP actual.
+- **Envío del trámite, folio y revisión humana de SEDEQ:** fuera del MVP actual. (En la rama `hud-sedeq-1` ya existe el reparto y la lectura para SEDEQ, sección 3; la revisión en sí, la devolución por sección y la resolución con QR siguen pendientes.)
 - **API externa (Etapa 3):** no existe; la preparación de WS-2 hace que los casos de uso ya se protejan solos para cuando exista.
 
 ---
