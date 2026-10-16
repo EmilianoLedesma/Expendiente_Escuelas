@@ -3,6 +3,7 @@
 namespace App\Livewire\Cuenta;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Revision\RolesSedeq;
 use App\Application\Tramite\EliminarCuenta;
 use App\Livewire\Actions\Logout;
 use App\Livewire\Concerns\NotificaToast;
@@ -81,6 +82,6 @@ class Perfil extends Component
 
     public function render()
     {
-        return view('livewire.cuenta.perfil', ['correo' => Auth::user()->email, 'puedeEliminar' => ! Auth::user()->hasRole('sedeq')]);
+        return view('livewire.cuenta.perfil', ['correo' => Auth::user()->email, 'puedeEliminar' => ! RolesSedeq::cuentaProtegida(Auth::user())]);
     }
 }

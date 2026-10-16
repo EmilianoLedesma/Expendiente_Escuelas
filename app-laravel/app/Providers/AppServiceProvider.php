@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\ExigeRol;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
 use App\Listeners\CrearSolicitanteAlRegistrarUsuario;
@@ -46,6 +47,6 @@ class AppServiceProvider extends ServiceProvider
 
         // Livewire re-applies only its known persistent middleware on POST /livewire/update;
         // `verified` is not among them, so without this an unverified user could replay a snapshot.
-        Livewire::addPersistentMiddleware([EnsureEmailIsVerified::class]);
+        Livewire::addPersistentMiddleware([EnsureEmailIsVerified::class, ExigeRol::class]);
     }
 }

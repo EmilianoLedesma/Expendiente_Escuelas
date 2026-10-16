@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Notifications\InvitacionResponsableNivel;
+use App\Notifications\InvitacionRevisor;
 use App\Notifications\RestablecerContrasena;
 use App\Notifications\VerificarCorreo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,6 +23,8 @@ class CorreoDisenoTest extends TestCase
             'verificar' => [fn () => new VerificarCorreo],
             'invitacion con enlace' => [fn () => new InvitacionResponsableNivel('Ana', 'Primaria', 'tok')],
             'invitacion sin enlace' => [fn () => new InvitacionResponsableNivel('Ana', 'Primaria', null)],
+            'invitacion revisor con enlace' => [fn () => new InvitacionRevisor('Ana', 'tok')],
+            'invitacion revisor sin enlace' => [fn () => new InvitacionRevisor('Ana', null)],
         ];
     }
 

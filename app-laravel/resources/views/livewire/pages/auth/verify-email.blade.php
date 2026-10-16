@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Revision\RutaInicio;
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -13,7 +14,7 @@ new #[Layout('layouts.guest')] class extends Component
     public function sendVerification(): bool
     {
         if (Auth::user()->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('tramite.index', absolute: false), navigate: true);
+            $this->redirectIntended(default: RutaInicio::para(Auth::user()), navigate: true);
 
             return true;
         }

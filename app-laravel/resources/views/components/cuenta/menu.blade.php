@@ -5,6 +5,10 @@
 
     if ($usuario->hasRole('sedeq')) {
         $opciones[] = ['Panel de administración', url('/admin'), false];
+    } elseif ($usuario->hasRole('supervisor')) {
+        $opciones[] = ['Revisores', route('sedeq.revisores'), request()->routeIs('sedeq.revisores')];
+    } elseif ($usuario->hasRole('revisor')) {
+        $opciones[] = ['Mis Revisiones', route('sedeq.cola'), request()->routeIs('sedeq.cola')];
     } elseif ($usuario->solicitante !== null) {
         $opciones[] = ['Responsables por nivel', route('tramite.responsables'), request()->routeIs('tramite.responsables')];
     } else {

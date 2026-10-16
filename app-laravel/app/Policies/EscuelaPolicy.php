@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Application\Escuelas\VerificarAccesoResponsable;
 use App\Application\Escuelas\VerificarPropietarioEscuela;
+use App\Application\Revision\AccesoSedeq;
 use App\Application\Tramite\TramiteEditable;
 use App\Models\Escuela;
 use App\Models\User;
@@ -11,12 +12,10 @@ use App\Models\User;
 /**
  * `update` autoriza toda página que escribe (Paso 2 responsable y
  * documentos) y es SOLO del dueño. `view` autoriza lectura pura (descarga
- * de documento) y hoy también es solo dueño,
- * pero es la habilidad que deberá abrirse a revisores SEDEQ (Etapa 2:
- * dueño O rol `sedeq`) — por eso ninguna ruta que escribe puede usar
- * `view`: abrir `view` nunca debe abrir escrituras. No abierto aquí a
- * propósito — el panel Filament no consume esta Policy todavía. Ambas
- * delegan en VerificarPropietarioEscuela, sin reimplementar la comparación.
+ * de documento, vista SEDEQ) y admite al dueño o a SEDEQ
+ * (supervisor/revisor, AccesoSedeq) — por eso ninguna ruta que escribe puede
+ * usar `view`: abrir `view` nunca abre escrituras. El rol `sedeq` (admin) no
+ * entra. La propiedad se delega en VerificarPropietarioEscuela.
  */
 class EscuelaPolicy
 {
@@ -24,14 +23,25 @@ class EscuelaPolicy
         private readonly VerificarPropietarioEscuela $verificar,
         private readonly VerificarAccesoResponsable $accesoResponsable,
         private readonly TramiteEditable $editable,
+        private readonly AccesoSedeq $accesoSedeq,
     ) {}
 
     public function view(User $user, Escuela $escuela): bool
     {
+        return $this->esDueno($user, $escuela) || $this->accesoSedeq->puedeVerEscuela($user, $escuela->getKey());
+    }
+
+    /**
+     * Reporte de validación final: SOLO el dueño. Cubre todos los niveles de la escuela y también se guarda
+     * en cada corrida previa al envío; SEDEQ no lo ve en el proyecto 1 (el proyecto 2 lo abrirá acotado por
+     * nivel y solo para la evaluación enviada).
+     */
+    public function verReporte(User $user, Escuela $escuela): bool
+    {
         return $this->esDueno($user, $escuela);
     }
 
-    /** Hub "Resumen del trámite": el dueño, o un responsable con algún nivel de esta escuela (el DTO se acota a sus niveles). `view` NO cambia: protege descargas de documentos de la escuela. */
+    /** Hub "Resumen del trámite": el dueño, o un responsable con algún nivel de esta escuela (el DTO se acota a sus niveles). SEDEQ no entra: el hub trae enlaces de edición; SEDEQ lee por `sedeq.tramite` (`view`). */
     public function verResumen(User $user, Escuela $escuela): bool
     {
         return $this->esDueno($user, $escuela)

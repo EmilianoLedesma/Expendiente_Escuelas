@@ -3,6 +3,7 @@
 namespace App\Application\Tramite;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Revision\RolesSedeq;
 use App\Models\Escuela;
 use App\Models\Solicitante;
 use App\Models\User;
@@ -26,7 +27,7 @@ class EliminarCuenta
         DB::transaction(function () use ($userId) {
             $usuario = User::whereKey($userId)->lockForUpdate()->firstOrFail();
 
-            if ($usuario->hasRole('sedeq')) {
+            if (RolesSedeq::cuentaProtegida($usuario)) {
                 throw new PrecondicionIncumplida('cuenta', 'Las cuentas de SEDEQ no se pueden eliminar desde el perfil.');
             }
 

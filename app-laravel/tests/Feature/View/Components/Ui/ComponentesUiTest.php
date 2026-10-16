@@ -193,4 +193,22 @@ class ComponentesUiTest extends TestCase
             ->assertSee('sm:sticky', false)
             ->assertSee('sm:bottom-0', false);
     }
+
+    public function test_pdf_preview_es_un_enlace_que_abre_un_dialogo_con_vista_previa(): void
+    {
+        $html = (string) $this->blade('<x-ui.pdf-preview url="/docs/ine.pdf" title="INE del responsable" />');
+
+        // Sin JS el disparador sigue siendo una descarga normal.
+        // El visor solo lee el href que pintó el servidor (x-ref="enlace").
+        $this->assertStringContainsString('x-data="vistaPdf"', $html);
+        $this->assertMatchesRegularExpression('#<a href="/docs/ine.pdf"[^>]*x-ref="enlace"[^>]*x-on:click.prevent="abrir\(\)"#', $html);
+        $this->assertMatchesRegularExpression('#<dialog[^>]*aria-labelledby="([^"]+)"#', $html);
+        preg_match('#aria-labelledby="([^"]+)"#', $html, $m);
+        $this->assertMatchesRegularExpression('#<h2 id="'.preg_quote($m[1], '#').'"[^>]*>\s*INE del responsable#', $html);
+        $this->assertStringContainsString('class="modal', $html);
+        $this->assertStringContainsString('aria-label="Cerrar vista previa"', $html);
+        $this->assertStringContainsString('Abrir en pantalla completa', $html);
+        $this->assertStringContainsString('Cargando…', $html);
+        $this->assertStringContainsString('No se pudo cargar el documento.', $html);
+    }
 }
