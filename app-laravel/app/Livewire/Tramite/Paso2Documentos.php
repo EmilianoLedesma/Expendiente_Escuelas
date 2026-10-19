@@ -145,12 +145,7 @@ class Paso2Documentos extends Component
             fn () => $this->dictamenForm->validate(),
         );
 
-        if (! $this->intentarRegistrar($registrarDocumento, 'dictamen_uso_suelo', new DatosDocumento(
-            fechaEmision: $this->dictamenForm->fechaEmision,
-            autoridadExpide: $this->dictamenForm->autoridadExpide,
-            folioDictamen: $this->dictamenForm->folioDictamen,
-            giroAutorizado: $this->dictamenForm->giroAutorizado,
-        ))) {
+        if (! $this->intentarRegistrar($registrarDocumento, 'dictamen_uso_suelo', new DatosDocumento(...$this->dictamenForm->datosParaDocumento()))) {
             return;
         }
         $this->archivos['dictamen_uso_suelo'] = null;
