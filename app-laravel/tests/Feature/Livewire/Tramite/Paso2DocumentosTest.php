@@ -673,7 +673,8 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertSeeHtml('id="acreditacionForm.propietarioNombre"')
             ->assertSee('Número de notaría')
-            ->assertSee('Municipio y entidad federativa')
+            ->assertSeeHtml('id="acreditacionForm.notarioEntidadFederativaId"')
+            ->assertSeeHtml('id="acreditacionForm.notarioMunicipioId"')
             ->assertDontSeeHtml('id="acreditacionForm.arrendadorComodante"')
             ->assertDontSeeHtml('id="acreditacionForm.otroDerecho"')
             ->set('acreditacionForm.tipo', 'arrendamiento')
@@ -1221,5 +1222,65 @@ class Paso2DocumentosTest extends TestCase
             ->assertSeeHtml('id="dictamenForm.fechaVencimientoDocumento"')
             ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
+    }
+
+    // --- Ubicación de la notaría: selectores alimentados por el catálogo geográfico ---
+
+    public function test_los_selectores_de_la_notaria_salen_de_la_base_de_datos_y_no_de_la_vista(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        $vacio = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="acreditacionForm.notarioEntidadFederativaId"')
+            ->assertSeeHtml('id="acreditacionForm.notarioMunicipioId"')
+            ->assertDontSee('QUERÉTARO')
+            ->assertSee('catálogo geográfico');
+
+        $this->assertStringNotContainsString('AGUASCALIENTES', $vacio->html());
+
+        EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        EntidadFederativa::create(['clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('QUERÉTARO')
+            ->assertSee('AGUASCALIENTES')
+            ->assertDontSee('catálogo geográfico');
+    }
+
+    public function test_los_municipios_siguen_a_la_entidad_elegida_y_el_selector_empieza_deshabilitado(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $otra = EntidadFederativa::create(['clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+        Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA']);
+        Municipio::create(['entidad_federativa_id' => $otra->id, 'clave' => 2, 'nombre' => 'ASIENTOS']);
+
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertDontSee('CORREGIDORA')
+            ->assertDontSee('ASIENTOS');
+        $this->assertMatchesRegularExpression('/<select[^>]*id="acreditacionForm.notarioMunicipioId"[^>]*\bdisabled\b/s', $prueba->html());
+
+        $prueba->set('acreditacionForm.notarioEntidadFederativaId', (string) $queretaro->id)
+            ->assertSee('CORREGIDORA')
+            ->assertDontSee('ASIENTOS');
+        $this->assertDoesNotMatchRegularExpression('/<select[^>]*id="acreditacionForm.notarioMunicipioId"[^>]*\bdisabled\b/s', $prueba->html());
+    }
+
+    public function test_cambiar_la_entidad_borra_el_municipio_elegido(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $otra = EntidadFederativa::create(['clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+        $corregidora = Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA']);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.notarioEntidadFederativaId', (string) $queretaro->id)
+            ->set('acreditacionForm.notarioMunicipioId', (string) $corregidora->id)
+            ->set('acreditacionForm.notarioEntidadFederativaId', (string) $otra->id)
+            ->assertSet('acreditacionForm.notarioMunicipioId', '')
+            ->assertHasNoErrors(['acreditacionForm.notarioMunicipioId']);
     }
 }
