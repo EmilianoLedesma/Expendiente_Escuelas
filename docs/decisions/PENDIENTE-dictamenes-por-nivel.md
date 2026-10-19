@@ -57,3 +57,33 @@ Estado de la pregunta sobre `ratificado_notario`: **parcialmente resuelta**. Lo 
 ### Si la respuesta a (1) es "por nivel"
 
 La obligatoriedad de la ratificación se resolvería en la **revisión** (o en la validación final) con una regla por nivel, sin cambiar el esquema. Mover la acreditación a `escuela_nivel` requiere una decisión arquitectónica y normativa explícita (misma consecuencia que "dictámenes por nivel": recarga de documentos de las escuelas que ya terminaron).
+
+## Actualización (2026-10-19): vigencia del Dictamen de Uso de Suelo
+
+Estado: **parcialmente resuelto**. Lo técnico quedó resuelto; la antigüedad de presentación y los requisitos por nivel siguen **normativamente sin resolver**. Este archivo no se renombra (siguen abiertas las preguntas de arriba). Detalle y evidencia en `docs/reports/2026-10-19-dictamen-uso-suelo.md`.
+
+### Qué cambió
+
+- El sistema dejó de rechazar un dictamen por tener más de 30 días desde su emisión. Ese límite (`tipos_documentos.vigencia_max_dias = 30`) nació como regla operativa confirmada por el dueño del proyecto, sin cita normativa (COMPENDIO_MAESTRO, fila 4), y se aplicaba como si fuera la **vigencia jurídica** del documento.
+- Ahora se captura lo que declara el documento: "¿El documento indica una fecha de vencimiento?" → si **sí**, la fecha (obligatoria en ese caso); si **no**, se registra `sin_fecha_expresa` y **no se inventa ninguna fecha**. Solo una fecha de vencimiento declarada y ya pasada bloquea el avance.
+- Los dictámenes ya capturados quedan en el estado explícito `no_capturada` (ni vigentes ni vencidos, no bloquean) y su fecha calculada se anuló por una migración reversible.
+- Se agrega `condicionantes` (opcional) y la etiqueta "Uso o giro autorizado según el dictamen".
+
+### Fuentes y certeza
+
+| Dato | Fuente | Certeza |
+|---|---|---|
+| Vigencia = "la que indique el documento"; autoridad: Dirección de Desarrollo Urbano; el dictamen contiene giros y condicionantes | Municipio de Querétaro, TR-170100-017 (rev. 33, 06/nov/2024) | Texto leído; solo Municipio de Querétaro |
+| Solo la factibilidad de giro tiene vigencia de 1 año calendario; el dictamen de uso de suelo no indica plazo | Municipio de Querétaro, TR-170100-044 (rev. 11) | Texto leído |
+| Antigüedad máxima de 1 mes | COMPENDIO_MAESTRO (regla operativa del dueño) | **Sin fundamento verificado**; ya no bloquea |
+| Requisitos por nivel de SEDEQ | Página de trámites de SEDEQ (carpeta "Servicios": PDF de requisitos de Básica, Media Superior y Superior 2024) | **No verificada**: no se pudo leer el contenido de los PDF |
+
+### Preguntas abiertas para SEDEQ (no se asumen)
+
+1. ¿SEDEQ exige una **antigüedad máxima** de presentación del dictamen? ¿De cuántos meses? ¿Es la misma en todos los niveles?
+2. ¿Se acepta un dictamen **sin fecha de vencimiento expresa**? ¿Con qué condiciones?
+3. ¿SEDEQ exige además la **factibilidad de giro** (cédula TR-170100-044) y con qué vigencia?
+4. Dictámenes de **otros municipios** de Querétaro: ¿autoridad y formato aceptados?
+5. ¿El uso o giro debe indicar expresamente el servicio educativo y por nivel (relación con la pregunta de "dictámenes por nivel" de arriba)?
+
+Si SEDEQ confirma una antigüedad máxima, se implementaría como una regla **separada** (aviso o bloqueo según lo que se decida), nunca reutilizando la vigencia declarada por el documento.

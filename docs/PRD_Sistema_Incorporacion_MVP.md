@@ -115,8 +115,10 @@ documento (INE, acta de nacimiento, escritura, dictamen de uso de suelo, constan
 de seguridad estructural + datos del perito/DRO, formato de pago).
 
 - Regla de vigencia: si `tipos_documentos.vigencia_max_dias` no es NULL, validar que
-  la fecha de emisión capturada no exceda ese máximo (ej. Dictamen de Uso de Suelo,
-  30 días).
+  la fecha de emisión capturada no exceda ese máximo (ej. Visto Bueno de Protección
+  Civil, 30 días). Nota 2026-10-19: el Dictamen de Uso de Suelo **ya no usa esta regla**
+  (`vigencia_max_dias` NULL): su vigencia es la que declara el documento y se captura
+  en `dictamenes_uso_suelo`; ver COMPENDIO_MAESTRO.
 - Generar el **Formato de Solicitud** como PDF prellenado (dompdf) a partir de los
   datos capturados, para descarga, firma autógrafa y resubida.
 - Nota de alcance confirmada: "Constancia de Seguridad Estructural" y "Carta

@@ -79,7 +79,7 @@ Esta elección **activa dinámicamente** qué documentos son obligatorios.
 | 2 | Acta de nacimiento | ✔️ | — | — |
 | 2m | Escritura o poder notarial de facultades del representante legal (sobre inmueble y trámites de funcionamiento) | — | ✔️ | — |
 | 3 | Escritura del bien inmueble | ✔️ (valida si está a nombre del solicitante) | ✔️ | Original se coteja en la visita de verificación |
-| 4 | Dictamen de Uso de Suelo vigente | ✔️ | ✔️ | **Vigencia máxima: 1 mes de antigüedad** (regla operativa confirmada por el usuario, no aparece en los documentos normativos fuente) |
+| 4 | Dictamen de Uso de Suelo vigente | ✔️ | ✔️ | **Vigencia: la que indique el propio documento** (cédula municipal TR-170100-017, Municipio de Querétaro, actualizada 06/nov/2024). El sistema captura la fecha de vencimiento si el documento la trae y no inventa una si no la trae. La "antigüedad máxima de 1 mes" que antes se aplicaba como bloqueo era una regla operativa confirmada por el dueño del proyecto que **no aparece en los documentos normativos fuente**; **desde 2026-10-19 ya no bloquea** y queda como pregunta abierta para SEDEQ (ver `docs/decisions/PENDIENTE-dictamenes-por-nivel.md` y `docs/reports/2026-10-19-dictamen-uso-suelo.md`). |
 | 5 | Constancia de Seguridad Estructural y de Ocupación (incluye datos del perito/DRO) | ✔️ | ✔️ | Un solo documento a cargar; el formulario de captura incluye campos del perito (nombre, cédula profesional, número de registro como DRO, autoridad que expide, vigencia del registro) además de los datos de la propia constancia. Regla de validación: el año del registro del perito debe coincidir con el año de emisión de la constancia. |
 | 6 | Formato de pago de derechos (RecaudaNet) | ✔️ | ✔️ | — |
 
@@ -192,7 +192,7 @@ Esta subsección del formulario tiene **cuatro variantes mutuamente excluyentes*
 
 **3. Constancia de Seguridad Estructural y de Ocupación**: nombre del perito, fecha de expedición de la constancia, vigencia de la constancia, número de cédula profesional del perito, número de registro del perito como DRO (o similar), autoridad que expide el registro, vigencia del registro.
 
-**4. Dictamen de Uso de Suelo**: autoridad que expide, folio del dictamen, fecha de expedición, giro que autoriza, vigencia.
+**4. Dictamen de Uso de Suelo**: autoridad que expide, folio del dictamen, fecha de expedición, uso o giro autorizado tal como aparece en el documento, vigencia declarada por el documento (fecha de vencimiento, o "sin fecha expresa" si el documento no la trae) y condicionantes urbanísticas (opcional). La factibilidad de giro es un documento distinto (cédula TR-170100-044: vigencia de 1 año calendario solo para la factibilidad; el dictamen de uso de suelo no indica plazo) y no se captura en este formulario.
 
 **5. Descripción de instalaciones — subcampos**:
 - Dimensiones: predio (m²), construido (m²).

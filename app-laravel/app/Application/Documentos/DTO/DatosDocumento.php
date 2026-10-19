@@ -17,6 +17,10 @@ final readonly class DatosDocumento
         public ?string $autoridadExpide = null,
         public ?string $folioDictamen = null,
         public ?string $giroAutorizado = null,
+        // Vigencia que declara el documento: fecha_expresa | sin_fecha_expresa; null = no capturada.
+        public ?string $tipoVigencia = null,
+        public ?string $fechaVencimientoDocumento = null,
+        public ?string $condicionantes = null,
         // constancia_seguridad_estructural
         public ?string $peritoNombre = null,
         public ?string $peritoCedulaProfesional = null,
