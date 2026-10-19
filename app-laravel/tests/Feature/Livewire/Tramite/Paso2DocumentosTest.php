@@ -13,8 +13,10 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
+use App\Models\EntidadFederativa;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
+use App\Models\Municipio;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
@@ -1042,6 +1044,9 @@ class Paso2DocumentosTest extends TestCase
 
     public function test_escritura_guarda_propietario_y_datos_registrales(): void
     {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $corregidora = Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA']);
+
         $this->componenteListoParaAcreditar()
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
@@ -1049,7 +1054,8 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.propietarioNombre', 'Colegio Norte SA de CV')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->set('acreditacionForm.notarioNumero', '14')
-            ->set('acreditacionForm.notarioLocalidad', 'Querétaro, Querétaro')
+            ->set('acreditacionForm.notarioEntidadFederativaId', (string) $queretaro->id)
+            ->set('acreditacionForm.notarioMunicipioId', (string) $corregidora->id)
             ->set('acreditacionForm.folioRpp', 'FME-123')
             ->set('acreditacionForm.fechaInscripcionRpp', '2024-04-01')
             ->call('guardarAcreditacion')
@@ -1059,7 +1065,8 @@ class Paso2DocumentosTest extends TestCase
             'tipo' => 'escritura_publica',
             'propietario_nombre' => 'Colegio Norte SA de CV',
             'notario_numero' => '14',
-            'notario_localidad' => 'Querétaro, Querétaro',
+            'notario_entidad_federativa_id' => $queretaro->id,
+            'notario_municipio_id' => $corregidora->id,
             'folio_rpp' => 'FME-123',
             'fecha_inscripcion_rpp' => '2024-04-01',
         ]);

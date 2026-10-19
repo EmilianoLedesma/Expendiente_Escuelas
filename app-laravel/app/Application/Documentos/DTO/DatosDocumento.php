@@ -35,6 +35,9 @@ final readonly class DatosDocumento
         public ?string $notarioNombre = null,
         public ?string $notarioNumero = null,
         public ?string $notarioLocalidad = null,
+        // Ubicación de la notaría desde el catálogo geográfico (ADR-017); notarioLocalidad queda para filas anteriores.
+        public ?int $notarioEntidadFederativaId = null,
+        public ?int $notarioMunicipioId = null,
         public ?string $folioRpp = null,
         public ?string $fechaInscripcionRpp = null,
         public ?string $arrendadorComodante = null,

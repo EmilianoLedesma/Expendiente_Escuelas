@@ -23,6 +23,8 @@ class AcreditacionOcupacionLegal extends Model
         'notario_nombre',
         'notario_numero',
         'notario_localidad',
+        'notario_entidad_federativa_id',
+        'notario_municipio_id',
         'folio_rpp',
         'fecha_inscripcion_rpp',
         'arrendador_comodante',

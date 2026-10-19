@@ -6,6 +6,7 @@ use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
 use App\Application\Captura\ReglasCaptura;
 use Closure;
+use Illuminate\Validation\Rule;
 use Livewire\Form;
 
 class AcreditacionOcupacionForm extends Form
@@ -22,7 +23,10 @@ class AcreditacionOcupacionForm extends Form
 
     public string $notarioNumero = '';
 
-    public string $notarioLocalidad = '';
+    /** Ids del catálogo geográfico (ADR-017); '' = sin elegir. El texto libre anterior vive solo en filas viejas. */
+    public string $notarioEntidadFederativaId = '';
+
+    public string $notarioMunicipioId = '';
 
     public string $folioRpp = '';
 
@@ -102,7 +106,11 @@ class AcreditacionOcupacionForm extends Form
             'propietarioNombre' => ReglasCaptura::texto(requerido: true, max: 200),
             'notarioNombre' => ReglasCaptura::nombrePersona(requerido: true, max: 150),
             'notarioNumero' => ReglasCaptura::texto(max: 20),
-            'notarioLocalidad' => ReglasCaptura::texto(max: 100),
+            'notarioEntidadFederativaId' => ['nullable', 'integer', Rule::exists('entidades_federativas', 'id')],
+            'notarioMunicipioId' => [
+                'nullable', 'integer',
+                Rule::exists('municipios', 'id')->where('entidad_federativa_id', $this->notarioEntidadFederativaId === '' ? 0 : (int) $this->notarioEntidadFederativaId),
+            ],
             'folioRpp' => ReglasCaptura::texto(max: 50),
             'fechaInscripcionRpp' => ReglasCaptura::fechaPasada(),
         ];
@@ -162,7 +170,8 @@ class AcreditacionOcupacionForm extends Form
             'propietarioNombre' => 'propietario',
             'notarioNombre' => 'nombre del notario',
             'notarioNumero' => 'número de notaría',
-            'notarioLocalidad' => 'municipio y entidad federativa',
+            'notarioEntidadFederativaId' => 'entidad federativa',
+            'notarioMunicipioId' => 'municipio',
             'folioRpp' => 'folio del Registro Público de la Propiedad',
             'fechaInscripcionRpp' => 'fecha de inscripción',
             'arrendadorComodante' => 'arrendador / comodante',
@@ -207,7 +216,8 @@ class AcreditacionOcupacionForm extends Form
                 'propietarioNombre' => $texto($this->propietarioNombre),
                 'notarioNombre' => $texto($this->notarioNombre),
                 'notarioNumero' => $texto($this->notarioNumero),
-                'notarioLocalidad' => $texto($this->notarioLocalidad),
+                'notarioEntidadFederativaId' => $this->idOnulo($this->notarioEntidadFederativaId),
+                'notarioMunicipioId' => $this->idOnulo($this->notarioMunicipioId),
                 'folioRpp' => $texto($this->folioRpp),
                 'fechaInscripcionRpp' => $texto($this->fechaInscripcionRpp),
             ],
@@ -241,6 +251,20 @@ class AcreditacionOcupacionForm extends Form
             ],
             default => [],
         };
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'notarioEntidadFederativaId.exists' => 'La entidad federativa seleccionada no existe.',
+            'notarioMunicipioId.exists' => 'El municipio no pertenece a la entidad federativa seleccionada.',
+        ];
+    }
+
+    private function idOnulo(string $valor): ?int
+    {
+        return $valor !== '' ? (int) $valor : null;
     }
 
     /** Solo compara cuando ambas fechas ya tienen formato válido; cada una tiene su propia regla de formato. */
