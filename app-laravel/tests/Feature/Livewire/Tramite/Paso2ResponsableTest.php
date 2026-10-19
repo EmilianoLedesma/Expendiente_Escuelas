@@ -22,8 +22,10 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2ResponsableTest extends TestCase
@@ -54,7 +56,7 @@ class Paso2ResponsableTest extends TestCase
      * back-navigation/datos legacy) — se insertan directo, mismo patrón que
      * DocumentoDownloadTest para los casos "documento legacy".
      */
-    private function registrarDocumentoLegacy(Escuela $escuela, string $clave, ?string $fechaEmision = null): void
+    private function registrarDocumentoLegacy(Escuela $escuela, string $clave, ?string $fechaEmision = null, ?string $vencimientoDeclarado = null): void
     {
         $tipo = TipoDocumento::where('clave', $clave)->firstOrFail();
         $ownerId = $tipo->ambito === 'plantel' ? $escuela->plantel_id : $escuela->id;
@@ -71,7 +73,14 @@ class Paso2ResponsableTest extends TestCase
         ];
 
         if ($tipo->ambito === 'plantel') {
-            DocumentoPlantel::create(['plantel_id' => $ownerId, ...$atributos]);
+            $documento = DocumentoPlantel::create(['plantel_id' => $ownerId, ...$atributos]);
+            if ($clave === 'dictamen_uso_suelo' && $vencimientoDeclarado !== null) {
+                DB::table('dictamenes_uso_suelo')->insert([
+                    'documento_plantel_id' => $documento->id,
+                    'tipo_vigencia' => 'fecha_expresa',
+                    'fecha_vencimiento_documento' => $vencimientoDeclarado,
+                ]);
+            }
         } else {
             DocumentoEscuela::create(['escuela_id' => $ownerId, ...$atributos]);
         }
@@ -161,9 +170,7 @@ class Paso2ResponsableTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
-        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
@@ -258,7 +265,7 @@ class Paso2ResponsableTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $this->registrarDocumentoLegacy($escuela, $clave);
         }
-        $this->registrarDocumentoLegacy($escuela, 'dictamen_uso_suelo', now()->subDays(60)->toDateString());
+        $this->registrarDocumentoLegacy($escuela, 'dictamen_uso_suelo', now()->subDays(60)->toDateString(), now()->subDay()->toDateString());
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])

@@ -33,10 +33,17 @@ class ValidarVigenciaDocumentos
         $dictamenTipo = TipoDocumento::where('clave', 'dictamen_uso_suelo')->first();
         $dictamen = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)
             ->where('tipo_documento_id', $dictamenTipo?->id)
+            ->with('dictamenUsoSuelo')
             ->first();
+        $declarado = $dictamen?->dictamenUsoSuelo;
 
-        if ($aplica('dictamen_uso_suelo') && $dictamen !== null && $dictamen->fecha_vigencia !== null && now()->toDateString() > $dictamen->fecha_vigencia) {
-            $violaciones['dictamen_uso_suelo'] = 'Dictamen de Uso de Suelo: ha superado su vigencia máxima, debe resubirse.';
+        // La vigencia jurídica del dictamen es la que declara el documento (cédula municipal
+        // TR-170100-017: "la que indique el documento"). Sin fecha expresa, o en un dictamen
+        // anterior a este dato, no hay nada que vencer. La antigüedad de presentación no se
+        // juzga aquí: no tiene fundamento confirmado (COMPENDIO_MAESTRO, 2026-10-19).
+        if ($aplica('dictamen_uso_suelo') && $declarado?->tipo_vigencia === 'fecha_expresa' && $declarado->fecha_vencimiento_documento !== null && now()->toDateString() > $declarado->fecha_vencimiento_documento) {
+            $fecha = date('d/m/Y', strtotime($declarado->fecha_vencimiento_documento));
+            $violaciones['dictamen_uso_suelo'] = "Dictamen de Uso de Suelo: la fecha de vencimiento indicada en el documento ({$fecha}) ya pasó; suba el dictamen vigente.";
         }
 
         // Todo otro documento del plantel con vigencia calculada al subirlo
