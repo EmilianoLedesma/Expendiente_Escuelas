@@ -649,7 +649,7 @@ class Paso2DocumentosTest extends TestCase
         ]);
     }
 
-    public function test_acreditacion_muestra_ratificado_notario_solo_en_comodato(): void
+    public function test_acreditacion_muestra_ratificado_notario_en_arrendamiento_y_comodato_pero_no_en_escritura_ni_otro(): void
     {
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
@@ -657,7 +657,77 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertDontSeeHtml('id="acreditacionForm.ratificadoNotario"')
             ->set('acreditacionForm.tipo', 'comodato')
-            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"');
+            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"')
+            ->set('acreditacionForm.tipo', 'otro')
+            ->assertDontSeeHtml('id="acreditacionForm.ratificadoNotario"');
+    }
+
+    public function test_acreditacion_cada_variante_muestra_solo_sus_campos(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="acreditacionForm.propietarioNombre"')
+            ->assertSee('Número de notaría')
+            ->assertSee('Municipio y entidad federativa')
+            ->assertDontSeeHtml('id="acreditacionForm.arrendadorComodante"')
+            ->assertDontSeeHtml('id="acreditacionForm.otroDerecho"')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertSeeHtml('id="acreditacionForm.arrendadorComodante"')
+            ->assertSeeHtml('id="acreditacionForm.fechaInicioVigencia"')
+            ->assertSee('Arrendador')
+            ->assertDontSeeHtml('id="acreditacionForm.propietarioNombre"')
+            ->assertDontSeeHtml('id="acreditacionForm.folioRpp"')
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->assertSee('Comodante')
+            ->assertSee('Comodatario')
+            ->set('acreditacionForm.tipo', 'otro')
+            ->assertSeeHtml('id="acreditacionForm.otroDerecho"')
+            ->assertSeeHtml('id="acreditacionForm.otroReferencia"')
+            ->assertDontSeeHtml('id="acreditacionForm.numeroEscritura"')
+            ->assertDontSeeHtml('id="acreditacionForm.arrendadorComodante"');
+    }
+
+    public function test_acreditacion_oculta_la_fecha_de_fin_con_vigencia_indeterminada(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->assertSeeHtml('id="acreditacionForm.vigenciaContrato"')
+            ->set('acreditacionForm.vigenciaIndeterminada', true)
+            ->assertDontSeeHtml('id="acreditacionForm.vigenciaContrato"');
+    }
+
+    public function test_acreditacion_muestra_datos_de_ratificacion_solo_si_esta_ratificado(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertDontSeeHtml('id="acreditacionForm.ratificacionFecha"')
+            ->set('acreditacionForm.ratificadoNotario', true)
+            ->assertSeeHtml('id="acreditacionForm.ratificacionFecha"')
+            ->assertSeeHtml('id="acreditacionForm.ratificacionNotarioNombre"')
+            ->assertSeeHtml('id="acreditacionForm.ratificacionNotariaNumero"');
+    }
+
+    public function test_acreditacion_muestra_facultades_solo_si_el_arrendador_no_es_propietario(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertSeeHtml('id="acreditacionForm.arrendadorEsPropietario"')
+            ->assertDontSeeHtml('id="acreditacionForm.facultadesReferencia"')
+            ->set('acreditacionForm.arrendadorEsPropietario', false)
+            ->assertSeeHtml('id="acreditacionForm.facultadesReferencia"');
     }
 
     public function test_comodato_guarda_ratificado_notario(): void
