@@ -69,7 +69,8 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertDatabaseHas('documentos_plantel', [
             'plantel_id' => $escuela->plantel_id,
             'fecha_emision' => '2026-09-01',
-            'fecha_vigencia' => '2026-10-01',
+            // El dictamen ya no caduca por cálculo: su vigencia es la que declara el documento.
+            'fecha_vigencia' => null,
             'estado_validacion' => 'pendiente',
         ]);
     }
@@ -315,9 +316,9 @@ class RegistrarDocumentoTest extends TestCase
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento(
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento(
             fechaEmision: '2026-09-01',
-            giroAutorizado: 'Escuela de educación básica',
+            peritoNombre: 'Ing. Juan Pérez',
         ));
 
         $documentoAntes = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->first();
@@ -326,11 +327,11 @@ class RegistrarDocumentoTest extends TestCase
         $bytesAnteriores = Storage::disk('documentos')->get($rutaAnterior);
 
         try {
-            // giro_autorizado es VARCHAR(200) y este documento no valida largo antes de escribir:
+            // perito_nombre es VARCHAR(200) y este documento no valida largo antes de escribir:
             // el fallo ocurre dentro de la transacción, tras reemplazar la fila base.
-            (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento(
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento(
                 fechaEmision: '2026-09-02',
-                giroAutorizado: str_repeat('x', 201),
+                peritoNombre: str_repeat('x', 201),
             ));
             $this->fail('Se esperaba que la transacción fallara por el largo de la columna.');
         } catch (\Throwable) {
@@ -1218,5 +1219,179 @@ class RegistrarDocumentoTest extends TestCase
 
         $this->assertNotContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
         $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+    }
+
+    // --- Dictamen de Uso de Suelo: vigencia declarada por el documento ---
+
+    /** @param  array<string, mixed>  $campos */
+    private function datosDictamen(array $campos = []): DatosDocumento
+    {
+        return new DatosDocumento(...[
+            'fechaEmision' => '2026-09-01',
+            'autoridadExpide' => 'Dirección de Desarrollo Urbano',
+            'folioDictamen' => 'DUS-2026-001',
+            'giroAutorizado' => 'Escuela de educación básica',
+            'tipoVigencia' => 'fecha_expresa',
+            'fechaVencimientoDocumento' => '2030-06-30',
+            ...$campos,
+        ]);
+    }
+
+    private function registrarDictamen(Escuela $escuela, DatosDocumento $datos): void
+    {
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 50, 'application/pdf'), $datos);
+    }
+
+    /** @return array<string, mixed> */
+    private function filaDictamen(): array
+    {
+        return (array) DB::table('dictamenes_uso_suelo')->first();
+    }
+
+    /** @param  list<string>  $claves  campos que deben venir en los errores (rutas dictamenForm.*) */
+    private function assertDictamenRechazado(Escuela $escuela, DatosDocumento $datos, array $claves): void
+    {
+        try {
+            $this->registrarDictamen($escuela, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            foreach ($claves as $clave) {
+                $this->assertArrayHasKey("dictamenForm.{$clave}", $e->errores);
+            }
+        }
+
+        $this->assertDatabaseCount('dictamenes_uso_suelo', 0);
+        $this->assertDatabaseCount('documentos_plantel', 0);
+        $this->assertSame([], Storage::disk('documentos')->allFiles());
+    }
+
+    public function test_dictamen_persiste_la_fecha_de_vencimiento_declarada_y_las_condicionantes(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarDictamen($escuela, $this->datosDictamen(['condicionantes' => 'Máximo 200 alumnos por turno.']));
+
+        $fila = $this->filaDictamen();
+        $this->assertSame('fecha_expresa', $fila['tipo_vigencia']);
+        $this->assertSame('2030-06-30', $fila['fecha_vencimiento_documento']);
+        $this->assertSame('Máximo 200 alumnos por turno.', $fila['condicionantes']);
+        $this->assertSame('Dirección de Desarrollo Urbano', $fila['autoridad_expide']);
+    }
+
+    public function test_dictamen_sin_fecha_expresa_no_inventa_ni_guarda_fecha(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarDictamen($escuela, $this->datosDictamen(['tipoVigencia' => 'sin_fecha_expresa']));
+
+        $fila = $this->filaDictamen();
+        $this->assertSame('sin_fecha_expresa', $fila['tipo_vigencia']);
+        $this->assertNull($fila['fecha_vencimiento_documento']);
+    }
+
+    public function test_dictamen_sin_datos_de_vigencia_queda_no_capturada(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarDictamen($escuela, new DatosDocumento(fechaEmision: '2026-09-01'));
+
+        $fila = $this->filaDictamen();
+        $this->assertSame('no_capturada', $fila['tipo_vigencia']);
+        $this->assertNull($fila['fecha_vencimiento_documento']);
+    }
+
+    public function test_dictamen_no_calcula_una_fecha_de_vigencia_del_documento(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarDictamen($escuela, $this->datosDictamen([
+            'fechaEmision' => now()->subDays(90)->toDateString(),
+            'tipoVigencia' => 'sin_fecha_expresa',
+            'fechaVencimientoDocumento' => null,
+        ]));
+
+        $this->assertNull(DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('fecha_vigencia'));
+    }
+
+    public function test_dictamen_con_fecha_expresa_exige_la_fecha(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertDictamenRechazado($escuela, $this->datosDictamen(['fechaVencimientoDocumento' => null]), ['fechaVencimientoDocumento']);
+    }
+
+    public function test_dictamen_rechaza_un_vencimiento_anterior_a_la_emision(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertDictamenRechazado($escuela, $this->datosDictamen(['fechaVencimientoDocumento' => '2026-08-31']), ['fechaVencimientoDocumento']);
+    }
+
+    public function test_dictamen_rechaza_textos_de_solo_espacios_y_campos_obligatorios_vacios(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        foreach (['autoridadExpide' => 50, 'folioDictamen' => 51, 'giroAutorizado' => 52] as $campo => $espacios) {
+            $this->assertDictamenRechazado($escuela, $this->datosDictamen([$campo => str_repeat(' ', $espacios)]), [$campo]);
+            $this->assertDictamenRechazado($escuela, $this->datosDictamen([$campo => null]), [$campo]);
+        }
+    }
+
+    public function test_dictamen_rechaza_un_texto_de_solo_espacios_aun_sin_datos_de_vigencia(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertDictamenRechazado($escuela, new DatosDocumento(fechaEmision: '2026-09-01', autoridadExpide: '   '), ['autoridadExpide']);
+    }
+
+    public function test_dictamen_rechaza_emision_futura_largos_excedidos_y_tipo_desconocido(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertDictamenRechazado($escuela, $this->datosDictamen(['fechaEmision' => now()->addDay()->toDateString()]), ['fechaEmision']);
+        $this->assertDictamenRechazado($escuela, $this->datosDictamen(['condicionantes' => str_repeat('x', 1001)]), ['condicionantes']);
+        $this->assertDictamenRechazado($escuela, $this->datosDictamen(['giroAutorizado' => str_repeat('x', 201)]), ['giroAutorizado']);
+        $this->assertDictamenRechazado($escuela, $this->datosDictamen(['tipoVigencia' => 'perpetua']), ['tipoVigencia']);
+    }
+
+    public function test_dictamen_acepta_un_vencimiento_ya_pasado_porque_lo_juzga_el_validador(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarDictamen($escuela, $this->datosDictamen(['fechaVencimientoDocumento' => '2026-09-15']));
+
+        $this->assertSame('2026-09-15', $this->filaDictamen()['fecha_vencimiento_documento']);
+    }
+
+    public function test_dictamen_reemplazado_cambia_la_declaracion_y_limpia_la_fecha(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarDictamen($escuela, $this->datosDictamen());
+
+        $this->registrarDictamen($escuela, $this->datosDictamen(['tipoVigencia' => 'sin_fecha_expresa', 'condicionantes' => null]));
+
+        $this->assertDatabaseCount('dictamenes_uso_suelo', 1);
+        $fila = $this->filaDictamen();
+        $this->assertSame('sin_fecha_expresa', $fila['tipo_vigencia']);
+        $this->assertNull($fila['fecha_vencimiento_documento']);
+        $this->assertNull($fila['condicionantes']);
+    }
+
+    public function test_un_dictamen_invalido_al_reemplazar_conserva_fila_y_archivo_previos(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarDictamen($escuela, $this->datosDictamen());
+        $ruta = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path');
+
+        try {
+            $this->registrarDictamen($escuela, $this->datosDictamen(['fechaVencimientoDocumento' => null]));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos) {
+            // esperado
+        }
+
+        $this->assertSame('2030-06-30', $this->filaDictamen()['fecha_vencimiento_documento']);
+        $this->assertSame($ruta, DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path'));
+        $this->assertCount(1, Storage::disk('documentos')->allFiles());
     }
 }
