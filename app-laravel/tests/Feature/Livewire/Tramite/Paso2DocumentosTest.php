@@ -24,6 +24,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -317,6 +318,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
             ->set('acreditacionForm.fechaEscritura', '2024-03-15')
+            ->set('acreditacionForm.propietarioNombre', 'Colegio Norte SA de CV')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->call('guardarAcreditacion')
             ->assertHasNoErrors();
@@ -392,6 +394,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.tipo', 'escritura_publica')
             ->set('acreditacionForm.numeroEscritura', 'E-500')
             ->set('acreditacionForm.fechaEscritura', '2024-03-15')
+            ->set('acreditacionForm.propietarioNombre', 'Colegio Norte SA de CV')
             ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
             ->call('guardarAcreditacion')
             ->assertHasNoErrors();
@@ -594,6 +597,8 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.arrendadorComodante', 'Juan Arrendador')
             ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
             ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.fechaInicioVigencia', '2026-02-01')
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
             ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
             ->set('acreditacionForm.observaciones', 'Contrato renovable anualmente')
             ->call('guardarAcreditacion')
@@ -644,7 +649,7 @@ class Paso2DocumentosTest extends TestCase
         ]);
     }
 
-    public function test_acreditacion_muestra_ratificado_notario_solo_en_comodato(): void
+    public function test_acreditacion_muestra_ratificado_notario_en_arrendamiento_y_comodato_pero_no_en_escritura_ni_otro(): void
     {
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
@@ -652,7 +657,77 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertDontSeeHtml('id="acreditacionForm.ratificadoNotario"')
             ->set('acreditacionForm.tipo', 'comodato')
-            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"');
+            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertSeeHtml('id="acreditacionForm.ratificadoNotario"')
+            ->set('acreditacionForm.tipo', 'otro')
+            ->assertDontSeeHtml('id="acreditacionForm.ratificadoNotario"');
+    }
+
+    public function test_acreditacion_cada_variante_muestra_solo_sus_campos(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="acreditacionForm.propietarioNombre"')
+            ->assertSee('Número de notaría')
+            ->assertSee('Municipio y entidad federativa')
+            ->assertDontSeeHtml('id="acreditacionForm.arrendadorComodante"')
+            ->assertDontSeeHtml('id="acreditacionForm.otroDerecho"')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertSeeHtml('id="acreditacionForm.arrendadorComodante"')
+            ->assertSeeHtml('id="acreditacionForm.fechaInicioVigencia"')
+            ->assertSee('Arrendador')
+            ->assertDontSeeHtml('id="acreditacionForm.propietarioNombre"')
+            ->assertDontSeeHtml('id="acreditacionForm.folioRpp"')
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->assertSee('Comodante')
+            ->assertSee('Comodatario')
+            ->set('acreditacionForm.tipo', 'otro')
+            ->assertSeeHtml('id="acreditacionForm.otroDerecho"')
+            ->assertSeeHtml('id="acreditacionForm.otroReferencia"')
+            ->assertDontSeeHtml('id="acreditacionForm.numeroEscritura"')
+            ->assertDontSeeHtml('id="acreditacionForm.arrendadorComodante"');
+    }
+
+    public function test_acreditacion_oculta_la_fecha_de_fin_con_vigencia_indeterminada(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->assertSeeHtml('id="acreditacionForm.vigenciaContrato"')
+            ->set('acreditacionForm.vigenciaIndeterminada', true)
+            ->assertDontSeeHtml('id="acreditacionForm.vigenciaContrato"');
+    }
+
+    public function test_acreditacion_muestra_datos_de_ratificacion_solo_si_esta_ratificado(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertDontSeeHtml('id="acreditacionForm.ratificacionFecha"')
+            ->set('acreditacionForm.ratificadoNotario', true)
+            ->assertSeeHtml('id="acreditacionForm.ratificacionFecha"')
+            ->assertSeeHtml('id="acreditacionForm.ratificacionNotarioNombre"')
+            ->assertSeeHtml('id="acreditacionForm.ratificacionNotariaNumero"');
+    }
+
+    public function test_acreditacion_muestra_facultades_solo_si_el_arrendador_no_es_propietario(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->assertSeeHtml('id="acreditacionForm.arrendadorEsPropietario"')
+            ->assertDontSeeHtml('id="acreditacionForm.facultadesReferencia"')
+            ->set('acreditacionForm.arrendadorEsPropietario', false)
+            ->assertSeeHtml('id="acreditacionForm.facultadesReferencia"');
     }
 
     public function test_comodato_guarda_ratificado_notario(): void
@@ -669,6 +744,8 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.arrendadorComodante', 'Juan Comodante')
             ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
             ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.fechaInicioVigencia', '2026-02-01')
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
             ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
             ->set('acreditacionForm.ratificadoNotario', true)
             ->call('guardarAcreditacion')
@@ -790,6 +867,8 @@ class Paso2DocumentosTest extends TestCase
             ->set('acreditacionForm.arrendadorComodante', 'Comodante SA')
             ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
             ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.fechaInicioVigencia', '2026-02-01')
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
             ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
             ->call('guardarAcreditacion')
             ->assertHasNoErrors();
@@ -816,6 +895,12 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
 
         $component->set('acreditacionForm.otroEspecifique', 'Posesión por resolución judicial')
+            ->set('acreditacionForm.otroReferencia', 'EXP-123/2025')
+            ->set('acreditacionForm.otroTitular', 'Colegio Norte SA de CV')
+            ->set('acreditacionForm.otroFechaExpedicion', '2025-05-01')
+            ->set('acreditacionForm.otroAutoridad', 'Juzgado Civil')
+            ->set('acreditacionForm.otroDerecho', 'Posesión')
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
             ->call('guardarAcreditacion')
             ->assertHasNoErrors();
 
@@ -910,5 +995,145 @@ class Paso2DocumentosTest extends TestCase
             ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
 
         $this->assertDatabaseCount('documentos_escuela', 0);
+    }
+
+    // --- Acreditación de ocupación legal: persistencia por variante ---
+
+    private function componenteListoParaAcreditar(): Testable
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $component->set('archivos.ine', UploadedFile::fake()->create('ine.pdf', 10, 'application/pdf'))->set('ineForm.nombre', 'PEREZ JUANA')->set('ineForm.curp', 'PEJU800101MQTRRN01')->call('guardarIne');
+        $component->set('archivos.acta_nacimiento', UploadedFile::fake()->create('acta.pdf', 10, 'application/pdf'))->call('guardarDocumentoSimple', 'acta_nacimiento');
+
+        return $component->set('archivos.escritura_inmueble', UploadedFile::fake()->create('acreditacion.pdf', 10, 'application/pdf'));
+    }
+
+    /** @return array<string, mixed> */
+    private function filaAcreditacion(): array
+    {
+        return (array) DB::table('acreditaciones_ocupacion_legal')->first();
+    }
+
+    public function test_cambiar_de_tipo_antes_de_guardar_no_persiste_la_variante_anterior(): void
+    {
+        $component = $this->componenteListoParaAcreditar();
+
+        $component->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->set('acreditacionForm.folioRpp', 'FME-123')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->set('acreditacionForm.arrendadorComodante', 'Juan Arrendador')
+            ->set('acreditacionForm.arrendatarioComodatario', 'Juana Pérez')
+            ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.fechaInicioVigencia', '2026-02-01')
+            ->set('acreditacionForm.vigenciaContrato', '2030-01-01')
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+
+        $fila = $this->filaAcreditacion();
+        $this->assertSame('arrendamiento', $fila['tipo']);
+        $this->assertNull($fila['folio_rpp']);
+        $this->assertNull($fila['numero_escritura']);
+    }
+
+    public function test_escritura_guarda_propietario_y_datos_registrales(): void
+    {
+        $this->componenteListoParaAcreditar()
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.numeroEscritura', 'E-500')
+            ->set('acreditacionForm.fechaEscritura', '2024-03-15')
+            ->set('acreditacionForm.propietarioNombre', 'Colegio Norte SA de CV')
+            ->set('acreditacionForm.notarioNombre', 'Lic. Ana Notaria')
+            ->set('acreditacionForm.notarioNumero', '14')
+            ->set('acreditacionForm.notarioLocalidad', 'Querétaro, Querétaro')
+            ->set('acreditacionForm.folioRpp', 'FME-123')
+            ->set('acreditacionForm.fechaInscripcionRpp', '2024-04-01')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'escritura_publica',
+            'propietario_nombre' => 'Colegio Norte SA de CV',
+            'notario_numero' => '14',
+            'notario_localidad' => 'Querétaro, Querétaro',
+            'folio_rpp' => 'FME-123',
+            'fecha_inscripcion_rpp' => '2024-04-01',
+        ]);
+    }
+
+    public function test_arrendamiento_guarda_ratificacion_y_facultades_del_arrendador(): void
+    {
+        $this->componenteListoParaAcreditar()
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->set('acreditacionForm.arrendadorComodante', 'Inmobiliaria Sur SA')
+            ->set('acreditacionForm.arrendatarioComodatario', 'Colegio Norte SA de CV')
+            ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.fechaInicioVigencia', '2026-02-01')
+            ->set('acreditacionForm.vigenciaContrato', '2030-01-31')
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
+            ->set('acreditacionForm.ratificadoNotario', true)
+            ->set('acreditacionForm.ratificacionFecha', '2026-01-20')
+            ->set('acreditacionForm.ratificacionNotarioNombre', 'Lic. Ana Notaria')
+            ->set('acreditacionForm.ratificacionNotariaNumero', '14')
+            ->set('acreditacionForm.arrendadorEsPropietario', false)
+            ->set('acreditacionForm.facultadesReferencia', 'Poder notarial 123')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+
+        $fila = $this->filaAcreditacion();
+        $this->assertTrue($fila['ratificado_notario']);
+        $this->assertSame('2026-01-20', $fila['ratificacion_fecha']);
+        $this->assertSame('Lic. Ana Notaria', $fila['ratificacion_notario_nombre']);
+        $this->assertSame('14', $fila['ratificacion_notaria_numero']);
+        $this->assertFalse($fila['arrendador_es_propietario']);
+        $this->assertSame('Poder notarial 123', $fila['facultades_referencia']);
+    }
+
+    public function test_comodato_con_vigencia_indeterminada_guarda_fin_nulo(): void
+    {
+        $this->componenteListoParaAcreditar()
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->set('acreditacionForm.arrendadorComodante', 'Comodante SA')
+            ->set('acreditacionForm.arrendatarioComodatario', 'Colegio Norte SA de CV')
+            ->set('acreditacionForm.fechaContrato', '2026-01-01')
+            ->set('acreditacionForm.fechaInicioVigencia', '2026-02-01')
+            ->set('acreditacionForm.vigenciaContrato', '2030-01-31')
+            ->set('acreditacionForm.vigenciaIndeterminada', true)
+            ->set('acreditacionForm.usoAutorizado', 'Prestación de servicio educativo')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+
+        $fila = $this->filaAcreditacion();
+        $this->assertTrue($fila['vigencia_indeterminada']);
+        $this->assertNull($fila['vigencia_contrato']);
+    }
+
+    public function test_otro_guarda_los_metadatos_del_instrumento(): void
+    {
+        $this->componenteListoParaAcreditar()
+            ->set('acreditacionForm.tipo', 'otro')
+            ->set('acreditacionForm.otroEspecifique', 'Resolución judicial de posesión')
+            ->set('acreditacionForm.otroReferencia', 'EXP-123/2025')
+            ->set('acreditacionForm.otroTitular', 'Colegio Norte SA de CV')
+            ->set('acreditacionForm.otroFechaExpedicion', '2025-05-01')
+            ->set('acreditacionForm.otroAutoridad', 'Juzgado Civil')
+            ->set('acreditacionForm.otroDerecho', 'Posesión')
+            ->set('acreditacionForm.usoAutorizado', 'Ocupación para actividades escolares')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'otro',
+            'otro_referencia' => 'EXP-123/2025',
+            'otro_titular' => 'Colegio Norte SA de CV',
+            'otro_fecha_expedicion' => '2025-05-01',
+            'otro_autoridad' => 'Juzgado Civil',
+            'otro_derecho' => 'Posesión',
+            'uso_autorizado' => 'Ocupación para actividades escolares',
+        ]);
     }
 }

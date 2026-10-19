@@ -92,27 +92,48 @@
                     @if ($acreditacionForm->tipo === 'escritura_publica')
                         <x-ui.field id="acreditacionForm.numeroEscritura" label="Número de escritura"><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.numeroEscritura" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.fechaEscritura" label="Fecha de la escritura"><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaEscritura" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.propietarioNombre" label="Nombre completo o razón social del propietario" hint="Tal como aparece en la escritura."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.propietarioNombre" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.notarioNombre" label="Nombre del notario"><x-ui.input maxlength="150" wire:model.blur="acreditacionForm.notarioNombre" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.notarioNumero" label="Número del notario" optional><x-ui.input maxlength="20" wire:model.blur="acreditacionForm.notarioNumero" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.notarioLocalidad" label="Localidad del notario" optional><x-ui.input maxlength="100" wire:model.blur="acreditacionForm.notarioLocalidad" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.folioRpp" label="Folio del Registro Público de la Propiedad" optional><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.folioRpp" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción RPP" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInscripcionRpp" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioNumero" label="Número de notaría" optional><x-ui.input maxlength="20" wire:model.blur="acreditacionForm.notarioNumero" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioLocalidad" label="Municipio y entidad federativa" hint="Donde está la notaría, por ejemplo: Querétaro, Querétaro." optional><x-ui.input maxlength="100" wire:model.blur="acreditacionForm.notarioLocalidad" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.folioRpp" label="Folio o antecedente registral (Registro Público de la Propiedad)" hint="Dato de inscripción de la escritura en el Registro Público de la Propiedad. Puede omitirlo si no lo tiene a la mano." optional><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.folioRpp" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInscripcionRpp" /></x-ui.field>
                     @endif
 
                     @if (in_array($acreditacionForm->tipo, ['arrendamiento', 'comodato']))
-                        <x-ui.field id="acreditacionForm.arrendadorComodante" label="Arrendador / comodante"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.arrendadorComodante" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.arrendatarioComodatario" label="Arrendatario / comodatario"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.arrendatarioComodatario" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.fechaContrato" label="Fecha del contrato"><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaContrato" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.vigenciaContrato" label="Vigencia del contrato"><x-ui.input type="date" wire:model.blur="acreditacionForm.vigenciaContrato" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado" optional><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
-                    @endif
-
-                    @if ($acreditacionForm->tipo === 'comodato')
-                        <x-ui.checkbox id="acreditacionForm.ratificadoNotario" wire:model.blur="acreditacionForm.ratificadoNotario">Comodato ratificado ante notario público</x-ui.checkbox>
+                        <x-ui.field id="acreditacionForm.arrendadorComodante" :label="$acreditacionForm->tipo === 'comodato' ? 'Comodante' : 'Arrendador'"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.arrendadorComodante" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.arrendatarioComodatario" :label="$acreditacionForm->tipo === 'comodato' ? 'Comodatario' : 'Arrendatario'"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.arrendatarioComodatario" /></x-ui.field>
+                        <x-ui.checkbox id="acreditacionForm.arrendadorEsPropietario" wire:model.live="acreditacionForm.arrendadorEsPropietario">El {{ $acreditacionForm->tipo === 'comodato' ? 'comodante' : 'arrendador' }} es el propietario del inmueble</x-ui.checkbox>
+                        @if (! $acreditacionForm->arrendadorEsPropietario)
+                            <x-ui.field id="acreditacionForm.facultadesReferencia" label="Documento que acredita sus facultades" hint="Poder, mandato u otro documento por el que puede conceder el uso del inmueble."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.facultadesReferencia" /></x-ui.field>
+                        @endif
+                        <x-ui.field id="acreditacionForm.fechaContrato" label="Fecha de celebración del contrato" hint="El día en que se firmó."><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaContrato" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaInicioVigencia" label="Inicio de la vigencia" hint="Puede ser distinta de la fecha de celebración."><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInicioVigencia" /></x-ui.field>
+                        <x-ui.checkbox id="acreditacionForm.vigenciaIndeterminada" wire:model.live="acreditacionForm.vigenciaIndeterminada" descripcion="Se registra tal como consta en el contrato; SEDEQ determina si es aceptable.">El contrato no tiene fecha de terminación</x-ui.checkbox>
+                        @if (! $acreditacionForm->vigenciaIndeterminada)
+                            <x-ui.field id="acreditacionForm.vigenciaContrato" label="Fin de la vigencia"><x-ui.input type="date" wire:model.blur="acreditacionForm.vigenciaContrato" /></x-ui.field>
+                        @endif
+                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado del inmueble" hint="El destino que permite el contrato, por ejemplo: prestación de servicio educativo."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
+                        <x-ui.checkbox id="acreditacionForm.ratificadoNotario" wire:model.live="acreditacionForm.ratificadoNotario" descripcion="Un notario público confirmó el contenido y las firmas del contrato. Si se exige o no depende del nivel educativo; aquí solo se registra.">Contrato ratificado ante notario público</x-ui.checkbox>
+                        @if ($acreditacionForm->ratificadoNotario)
+                            <x-ui.field id="acreditacionForm.ratificacionFecha" label="Fecha de ratificación" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.ratificacionFecha" /></x-ui.field>
+                            <x-ui.field id="acreditacionForm.ratificacionNotarioNombre" label="Notario que ratificó" optional><x-ui.input maxlength="150" wire:model.blur="acreditacionForm.ratificacionNotarioNombre" /></x-ui.field>
+                            <x-ui.field id="acreditacionForm.ratificacionNotariaNumero" label="Número de notaría" optional><x-ui.input maxlength="20" wire:model.blur="acreditacionForm.ratificacionNotariaNumero" /></x-ui.field>
+                        @endif
                     @endif
 
                     @if ($acreditacionForm->tipo === 'otro')
-                        <x-ui.field id="acreditacionForm.otroEspecifique" label="Especifique"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroEspecifique" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroEspecifique" label="Denominación del instrumento" hint="Por ejemplo: resolución judicial, convenio, concesión."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroEspecifique" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroReferencia" label="Número o referencia del documento"><x-ui.input maxlength="100" wire:model.blur="acreditacionForm.otroReferencia" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroTitular" label="Titular o beneficiario"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroTitular" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroFechaExpedicion" label="Fecha de expedición u otorgamiento"><x-ui.input type="date" wire:model.blur="acreditacionForm.otroFechaExpedicion" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroAutoridad" label="Autoridad o fedatario que lo emite"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroAutoridad" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.otroDerecho" label="Derecho que acredita" hint="Por ejemplo: propiedad, posesión, usufructo, uso."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroDerecho" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado del inmueble" hint="La finalidad para la que el instrumento permite ocupar el inmueble. SEDEQ revisa si el instrumento es suficiente."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaInicioVigencia" label="Inicio de la vigencia" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInicioVigencia" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.vigenciaContrato" label="Fin de la vigencia" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.vigenciaContrato" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.folioRpp" label="Folio o antecedente registral" hint="Solo si el instrumento está inscrito en el Registro Público de la Propiedad." optional><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.folioRpp" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInscripcionRpp" /></x-ui.field>
                     @endif
                 </x-tramite.documento-row>
             @elseif ($clave === 'dictamen_uso_suelo')

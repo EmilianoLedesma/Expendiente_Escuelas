@@ -208,24 +208,7 @@ class Paso2Documentos extends Component
             fn () => $this->acreditacionForm->validate(),
         );
 
-        if (! $this->intentarRegistrar($registrarDocumento, 'escritura_inmueble', new DatosDocumento(
-            tipoAcreditacion: $this->acreditacionForm->tipo,
-            numeroEscritura: $this->acreditacionForm->numeroEscritura !== '' ? $this->acreditacionForm->numeroEscritura : null,
-            fechaEscritura: $this->acreditacionForm->fechaEscritura !== '' ? $this->acreditacionForm->fechaEscritura : null,
-            notarioNombre: $this->acreditacionForm->notarioNombre !== '' ? $this->acreditacionForm->notarioNombre : null,
-            notarioNumero: $this->acreditacionForm->notarioNumero !== '' ? $this->acreditacionForm->notarioNumero : null,
-            notarioLocalidad: $this->acreditacionForm->notarioLocalidad !== '' ? $this->acreditacionForm->notarioLocalidad : null,
-            folioRpp: $this->acreditacionForm->folioRpp !== '' ? $this->acreditacionForm->folioRpp : null,
-            fechaInscripcionRpp: $this->acreditacionForm->fechaInscripcionRpp !== '' ? $this->acreditacionForm->fechaInscripcionRpp : null,
-            arrendadorComodante: $this->acreditacionForm->arrendadorComodante !== '' ? $this->acreditacionForm->arrendadorComodante : null,
-            arrendatarioComodatario: $this->acreditacionForm->arrendatarioComodatario !== '' ? $this->acreditacionForm->arrendatarioComodatario : null,
-            fechaContrato: $this->acreditacionForm->fechaContrato !== '' ? $this->acreditacionForm->fechaContrato : null,
-            vigenciaContrato: $this->acreditacionForm->vigenciaContrato !== '' ? $this->acreditacionForm->vigenciaContrato : null,
-            usoAutorizado: $this->acreditacionForm->usoAutorizado !== '' ? $this->acreditacionForm->usoAutorizado : null,
-            ratificadoNotario: $this->acreditacionForm->ratificadoNotario,
-            otroEspecifique: $this->acreditacionForm->otroEspecifique !== '' ? $this->acreditacionForm->otroEspecifique : null,
-            observaciones: $this->acreditacionForm->observaciones !== '' ? $this->acreditacionForm->observaciones : null,
-        ))) {
+        if (! $this->intentarRegistrar($registrarDocumento, 'escritura_inmueble', new DatosDocumento(...$this->acreditacionForm->datosParaTipo()))) {
             return;
         }
         $this->archivos['escritura_inmueble'] = null;

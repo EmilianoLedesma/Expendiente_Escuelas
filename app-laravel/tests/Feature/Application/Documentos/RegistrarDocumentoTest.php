@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Documentos;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
@@ -10,6 +11,7 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
+use App\Models\AcreditacionOcupacionLegal;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
@@ -19,6 +21,7 @@ use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
+use App\Models\TipoDocumento;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -159,6 +162,7 @@ class RegistrarDocumentoTest extends TestCase
             tipoAcreditacion: 'escritura_publica',
             numeroEscritura: 'E-500',
             fechaEscritura: '2024-03-15',
+            propietarioNombre: 'Colegio Norte SA de CV',
             notarioNombre: 'Lic. Ana Notaria',
         ));
 
@@ -311,9 +315,9 @@ class RegistrarDocumentoTest extends TestCase
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'escritura_inmueble', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento(
-            tipoAcreditacion: 'escritura_publica',
-            numeroEscritura: 'E-100',
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->createWithContent('v1.pdf', 'contenido-version-1'), new DatosDocumento(
+            fechaEmision: '2026-09-01',
+            giroAutorizado: 'Escuela de educación básica',
         ));
 
         $documentoAntes = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->first();
@@ -322,12 +326,13 @@ class RegistrarDocumentoTest extends TestCase
         $bytesAnteriores = Storage::disk('documentos')->get($rutaAnterior);
 
         try {
-            // tipoAcreditacion inválido viola el CHECK de acreditaciones_ocupacion_legal.tipo,
-            // forzando el fallo dentro de la transacción tras reemplazar la fila base.
-            (new RegistrarDocumento)->ejecutar($escuela->id, 'escritura_inmueble', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento(
-                tipoAcreditacion: 'tipo_invalido',
+            // giro_autorizado es VARCHAR(200) y este documento no valida largo antes de escribir:
+            // el fallo ocurre dentro de la transacción, tras reemplazar la fila base.
+            (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->createWithContent('v2.pdf', 'contenido-version-2-mas-largo'), new DatosDocumento(
+                fechaEmision: '2026-09-02',
+                giroAutorizado: str_repeat('x', 201),
             ));
-            $this->fail('Se esperaba que la transacción fallara por el CHECK de tipo.');
+            $this->fail('Se esperaba que la transacción fallara por el largo de la columna.');
         } catch (\Throwable) {
             // esperado
         }
@@ -806,5 +811,412 @@ class RegistrarDocumentoTest extends TestCase
         app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(monto: '0.01'), $escuelaNivel->id);
         app(RegistrarDocumento::class)->ejecutar($escuelaNivel->escuela_id, 'recibo_pago_derechos', $this->pdf(), $this->recibo(monto: '99999999.99'), $escuelaNivel->id);
         $this->assertDatabaseHas('recibos_pago_derechos', ['monto' => '99999999.99']);
+    }
+
+    // --- Acreditación de ocupación legal (escritura_inmueble): invariantes por variante ---
+
+    /**
+     * @param  array<string, mixed>  $campos  sobrescribe o agrega campos del DTO base de la variante
+     */
+    private function datosAcreditacion(string $tipo, array $campos = []): DatosDocumento
+    {
+        $base = match ($tipo) {
+            'escritura_publica' => [
+                'numeroEscritura' => 'E-500',
+                'fechaEscritura' => '2024-03-15',
+                'propietarioNombre' => 'Colegio Norte SA de CV',
+                'notarioNombre' => 'Lic. Ana Notaria',
+            ],
+            'arrendamiento', 'comodato' => [
+                'arrendadorComodante' => 'Inmobiliaria Sur SA',
+                'arrendatarioComodatario' => 'Colegio Norte SA de CV',
+                'fechaContrato' => '2025-01-10',
+                'fechaInicioVigencia' => '2025-02-01',
+                'vigenciaContrato' => '2030-01-31',
+                'usoAutorizado' => 'Prestación de servicio educativo',
+            ],
+            'otro' => [
+                'otroEspecifique' => 'Convenio de usufructo',
+                'otroReferencia' => 'CU-77',
+                'otroTitular' => 'Colegio Norte SA de CV',
+                'otroFechaExpedicion' => '2024-06-01',
+                'otroAutoridad' => 'Notaría 14',
+                'otroDerecho' => 'Usufructo',
+                'usoAutorizado' => 'Prestación de servicio educativo',
+            ],
+            default => [],
+        };
+
+        return new DatosDocumento(...['tipoAcreditacion' => $tipo, ...$base, ...$campos]);
+    }
+
+    private function escuelaConAcreditacion(): Escuela
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+
+        return $this->crearEscuela();
+    }
+
+    private function registrarAcreditacion(Escuela $escuela, DatosDocumento $datos): void
+    {
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'escritura_inmueble', UploadedFile::fake()->create('e.pdf', 50, 'application/pdf'), $datos);
+    }
+
+    /** @return array<string, mixed> */
+    private function filaAcreditacion(): array
+    {
+        return (array) DB::table('acreditaciones_ocupacion_legal')->first();
+    }
+
+    /** @param  list<string>  $claves  campos del formulario que deben venir en los errores */
+    private function assertAcreditacionRechazada(Escuela $escuela, DatosDocumento $datos, array $claves): void
+    {
+        try {
+            $this->registrarAcreditacion($escuela, $datos);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            foreach ($claves as $clave) {
+                $this->assertArrayHasKey("acreditacionForm.{$clave}", $e->errores);
+            }
+        }
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 0);
+        $this->assertDatabaseCount('documentos_plantel', 0);
+        $this->assertSame([], Storage::disk('documentos')->allFiles());
+    }
+
+    public function test_escritura_persiste_propietario_y_datos_registrales(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', [
+            'notarioNumero' => '14',
+            'notarioLocalidad' => 'Querétaro, Querétaro',
+            'folioRpp' => 'FME-123',
+            'fechaInscripcionRpp' => '2024-04-01',
+        ]));
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'escritura_publica',
+            'numero_escritura' => 'E-500',
+            'fecha_escritura' => '2024-03-15',
+            'propietario_nombre' => 'Colegio Norte SA de CV',
+            'notario_nombre' => 'Lic. Ana Notaria',
+            'notario_numero' => '14',
+            'notario_localidad' => 'Querétaro, Querétaro',
+            'folio_rpp' => 'FME-123',
+            'fecha_inscripcion_rpp' => '2024-04-01',
+        ]);
+    }
+
+    public function test_escritura_rechaza_datos_esenciales_faltantes(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        foreach (['numeroEscritura', 'fechaEscritura', 'propietarioNombre', 'notarioNombre'] as $campo) {
+            $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', [$campo => null]), [$campo]);
+        }
+    }
+
+    public function test_rechaza_fechas_futuras(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $futura = now()->addDay()->toDateString();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['fechaEscritura' => $futura]), ['fechaEscritura']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['fechaInscripcionRpp' => $futura]), ['fechaInscripcionRpp']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('arrendamiento', ['fechaContrato' => $futura]), ['fechaContrato']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('comodato', ['ratificadoNotario' => true, 'ratificacionFecha' => $futura]), ['ratificacionFecha']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('otro', ['otroFechaExpedicion' => $futura]), ['otroFechaExpedicion']);
+    }
+
+    public function test_rechaza_valores_que_exceden_la_columna_o_fechas_mal_formadas(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['numeroEscritura' => str_repeat('1', 51)]), ['numeroEscritura']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['fechaEscritura' => '15/03/2024']), ['fechaEscritura']);
+    }
+
+    public function test_tipo_invalido_se_rechaza_antes_de_escribir(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('tipo_invalido'), ['tipo']);
+    }
+
+    public function test_arrendamiento_persiste_el_contrato_y_anula_campos_de_otras_variantes(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        // Un caller que evita Livewire manda además campos de escritura y de "otro".
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento', [
+            'numeroEscritura' => 'E-1',
+            'fechaEscritura' => '2024-03-15',
+            'propietarioNombre' => 'Otro Propietario',
+            'notarioNombre' => 'Lic. Notario',
+            'folioRpp' => 'FME-9',
+            'fechaInscripcionRpp' => '2024-04-01',
+            'otroEspecifique' => 'Algo',
+            'otroDerecho' => 'Usufructo',
+            'observaciones' => null,
+        ]));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertSame('arrendamiento', $fila['tipo']);
+        $this->assertSame('Inmobiliaria Sur SA', $fila['arrendador_comodante']);
+        $this->assertSame('2025-02-01', $fila['fecha_inicio_vigencia']);
+        $this->assertSame('2030-01-31', $fila['vigencia_contrato']);
+        $this->assertSame('Prestación de servicio educativo', $fila['uso_autorizado']);
+        foreach (['numero_escritura', 'fecha_escritura', 'propietario_nombre', 'notario_nombre', 'folio_rpp', 'fecha_inscripcion_rpp', 'otro_especifique', 'otro_derecho'] as $columna) {
+            $this->assertNull($fila[$columna], $columna);
+        }
+    }
+
+    public function test_escritura_anula_campos_de_contrato_y_de_otro_enviados_por_un_caller(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', [
+            'arrendadorComodante' => 'Alguien',
+            'vigenciaContrato' => '2030-01-31',
+            'usoAutorizado' => 'Educativo',
+            'ratificadoNotario' => true,
+            'otroReferencia' => 'X',
+        ]));
+
+        $fila = $this->filaAcreditacion();
+        foreach (['arrendador_comodante', 'vigencia_contrato', 'uso_autorizado', 'ratificado_notario', 'otro_referencia'] as $columna) {
+            $this->assertNull($fila[$columna], $columna);
+        }
+    }
+
+    public function test_contrato_exige_inicio_fin_y_uso_autorizado(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        foreach (['arrendamiento', 'comodato'] as $tipo) {
+            foreach (['arrendadorComodante', 'arrendatarioComodatario', 'fechaContrato', 'fechaInicioVigencia', 'vigenciaContrato', 'usoAutorizado'] as $campo) {
+                $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion($tipo, [$campo => null]), [$campo]);
+            }
+        }
+    }
+
+    public function test_el_fin_de_vigencia_no_puede_ser_anterior_al_inicio_ni_a_la_celebracion(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('arrendamiento', ['vigenciaContrato' => '2025-01-15']), ['vigenciaContrato']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('comodato', ['fechaInicioVigencia' => '2024-01-01', 'vigenciaContrato' => '2024-06-01']), ['vigenciaContrato']);
+    }
+
+    public function test_vigencia_indeterminada_guarda_fin_nulo_aunque_se_envie_una_fecha(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('comodato', ['vigenciaIndeterminada' => true]));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertTrue($fila['vigencia_indeterminada']);
+        $this->assertNull($fila['vigencia_contrato']);
+        $this->assertSame('2025-02-01', $fila['fecha_inicio_vigencia']);
+    }
+
+    public function test_vigencia_indeterminada_sin_marcar_exige_fin(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('arrendamiento', ['vigenciaIndeterminada' => false, 'vigenciaContrato' => null]), ['vigenciaContrato']);
+    }
+
+    public function test_ratificacion_se_conserva_en_arrendamiento_y_comodato(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        foreach (['arrendamiento', 'comodato'] as $tipo) {
+            DB::table('acreditaciones_ocupacion_legal')->delete();
+            DB::table('documentos_plantel')->delete();
+
+            $this->registrarAcreditacion($escuela, $this->datosAcreditacion($tipo, [
+                'ratificadoNotario' => true,
+                'ratificacionFecha' => '2025-01-20',
+                'ratificacionNotarioNombre' => 'Lic. Ana Notaria',
+                'ratificacionNotariaNumero' => '14',
+            ]));
+
+            $fila = $this->filaAcreditacion();
+            $this->assertTrue($fila['ratificado_notario'], $tipo);
+            $this->assertSame('2025-01-20', $fila['ratificacion_fecha'], $tipo);
+            $this->assertSame('Lic. Ana Notaria', $fila['ratificacion_notario_nombre'], $tipo);
+            $this->assertSame('14', $fila['ratificacion_notaria_numero'], $tipo);
+        }
+    }
+
+    public function test_los_datos_de_ratificacion_se_anulan_si_no_esta_ratificado(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento', [
+            'ratificadoNotario' => false,
+            'ratificacionFecha' => '2025-01-20',
+            'ratificacionNotarioNombre' => 'Lic. Ana Notaria',
+            'ratificacionNotariaNumero' => '14',
+        ]));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertFalse($fila['ratificado_notario']);
+        foreach (['ratificacion_fecha', 'ratificacion_notario_nombre', 'ratificacion_notaria_numero'] as $columna) {
+            $this->assertNull($fila[$columna], $columna);
+        }
+    }
+
+    public function test_la_ratificacion_no_es_obligatoria(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('comodato'));
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+    }
+
+    public function test_arrendador_que_no_es_propietario_exige_referencia_de_facultades(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('arrendamiento', ['arrendadorEsPropietario' => false]), ['facultadesReferencia']);
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento', ['arrendadorEsPropietario' => false, 'facultadesReferencia' => 'Poder notarial 123']));
+        $fila = $this->filaAcreditacion();
+        $this->assertFalse($fila['arrendador_es_propietario']);
+        $this->assertSame('Poder notarial 123', $fila['facultades_referencia']);
+    }
+
+    public function test_arrendador_propietario_anula_la_referencia_de_facultades(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('comodato', ['arrendadorEsPropietario' => true, 'facultadesReferencia' => 'Poder 1']));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertTrue($fila['arrendador_es_propietario']);
+        $this->assertNull($fila['facultades_referencia']);
+    }
+
+    public function test_comodato_persiste_estructura_equivalente_a_arrendamiento(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('comodato'));
+
+        $this->assertDatabaseHas('acreditaciones_ocupacion_legal', [
+            'tipo' => 'comodato',
+            'arrendador_comodante' => 'Inmobiliaria Sur SA',
+            'arrendatario_comodatario' => 'Colegio Norte SA de CV',
+            'fecha_contrato' => '2025-01-10',
+            'fecha_inicio_vigencia' => '2025-02-01',
+            'vigencia_contrato' => '2030-01-31',
+        ]);
+    }
+
+    public function test_otro_exige_metadatos_del_instrumento_derecho_y_uso(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        foreach (['otroEspecifique', 'otroReferencia', 'otroTitular', 'otroFechaExpedicion', 'otroAutoridad', 'otroDerecho', 'usoAutorizado'] as $campo) {
+            $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('otro', [$campo => null]), [$campo]);
+        }
+    }
+
+    public function test_otro_persiste_metadatos_sin_exigir_leyenda_de_uso_educativo(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('otro', [
+            'usoAutorizado' => 'Ocupación de oficinas administrativas',
+            'folioRpp' => 'FME-9',
+            'arrendadorComodante' => 'Se descarta',
+        ]));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertSame('otro', $fila['tipo']);
+        $this->assertSame('Usufructo', $fila['otro_derecho']);
+        $this->assertSame('Ocupación de oficinas administrativas', $fila['uso_autorizado']);
+        $this->assertSame('FME-9', $fila['folio_rpp']);
+        $this->assertNull($fila['arrendador_comodante']);
+    }
+
+    public function test_reemplazar_la_acreditacion_por_otra_variante_deja_nulos_los_campos_anteriores(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['folioRpp' => 'FME-123']));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento'));
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+        $fila = $this->filaAcreditacion();
+        $this->assertSame('arrendamiento', $fila['tipo']);
+        $this->assertNull($fila['folio_rpp']);
+        $this->assertNull($fila['numero_escritura']);
+        $this->assertNull($fila['propietario_nombre']);
+    }
+
+    public function test_reemplazar_con_la_misma_variante_actualiza_los_datos_en_la_misma_fila(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['numeroEscritura' => 'E-1']));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['numeroEscritura' => 'E-2']));
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+        $this->assertDatabaseCount('documentos_plantel', 1);
+        $this->assertSame('E-2', $this->filaAcreditacion()['numero_escritura']);
+    }
+
+    public function test_una_validacion_fallida_al_reemplazar_conserva_fila_y_archivo_previos(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+        $ruta = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path');
+
+        try {
+            $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento', ['usoAutorizado' => null]));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos) {
+            // esperado
+        }
+
+        $this->assertSame('escritura_publica', $this->filaAcreditacion()['tipo']);
+        $this->assertSame($ruta, DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path'));
+        Storage::disk('documentos')->assertExists($ruta);
+        $this->assertCount(1, Storage::disk('documentos')->allFiles());
+    }
+
+    public function test_una_acreditacion_anterior_a_la_migracion_cuenta_como_capturada_y_se_puede_reemplazar(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $tipo = TipoDocumento::where('clave', 'escritura_inmueble')->firstOrFail();
+        $documento = DocumentoPlantel::create(['plantel_id' => $escuela->plantel_id, 'tipo_documento_id' => $tipo->id, 'archivo_path' => 'viejo.pdf']);
+        AcreditacionOcupacionLegal::create(['documento_plantel_id' => $documento->id, 'tipo' => 'escritura_publica', 'numero_escritura' => 'E-1', 'notario_nombre' => 'Lic. X']);
+
+        $this->assertNotContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($escuela->id, 'fisica'));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+        $this->assertSame('Colegio Norte SA de CV', $this->filaAcreditacion()['propietario_nombre']);
+    }
+
+    public function test_la_acreditacion_es_compartida_por_las_escuelas_del_plantel(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $hermana = Escuela::create(['plantel_id' => $escuela->plantel_id, 'solicitante_id' => $escuela->solicitante_id]);
+        ResponsableLegal::create(['escuela_id' => $hermana->id, 'tipo_persona' => 'fisica']);
+        $this->assertContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+
+        $this->assertNotContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
     }
 }
