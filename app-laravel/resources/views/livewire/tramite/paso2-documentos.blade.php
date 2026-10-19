@@ -95,7 +95,25 @@
                         <x-ui.field id="acreditacionForm.propietarioNombre" label="Nombre completo o razón social del propietario" hint="Tal como aparece en la escritura."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.propietarioNombre" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.notarioNombre" label="Nombre del notario"><x-ui.input maxlength="150" wire:model.blur="acreditacionForm.notarioNombre" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.notarioNumero" label="Número de notaría" optional><x-ui.input maxlength="20" wire:model.blur="acreditacionForm.notarioNumero" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.notarioLocalidad" label="Municipio y entidad federativa" hint="Donde está la notaría, por ejemplo: Querétaro, Querétaro." optional><x-ui.input maxlength="100" wire:model.blur="acreditacionForm.notarioLocalidad" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioEntidadFederativaId" label="Entidad federativa" hint="Donde está la notaría." optional>
+                            <x-ui.select wire:model.live="acreditacionForm.notarioEntidadFederativaId">
+                                <option value="">Seleccione…</option>
+                                @foreach ($entidades as $entidad)
+                                    <option value="{{ $entidad['id'] }}">{{ $entidad['nombre'] }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @if ($entidades === [])
+                                <p class="mt-xs text-body-sm text-muted">Aún no hay entidades cargadas: pida a la persona administradora que importe el catálogo geográfico.</p>
+                            @endif
+                        </x-ui.field>
+                        <x-ui.field id="acreditacionForm.notarioMunicipioId" label="Municipio" optional>
+                            <x-ui.select wire:model.blur="acreditacionForm.notarioMunicipioId" :disabled="$acreditacionForm->notarioEntidadFederativaId === ''">
+                                <option value="">Seleccione…</option>
+                                @foreach ($municipios as $municipio)
+                                    <option value="{{ $municipio['id'] }}">{{ $municipio['nombre'] }}</option>
+                                @endforeach
+                            </x-ui.select>
+                        </x-ui.field>
                         <x-ui.field id="acreditacionForm.folioRpp" label="Folio o antecedente registral (Registro Público de la Propiedad)" hint="Dato de inscripción de la escritura en el Registro Público de la Propiedad. Puede omitirlo si no lo tiene a la mano." optional><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.folioRpp" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.fechaInscripcionRpp" label="Fecha de inscripción" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInscripcionRpp" /></x-ui.field>
                     @endif
