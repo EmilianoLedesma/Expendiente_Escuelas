@@ -98,6 +98,10 @@ class RegistrarDocumento
 
         $this->validarDatosTipados($tipoDocumentoClave, $datos);
 
+        if ($tipoDocumentoClave === 'escritura_inmueble' && $datos->tipoAcreditacion !== null) {
+            $this->validarAcreditacion($datos);
+        }
+
         if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
             throw new DatosInvalidos(['acervo.titulos' => 'El número de títulos no puede ser negativo.']);
         }
@@ -212,24 +216,7 @@ class RegistrarDocumento
                 if ($tipo->clave === 'escritura_inmueble' && $datos->tipoAcreditacion !== null) {
                     AcreditacionOcupacionLegal::updateOrCreate(
                         ['documento_plantel_id' => $documento->getKey()],
-                        [
-                            'tipo' => $datos->tipoAcreditacion,
-                            'numero_escritura' => $datos->numeroEscritura,
-                            'fecha_escritura' => $datos->fechaEscritura,
-                            'notario_nombre' => $datos->notarioNombre,
-                            'notario_numero' => $datos->notarioNumero,
-                            'notario_localidad' => $datos->notarioLocalidad,
-                            'folio_rpp' => $datos->folioRpp,
-                            'fecha_inscripcion_rpp' => $datos->fechaInscripcionRpp,
-                            'arrendador_comodante' => $datos->arrendadorComodante,
-                            'arrendatario_comodatario' => $datos->arrendatarioComodatario,
-                            'fecha_contrato' => $datos->fechaContrato,
-                            'vigencia_contrato' => $datos->vigenciaContrato,
-                            'uso_autorizado' => $datos->usoAutorizado,
-                            'ratificado_notario' => $datos->ratificadoNotario,
-                            'otro_especifique' => $datos->otroEspecifique,
-                            'observaciones' => $datos->observaciones,
-                        ],
+                        $this->columnasAcreditacion($datos),
                     );
                 }
 
@@ -406,6 +393,177 @@ class RegistrarDocumento
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
         }
+    }
+
+    private const ACREDITACION_ESCRITURA = [
+        'numero_escritura', 'fecha_escritura', 'propietario_nombre', 'notario_nombre', 'notario_numero',
+        'notario_localidad', 'folio_rpp', 'fecha_inscripcion_rpp',
+    ];
+
+    private const ACREDITACION_CONTRATO = [
+        'arrendador_comodante', 'arrendatario_comodatario', 'fecha_contrato', 'fecha_inicio_vigencia',
+        'vigencia_contrato', 'vigencia_indeterminada', 'uso_autorizado', 'ratificado_notario',
+        'ratificacion_fecha', 'ratificacion_notario_nombre', 'ratificacion_notaria_numero',
+        'arrendador_es_propietario', 'facultades_referencia',
+    ];
+
+    private const ACREDITACION_OTRO = [
+        'otro_especifique', 'otro_referencia', 'otro_titular', 'otro_fecha_expedicion', 'otro_autoridad',
+        'otro_derecho', 'uso_autorizado', 'fecha_inicio_vigencia', 'vigencia_contrato', 'folio_rpp',
+        'fecha_inscripcion_rpp',
+    ];
+
+    /**
+     * Invariantes de la acreditación de ocupación legal por variante de `tipo`.
+     * Es solo completitud de datos: la suficiencia jurídica del instrumento la
+     * decide la autoridad. La exigencia de ratificación notarial depende del
+     * nivel educativo (PENDIENTE-dictamenes-por-nivel.md) y no se impone aquí.
+     * Las rutas de error son las propiedades de AcreditacionOcupacionForm.
+     */
+    private function validarAcreditacion(DatosDocumento $datos): void
+    {
+        $variante = $datos->tipoAcreditacion;
+        if (! in_array($variante, ['escritura_publica', 'arrendamiento', 'comodato', 'otro'], true)) {
+            throw new DatosInvalidos(['acreditacionForm.tipo' => 'Selecciona un tipo de acreditación válido.']);
+        }
+
+        $errores = [];
+        $texto = function (string $campo, ?string $valor, int $max, bool $requerido = true) use (&$errores): void {
+            if ($valor === null || trim($valor) === '') {
+                if ($requerido) {
+                    $errores["acreditacionForm.{$campo}"] = 'Este dato es obligatorio.';
+                }
+
+                return;
+            }
+            if (mb_strlen($valor) > $max) {
+                $errores["acreditacionForm.{$campo}"] = "Admite hasta {$max} caracteres.";
+            }
+        };
+        $fecha = function (string $campo, ?string $valor, bool $requerido = true, bool $pasada = true) use (&$errores): void {
+            if ($valor === null || $valor === '') {
+                if ($requerido) {
+                    $errores["acreditacionForm.{$campo}"] = 'Este dato es obligatorio.';
+                }
+
+                return;
+            }
+            $fechaValida = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
+            if ($fechaValida === false || $fechaValida->format('Y-m-d') !== $valor) {
+                $errores["acreditacionForm.{$campo}"] = 'La fecha no es válida.';
+            } elseif ($pasada && $valor > now()->toDateString()) {
+                $errores["acreditacionForm.{$campo}"] = 'La fecha no puede ser posterior a hoy.';
+            }
+        };
+        $noAnterior = function (string $campo, ?string $fin, ?string $inicio, string $mensaje) use (&$errores): void {
+            if ($fin !== null && $inicio !== null && ! isset($errores["acreditacionForm.{$campo}"]) && $fin < $inicio) {
+                $errores["acreditacionForm.{$campo}"] = $mensaje;
+            }
+        };
+
+        if ($variante === 'escritura_publica') {
+            $texto('numeroEscritura', $datos->numeroEscritura, 50);
+            $fecha('fechaEscritura', $datos->fechaEscritura);
+            $texto('propietarioNombre', $datos->propietarioNombre, 200);
+            $texto('notarioNombre', $datos->notarioNombre, 150);
+            $texto('notarioNumero', $datos->notarioNumero, 20, false);
+            $texto('notarioLocalidad', $datos->notarioLocalidad, 100, false);
+            $texto('folioRpp', $datos->folioRpp, 50, false);
+            $fecha('fechaInscripcionRpp', $datos->fechaInscripcionRpp, false);
+        } elseif ($variante === 'otro') {
+            $texto('otroEspecifique', $datos->otroEspecifique, 200);
+            $texto('otroReferencia', $datos->otroReferencia, 100);
+            $texto('otroTitular', $datos->otroTitular, 200);
+            $fecha('otroFechaExpedicion', $datos->otroFechaExpedicion);
+            $texto('otroAutoridad', $datos->otroAutoridad, 200);
+            $texto('otroDerecho', $datos->otroDerecho, 200);
+            $texto('usoAutorizado', $datos->usoAutorizado, 200);
+            $fecha('fechaInicioVigencia', $datos->fechaInicioVigencia, false, false);
+            $fecha('vigenciaContrato', $datos->vigenciaContrato, false, false);
+            $noAnterior('vigenciaContrato', $datos->vigenciaContrato, $datos->fechaInicioVigencia, 'La vigencia no puede ser anterior a su inicio.');
+            $texto('folioRpp', $datos->folioRpp, 50, false);
+            $fecha('fechaInscripcionRpp', $datos->fechaInscripcionRpp, false);
+        } else {
+            $indeterminada = $datos->vigenciaIndeterminada === true;
+            $texto('arrendadorComodante', $datos->arrendadorComodante, 200);
+            $texto('arrendatarioComodatario', $datos->arrendatarioComodatario, 200);
+            $fecha('fechaContrato', $datos->fechaContrato);
+            $fecha('fechaInicioVigencia', $datos->fechaInicioVigencia, true, false);
+            $texto('usoAutorizado', $datos->usoAutorizado, 200);
+            if (! $indeterminada) {
+                $fecha('vigenciaContrato', $datos->vigenciaContrato, true, false);
+                $noAnterior('vigenciaContrato', $datos->vigenciaContrato, $datos->fechaInicioVigencia, 'La vigencia del contrato no puede ser anterior al inicio de la vigencia.');
+                $noAnterior('vigenciaContrato', $datos->vigenciaContrato, $datos->fechaContrato, 'La vigencia del contrato no puede ser anterior a la fecha del contrato.');
+            }
+            if ($datos->ratificadoNotario === true) {
+                $fecha('ratificacionFecha', $datos->ratificacionFecha, false);
+                $texto('ratificacionNotarioNombre', $datos->ratificacionNotarioNombre, 150, false);
+                $texto('ratificacionNotariaNumero', $datos->ratificacionNotariaNumero, 20, false);
+            }
+            if ($datos->arrendadorEsPropietario === false) {
+                $texto('facultadesReferencia', $datos->facultadesReferencia, 200);
+            }
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
+    }
+
+    /**
+     * Todas las columnas de la extensión: las que no pertenecen a la variante
+     * elegida se escriben NULL, para que nada de otra figura sobreviva aunque el
+     * caller las mande (el formulario Livewire tampoco es la única entrada).
+     *
+     * @return array<string, mixed>
+     */
+    private function columnasAcreditacion(DatosDocumento $datos): array
+    {
+        $ratificado = $datos->ratificadoNotario === true;
+        $indeterminada = $datos->vigenciaIndeterminada === true;
+
+        $valores = [
+            'numero_escritura' => $datos->numeroEscritura,
+            'fecha_escritura' => $datos->fechaEscritura,
+            'propietario_nombre' => $datos->propietarioNombre,
+            'notario_nombre' => $datos->notarioNombre,
+            'notario_numero' => $datos->notarioNumero,
+            'notario_localidad' => $datos->notarioLocalidad,
+            'folio_rpp' => $datos->folioRpp,
+            'fecha_inscripcion_rpp' => $datos->fechaInscripcionRpp,
+            'arrendador_comodante' => $datos->arrendadorComodante,
+            'arrendatario_comodatario' => $datos->arrendatarioComodatario,
+            'fecha_contrato' => $datos->fechaContrato,
+            'fecha_inicio_vigencia' => $datos->fechaInicioVigencia,
+            'vigencia_contrato' => $indeterminada ? null : $datos->vigenciaContrato,
+            'vigencia_indeterminada' => $datos->vigenciaIndeterminada ?? false,
+            'uso_autorizado' => $datos->usoAutorizado,
+            'ratificado_notario' => $ratificado,
+            'ratificacion_fecha' => $ratificado ? $datos->ratificacionFecha : null,
+            'ratificacion_notario_nombre' => $ratificado ? $datos->ratificacionNotarioNombre : null,
+            'ratificacion_notaria_numero' => $ratificado ? $datos->ratificacionNotariaNumero : null,
+            'arrendador_es_propietario' => $datos->arrendadorEsPropietario,
+            'facultades_referencia' => $datos->arrendadorEsPropietario === false ? $datos->facultadesReferencia : null,
+            'otro_especifique' => $datos->otroEspecifique,
+            'otro_referencia' => $datos->otroReferencia,
+            'otro_titular' => $datos->otroTitular,
+            'otro_fecha_expedicion' => $datos->otroFechaExpedicion,
+            'otro_autoridad' => $datos->otroAutoridad,
+            'otro_derecho' => $datos->otroDerecho,
+        ];
+
+        $propias = match ($datos->tipoAcreditacion) {
+            'escritura_publica' => self::ACREDITACION_ESCRITURA,
+            'otro' => self::ACREDITACION_OTRO,
+            default => self::ACREDITACION_CONTRATO,
+        };
+
+        $columnas = [];
+        foreach ($valores as $columna => $valor) {
+            $columnas[$columna] = in_array($columna, $propias, true) ? $valor : null;
+        }
+
+        return ['tipo' => $datos->tipoAcreditacion, 'observaciones' => $datos->observaciones, ...$columnas];
     }
 
     /** Invariantes de recibos_pago_derechos (DDL: folio VARCHAR(50), monto NUMERIC(10,2), portal_referencia VARCHAR(200)); el dominio del portal no se exige (spec §5.3). */

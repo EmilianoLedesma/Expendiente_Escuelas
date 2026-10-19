@@ -79,6 +79,13 @@ class GuardaTramiteEnviadoTest extends TestCase
             'RegistrarDocumento ámbito escuela' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'acta_nacimiento', $pdf('acta.pdf'), new DatosDocumento)],
             'RegistrarDocumento ámbito nivel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'formato_solicitud', $pdf('formato.pdf'), new DatosDocumento, $n->id)],
             'RegistrarDocumento ámbito plantel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'plano_inmueble', $pdf('plano.pdf'), new DatosDocumento)],
+            'RegistrarDocumento acreditación de ocupación (plantel)' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'escritura_inmueble', $pdf('escritura.pdf'), new DatosDocumento(
+                tipoAcreditacion: 'escritura_publica',
+                numeroEscritura: 'E-1',
+                fechaEscritura: '2024-03-15',
+                propietarioNombre: 'Colegio Norte SA de CV',
+                notarioNombre: 'Lic. Ana Notaria',
+            ))],
             'RegistrarDatosNivel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDatosNivel::class)->ejecutar($n->id, 'vespertino', 'mixto')],
             'EjecutarValidacionFinal::ejecutar' => [fn (Escuela $e, EscuelaNivel $n) => app(EjecutarValidacionFinal::class)->ejecutar($e->id)],
         ];
@@ -293,6 +300,41 @@ class GuardaTramiteEnviadoTest extends TestCase
         // Control: the escuela's own (not shared) documents can still change.
         app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acta_nacimiento', $this->pdf('acta-nueva.pdf'), new DatosDocumento);
         $this->addToAssertionCount(1);
+    }
+
+    public function test_la_acreditacion_de_ocupacion_no_se_reemplaza_si_otra_escuela_del_plantel_ya_se_envio(): void
+    {
+        $hermana = $this->crearEscuelaConPlantel();
+        $this->completarTramite($hermana);
+        $escuela = Escuela::create(['plantel_id' => $hermana->plantel_id, 'solicitante_id' => $hermana->solicitante_id]);
+        $this->completarTramite($escuela);
+        $datos = new DatosDocumento(
+            tipoAcreditacion: 'escritura_publica',
+            numeroEscritura: 'E-1',
+            fechaEscritura: '2024-03-15',
+            propietarioNombre: 'Colegio Norte SA de CV',
+            notarioNombre: 'Lic. Ana Notaria',
+        );
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'escritura_inmueble', $this->pdf('escritura.pdf'), $datos);
+        $this->enviar($hermana);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuela->id, 'escritura_inmueble', $this->pdf('nueva.pdf'), new DatosDocumento(
+                tipoAcreditacion: 'arrendamiento',
+                arrendadorComodante: 'Inmobiliaria Sur SA',
+                arrendatarioComodatario: 'Colegio Norte SA de CV',
+                fechaContrato: '2025-01-10',
+                fechaInicioVigencia: '2025-02-01',
+                vigenciaContrato: '2030-01-31',
+                usoAutorizado: 'Prestación de servicio educativo',
+            ));
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
+        }
+
+        $this->assertSame('escritura_publica', DB::table('acreditaciones_ocupacion_legal')->value('tipo'));
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
     }
 
     public function test_no_se_agregan_espacios_ni_sanitarios_al_plantel_pero_las_aulas_del_nivel_si(): void

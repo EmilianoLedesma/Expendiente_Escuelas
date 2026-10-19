@@ -33,6 +33,24 @@ class AcreditacionOcupacionLegal extends Model
         'ratificado_notario',
         'otro_especifique',
         'observaciones',
+        'propietario_nombre',
+        'fecha_inicio_vigencia',
+        'vigencia_indeterminada',
+        'arrendador_es_propietario',
+        'facultades_referencia',
+        'ratificacion_fecha',
+        'ratificacion_notario_nombre',
+        'ratificacion_notaria_numero',
+        'otro_referencia',
+        'otro_titular',
+        'otro_fecha_expedicion',
+        'otro_autoridad',
+        'otro_derecho',
+    ];
+
+    protected $casts = [
+        'vigencia_indeterminada' => 'boolean',
+        'arrendador_es_propietario' => 'boolean',
     ];
 
     public function documentoPlantel(): BelongsTo

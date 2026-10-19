@@ -23,3 +23,37 @@ Se mantienen a nivel plantel (Paso 2.2). WS-5b solo movió al nivel los document
 - Mover `dictamen_uso_suelo` / `visto_bueno_proteccion_civil` a `ambito = escuela_nivel` en el catálogo (migración nueva, mismo patrón que la de WS-5b).
 - Los conteos de 2.2 bajarían (física 8 / moral 10 / gestor 9 hoy) y las escuelas que ya completaron 2.4 tendrían que volver a cargarlos (rollout similar al de WS-5a/5b).
 - Al resolverse, renombrar este archivo a `ADR-00N-dictamenes-por-nivel.md` en el mismo commit.
+
+## Actualización (2026-10-19): captura de la acreditación de ocupación legal
+
+Estado de la pregunta sobre `ratificado_notario`: **parcialmente resuelta**. Lo técnico quedó resuelto; lo normativo sigue abierto y no se marca como resuelto. Este archivo **no se renombra** porque quedan preguntas abiertas (dictámenes por nivel, número oficial y ratificación por nivel).
+
+### Qué se implementó (rama `worktree-acreditacion-ocupacion`, informe `docs/reports/2026-10-19-acreditacion-ocupacion.md`)
+
+- La ratificación se captura para **arrendamiento y comodato** (antes solo comodato, sin datos): casilla `ratificado_notario` y, si está marcada, `ratificacion_fecha`, `ratificacion_notario_nombre` y `ratificacion_notaria_numero` (columnas nullable, migración `2026_10_19_000100`).
+- **Comportamiento provisional:** se captura y se guarda, **nunca se exige ni bloquea**, en ningún nivel. Si no está marcada, los tres datos se guardan como NULL. La pantalla dice que la exigencia depende del nivel educativo y que aquí solo se registra.
+- La acreditación **sigue a nivel plantel** (`documentos_plantel`, una fila por plantel; sin cambios de cardinalidad ni de ámbito). Un mismo contrato cubre todos los niveles que pida la escuela; el sistema no sabe cuál nivel exige qué, así que no impone reglas por nivel durante la captura inicial.
+- Decisión relacionada, **vigencia indeterminada**: casilla "El contrato no tiene fecha de terminación"; con ella la fecha de fin no se exige y se guarda NULL. Es completitud de datos, no admisibilidad.
+
+### Fuentes y certeza (detalle en `COMPENDIO_MAESTRO`, "Fundamento normativo de la acreditación de ocupación legal")
+
+| Regla | Fuente | Certeza |
+|---|---|---|
+| Arrendamiento y comodato con ratificación de contenido y firmas ante notario | Acuerdo 450, art. 23, fr. II–III (DOF 16-dic-2008) | Texto leído; solo media superior; sin reforma ni abrogación hallada (no concluyente) |
+| Acuerdo 17/11/17 art. 23 (superior) no menciona ratificación ni plazo mínimo | DOF 13-nov-2017; reformas 08/04/20 y 02/02/24 solo tocan el art. 22 | Texto leído; **la ausencia no equivale a una exención**: remite a "disposiciones jurídicas aplicables" no revisadas |
+| Comodato ratificado solo en Básica; vigencia mínima de un ciclo escolar | Requisitos SEDEQ de Básica (vía COMPENDIO) | Documentada; no se pudo contrastar con la página pública de SEDEQ |
+| Guía DGB 2025 | URL del encargo | **No verificada** (PDF de imágenes) |
+
+### Preguntas que siguen abiertas para SEDEQ (no se asumen)
+
+1. Con la acreditación **compartida por plantel**: si una escuela pide Preescolar + Primaria bajo un mismo comodato, ¿la ratificación aplica por ser Básica? ¿Y para arrendamiento?
+2. ¿Se acepta un contrato **sin fecha de terminación**? ¿Con qué condiciones?
+3. **Vigencia mínima** del contrato por nivel (hoy solo "un ciclo escolar" en Básica; media superior y superior no la fijan en el artículo leído).
+4. ¿Los datos del **Registro Público de la Propiedad** son obligatorios en la escritura para Básica e Inicial? (hoy opcionales).
+5. ¿Qué **otros instrumentos** se aceptan y con qué suficiencia? (hoy se capturan metadatos; la revisión es humana).
+6. ¿SEDEQ aplica los Acuerdos 450 y 17/11/17 por delegación o tiene normativa estatal propia? ¿Existe versión posterior vigente del Acuerdo 450?
+7. ¿Una escritura con propietario distinto del solicitante, o un arrendador que no es propietario, qué documento de facultades acepta SEDEQ? (hoy solo se captura la referencia).
+
+### Si la respuesta a (1) es "por nivel"
+
+La obligatoriedad de la ratificación se resolvería en la **revisión** (o en la validación final) con una regla por nivel, sin cambiar el esquema. Mover la acreditación a `escuela_nivel` requiere una decisión arquitectónica y normativa explícita (misma consecuencia que "dictámenes por nivel": recarga de documentos de las escuelas que ya terminaron).

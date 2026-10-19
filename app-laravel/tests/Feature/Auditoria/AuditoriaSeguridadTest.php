@@ -90,7 +90,16 @@ class AuditoriaSeguridadTest extends TestCase
             $resA->escuelaId,
             'escritura_inmueble',
             UploadedFile::fake()->createWithContent('e.pdf', 'SECRETO-DE-A'),
-            new DatosDocumento(tipoAcreditacion: 'otro', otroEspecifique: 'x')
+            new DatosDocumento(
+                tipoAcreditacion: 'otro',
+                otroEspecifique: 'x',
+                otroReferencia: 'REF-1',
+                otroTitular: 'Titular',
+                otroFechaExpedicion: '2025-01-01',
+                otroAutoridad: 'Autoridad',
+                otroDerecho: 'Posesión',
+                usoAutorizado: 'Uso escolar',
+            )
         );
         $b = Solicitante::factory()->create();
         $this->actingAs($b->user);

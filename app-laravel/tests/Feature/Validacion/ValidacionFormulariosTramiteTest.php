@@ -188,6 +188,97 @@ class ValidacionFormulariosTramiteTest extends TestCase
         $this->assertSame('La vigencia del contrato no puede ser anterior a la fecha del contrato.', $this->primerError($prueba, 'acreditacionForm.vigenciaContrato'));
     }
 
+    public function test_paso2_documentos_escritura_exige_propietario(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors(['acreditacionForm.propietarioNombre']);
+    }
+
+    public function test_paso2_documentos_contrato_exige_inicio_y_uso_autorizado(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors(['acreditacionForm.fechaInicioVigencia', 'acreditacionForm.usoAutorizado']);
+    }
+
+    public function test_paso2_documentos_la_vigencia_indeterminada_no_exige_fecha_de_fin(): void
+    {
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'comodato')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors(['acreditacionForm.vigenciaContrato']);
+
+        $prueba->set('acreditacionForm.vigenciaIndeterminada', true)
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors(['acreditacionForm.vigenciaContrato']);
+    }
+
+    public function test_paso2_documentos_la_vigencia_no_es_anterior_al_inicio(): void
+    {
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->set('acreditacionForm.fechaInicioVigencia', '2025-06-01')
+            ->set('acreditacionForm.vigenciaContrato', '2025-03-01')
+            ->assertHasErrors(['acreditacionForm.vigenciaContrato']);
+
+        $this->assertSame('La vigencia del contrato no puede ser anterior al inicio de la vigencia.', $this->primerError($prueba, 'acreditacionForm.vigenciaContrato'));
+    }
+
+    public function test_paso2_documentos_las_facultades_se_exigen_solo_si_el_arrendador_no_es_propietario(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors(['acreditacionForm.facultadesReferencia'])
+            ->set('acreditacionForm.arrendadorEsPropietario', false)
+            ->call('guardarAcreditacion')
+            ->assertHasErrors(['acreditacionForm.facultadesReferencia']);
+    }
+
+    public function test_paso2_documentos_otro_exige_instrumento_derecho_y_uso(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'otro')
+            ->call('guardarAcreditacion')
+            ->assertHasErrors([
+                'acreditacionForm.otroEspecifique',
+                'acreditacionForm.otroReferencia',
+                'acreditacionForm.otroTitular',
+                'acreditacionForm.otroFechaExpedicion',
+                'acreditacionForm.otroAutoridad',
+                'acreditacionForm.otroDerecho',
+                'acreditacionForm.usoAutorizado',
+            ]);
+    }
+
+    public function test_paso2_documentos_los_campos_de_otra_variante_no_se_validan(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->set('acreditacionForm.notarioNumero', str_repeat('9', 50))
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors(['acreditacionForm.notarioNumero']);
+    }
+
+    public function test_paso2_documentos_el_payload_incluye_solo_la_variante_elegida(): void
+    {
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.folioRpp', 'FME-1')
+            ->set('acreditacionForm.tipo', 'arrendamiento')
+            ->set('acreditacionForm.arrendadorComodante', 'Inmobiliaria Sur');
+
+        $datos = $prueba->instance()->acreditacionForm->datosParaTipo();
+
+        $this->assertSame('arrendamiento', $datos['tipoAcreditacion']);
+        $this->assertSame('Inmobiliaria Sur', $datos['arrendadorComodante']);
+        $this->assertArrayNotHasKey('folioRpp', $datos);
+        $this->assertArrayNotHasKey('numeroEscritura', $datos);
+    }
+
     public function test_paso2_documentos_observaciones_conserva_parrafos(): void
     {
         Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
