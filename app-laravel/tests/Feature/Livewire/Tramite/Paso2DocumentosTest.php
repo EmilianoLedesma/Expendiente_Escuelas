@@ -342,6 +342,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -386,6 +387,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -809,6 +811,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
 
@@ -1132,5 +1135,56 @@ class Paso2DocumentosTest extends TestCase
             'otro_derecho' => 'Posesión',
             'uso_autorizado' => 'Ocupación para actividades escolares',
         ]);
+    }
+
+    // --- Dictamen de Uso de Suelo: vigencia declarada por el documento ---
+
+    private function componenteListoParaDictamen(): Testable
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        return Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
+            ->set('dictamenForm.fechaEmision', now()->subDays(90)->toDateString())
+            ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
+            ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
+            ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica');
+    }
+
+    public function test_dictamen_con_fecha_expresa_guarda_vencimiento_y_condicionantes_sin_fecha_calculada(): void
+    {
+        $this->componenteListoParaDictamen()
+            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
+            ->set('dictamenForm.fechaVencimientoDocumento', now()->addYear()->toDateString())
+            ->set('dictamenForm.condicionantes', 'Máximo 200 alumnos por turno.')
+            ->call('guardarDictamen')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('dictamenes_uso_suelo', [
+            'tipo_vigencia' => 'fecha_expresa',
+            'fecha_vencimiento_documento' => now()->addYear()->toDateString(),
+            'condicionantes' => 'Máximo 200 alumnos por turno.',
+            'giro_autorizado' => 'Escuela de educación básica',
+        ]);
+        $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
+    }
+
+    public function test_dictamen_sin_fecha_expresa_no_inventa_una_fecha_aunque_se_emitio_hace_90_dias(): void
+    {
+        $this->componenteListoParaDictamen()
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
+            ->call('guardarDictamen')
+            ->assertHasNoErrors();
+
+        $fila = (array) DB::table('dictamenes_uso_suelo')->first();
+        $this->assertSame('sin_fecha_expresa', $fila['tipo_vigencia']);
+        $this->assertNull($fila['fecha_vencimiento_documento']);
+        $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
     }
 }
