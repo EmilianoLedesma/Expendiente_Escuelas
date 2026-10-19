@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Documentos;
 
+use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Excepciones\DatosInvalidos;
@@ -10,6 +11,7 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
+use App\Models\AcreditacionOcupacionLegal;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
@@ -19,6 +21,7 @@ use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
+use App\Models\TipoDocumento;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -1156,5 +1159,64 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertNull($fila['folio_rpp']);
         $this->assertNull($fila['numero_escritura']);
         $this->assertNull($fila['propietario_nombre']);
+    }
+
+    public function test_reemplazar_con_la_misma_variante_actualiza_los_datos_en_la_misma_fila(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['numeroEscritura' => 'E-1']));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['numeroEscritura' => 'E-2']));
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+        $this->assertDatabaseCount('documentos_plantel', 1);
+        $this->assertSame('E-2', $this->filaAcreditacion()['numero_escritura']);
+    }
+
+    public function test_una_validacion_fallida_al_reemplazar_conserva_fila_y_archivo_previos(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+        $ruta = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path');
+
+        try {
+            $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento', ['usoAutorizado' => null]));
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos) {
+            // esperado
+        }
+
+        $this->assertSame('escritura_publica', $this->filaAcreditacion()['tipo']);
+        $this->assertSame($ruta, DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path'));
+        Storage::disk('documentos')->assertExists($ruta);
+        $this->assertCount(1, Storage::disk('documentos')->allFiles());
+    }
+
+    public function test_una_acreditacion_anterior_a_la_migracion_cuenta_como_capturada_y_se_puede_reemplazar(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $tipo = TipoDocumento::where('clave', 'escritura_inmueble')->firstOrFail();
+        $documento = DocumentoPlantel::create(['plantel_id' => $escuela->plantel_id, 'tipo_documento_id' => $tipo->id, 'archivo_path' => 'viejo.pdf']);
+        AcreditacionOcupacionLegal::create(['documento_plantel_id' => $documento->id, 'tipo' => 'escritura_publica', 'numero_escritura' => 'E-1', 'notario_nombre' => 'Lic. X']);
+
+        $this->assertNotContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($escuela->id, 'fisica'));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+        $this->assertSame('Colegio Norte SA de CV', $this->filaAcreditacion()['propietario_nombre']);
+    }
+
+    public function test_la_acreditacion_es_compartida_por_las_escuelas_del_plantel(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $hermana = Escuela::create(['plantel_id' => $escuela->plantel_id, 'solicitante_id' => $escuela->solicitante_id]);
+        ResponsableLegal::create(['escuela_id' => $hermana->id, 'tipo_persona' => 'fisica']);
+        $this->assertContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+
+        $this->assertNotContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
     }
 }
