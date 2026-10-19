@@ -9,6 +9,7 @@
 - Cambio de esquema autorizado por el dueño: tabla `municipios` (catálogo sembrado, 18 filas) y FK en `planteles` (y en `certificados_numero_oficial`, que también guarda municipio). Migración nueva; los datos de desarrollo se limpian, no se migran. El DDL se actualiza con la misma migración.
 - Paso 1 y el formulario del certificado de número oficial pasan a un `<select>`. El motor documental deja de normalizar texto de municipio.
 - Fuera de alcance: catálogo nacional (INEGI) y catálogo de localidades.
+- **Actualización (2026-10-19):** `ADR-017` creó un catálogo **nacional** (`entidades_federativas` y `municipios`, importado de una API) para la ubicación de la notaría. Contiene los 18 municipios de Querétaro como las filas de la entidad 22. Las FK de `planteles` y `certificados_numero_oficial` que este ADR pide siguen **sin hacer** y deben apuntar a esas tablas.
 - Trabajo derivado: ver `ADR-014-decisiones-de-producto-2026-10-07.md`.
 
 ---
