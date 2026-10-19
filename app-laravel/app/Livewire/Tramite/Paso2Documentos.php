@@ -9,6 +9,7 @@ use App\Application\Documentos\RegistrarDocumento;
 use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Geografia\ListarCatalogoGeografico;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\ResumenTramite;
@@ -381,10 +382,18 @@ class Paso2Documentos extends Component
             ?? throw new \RuntimeException("Escuela {$this->escuela->id} no tiene responsable legal — mount() debió redirigir antes de llegar aquí.");
     }
 
-    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, DocumentosCapturadosQuery $documentosCapturados)
+    /** Cambiar la entidad invalida el municipio elegido: pertenece a la entidad anterior. */
+    public function updatedAcreditacionFormNotarioEntidadFederativaId(): void
+    {
+        $this->acreditacionForm->notarioMunicipioId = '';
+        $this->resetErrorBag('acreditacionForm.notarioMunicipioId');
+    }
+
+    public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, DocumentosCapturadosQuery $documentosCapturados, ListarCatalogoGeografico $catalogoGeografico)
     {
         $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
         $capturados = $this->documentosCapturados($documentosCapturados);
+        $entidadNotaria = $this->acreditacionForm->notarioEntidadFederativaId;
 
         return view('livewire.tramite.paso2-documentos', [
             'clavesAplicables' => $clavesAplicables,
@@ -394,6 +403,9 @@ class Paso2Documentos extends Component
             'totalCompletos' => $capturados->count(),
             'encabezado' => ResumenTramite::encabezado('documentos'),
             'tipoPersona' => $this->tipoPersona(),
+            // Catálogo geográfico local (ADR-017) para los selectores de la notaría de la escritura.
+            'entidades' => $catalogoGeografico->entidades(),
+            'municipios' => $catalogoGeografico->municipios($entidadNotaria !== '' ? (int) $entidadNotaria : null),
             // Solo para marcar la fila vencida; la regla sigue en ValidarVigenciaDocumentos.
             'vencidos' => $this->getErrorBag()->has('vigencia') ? $validarVigencia->ejecutar($this->escuela->id) : [],
         ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => 'documentos']);
