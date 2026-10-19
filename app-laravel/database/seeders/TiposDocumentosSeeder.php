@@ -40,7 +40,7 @@ class TiposDocumentosSeeder extends Seeder
             ['clave' => 'acta_nacimiento', 'nombre' => 'Acta de nacimiento', 'aplica_persona' => 'ambas', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
             ['clave' => 'escritura_poder_facultades', 'nombre' => 'Escritura o poder notarial de facultades del representante legal', 'aplica_persona' => 'moral', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
             ['clave' => 'escritura_inmueble', 'nombre' => 'Escritura del bien inmueble', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
-            ['clave' => 'dictamen_uso_suelo', 'nombre' => 'Dictamen de Uso de Suelo vigente', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => 30],
+            ['clave' => 'dictamen_uso_suelo', 'nombre' => 'Dictamen de Uso de Suelo vigente', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'constancia_seguridad_estructural', 'nombre' => 'Constancia de Seguridad Estructural y de Ocupación', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null],
             ['clave' => 'formato_solicitud', 'nombre' => 'Formato de Solicitud', 'aplica_persona' => 'ambas', 'ambito' => 'escuela_nivel', 'vigencia_max_dias' => null],
             ['clave' => 'acta_constitutiva', 'nombre' => 'Acta constitutiva', 'aplica_persona' => 'moral', 'ambito' => 'escuela', 'vigencia_max_dias' => null],
