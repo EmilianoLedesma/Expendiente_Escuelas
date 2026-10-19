@@ -23,7 +23,7 @@ class TiposDocumentosSeederTest extends TestCase
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'acta_nacimiento', 'aplica_persona' => 'ambas', 'ambito' => 'escuela']);
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'escritura_poder_facultades', 'aplica_persona' => 'moral', 'ambito' => 'escuela']);
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'escritura_inmueble', 'aplica_persona' => 'ambas', 'ambito' => 'plantel']);
-        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'dictamen_uso_suelo', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => 30]);
+        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'dictamen_uso_suelo', 'aplica_persona' => 'ambas', 'ambito' => 'plantel', 'vigencia_max_dias' => null]);
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'constancia_seguridad_estructural', 'aplica_persona' => 'ambas', 'ambito' => 'plantel']);
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'formato_solicitud', 'aplica_persona' => 'ambas', 'ambito' => 'escuela_nivel', 'nivel_educativo_id' => null]);
         $this->assertDatabaseMissing('tipos_documentos', ['clave' => 'recibo_pago_derechos_plantel']);
@@ -58,7 +58,9 @@ class TiposDocumentosSeederTest extends TestCase
 
         $conVigencia = DB::table('tipos_documentos')->whereIn('ambito', ['plantel', 'escuela'])->whereNotNull('vigencia_max_dias')->pluck('clave')->all();
 
-        $this->assertEqualsCanonicalizing(['dictamen_uso_suelo', 'visto_bueno_proteccion_civil'], $conVigencia, 'control: el catálogo sí tiene claves con vigencia');
+        // El dictamen declara su propia vigencia (dictamenes_uso_suelo); los 30 días eran una antigüedad
+        // administrativa sin fundamento confirmado y ya no son regla (2026-10-19).
+        $this->assertEqualsCanonicalizing(['visto_bueno_proteccion_civil'], $conVigencia, 'control: el catálogo sí tiene claves con vigencia');
         $this->assertSame([], array_values(array_diff($conVigencia, Paso2Documentos::CON_DATOS_ESTRUCTURADOS)));
     }
 
