@@ -11,8 +11,10 @@ use App\Livewire\Tramite\Paso2Documentos;
 use App\Livewire\Tramite\Paso2Responsable;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
+use App\Models\EntidadFederativa;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
+use App\Models\Municipio;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
@@ -349,6 +351,58 @@ class ValidacionFormulariosTramiteTest extends TestCase
         $this->assertSame('sin_fecha_expresa', $datos['tipoVigencia']);
         $this->assertNull($datos['fechaVencimientoDocumento']);
         $this->assertNull($datos['condicionantes']);
+    }
+
+    public function test_paso2_documentos_la_ubicacion_de_la_notaria_es_opcional(): void
+    {
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->call('guardarAcreditacion')
+            ->assertHasNoErrors(['acreditacionForm.notarioEntidadFederativaId', 'acreditacionForm.notarioMunicipioId']);
+    }
+
+    public function test_paso2_documentos_el_municipio_de_la_notaria_debe_ser_de_la_entidad_elegida(): void
+    {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $otra = EntidadFederativa::create(['clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+        $propio = Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA']);
+        $ajeno = Municipio::create(['entidad_federativa_id' => $otra->id, 'clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.notarioEntidadFederativaId', (string) $queretaro->id)
+            ->set('acreditacionForm.notarioMunicipioId', (string) $ajeno->id)
+            ->assertHasErrors(['acreditacionForm.notarioMunicipioId'])
+            ->set('acreditacionForm.notarioMunicipioId', (string) $propio->id)
+            ->assertHasNoErrors(['acreditacionForm.notarioMunicipioId']);
+    }
+
+    public function test_paso2_documentos_un_municipio_sin_entidad_o_ids_inexistentes_se_rechazan(): void
+    {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $corregidora = Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA']);
+
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.notarioMunicipioId', (string) $corregidora->id)
+            ->assertHasErrors(['acreditacionForm.notarioMunicipioId']);
+
+        $prueba->set('acreditacionForm.notarioEntidadFederativaId', '999999')
+            ->assertHasErrors(['acreditacionForm.notarioEntidadFederativaId']);
+    }
+
+    public function test_paso2_documentos_el_payload_de_la_notaria_lleva_ids_enteros_o_nulos(): void
+    {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
+            ->set('acreditacionForm.tipo', 'escritura_publica')
+            ->set('acreditacionForm.notarioEntidadFederativaId', (string) $queretaro->id);
+
+        $datos = $prueba->instance()->acreditacionForm->datosParaTipo();
+
+        $this->assertSame($queretaro->id, $datos['notarioEntidadFederativaId']);
+        $this->assertNull($datos['notarioMunicipioId']);
+        $this->assertArrayNotHasKey('notarioLocalidad', $datos);
     }
 
     public function test_paso2_documentos_observaciones_conserva_parrafos(): void

@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Application\Geografia\FuenteCatalogoGeografico;
 use App\Http\Middleware\ExigeRol;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Infrastructure\Documentos\AlmacenDocumentosLocal;
+use App\Infrastructure\Geografia\ApiInfoMexico;
 use App\Listeners\CrearSolicitanteAlRegistrarUsuario;
 use App\Livewire\Hooks\LimpiarYValidarAlCapturar;
 use Illuminate\Auth\Events\Registered;
@@ -24,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             AlmacenDocumentos::class,
             AlmacenDocumentosLocal::class,
+        );
+
+        $this->app->bind(
+            FuenteCatalogoGeografico::class,
+            fn () => new ApiInfoMexico((string) config('services.api_info_mexico.url')),
         );
 
         // Livewire skips TrimStrings for its own requests: clean every captured

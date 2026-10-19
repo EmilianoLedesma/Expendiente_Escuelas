@@ -28,6 +28,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Fuente del catálogo geográfico (ADR-017); solo la usa `php artisan geografia:importar`.
+    'api_info_mexico' => [
+        'url' => env('API_INFO_MEXICO_URL', 'https://api-info-mexico.netlify.app'),
+        'minimo_entidades' => 32,
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

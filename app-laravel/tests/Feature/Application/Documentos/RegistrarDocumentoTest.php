@@ -15,8 +15,10 @@ use App\Models\AcreditacionOcupacionLegal;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
+use App\Models\EntidadFederativa;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
+use App\Models\Municipio;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
@@ -1219,6 +1221,69 @@ class RegistrarDocumentoTest extends TestCase
 
         $this->assertNotContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
         $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+    }
+
+    // --- Acreditación: ubicación de la notaría desde el catálogo geográfico ---
+
+    /** @return array{queretaro: int, corregidora: int, otraEntidad: int, municipioAjeno: int} ids creados */
+    private function geografia(): array
+    {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $otra = EntidadFederativa::create(['clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+
+        return [
+            'queretaro' => $queretaro->id,
+            'corregidora' => Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA'])->id,
+            'otraEntidad' => $otra->id,
+            'municipioAjeno' => Municipio::create(['entidad_federativa_id' => $otra->id, 'clave' => 1, 'nombre' => 'AGUASCALIENTES'])->id,
+        ];
+    }
+
+    public function test_escritura_persiste_la_entidad_y_el_municipio_de_la_notaria(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $ids = $this->geografia();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['notarioEntidadFederativaId' => $ids['queretaro'], 'notarioMunicipioId' => $ids['corregidora']]));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertSame($ids['queretaro'], $fila['notario_entidad_federativa_id']);
+        $this->assertSame($ids['corregidora'], $fila['notario_municipio_id']);
+    }
+
+    public function test_escritura_acepta_la_entidad_sin_municipio_y_sin_ubicacion(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $ids = $this->geografia();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica', ['notarioEntidadFederativaId' => $ids['queretaro']]));
+        $this->assertNull($this->filaAcreditacion()['notario_municipio_id']);
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+        $this->assertNull($this->filaAcreditacion()['notario_entidad_federativa_id']);
+    }
+
+    public function test_escritura_rechaza_un_municipio_de_otra_entidad_o_sin_entidad_o_inexistente(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $ids = $this->geografia();
+
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['notarioEntidadFederativaId' => $ids['queretaro'], 'notarioMunicipioId' => $ids['municipioAjeno']]), ['notarioMunicipioId']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['notarioMunicipioId' => $ids['corregidora']]), ['notarioEntidadFederativaId']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['notarioEntidadFederativaId' => 999999]), ['notarioEntidadFederativaId']);
+        $this->assertAcreditacionRechazada($escuela, $this->datosAcreditacion('escritura_publica', ['notarioEntidadFederativaId' => $ids['queretaro'], 'notarioMunicipioId' => 999999]), ['notarioMunicipioId']);
+    }
+
+    public function test_otras_variantes_anulan_la_ubicacion_de_la_notaria_enviada_por_un_caller(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        $ids = $this->geografia();
+
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('arrendamiento', ['notarioEntidadFederativaId' => $ids['queretaro'], 'notarioMunicipioId' => $ids['corregidora']]));
+
+        $fila = $this->filaAcreditacion();
+        $this->assertNull($fila['notario_entidad_federativa_id']);
+        $this->assertNull($fila['notario_municipio_id']);
     }
 
     // --- Dictamen de Uso de Suelo: vigencia declarada por el documento ---
