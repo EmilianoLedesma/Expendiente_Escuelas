@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Tramite;
 
+use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
@@ -61,6 +62,24 @@ class EstadoPaso2Test extends TestCase
         $this->assertFalse($estado->documentosVigentes($this->escuela->id));
         $this->assertFalse($estado->puedeSeleccionarNiveles($this->escuela->id));
         $this->assertSame(EstadoPaso2::DOCUMENTOS, $estado->etapaFaltante($this->escuela->id));
+    }
+
+    public function test_un_dictamen_emitido_hace_mucho_sin_fecha_expresa_no_bloquea_el_avance(): void
+    {
+        $this->completarPaso2($this->escuela->id);
+        $dictamen = DictamenDeEjemplo::conVigencia('sin_fecha_expresa');
+        app(RegistrarDocumento::class)->ejecutar($this->escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(400)->toDateString(),
+            autoridadExpide: $dictamen->autoridadExpide,
+            folioDictamen: $dictamen->folioDictamen,
+            giroAutorizado: $dictamen->giroAutorizado,
+            tipoVigencia: 'sin_fecha_expresa',
+        ));
+        $estado = app(EstadoPaso2::class);
+
+        $this->assertTrue($estado->documentosCompletos($this->escuela->id));
+        $this->assertTrue($estado->documentosVigentes($this->escuela->id));
+        $this->assertTrue($estado->puedeSeleccionarNiveles($this->escuela->id));
     }
 
     public function test_paso2_completo_permite_seleccionar_niveles(): void

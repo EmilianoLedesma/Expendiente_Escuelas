@@ -29,6 +29,14 @@ class TiposDocumentosSeederTest extends TestCase
         $this->assertDatabaseMissing('tipos_documentos', ['clave' => 'recibo_pago_derechos_plantel']);
     }
 
+    public function test_la_vigencia_de_proteccion_civil_se_conserva_y_la_del_dictamen_es_la_declarada(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+
+        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'visto_bueno_proteccion_civil', 'vigencia_max_dias' => 30]);
+        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'dictamen_uso_suelo', 'vigencia_max_dias' => null]);
+    }
+
     public function test_siembra_los_documentos_por_nivel_con_su_nivel(): void
     {
         (new TiposDocumentosSeeder)->run();

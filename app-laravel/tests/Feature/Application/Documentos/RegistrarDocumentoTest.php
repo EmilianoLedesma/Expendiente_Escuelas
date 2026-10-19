@@ -1377,6 +1377,22 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertNull($fila['condicionantes']);
     }
 
+    public function test_guardar_un_dictamen_no_modifica_otros_documentos_del_plantel(): void
+    {
+        $escuela = $this->escuelaConAcreditacion();
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'visto_bueno_proteccion_civil', UploadedFile::fake()->create('pc.pdf', 50, 'application/pdf'), new DatosDocumento(fechaEmision: '2026-09-01'));
+        $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));
+        $antes = DB::table('documentos_plantel')->orderBy('id')->get(['id', 'tipo_documento_id', 'archivo_path', 'fecha_vigencia'])->all();
+
+        $this->registrarDictamen($escuela, $this->datosDictamen());
+
+        $despues = DB::table('documentos_plantel')->whereIn('id', array_column($antes, 'id'))->orderBy('id')->get(['id', 'tipo_documento_id', 'archivo_path', 'fecha_vigencia'])->all();
+        $this->assertEquals($antes, $despues);
+        $this->assertDatabaseCount('documentos_plantel', 3);
+        $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
+        $this->assertSame('2026-10-01', DB::table('documentos_plantel')->where('tipo_documento_id', TipoDocumento::where('clave', 'visto_bueno_proteccion_civil')->value('id'))->value('fecha_vigencia'));
+    }
+
     public function test_un_dictamen_invalido_al_reemplazar_conserva_fila_y_archivo_previos(): void
     {
         $escuela = $this->escuelaConAcreditacion();

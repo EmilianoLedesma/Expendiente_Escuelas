@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CapturaExpedienteConsistente;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 /**
@@ -86,6 +87,7 @@ class GuardaTramiteEnviadoTest extends TestCase
                 propietarioNombre: 'Colegio Norte SA de CV',
                 notarioNombre: 'Lic. Ana Notaria',
             ))],
+            'RegistrarDocumento dictamen de uso de suelo (plantel)' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'dictamen_uso_suelo', $pdf('dictamen.pdf'), DictamenDeEjemplo::conVigencia('sin_fecha_expresa'))],
             'RegistrarDatosNivel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDatosNivel::class)->ejecutar($n->id, 'vespertino', 'mixto')],
             'EjecutarValidacionFinal::ejecutar' => [fn (Escuela $e, EscuelaNivel $n) => app(EjecutarValidacionFinal::class)->ejecutar($e->id)],
         ];
