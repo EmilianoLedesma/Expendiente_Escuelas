@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2DocumentosTest extends TestCase
@@ -491,9 +492,7 @@ class Paso2DocumentosTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
-        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
 
         $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))->assertOk();
 
@@ -555,9 +554,7 @@ class Paso2DocumentosTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'plano_inmueble']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
-        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))

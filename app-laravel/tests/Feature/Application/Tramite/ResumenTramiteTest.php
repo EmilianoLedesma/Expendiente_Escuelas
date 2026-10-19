@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\CompletaPaso24;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class ResumenTramiteTest extends TestCase
@@ -157,9 +158,7 @@ class ResumenTramiteTest extends TestCase
         $escuela = $this->escuela();
         $this->responsable($escuela);
         $this->documentos($escuela, ...array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']));
-        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
         $this->nivel($escuela, 'primaria');
 
         $resumen = $this->resumen($escuela);

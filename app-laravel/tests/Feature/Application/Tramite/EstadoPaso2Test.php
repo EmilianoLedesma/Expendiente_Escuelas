@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Application\Tramite;
 
-use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
@@ -14,6 +13,7 @@ use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class EstadoPaso2Test extends TestCase
@@ -54,9 +54,7 @@ class EstadoPaso2Test extends TestCase
     public function test_documentos_completos_pero_vencidos_falta_la_etapa_documentos(): void
     {
         $this->completarPaso2($this->escuela->id);
-        app(RegistrarDocumento::class)->ejecutar($this->escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        app(RegistrarDocumento::class)->ejecutar($this->escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
         $estado = app(EstadoPaso2::class);
 
         $this->assertTrue($estado->documentosCompletos($this->escuela->id));
