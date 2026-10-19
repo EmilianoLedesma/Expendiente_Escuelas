@@ -1187,4 +1187,32 @@ class Paso2DocumentosTest extends TestCase
         $this->assertNull($fila['fecha_vencimiento_documento']);
         $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
     }
+
+    public function test_dictamen_muestra_los_campos_de_vigencia_declarada_y_la_ayuda(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('Uso o giro autorizado según el dictamen')
+            ->assertSee('Capture el uso autorizado tal como aparece en el documento emitido por la autoridad municipal.')
+            ->assertSee('Sí, el documento indica una fecha de vencimiento')
+            ->assertSee('No, el documento no indica fecha de vencimiento')
+            ->assertSee('Registre solo lo que dice el documento')
+            ->assertSeeHtml('id="dictamenForm.condicionantes"')
+            ->assertSee('Condicionantes')
+            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
+    }
+
+    public function test_dictamen_muestra_la_fecha_de_vencimiento_solo_si_el_documento_la_indica(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
+            ->assertSeeHtml('id="dictamenForm.fechaVencimientoDocumento"')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
+            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
+    }
 }
