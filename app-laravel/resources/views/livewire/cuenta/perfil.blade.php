@@ -17,7 +17,7 @@
     </x-ui.section>
 
     <x-ui.section title="Cambiar contraseña">
-        <form novalidate wire:submit="cambiarContrasena" class="max-w-xl space-y-md">
+        <form novalidate class="max-w-xl space-y-md">
             <x-ui.field id="contrasenaActual" label="Contraseña actual">
                 <x-ui.input type="password" wire:model="contrasenaActual" autocomplete="current-password" />
             </x-ui.field>
@@ -27,7 +27,7 @@
             <x-ui.field id="contrasenaNueva_confirmation" label="Confirmar nueva contraseña">
                 <x-ui.input type="password" wire:model="contrasenaNueva_confirmation" autocomplete="new-password" />
             </x-ui.field>
-            <x-ui.button-primary type="submit">Cambiar contraseña</x-ui.button-primary>
+            <x-ui.stateful-button type="submit" action="cambiarContrasena" label="Cambiar contraseña" success-label="Contraseña actualizada" error-label="No se guardó. Reintentar" :reset-after="4000" />
         </form>
     </x-ui.section>
 

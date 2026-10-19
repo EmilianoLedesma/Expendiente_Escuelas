@@ -9,6 +9,7 @@ use App\Livewire\Actions\Logout;
 use App\Livewire\Concerns\NotificaToast;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -44,7 +45,8 @@ class Perfil extends Component
         $this->toast('Nombre actualizado');
     }
 
-    public function cambiarContrasena(): void
+    /** true = la contraseña cambió; un dato inválido relanza la excepción, que x-ui.stateful-button muestra como error. */
+    public function cambiarContrasena(): bool
     {
         try {
             $datos = $this->validate([
@@ -56,13 +58,19 @@ class Perfil extends Component
                 'contrasenaNueva.required' => 'Escribe la nueva contraseña.',
                 'contrasenaNueva.confirmed' => 'La confirmación no coincide con la nueva contraseña.',
             ]);
+        } catch (ValidationException $e) {
+            $this->toastDatosInvalidos();
+
+            throw $e;
         } finally {
             $this->reset('contrasenaActual', 'contrasenaNueva', 'contrasenaNueva_confirmation');
         }
 
         Auth::user()->update(['password' => $datos['contrasenaNueva']]);
 
-        $this->toast('Contraseña actualizada');
+        $this->toast('Contraseña actualizada', 'Úsala la próxima vez que inicies sesión.');
+
+        return true;
     }
 
     public function eliminarCuenta(Logout $cerrarSesion, EliminarCuenta $eliminarCuenta): void
