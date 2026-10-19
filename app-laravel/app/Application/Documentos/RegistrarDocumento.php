@@ -21,8 +21,10 @@ use App\Models\DictamenUsoSuelo;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
+use App\Models\EntidadFederativa;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
+use App\Models\Municipio;
 use App\Models\ReciboPagoDerechos;
 use App\Models\RelacionAcervoBibliografico;
 use App\Models\TipoDocumento;
@@ -405,7 +407,7 @@ class RegistrarDocumento
 
     private const ACREDITACION_ESCRITURA = [
         'numero_escritura', 'fecha_escritura', 'propietario_nombre', 'notario_nombre', 'notario_numero',
-        'notario_localidad', 'folio_rpp', 'fecha_inscripcion_rpp',
+        'notario_localidad', 'notario_entidad_federativa_id', 'notario_municipio_id', 'folio_rpp', 'fecha_inscripcion_rpp',
     ];
 
     private const ACREDITACION_CONTRATO = [
@@ -453,6 +455,7 @@ class RegistrarDocumento
             $texto('notarioNombre', $datos->notarioNombre, 150);
             $texto('notarioNumero', $datos->notarioNumero, 20, false);
             $texto('notarioLocalidad', $datos->notarioLocalidad, 100, false);
+            $this->validarUbicacionNotaria($errores, $datos);
             $texto('folioRpp', $datos->folioRpp, 50, false);
             $fecha('fechaInscripcionRpp', $datos->fechaInscripcionRpp, false);
         } elseif ($variante === 'otro') {
@@ -496,6 +499,36 @@ class RegistrarDocumento
     }
 
     /**
+     * Ubicación de la notaría desde el catálogo geográfico (ADR-017): la entidad debe
+     * existir, el municipio debe existir y pertenecer a esa entidad, y no hay municipio
+     * sin entidad. Ambos son opcionales.
+     *
+     * @param  array<string, string>  $errores
+     */
+    private function validarUbicacionNotaria(array &$errores, DatosDocumento $datos): void
+    {
+        $entidadId = $datos->notarioEntidadFederativaId;
+        $municipioId = $datos->notarioMunicipioId;
+
+        if ($entidadId !== null && ! EntidadFederativa::whereKey($entidadId)->exists()) {
+            $errores['acreditacionForm.notarioEntidadFederativaId'] = 'La entidad federativa seleccionada no existe.';
+
+            return;
+        }
+        if ($municipioId === null) {
+            return;
+        }
+        if ($entidadId === null) {
+            $errores['acreditacionForm.notarioEntidadFederativaId'] = 'Seleccione la entidad federativa del municipio.';
+
+            return;
+        }
+        if (! Municipio::whereKey($municipioId)->where('entidad_federativa_id', $entidadId)->exists()) {
+            $errores['acreditacionForm.notarioMunicipioId'] = 'El municipio no pertenece a la entidad federativa seleccionada.';
+        }
+    }
+
+    /**
      * Todas las columnas de la extensión: las que no pertenecen a la variante
      * elegida se escriben NULL, para que nada de otra figura sobreviva aunque el
      * caller las mande (el formulario Livewire tampoco es la única entrada).
@@ -514,6 +547,8 @@ class RegistrarDocumento
             'notario_nombre' => $datos->notarioNombre,
             'notario_numero' => $datos->notarioNumero,
             'notario_localidad' => $datos->notarioLocalidad,
+            'notario_entidad_federativa_id' => $datos->notarioEntidadFederativaId,
+            'notario_municipio_id' => $datos->notarioMunicipioId,
             'folio_rpp' => $datos->folioRpp,
             'fecha_inscripcion_rpp' => $datos->fechaInscripcionRpp,
             'arrendador_comodante' => $datos->arrendadorComodante,
