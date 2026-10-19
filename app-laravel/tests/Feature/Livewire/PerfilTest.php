@@ -172,9 +172,12 @@ class PerfilTest extends TestCase
             ->set('contrasenaActual', 'secreto-viejo')
             ->set('contrasenaNueva', 'otra-clave-larga-2026')
             ->set('contrasenaNueva_confirmation', 'otra-clave-larga-2026')
+            ->assertSeeHtml('wire:ignore')
+            ->assertSeeHtml('cambiarContrasena')
             ->call('cambiarContrasena')
+            ->assertReturned(true)
             ->assertHasNoErrors()
-            ->assertDispatched('toast')
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Contraseña actualizada')
             ->assertSet('contrasenaActual', '');
 
         $this->assertTrue(password_verify('otra-clave-larga-2026', $usuario->fresh()->password));
@@ -189,7 +192,8 @@ class PerfilTest extends TestCase
             ->set('contrasenaNueva', 'otra-clave-larga-2026')
             ->set('contrasenaNueva_confirmation', 'otra-clave-larga-2026')
             ->call('cambiarContrasena')
-            ->assertHasErrors(['contrasenaActual']);
+            ->assertHasErrors(['contrasenaActual'])
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
 
         $this->assertTrue(password_verify('secreto-viejo', $usuario->fresh()->password));
     }
@@ -201,7 +205,8 @@ class PerfilTest extends TestCase
             ->set('contrasenaNueva', 'otra-clave-larga-2026')
             ->set('contrasenaNueva_confirmation', 'distinta')
             ->call('cambiarContrasena')
-            ->assertHasErrors(['contrasenaNueva' => 'confirmed']);
+            ->assertHasErrors(['contrasenaNueva' => 'confirmed'])
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
     }
 
     public function test_elimina_la_cuenta_con_la_contrasena_correcta(): void
