@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2DocumentosVistaTest extends TestCase
@@ -75,7 +76,7 @@ class Paso2DocumentosVistaTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $this->subir($escuela, $clave);
         }
-        $this->subir($escuela, 'dictamen_uso_suelo', new DatosDocumento(fechaEmision: now()->subDays(60)->toDateString()));
+        $this->subir($escuela, 'dictamen_uso_suelo', DictamenDeEjemplo::vencido());
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertHasErrors('vigencia')

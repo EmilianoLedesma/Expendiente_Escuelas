@@ -42,19 +42,102 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
     }
 
-    public function test_detecta_dictamen_de_uso_de_suelo_vencido(): void
+    /**
+     * El dictamen vence cuando lo dice el documento (cédula TR-170100-017: "la que
+     * indique el documento"), no por antigüedad calculada.
+     *
+     * @param  array<string, mixed>  $campos
+     */
+    private function registrarDictamen(Escuela $escuela, array $campos): void
     {
         Storage::fake('documentos');
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(...[
+            'autoridadExpide' => 'Dirección de Desarrollo Urbano',
+            'folioDictamen' => 'DUS-2026-001',
+            'giroAutorizado' => 'Escuela de educación básica',
+            ...$campos,
+        ]));
+    }
+
+    public function test_detecta_dictamen_con_fecha_de_vencimiento_declarada_ya_pasada(): void
+    {
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $vencimiento = now()->subDay();
+        $this->registrarDictamen($escuela, [
+            'fechaEmision' => now()->subDays(60)->toDateString(),
+            'tipoVigencia' => 'fecha_expresa',
+            'fechaVencimientoDocumento' => $vencimiento->toDateString(),
+        ]);
 
         $violaciones = (new ValidarVigenciaDocumentos)->ejecutar($escuela->id);
 
-        $this->assertNotEmpty($violaciones);
+        $this->assertSame(['dictamen_uso_suelo'], array_keys($violaciones));
         $this->assertStringContainsString('Dictamen de Uso de Suelo', $violaciones['dictamen_uso_suelo']);
+        $this->assertStringContainsString($vencimiento->format('d/m/Y'), $violaciones['dictamen_uso_suelo']);
+        $this->assertStringNotContainsString('vigencia máxima', $violaciones['dictamen_uso_suelo']);
+    }
+
+    public function test_acepta_dictamen_emitido_hace_mucho_con_vencimiento_declarado_futuro(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarDictamen($escuela, [
+            'fechaEmision' => now()->subDays(400)->toDateString(),
+            'tipoVigencia' => 'fecha_expresa',
+            'fechaVencimientoDocumento' => now()->addYear()->toDateString(),
+        ]);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
+
+    public function test_acepta_dictamen_sin_fecha_expresa_aunque_se_emitio_hace_mucho(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarDictamen($escuela, [
+            'fechaEmision' => now()->subDays(400)->toDateString(),
+            'tipoVigencia' => 'sin_fecha_expresa',
+        ]);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
+
+    public function test_un_dictamen_con_vencimiento_hoy_sigue_vigente(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarDictamen($escuela, [
+            'fechaEmision' => now()->subDays(60)->toDateString(),
+            'tipoVigencia' => 'fecha_expresa',
+            'fechaVencimientoDocumento' => now()->toDateString(),
+        ]);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
+
+    public function test_un_dictamen_anterior_sin_vigencia_capturada_no_se_marca_ni_vigente_ni_vencido(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarDictamen($escuela, ['fechaEmision' => now()->subDays(60)->toDateString()]);
+
+        $this->assertSame('no_capturada', DB::table('dictamenes_uso_suelo')->value('tipo_vigencia'));
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+    }
+
+    public function test_el_dictamen_no_aplicable_al_tipo_de_persona_no_se_evalua(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarDictamen($escuela, [
+            'fechaEmision' => now()->subDays(60)->toDateString(),
+            'tipoVigencia' => 'fecha_expresa',
+            'fechaVencimientoDocumento' => now()->subDay()->toDateString(),
+        ]);
+        DB::table('tipos_documentos')->where('clave', 'dictamen_uso_suelo')->update(['aplica_persona' => 'moral']);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
     }
 
     public function test_detecta_visto_bueno_de_proteccion_civil_vencido(): void
@@ -78,18 +161,6 @@ class ValidarVigenciaDocumentosTest extends TestCase
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
         (new RegistrarDocumento)->ejecutar($escuela->id, 'visto_bueno_proteccion_civil', UploadedFile::fake()->create('pc.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(5)->toDateString(),
-        ));
-
-        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
-    }
-
-    public function test_acepta_dictamen_de_uso_de_suelo_vigente(): void
-    {
-        Storage::fake('documentos');
-        (new TiposDocumentosSeeder)->run();
-        $escuela = $this->crearEscuela();
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
             fechaEmision: now()->subDays(5)->toDateString(),
         ));
 

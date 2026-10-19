@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2DocumentosTest extends TestCase
@@ -341,6 +342,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -385,6 +387,7 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -491,9 +494,7 @@ class Paso2DocumentosTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
-        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
 
         $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))->assertOk();
 
@@ -555,9 +556,7 @@ class Paso2DocumentosTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo', 'plano_inmueble']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
-        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        $registrar->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
@@ -812,6 +811,7 @@ class Paso2DocumentosTest extends TestCase
         $component->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
 
@@ -1135,5 +1135,84 @@ class Paso2DocumentosTest extends TestCase
             'otro_derecho' => 'Posesión',
             'uso_autorizado' => 'Ocupación para actividades escolares',
         ]);
+    }
+
+    // --- Dictamen de Uso de Suelo: vigencia declarada por el documento ---
+
+    private function componenteListoParaDictamen(): Testable
+    {
+        Storage::fake('documentos');
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+        $registrar = new RegistrarDocumento;
+        foreach (['ine', 'acta_nacimiento', 'escritura_inmueble'] as $clave) {
+            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
+        }
+
+        return Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.dictamen_uso_suelo', UploadedFile::fake()->create('dictamen.pdf', 10, 'application/pdf'))
+            ->set('dictamenForm.fechaEmision', now()->subDays(90)->toDateString())
+            ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
+            ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
+            ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica');
+    }
+
+    public function test_dictamen_con_fecha_expresa_guarda_vencimiento_y_condicionantes_sin_fecha_calculada(): void
+    {
+        $this->componenteListoParaDictamen()
+            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
+            ->set('dictamenForm.fechaVencimientoDocumento', now()->addYear()->toDateString())
+            ->set('dictamenForm.condicionantes', 'Máximo 200 alumnos por turno.')
+            ->call('guardarDictamen')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('dictamenes_uso_suelo', [
+            'tipo_vigencia' => 'fecha_expresa',
+            'fecha_vencimiento_documento' => now()->addYear()->toDateString(),
+            'condicionantes' => 'Máximo 200 alumnos por turno.',
+            'giro_autorizado' => 'Escuela de educación básica',
+        ]);
+        $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
+    }
+
+    public function test_dictamen_sin_fecha_expresa_no_inventa_una_fecha_aunque_se_emitio_hace_90_dias(): void
+    {
+        $this->componenteListoParaDictamen()
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
+            ->call('guardarDictamen')
+            ->assertHasNoErrors();
+
+        $fila = (array) DB::table('dictamenes_uso_suelo')->first();
+        $this->assertSame('sin_fecha_expresa', $fila['tipo_vigencia']);
+        $this->assertNull($fila['fecha_vencimiento_documento']);
+        $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
+    }
+
+    public function test_dictamen_muestra_los_campos_de_vigencia_declarada_y_la_ayuda(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('Uso o giro autorizado según el dictamen')
+            ->assertSee('Capture el uso autorizado tal como aparece en el documento emitido por la autoridad municipal.')
+            ->assertSee('Sí, el documento indica una fecha de vencimiento')
+            ->assertSee('No, el documento no indica fecha de vencimiento')
+            ->assertSee('Registre solo lo que dice el documento')
+            ->assertSeeHtml('id="dictamenForm.condicionantes"')
+            ->assertSee('Condicionantes')
+            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
+    }
+
+    public function test_dictamen_muestra_la_fecha_de_vencimiento_solo_si_el_documento_la_indica(): void
+    {
+        $escuela = $this->crearEscuelaConResponsable();
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
+            ->assertSeeHtml('id="dictamenForm.fechaVencimientoDocumento"')
+            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
+            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
     }
 }

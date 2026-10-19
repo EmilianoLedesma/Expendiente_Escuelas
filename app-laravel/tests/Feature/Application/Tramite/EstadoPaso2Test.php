@@ -14,6 +14,7 @@ use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class EstadoPaso2Test extends TestCase
@@ -54,15 +55,31 @@ class EstadoPaso2Test extends TestCase
     public function test_documentos_completos_pero_vencidos_falta_la_etapa_documentos(): void
     {
         $this->completarPaso2($this->escuela->id);
-        app(RegistrarDocumento::class)->ejecutar($this->escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: now()->subDays(60)->toDateString(),
-        ));
+        app(RegistrarDocumento::class)->ejecutar($this->escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
         $estado = app(EstadoPaso2::class);
 
         $this->assertTrue($estado->documentosCompletos($this->escuela->id));
         $this->assertFalse($estado->documentosVigentes($this->escuela->id));
         $this->assertFalse($estado->puedeSeleccionarNiveles($this->escuela->id));
         $this->assertSame(EstadoPaso2::DOCUMENTOS, $estado->etapaFaltante($this->escuela->id));
+    }
+
+    public function test_un_dictamen_emitido_hace_mucho_sin_fecha_expresa_no_bloquea_el_avance(): void
+    {
+        $this->completarPaso2($this->escuela->id);
+        $dictamen = DictamenDeEjemplo::conVigencia('sin_fecha_expresa');
+        app(RegistrarDocumento::class)->ejecutar($this->escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), new DatosDocumento(
+            fechaEmision: now()->subDays(400)->toDateString(),
+            autoridadExpide: $dictamen->autoridadExpide,
+            folioDictamen: $dictamen->folioDictamen,
+            giroAutorizado: $dictamen->giroAutorizado,
+            tipoVigencia: 'sin_fecha_expresa',
+        ));
+        $estado = app(EstadoPaso2::class);
+
+        $this->assertTrue($estado->documentosCompletos($this->escuela->id));
+        $this->assertTrue($estado->documentosVigentes($this->escuela->id));
+        $this->assertTrue($estado->puedeSeleccionarNiveles($this->escuela->id));
     }
 
     public function test_paso2_completo_permite_seleccionar_niveles(): void

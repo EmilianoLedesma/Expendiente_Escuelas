@@ -102,6 +102,10 @@ class RegistrarDocumento
             $this->validarAcreditacion($datos);
         }
 
+        if ($tipoDocumentoClave === 'dictamen_uso_suelo') {
+            $this->validarDictamen($datos);
+        }
+
         if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
             throw new DatosInvalidos(['acervo.titulos' => 'El número de títulos no puede ser negativo.']);
         }
@@ -195,6 +199,10 @@ class RegistrarDocumento
                             'autoridad_expide' => $datos->autoridadExpide,
                             'folio_dictamen' => $datos->folioDictamen,
                             'giro_autorizado' => $datos->giroAutorizado,
+                            // Lo que declara el documento; sin tipo = dictamen anterior a este dato.
+                            'tipo_vigencia' => $datos->tipoVigencia ?? 'no_capturada',
+                            'fecha_vencimiento_documento' => $datos->tipoVigencia === 'fecha_expresa' ? $datos->fechaVencimientoDocumento : null,
+                            'condicionantes' => $datos->condicionantes,
                         ],
                     );
                 }
@@ -429,36 +437,13 @@ class RegistrarDocumento
 
         $errores = [];
         $texto = function (string $campo, ?string $valor, int $max, bool $requerido = true) use (&$errores): void {
-            if ($valor === null || trim($valor) === '') {
-                if ($requerido) {
-                    $errores["acreditacionForm.{$campo}"] = 'Este dato es obligatorio.';
-                }
-
-                return;
-            }
-            if (mb_strlen($valor) > $max) {
-                $errores["acreditacionForm.{$campo}"] = "Admite hasta {$max} caracteres.";
-            }
+            $this->validarTextoCampo($errores, 'acreditacionForm', $campo, $valor, $max, $requerido);
         };
         $fecha = function (string $campo, ?string $valor, bool $requerido = true, bool $pasada = true) use (&$errores): void {
-            if ($valor === null || $valor === '') {
-                if ($requerido) {
-                    $errores["acreditacionForm.{$campo}"] = 'Este dato es obligatorio.';
-                }
-
-                return;
-            }
-            $fechaValida = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
-            if ($fechaValida === false || $fechaValida->format('Y-m-d') !== $valor) {
-                $errores["acreditacionForm.{$campo}"] = 'La fecha no es válida.';
-            } elseif ($pasada && $valor > now()->toDateString()) {
-                $errores["acreditacionForm.{$campo}"] = 'La fecha no puede ser posterior a hoy.';
-            }
+            $this->validarFechaCampo($errores, 'acreditacionForm', $campo, $valor, $requerido, $pasada);
         };
         $noAnterior = function (string $campo, ?string $fin, ?string $inicio, string $mensaje) use (&$errores): void {
-            if ($fin !== null && $inicio !== null && ! isset($errores["acreditacionForm.{$campo}"]) && $fin < $inicio) {
-                $errores["acreditacionForm.{$campo}"] = $mensaje;
-            }
+            $this->validarNoAnterior($errores, 'acreditacionForm', $campo, $fin, $inicio, $mensaje);
         };
 
         if ($variante === 'escritura_publica') {
@@ -564,6 +549,91 @@ class RegistrarDocumento
         }
 
         return ['tipo' => $datos->tipoAcreditacion, 'observaciones' => $datos->observaciones, ...$columnas];
+    }
+
+    /**
+     * Dictamen de Uso de Suelo: la vigencia jurídica es la que declara el documento
+     * (cédula municipal TR-170100-017: "la que indique el documento"); aquí no se
+     * calcula ni se inventa una fecha. Un DTO sin `tipoVigencia` (llamadores
+     * anteriores) solo se revisa en largo y en blancos y queda `no_capturada`; con
+     * `tipoVigencia` es una captura completa y los datos esenciales son obligatorios.
+     * La obligatoriedad "de pantalla" sigue siendo del formulario; esto protege al
+     * llamador que lo evite. Las rutas de error son las de DictamenUsoSueloForm.
+     */
+    private function validarDictamen(DatosDocumento $datos): void
+    {
+        $errores = [];
+        $captura = $datos->tipoVigencia !== null;
+
+        if ($captura && ! in_array($datos->tipoVigencia, ['fecha_expresa', 'sin_fecha_expresa'], true)) {
+            $errores['dictamenForm.tipoVigencia'] = 'Indique si el documento trae fecha de vencimiento.';
+        }
+
+        $this->validarTextoCampo($errores, 'dictamenForm', 'autoridadExpide', $datos->autoridadExpide, 200, $captura);
+        $this->validarTextoCampo($errores, 'dictamenForm', 'folioDictamen', $datos->folioDictamen, 50, $captura);
+        $this->validarTextoCampo($errores, 'dictamenForm', 'giroAutorizado', $datos->giroAutorizado, 200, $captura);
+        $this->validarTextoCampo($errores, 'dictamenForm', 'condicionantes', $datos->condicionantes, 1000, false);
+        $this->validarFechaCampo($errores, 'dictamenForm', 'fechaEmision', $datos->fechaEmision, $captura, true);
+
+        if ($datos->tipoVigencia === 'fecha_expresa') {
+            $this->validarFechaCampo($errores, 'dictamenForm', 'fechaVencimientoDocumento', $datos->fechaVencimientoDocumento, true, false);
+            $this->validarNoAnterior($errores, 'dictamenForm', 'fechaVencimientoDocumento', $datos->fechaVencimientoDocumento, $datos->fechaEmision, 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.');
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
+    }
+
+    /**
+     * Texto: vacío = no capturado (error solo si es obligatorio); solo espacios = error; largo máximo.
+     *
+     * @param  array<string, string>  $errores
+     */
+    private function validarTextoCampo(array &$errores, string $formulario, string $campo, ?string $valor, int $max, bool $requerido): void
+    {
+        $clave = "{$formulario}.{$campo}";
+
+        if ($valor === null || $valor === '') {
+            if ($requerido) {
+                $errores[$clave] = 'Este dato es obligatorio.';
+            }
+
+            return;
+        }
+        if (trim($valor) === '') {
+            $errores[$clave] = 'Este dato no puede estar en blanco.';
+        } elseif (mb_strlen($valor) > $max) {
+            $errores[$clave] = "Admite hasta {$max} caracteres.";
+        }
+    }
+
+    /** @param  array<string, string>  $errores */
+    private function validarFechaCampo(array &$errores, string $formulario, string $campo, ?string $valor, bool $requerido, bool $pasada): void
+    {
+        $clave = "{$formulario}.{$campo}";
+
+        if ($valor === null || $valor === '') {
+            if ($requerido) {
+                $errores[$clave] = 'Este dato es obligatorio.';
+            }
+
+            return;
+        }
+        $fechaValida = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
+        if ($fechaValida === false || $fechaValida->format('Y-m-d') !== $valor) {
+            $errores[$clave] = 'La fecha no es válida.';
+        } elseif ($pasada && $valor > now()->toDateString()) {
+            $errores[$clave] = 'La fecha no puede ser posterior a hoy.';
+        }
+    }
+
+    /** @param  array<string, string>  $errores */
+    private function validarNoAnterior(array &$errores, string $formulario, string $campo, ?string $fin, ?string $inicio, string $mensaje): void
+    {
+        if ($fin !== null && $inicio !== null && ! isset($errores["{$formulario}.{$campo}"]) && $fin < $inicio) {
+            $errores["{$formulario}.{$campo}"] = $mensaje;
+        }
     }
 
     /** Invariantes de recibos_pago_derechos (DDL: folio VARCHAR(50), monto NUMERIC(10,2), portal_referencia VARCHAR(200)); el dominio del portal no se exige (spec §5.3). */
