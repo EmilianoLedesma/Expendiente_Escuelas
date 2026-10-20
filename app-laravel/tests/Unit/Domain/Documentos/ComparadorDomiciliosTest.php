@@ -20,7 +20,7 @@ class ComparadorDomiciliosTest extends TestCase
         return (new ComparadorDomicilios(new NormalizadorDomicilio))->comparar($a, $b)->resultado;
     }
 
-    /** @param  array<string, ?string>  $campos */
+    /** @param  array<string, string|int|null>  $campos */
     private function base(array $campos = []): Domicilio
     {
         return new Domicilio(...[
@@ -103,5 +103,42 @@ class ComparadorDomiciliosTest extends TestCase
         $this->comparar($a, $this->base());
 
         $this->assertSame('Av. Hidalgo', $a->calle);
+    }
+
+    /** Con clave del catálogo en ambas fuentes se compara la clave: «Qro.» y «Querétaro» con el mismo id coinciden. */
+    public function test_con_id_de_municipio_en_ambas_fuentes_se_compara_el_id_y_no_el_texto(): void
+    {
+        $comparacion = (new ComparadorDomicilios(new NormalizadorDomicilio))->comparar(
+            $this->base(['municipio' => 'Qro.', 'municipioId' => 14]),
+            $this->base(['municipio' => 'QUERÉTARO', 'municipioId' => 14]),
+        );
+
+        $this->assertSame(ResultadoComparacion::CoincidenciaAcreditada, $comparacion->resultado);
+        $this->assertContains('municipio', $comparacion->partesQueCoinciden);
+    }
+
+    public function test_ids_de_municipio_distintos_son_evidencia_insuficiente_aunque_el_texto_coincida(): void
+    {
+        $comparacion = (new ComparadorDomicilios(new NormalizadorDomicilio))->comparar(
+            $this->base(['municipioId' => 14]),
+            $this->base(['municipioId' => 6]),
+        );
+
+        $this->assertSame(ResultadoComparacion::EvidenciaInsuficiente, $comparacion->resultado);
+        $this->assertContains('municipio', $comparacion->partesQueDifieren);
+    }
+
+    public function test_con_id_en_una_sola_fuente_se_compara_el_texto(): void
+    {
+        $this->assertSame(ResultadoComparacion::CoincidenciaAcreditada, $this->comparar($this->base(['municipioId' => 14]), $this->base()));
+    }
+
+    /** Una coincidencia de municipio no es coincidencia de domicilio. */
+    public function test_el_mismo_municipio_no_basta_si_otra_parte_difiere(): void
+    {
+        $this->assertSame(ResultadoComparacion::EvidenciaInsuficiente, $this->comparar(
+            $this->base(['municipioId' => 14, 'calle' => 'Zaragoza']),
+            $this->base(['municipioId' => 14]),
+        ));
     }
 }

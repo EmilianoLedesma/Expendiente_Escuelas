@@ -13,6 +13,8 @@ use App\Domain\Validaciones\Documental\NormalizadorDomicilio;
  * coincidencia; el número interior solo se compara si ambas fuentes lo traen. «S/N» declara «sin número».
  * Si alguna parte difiere o falta, el resultado es evidencia insuficiente: ausencia de evidencia no es
  * ausencia de discrepancia, y un texto distinto tampoco es una discrepancia confirmada.
+ * Si ambas fuentes traen la clave del municipio del catálogo, se compara la clave (más estable que el texto); si solo
+ * una la trae, se compara el texto normalizado. Una coincidencia de municipio no es coincidencia de domicilio.
  */
 final class ComparadorDomicilios
 {
@@ -27,8 +29,9 @@ final class ComparadorDomicilios
         $noComparables = [];
 
         foreach (['calle', 'numeroExt', 'numeroInt', 'colonia', 'municipio', 'codigoPostal'] as $parte) {
-            $x = $this->valor($parte, $a->{$parte});
-            $y = $this->valor($parte, $b->{$parte});
+            [$x, $y] = $parte === 'municipio' && $a->municipioId !== null && $b->municipioId !== null
+                ? [(string) $a->municipioId, (string) $b->municipioId]
+                : [$this->valor($parte, $a->{$parte}), $this->valor($parte, $b->{$parte})];
 
             if ($x === null || $y === null) {
                 $noComparables[] = $parte;

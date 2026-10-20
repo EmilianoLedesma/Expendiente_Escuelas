@@ -100,7 +100,7 @@ class EvaluarAplicabilidadDocumentos
         }
 
         $plantel = Escuela::findOrFail($escuelaId)->plantel;
-        $referencia = new Domicilio($plantel->calle, $plantel->numero_ext, $plantel->numero_int, $plantel->colonia, $plantel->municipio, $plantel->codigo_postal);
+        $referencia = new Domicilio($plantel->calle, $plantel->numero_ext, $plantel->numero_int, $plantel->colonia, $plantel->municipio, $plantel->codigo_postal, $plantel->municipio_id);
 
         $coinciden = [];
         $dudas = false;

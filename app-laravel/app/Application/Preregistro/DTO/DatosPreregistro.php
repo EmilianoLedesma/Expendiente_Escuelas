@@ -11,6 +11,10 @@ namespace App\Application\Preregistro\DTO;
  * `plantel` desde los campos de dirección; 'existente' reutiliza un
  * `plantel_id` ya registrado (selector simple — la precarga inteligente es
  * Etapa 3, fuera de alcance).
+ *
+ * `municipioId` es el municipio de Querétaro del catálogo local (ADR-008/ADR-017); cuando llega, el texto
+ * `municipio` se deriva del catálogo y el que mande el cliente se ignora. Sin id se acepta el texto (adaptadores
+ * anteriores al catálogo o catálogo sin importar).
  */
 final readonly class DatosPreregistro
 {
@@ -26,5 +30,6 @@ final readonly class DatosPreregistro
         public ?string $codigoPostal = null,
         public ?string $telefono = null,
         public ?string $correoElectronico = null,
+        public ?int $municipioId = null,
     ) {}
 }

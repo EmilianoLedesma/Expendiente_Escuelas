@@ -45,9 +45,21 @@
                     <x-ui.field id="localidad" label="Localidad" optional>
                         <x-ui.input maxlength="150" wire:model.blur="localidad" />
                     </x-ui.field>
-                    <x-ui.field id="municipio" label="Municipio">
-                        <x-ui.input maxlength="150" wire:model.blur="municipio" />
-                    </x-ui.field>
+                    {{-- Catálogo geográfico local (ADR-008/ADR-017): solo municipios de Querétaro. Sin catálogo importado, texto. --}}
+                    @if ($municipiosQueretaro !== [])
+                        <x-ui.field id="municipioId" label="Municipio">
+                            <x-ui.select wire:model.blur="municipioId">
+                                <option value="">Seleccione…</option>
+                                @foreach ($municipiosQueretaro as $opcion)
+                                    <option value="{{ $opcion['id'] }}">{{ $opcion['nombre'] }}</option>
+                                @endforeach
+                            </x-ui.select>
+                        </x-ui.field>
+                    @else
+                        <x-ui.field id="municipio" label="Municipio">
+                            <x-ui.input maxlength="150" wire:model.blur="municipio" />
+                        </x-ui.field>
+                    @endif
                     <x-ui.field id="codigoPostal" label="Código postal">
                         <x-ui.input maxlength="5" wire:model.blur="codigoPostal" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" autocomplete="postal-code" />
                     </x-ui.field>
