@@ -200,8 +200,10 @@ class Paso2NivelesEdicionTest extends TestCase
         $this->assertDatabaseCount('escuela_niveles', 1);
     }
 
+    /** Quitar no exige los documentos; con documentos pendientes, lo siguiente son los documentos generales (2026-10-20). */
     public function test_quitar_con_paso2_pendiente_esta_permitido(): void
     {
+        (new TiposDocumentosSeeder)->run();
         (new RegistrarResponsableLegal)->ejecutar($this->escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
         $this->nivelEn($this->escuela, 'preescolar');
         $this->nivelEn($this->escuela, 'primaria');
@@ -209,13 +211,13 @@ class Paso2NivelesEdicionTest extends TestCase
         $this->pagina()
             ->set('nivelesSeleccionados', [$this->id('preescolar')])
             ->call('guardarNiveles')
-            ->assertRedirect(route('tramite.resumen', ['escuela' => $this->escuela->id]));
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $this->escuela->id]));
 
         $this->assertDatabaseCount('escuela_niveles', 1);
     }
 
-    /** Agregar y quitar a la vez con Paso 2 pendiente: el caso de uso lo rechaza y la página lo explica sin redirigir. */
-    public function test_agregar_y_quitar_con_paso2_pendiente_avisa_y_no_cambia_nada(): void
+    /** 2026-10-20: agregar y quitar a la vez ya no espera a los documentos generales; basta el responsable. */
+    public function test_agregar_y_quitar_sin_documentos_se_aplica_y_sigue_con_los_documentos(): void
     {
         (new TiposDocumentosSeeder)->run();
         (new RegistrarResponsableLegal)->ejecutar($this->escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
@@ -225,12 +227,25 @@ class Paso2NivelesEdicionTest extends TestCase
         $this->pagina()
             ->set('nivelesSeleccionados', [$this->id('preescolar'), $this->id('secundaria')])
             ->call('guardarNiveles')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $this->escuela->id]));
+
+        $this->assertDatabaseMissing('escuela_niveles', ['escuela_id' => $this->escuela->id, 'nivel_educativo_id' => $this->id('primaria')]);
+        $this->assertDatabaseHas('escuela_niveles', ['escuela_id' => $this->escuela->id, 'nivel_educativo_id' => $this->id('secundaria')]);
+    }
+
+    /** Sin responsable, una llamada forjada a guardarNiveles() no escribe: el caso de uso lo rechaza y la página lo explica. */
+    public function test_agregar_sin_responsable_avisa_y_no_cambia_nada(): void
+    {
+        Livewire::test(Paso2Responsable::class, ['escuela' => $this->escuela])
+            ->assertSet('fase', 'responsable')
+            ->set('nivelesSeleccionados', [$this->id('primaria')])
+            ->call('guardarNiveles')
             ->assertNoRedirect()
             ->assertHasErrors('nivelesSeleccionados')
-            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'Completa el responsable legal y los documentos (Paso 2) antes de seleccionar niveles.');
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'Captura el responsable legal (Paso 2) antes de seleccionar niveles.');
 
-        $this->assertDatabaseHas('escuela_niveles', ['escuela_id' => $this->escuela->id, 'nivel_educativo_id' => $this->id('primaria')]);
-        $this->assertDatabaseMissing('escuela_niveles', ['escuela_id' => $this->escuela->id, 'nivel_educativo_id' => $this->id('secundaria')]);
+        $this->assertDatabaseCount('escuela_niveles', 0);
     }
 
     public function test_sin_cambios_vuelve_al_resumen_sin_escribir(): void

@@ -56,7 +56,7 @@ class RegistrarDocumento
     /**
      * @param  int|null  $escuelaNivelId  nivel dueño del documento en Paso 2.4 (ámbito escuela_nivel); null en Paso 2.2.
      *
-     * @throws PrecondicionIncumplida si no hay responsable legal; en Paso 2.4 además si Paso 2 no está completo o si se sube el Formato antes de turno y tipo de alumnado; si el trámite (o, para documentos del plantel, cualquier trámite del plantel) ya se envió (WS-7a).
+     * @throws PrecondicionIncumplida si no hay responsable legal; en Paso 2.3 además si no hay niveles elegidos; en Paso 2.4 además si Paso 2 no está completo o si se sube el Formato antes de turno y tipo de alumnado; si el trámite (o, para documentos del plantel, cualquier trámite del plantel) ya se envió (WS-7a).
      */
     public function ejecutar(int $escuelaId, string $tipoDocumentoClave, UploadedFile $archivo, DatosDocumento $datos, ?int $escuelaNivelId = null): void
     {
@@ -77,6 +77,11 @@ class RegistrarDocumento
         // Paso 2.2 solo acepta claves plantel/escuela y Paso 2.4 solo
         // escuela_nivel, así que tras esto el ámbito y $escuelaNivelId concuerdan.
         if ($escuelaNivelId === null) {
+            // 2026-10-20: los documentos generales se capturan sobre niveles ya elegidos (la aplicabilidad depende de ellos).
+            if (! $estadoPaso2->puedeCapturarDocumentosGenerales($escuelaId)) {
+                throw new PrecondicionIncumplida(EstadoPaso2::NIVELES, 'Elige los niveles educativos (Paso 2) antes de subir los documentos generales.');
+            }
+
             $tipoPersonaDeEscuela = $this->tipoPersonaDeEscuela ?? app(TipoPersonaDeEscuela::class);
             $tipoPersona = $tipoPersonaDeEscuela->ejecutar($escuelaId);
             $documentosCompletos = $this->documentosCompletos ?? app(DocumentosCompletos::class);

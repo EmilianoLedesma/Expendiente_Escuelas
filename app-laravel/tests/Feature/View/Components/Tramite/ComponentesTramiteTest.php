@@ -81,8 +81,8 @@ class ComponentesTramiteTest extends TestCase
 
     public function test_una_fila_bloqueada_muestra_el_motivo_y_ningun_enlace(): void
     {
-        $this->blade('<ol><x-tramite.task-row :seccion="$s" /></ol>', ['s' => $this->seccion('pendiente', null, null, 'Completa primero: Documentos')])
-            ->assertSee('Completa primero: Documentos')
+        $this->blade('<ol><x-tramite.task-row :seccion="$s" /></ol>', ['s' => $this->seccion('pendiente', null, null, 'Completa primero: Documentos generales')])
+            ->assertSee('Completa primero: Documentos generales')
             ->assertDontSee('<a ', false);
     }
 

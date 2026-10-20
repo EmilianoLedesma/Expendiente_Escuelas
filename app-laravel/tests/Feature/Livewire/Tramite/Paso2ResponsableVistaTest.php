@@ -81,7 +81,7 @@ class Paso2ResponsableVistaTest extends TestCase
         $primaria = NivelEducativo::where('clave', 'primaria')->value('id');
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
-            ->assertSee('Datos generales · Paso 4 de 4')
+            ->assertSee('Datos generales · Paso 3 de 4')
             ->assertSee('Responsable legal (ya registrado)')
             ->assertSeeHtml('for="nivel-'.$primaria.'"')
             ->assertSeeHtml('border-nivel-primaria')

@@ -454,7 +454,7 @@ class Paso24DocumentosNivelTest extends TestCase
     }
 
     /** Revisión Importante 2b: si Paso 2 deja de estar completo tras montar, guardar redirige a Paso 2 (sin error de campo ni escritura). */
-    public function test_si_paso2_se_incompleta_tras_montar_guardar_documento_redirige_a_paso2(): void
+    public function test_si_paso2_se_incompleta_tras_montar_guardar_documento_redirige_a_los_documentos_generales(): void
     {
         $escuelaNivel = $this->nivel();
         $componente = Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel->fresh()]);
@@ -463,12 +463,13 @@ class Paso24DocumentosNivelTest extends TestCase
         $componente->set('archivos.acervo_bibliografico_primaria', $this->pdf())
             ->set('acervoTitulos.acervo_bibliografico_primaria', '300')
             ->call('guardarDocumento', 'acervo_bibliografico_primaria')
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]));
+            // Lo que falta son los documentos generales: se manda directo a ellos (RedirigeAPaso2 sigue a EstadoPaso2::etapaFaltante).
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuelaNivel->escuela_id]));
 
         $this->assertDatabaseCount('documentos_escuela_nivel', 0);
     }
 
-    public function test_si_paso2_se_incompleta_tras_montar_guardar_datos_redirige_a_paso2(): void
+    public function test_si_paso2_se_incompleta_tras_montar_guardar_datos_redirige_a_los_documentos_generales(): void
     {
         $escuelaNivel = $this->nivel();
         $componente = Livewire::test(Paso24DocumentosNivel::class, ['escuelaNivel' => $escuelaNivel->fresh()]);
@@ -477,7 +478,8 @@ class Paso24DocumentosNivelTest extends TestCase
         $componente->set('turno', 'vespertino')
             ->set('tipoAlumnado', 'mixto')
             ->call('guardarDatos')
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuelaNivel->escuela_id]));
+            // Lo que falta son los documentos generales: se manda directo a ellos (RedirigeAPaso2 sigue a EstadoPaso2::etapaFaltante).
+            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuelaNivel->escuela_id]));
 
         $this->assertNull($escuelaNivel->fresh()->turno);
     }

@@ -117,6 +117,7 @@ class InvariantesDeCapturaTest extends TestCase
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->escuela();
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->elegirNivel($escuela->id);
         $subir = fn (string $clave, DatosDocumento $datos) => $this->erroresDe(fn () => app(RegistrarDocumento::class)->ejecutar(
             $escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), $datos,
         ));

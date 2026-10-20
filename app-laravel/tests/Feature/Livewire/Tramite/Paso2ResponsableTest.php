@@ -25,11 +25,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2ResponsableTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -105,10 +107,7 @@ class Paso2ResponsableTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
-        $registrar = new RegistrarDocumento;
-        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
-            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
-        }
+        // 2026-10-20: elegir niveles ya no espera a los documentos; basta el responsable.
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
@@ -131,10 +130,7 @@ class Paso2ResponsableTest extends TestCase
             domicilioNotificaciones: 'Calle Falsa 123, Centro',
             nombre: 'Juana Pérez',
         ));
-        $registrar = new RegistrarDocumento;
-        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
-            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
-        }
+        // 2026-10-20: elegir niveles ya no espera a los documentos; basta el responsable.
         $this->actingAs($solicitante->user);
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
@@ -143,8 +139,8 @@ class Paso2ResponsableTest extends TestCase
             ->assertSee('Persona física');
     }
 
-    /** WS-7b-1: con responsable y documentos pendientes ya no redirige; el formulario prellenado es alcanzable. */
-    public function test_con_responsable_y_documentos_pendientes_muestra_el_formulario_prellenado(): void
+    /** 2026-10-20: con responsable y sin niveles se abre la elección de niveles; el formulario sigue prellenado. */
+    public function test_con_responsable_y_sin_niveles_abre_los_niveles_con_el_formulario_prellenado(): void
     {
         (new TiposDocumentosSeeder)->run();
         $solicitante = Solicitante::factory()->create();
@@ -154,7 +150,7 @@ class Paso2ResponsableTest extends TestCase
 
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertNoRedirect()
-            ->assertSet('fase', 'responsable')
+            ->assertSet('fase', 'niveles')
             ->assertSet('personaFisicaForm.nombre', 'Juana Pérez');
     }
 
@@ -166,6 +162,7 @@ class Paso2ResponsableTest extends TestCase
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->elegirNivel($escuela->id);
         $registrar = new RegistrarDocumento;
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
@@ -203,7 +200,8 @@ class Paso2ResponsableTest extends TestCase
      * una vez que escuela_niveles existe). En la práctica, Documentos era
      * inalcanzable en el flujo normal de un solo tramo.
      */
-    public function test_guardar_responsable_redirige_a_documentos_si_documentos_no_estan_completos(): void
+    /** 2026-10-20: tras el responsable siguen los niveles, sin esperar a los documentos. */
+    public function test_guardar_responsable_sigue_con_los_niveles_aunque_falten_los_documentos(): void
     {
         $solicitante = Solicitante::factory()->create();
         $escuela = $this->crearEscuelaPara($solicitante);
@@ -217,8 +215,8 @@ class Paso2ResponsableTest extends TestCase
             ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
-            ->assertSessionHas('toast.titulo', 'Responsable legal guardado')
-            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('fase', 'niveles');
 
         $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
     }
@@ -255,7 +253,8 @@ class Paso2ResponsableTest extends TestCase
     }
 
     /** WS-1.2: guardarResponsable() aplica también la vigencia, no solo la completitud. */
-    public function test_guardar_responsable_redirige_a_documentos_si_el_dictamen_esta_vencido(): void
+    /** Histórico con documentos (uno vencido) y sin niveles: el orden nuevo pide primero los niveles. */
+    public function test_guardar_responsable_con_documentos_previos_y_dictamen_vencido_sigue_con_los_niveles(): void
     {
         Storage::fake('documentos');
         $solicitante = Solicitante::factory()->create();
@@ -276,7 +275,8 @@ class Paso2ResponsableTest extends TestCase
             ->set('nombrePropuesto3', 'Escuela Reforma')
             ->set('personaFisicaForm.nombre', 'Juana Pérez')
             ->call('guardarResponsable')
-            ->assertRedirect(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));
+            ->assertNoRedirect()
+            ->assertSet('fase', 'niveles');
     }
 
     public function test_captura_domicilio_notificaciones_y_persona_autorizada_recoger(): void
@@ -469,14 +469,10 @@ class Paso2ResponsableTest extends TestCase
     }
 
     /** Registra todos los documentos aplicables para que mount() no redirija a paso2-documentos. */
+    /** Documentos generales completos; sin niveles elegidos queda el estado histórico «documentos sin niveles» (CompletaPaso2). */
     private function registrarDocumentosCompletos(Escuela $escuela): void
     {
-        Storage::fake('documentos');
-        (new TiposDocumentosSeeder)->run();
-        $registrar = new RegistrarDocumento;
-        foreach (app(DocumentosCompletos::class)->clavesAplicables('fisica') as $clave) {
-            $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
-        }
+        $this->completarPaso2($escuela->id);
     }
 
     public function test_rechaza_envio_sin_ningun_nivel_seleccionado(): void

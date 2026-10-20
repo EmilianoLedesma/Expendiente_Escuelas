@@ -1,6 +1,6 @@
 <div class="max-w-3xl">
-    <x-ui.page-header :eyebrow="$encabezado" title="Documentos">
-        <x-slot:intro>Sube cada documento en PDF. Puedes hacerlo en el orden que prefieras: cada uno se guarda por separado.</x-slot:intro>
+    <x-ui.page-header :eyebrow="$encabezado" title="Documentos generales">
+        <x-slot:intro>Sube cada documento en PDF. Puedes hacerlo en el orden que prefieras: cada uno se guarda por separado. Los documentos que se piden dependen del responsable legal y de los niveles que elegiste.</x-slot:intro>
     </x-ui.page-header>
 
     <p class="text-title-sm font-semibold text-ink">{{ $totalCompletos }} de {{ $totalAplicables }} documentos completos</p>

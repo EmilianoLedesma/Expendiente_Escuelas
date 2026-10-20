@@ -165,6 +165,7 @@ class ValidacionFormulariosTramiteTest extends TestCase
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->escuela();
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->elegirNivel($escuela->id);
 
         return $escuela;
     }

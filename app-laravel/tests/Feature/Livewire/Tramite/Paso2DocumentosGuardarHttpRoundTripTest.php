@@ -9,6 +9,7 @@ use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,7 @@ use Tests\TestCase;
  */
 class Paso2DocumentosGuardarHttpRoundTripTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     public function test_guardar_documento_simple_sin_archivo_responde_error_de_validacion_no_500(): void
@@ -33,6 +35,7 @@ class Paso2DocumentosGuardarHttpRoundTripTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->elegirNivel($escuela->id);
 
         $page = $this->actingAs($solicitante->user)
             ->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]));

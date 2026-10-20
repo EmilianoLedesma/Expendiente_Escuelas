@@ -11,7 +11,7 @@ use App\Models\EscuelaNivel;
 
 /**
  * Compuerta de entrada de cada página de Paso 3. Solo presentación: las
- * decisiones son de EstadoPaso2 (Paso 2 completo, WS-1.2), EstadoPaso24
+ * decisiones son de EstadoPaso2 (responsable, niveles y documentos generales satisfechos), EstadoPaso24
  * (Paso 2.4 del nivel, WS-5b) y EstadoPaso3 (orden de sub-pasos, WS-1.3); aquí únicamente se redirige. Se llama como
  * primera línea de mount(), antes de cualquier efecto (MarcarPasoCompletado):
  * un auto-completado en GET solo ocurre si la página ya es alcanzable.
@@ -28,7 +28,7 @@ trait CompuertaPaso3
      */
     protected function redirigirSiNoAlcanzable(EscuelaNivel $escuelaNivel, string $clave): bool
     {
-        if (! app(EstadoPaso2::class)->puedeSeleccionarNiveles($escuelaNivel->escuela_id)) {
+        if (! app(EstadoPaso2::class)->generalesSatisfechos($escuelaNivel->escuela_id)) {
             $this->redirigirAPaso2($escuelaNivel->escuela_id);
 
             return true;

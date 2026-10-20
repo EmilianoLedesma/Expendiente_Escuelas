@@ -16,11 +16,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2DocumentosVistaTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function escuelaConResponsable(): Escuela
@@ -31,6 +33,7 @@ class Paso2DocumentosVistaTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->elegirNivel($escuela->id);
         $this->actingAs($solicitante->user);
 
         return $escuela;
@@ -47,7 +50,7 @@ class Paso2DocumentosVistaTest extends TestCase
 
         $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))
             ->assertOk()
-            ->assertSee('Datos generales · Paso 3 de 4')
+            ->assertSee('Datos generales · Paso 4 de 4')
             ->assertSee('href="'.route('tramite.resumen', ['escuela' => $escuela->id]).'"', false)
             ->assertSee('0 de '.count(app(DocumentosCompletos::class)->clavesAplicables('fisica')).' documentos completos')
             ->assertSee('for="archivos.ine"', false)

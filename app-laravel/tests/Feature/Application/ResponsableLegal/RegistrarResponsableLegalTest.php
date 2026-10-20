@@ -243,6 +243,7 @@ class RegistrarResponsableLegalTest extends TestCase
     public function test_cambio_de_tipo_de_persona(string $de, string $a, array $filas, ?string $etapa): void
     {
         $escuela = $this->crearEscuela();
+        $this->elegirNivel($escuela->id);
         $this->completarPaso2($escuela->id, $de);
         $documentos = DocumentoEscuela::where('escuela_id', $escuela->id)->count();
 
@@ -259,6 +260,7 @@ class RegistrarResponsableLegalTest extends TestCase
     public function test_los_documentos_del_tipo_anterior_se_conservan_y_vuelven_a_contar(): void
     {
         $escuela = $this->crearEscuela();
+        $this->elegirNivel($escuela->id);
         $this->completarPaso2($escuela->id, 'fisica_con_gestor');
         $poderGestor = TipoDocumento::where('clave', 'poder_gestor')->value('id');
         $poder = fn () => DocumentoEscuela::where('escuela_id', $escuela->id)->where('tipo_documento_id', $poderGestor)->first();

@@ -22,6 +22,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 use Throwable;
 
@@ -31,6 +32,7 @@ use Throwable;
  */
 class AuditoriaSeguridadTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -86,6 +88,7 @@ class AuditoriaSeguridadTest extends TestCase
         $resA = $this->nuevoTramite($a);
         // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado antes de escribir.
         app(RegistrarResponsableLegal::class)->ejecutar($resA->escuelaId, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez'));
+        $this->elegirNivel($resA->escuelaId);
         app(RegistrarDocumento::class)->ejecutar(
             $resA->escuelaId,
             'escritura_inmueble',

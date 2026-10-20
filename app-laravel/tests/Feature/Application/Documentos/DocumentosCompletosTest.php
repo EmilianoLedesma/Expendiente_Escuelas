@@ -14,10 +14,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class DocumentosCompletosTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuela(): Escuela
@@ -110,6 +112,7 @@ class DocumentosCompletosTest extends TestCase
         $escuela = $this->crearEscuela();
         // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado antes de escribir.
         ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+        $this->elegirNivel($escuela->id);
         $registrar = new RegistrarDocumento;
 
         foreach ((new DocumentosCompletos)->clavesAplicables('fisica') as $clave) {

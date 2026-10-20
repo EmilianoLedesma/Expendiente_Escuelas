@@ -15,9 +15,7 @@ use App\Models\DocumentoEscuela;
 use App\Models\DocumentoPlantel;
 use App\Models\EntidadFederativa;
 use App\Models\Escuela;
-use App\Models\EscuelaNivel;
 use App\Models\Municipio;
-use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\CatalogoMinimoSeeder;
@@ -29,11 +27,13 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\DictamenDeEjemplo;
 use Tests\TestCase;
 
 class Paso2DocumentosTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuelaConResponsable(string $tipoPersona = 'fisica'): Escuela
@@ -49,6 +49,7 @@ class Paso2DocumentosTest extends TestCase
             nombreRepresentanteLegal: $tipoPersona === 'moral' ? 'Miguel Torres' : null,
             gestorNombre: $tipoPersona === 'fisica_con_gestor' ? 'Gestor Uno' : null,
         ));
+        $this->elegirNivel($escuela->id);
 
         return $escuela;
     }
@@ -565,7 +566,8 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseHas('acreditaciones_ocupacion_legal', ['numero_escritura' => 'E-500', 'fecha_escritura' => '2024-03-15']);
     }
 
-    public function test_subir_el_ultimo_documento_simple_redirige_a_paso2(): void
+    /** 2026-10-20: los niveles ya se eligieron antes de los documentos, así que completar los documentos lleva al resumen. */
+    public function test_subir_el_ultimo_documento_simple_vuelve_al_resumen(): void
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
@@ -578,7 +580,7 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
             ->call('guardarDocumentoSimple', 'plano_inmueble')
-            ->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
     }
 
     public function test_el_formato_de_solicitud_ya_no_aparece_en_documentos(): void
@@ -693,18 +695,12 @@ class Paso2DocumentosTest extends TestCase
         foreach (array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['plano_inmueble']) as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
-        EscuelaNivel::create([
-            'escuela_id' => $escuela->id,
-            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
-            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
-            'tipo_tramite' => 'alta_nueva',
-        ]);
 
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->set('archivos.plano_inmueble', UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf'))
             ->call('guardarDocumentoSimple', 'plano_inmueble')
             ->assertSessionHas('toast.titulo', 'Documentos completos')
-            ->assertSessionHas('toast.descripcion', 'Continúa desde el resumen de tu trámite.')
+            ->assertSessionHas('toast.descripcion', 'Continúa con los documentos de cada nivel desde el resumen de tu trámite.')
             ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
     }
 
