@@ -178,13 +178,43 @@
                 </x-tramite.documento-row>
             @elseif ($clave === 'constancia_seguridad_estructural')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarConstancia">
+                    @isset($avisos[$clave])
+                        <x-slot:extra>
+                            <p class="flex items-start gap-xxs text-body-sm text-body">
+                                <x-ui.icon nombre="exclamation-circle" class="mt-px h-5 w-5 shrink-0" />
+                                {{ $avisos[$clave] }}
+                            </p>
+                        </x-slot:extra>
+                    @endisset
+                    <h3 class="text-body-md font-semibold text-ink">Datos de la constancia</h3>
+                    <x-ui.field id="constanciaForm.folioConstancia" label="Folio o número de la constancia" hint="Solo si el documento lo trae." optional><x-ui.input maxlength="50" wire:model.blur="constanciaForm.folioConstancia" /></x-ui.field>
                     <x-ui.field id="constanciaForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="constanciaForm.fechaEmision" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoNombre" label="Nombre del perito"><x-ui.input maxlength="200" wire:model.blur="constanciaForm.peritoNombre" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoCedulaProfesional" label="Cédula profesional del perito" optional><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoCedulaProfesional" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro DRO"><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoRegistroDro" /></x-ui.field>
+                    <x-ui.radio-group
+                        id="constanciaForm.tipoVigencia"
+                        legend="¿El documento indica una fecha de vencimiento?"
+                        wire:model.live="constanciaForm.tipoVigencia"
+                        :opciones="['fecha_expresa' => 'Sí, el documento indica una fecha de vencimiento', 'sin_fecha_expresa' => 'No, el documento no indica fecha de vencimiento']"
+                    />
+                    <p class="text-body-sm text-muted">Registre solo lo que dice el documento. SEDEQ revisa su vigencia.</p>
+                    @if ($constanciaForm->tipoVigencia === 'fecha_expresa')
+                        <x-ui.field id="constanciaForm.vigenciaConstancia" label="Fecha de vencimiento" hint="Tal como aparece en la constancia."><x-ui.input type="date" wire:model.blur="constanciaForm.vigenciaConstancia" /></x-ui.field>
+                    @endif
+                    <h3 class="text-body-md font-semibold text-ink">Datos del profesional que firma</h3>
+                    <x-ui.field id="constanciaForm.peritoNombre" label="Nombre del profesional"><x-ui.input maxlength="200" wire:model.blur="constanciaForm.peritoNombre" /></x-ui.field>
+                    <x-ui.radio-group
+                        id="constanciaForm.calidadProfesional"
+                        legend="Calidad en que firma"
+                        wire:model.live="constanciaForm.calidadProfesional"
+                        :opciones="['dro' => 'Director Responsable de Obra (DRO)', 'corresponsable_seguridad_estructural' => 'Corresponsable en Seguridad Estructural', 'otra' => 'Otra calidad indicada en el documento']"
+                    />
+                    @if ($constanciaForm->calidadProfesional === 'otra')
+                        <x-ui.field id="constanciaForm.calidadProfesionalOtra" label="¿Cuál calidad indica el documento?"><x-ui.input maxlength="150" wire:model.blur="constanciaForm.calidadProfesionalOtra" /></x-ui.field>
+                    @endif
+                    <x-ui.field id="constanciaForm.peritoCedulaProfesional" label="Cédula profesional" optional><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoCedulaProfesional" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoRegistroDro" label="Número de registro del profesional" hint="El que indica el documento, sea DRO o Corresponsable."><x-ui.input maxlength="50" wire:model.blur="constanciaForm.peritoRegistroDro" /></x-ui.field>
                     <x-ui.field id="constanciaForm.peritoRegistroAutoridad" label="Autoridad del registro" optional><x-ui.input maxlength="150" wire:model.blur="constanciaForm.peritoRegistroAutoridad" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.vigenciaConstancia" label="Vigencia de la constancia"><x-ui.input type="date" wire:model.blur="constanciaForm.vigenciaConstancia" /></x-ui.field>
-                    <x-ui.field id="constanciaForm.peritoRegistroVigencia" label="Vigencia del registro" optional><x-ui.input type="date" wire:model.blur="constanciaForm.peritoRegistroVigencia" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoRegistroFecha" label="Fecha de registro o refrendo" hint="Solo si el documento la indica." optional><x-ui.input type="date" wire:model.blur="constanciaForm.peritoRegistroFecha" /></x-ui.field>
+                    <x-ui.field id="constanciaForm.peritoRegistroVencimiento" label="Vencimiento del registro" hint="Solo si el documento lo indica." optional><x-ui.input type="date" wire:model.blur="constanciaForm.peritoRegistroVencimiento" /></x-ui.field>
                 </x-tramite.documento-row>
             @else
                 {{-- WS-5a M1: toda clave aplicable sin bloque propio se sube como documento simple. --}}

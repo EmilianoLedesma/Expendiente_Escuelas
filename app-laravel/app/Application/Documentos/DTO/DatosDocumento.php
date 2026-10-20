@@ -28,6 +28,14 @@ final readonly class DatosDocumento
         public ?string $peritoRegistroAutoridad = null,
         public ?string $peritoRegistroVigencia = null,
         public ?string $vigenciaConstancia = null,
+        // Calidad en que firma: dro | corresponsable_seguridad_estructural | otra (con descripción); null = no capturada.
+        // La vigencia de la constancia reutiliza tipoVigencia/vigenciaConstancia; peritoRegistroDro guarda el número de registro de cualquier calidad.
+        public ?string $calidadProfesional = null,
+        public ?string $calidadProfesionalOtra = null,
+        public ?string $folioConstancia = null,
+        // Fecha de registro o refrendo y vencimiento del registro profesional, tal como las declara el documento.
+        public ?string $peritoRegistroFecha = null,
+        public ?string $peritoRegistroVencimiento = null,
         // escritura_inmueble (acreditacion_ocupacion_legal), 4 variantes
         public ?string $tipoAcreditacion = null,
         public ?string $numeroEscritura = null,

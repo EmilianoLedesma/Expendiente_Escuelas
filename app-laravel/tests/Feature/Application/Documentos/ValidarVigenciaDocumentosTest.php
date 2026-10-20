@@ -200,20 +200,94 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
     }
 
-    public function test_detecta_perito_registro_ano_distinto_de_emision(): void
+    /**
+     * @param  array<string, mixed>  $campos
+     */
+    private function registrarConstancia(Escuela $escuela, array $campos): void
     {
         Storage::fake('documentos');
+        (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->create('c.pdf', 10, 'application/pdf'), new DatosDocumento(...[
+            'fechaEmision' => '2026-05-10',
+            'tipoVigencia' => 'sin_fecha_expresa',
+            'peritoNombre' => 'Ing. Juan Pérez',
+            'calidadProfesional' => 'corresponsable_seguridad_estructural',
+            'peritoRegistroDro' => 'CSE-100',
+            ...$campos,
+        ]));
+    }
+
+    /**
+     * Regresión de la regla retirada "año del registro = año de emisión" (sin artículo que la respalde;
+     * COMPENDIO: Documentado, no contrastado). Falso positivo: registro vigente que cruza de año.
+     */
+    public function test_un_registro_vigente_que_cruza_de_anio_ya_no_bloquea(): void
+    {
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
-        (new RegistrarDocumento)->ejecutar($escuela->id, 'constancia_seguridad_estructural', UploadedFile::fake()->create('c.pdf', 10, 'application/pdf'), new DatosDocumento(
-            fechaEmision: '2026-01-15',
-            peritoRegistroVigencia: '2025-01-01',
-        ));
+        $this->registrarConstancia($escuela, ['peritoRegistroVencimiento' => '2027-03-31']);
 
-        $violaciones = (new ValidarVigenciaDocumentos)->ejecutar($escuela->id);
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->avisos($escuela->id));
+    }
 
-        $this->assertNotEmpty($violaciones);
-        $this->assertStringContainsString('Constancia de Seguridad Estructural', $violaciones['constancia_seguridad_estructural']);
+    /** Falso negativo de la regla retirada: mismo año, pero el registro ya había vencido al emitir. */
+    public function test_un_registro_vencido_antes_de_la_emision_en_el_mismo_anio_avisa_sin_bloquear(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarConstancia($escuela, ['peritoRegistroVencimiento' => '2026-02-28']);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id), 'no bloquea: sin fundamento confirmado ni aplicable a todo municipio');
+        $avisos = (new ValidarVigenciaDocumentos)->avisos($escuela->id);
+        $this->assertSame(['constancia_seguridad_estructural'], array_keys($avisos));
+        $this->assertStringContainsString('28/02/2026', $avisos['constancia_seguridad_estructural']);
+    }
+
+    public function test_el_registro_que_vence_el_mismo_dia_de_la_emision_no_avisa(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarConstancia($escuela, ['peritoRegistroVencimiento' => '2026-05-10']);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->avisos($escuela->id));
+    }
+
+    public function test_el_registro_que_venció_el_dia_anterior_avisa(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarConstancia($escuela, ['peritoRegistroVencimiento' => '2026-05-09']);
+
+        $this->assertArrayHasKey('constancia_seguridad_estructural', (new ValidarVigenciaDocumentos)->avisos($escuela->id));
+    }
+
+    public function test_sin_vencimiento_del_registro_no_hay_aviso(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarConstancia($escuela, []);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->avisos($escuela->id));
+    }
+
+    /** perito_registro_vigencia es histórico y su semántica no se pudo determinar: no se evalúa. */
+    public function test_el_dato_historico_del_registro_no_se_evalua(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarConstancia($escuela, ['tipoVigencia' => null, 'calidadProfesional' => null, 'peritoRegistroVigencia' => '2025-01-01', 'fechaEmision' => '2026-01-15']);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id));
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->avisos($escuela->id));
+    }
+
+    public function test_una_constancia_sin_fecha_expresa_no_vence(): void
+    {
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $this->registrarConstancia($escuela, ['fechaEmision' => now()->subYears(8)->toDateString(), 'tipoVigencia' => 'sin_fecha_expresa']);
+
+        $this->assertSame([], (new ValidarVigenciaDocumentos)->ejecutar($escuela->id), 'no se supone un plazo de cinco años que el documento no declara');
     }
 
     /** Estructural: ningún documento por nivel sembrado tiene vigencia hoy; se inyecta uno. */

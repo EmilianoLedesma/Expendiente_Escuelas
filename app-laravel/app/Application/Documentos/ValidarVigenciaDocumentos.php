@@ -60,23 +60,47 @@ class ValidarVigenciaDocumentos
             $violaciones[$clave] = "{$nombre}: ha superado su vigencia máxima, debe resubirse.";
         }
 
-        $constanciaTipo = TipoDocumento::where('clave', 'constancia_seguridad_estructural')->first();
+        // Constancia de Seguridad Estructural: solo vence por la fecha que declara el documento
+        // (documentos_plantel.fecha_vigencia, ya cubierta arriba). La regla anterior "año del registro
+        // del perito = año de emisión" se retiró el 2026-10-20: ningún artículo del Reglamento de
+        // Construcción de Querétaro la respalda, rechazaba registros vigentes que cruzan de año y aceptaba
+        // registros ya vencidos al emitir (PENDIENTE-constancia-seguridad-estructural.md).
+
+        return $violaciones;
+    }
+
+    /**
+     * Observaciones que NO bloquean el avance: datos que SEDEQ confirmará en la revisión. El
+     * vencimiento declarado del registro profesional anterior a la emisión de la constancia es una
+     * inferencia de los arts. 295 y 297 del Reglamento de Construcción de Querétaro (refrendo y padrón
+     * anual de DRO/Corresponsables), solo de ese municipio y sin texto que lo declare requisito:
+     * por eso avisa y no impide. Comparación por fecha: el mismo día de la emisión no avisa.
+     * El dato histórico perito_registro_vigencia (semántica no determinada) no se evalúa.
+     *
+     * @return array<string, string> aviso por clave de documento
+     */
+    public function avisos(int $escuelaId): array
+    {
+        $escuela = Escuela::findOrFail($escuelaId);
+
+        $tipoPersona = app(TipoPersonaDeEscuela::class)->ejecutar($escuelaId);
+        if ($tipoPersona !== null && ! in_array('constancia_seguridad_estructural', app(DocumentosCompletos::class)->clavesAplicables($tipoPersona), true)) {
+            return [];
+        }
+
         $constancia = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)
-            ->where('tipo_documento_id', $constanciaTipo?->id)
+            ->where('tipo_documento_id', TipoDocumento::where('clave', 'constancia_seguridad_estructural')->value('id'))
             ->with('constanciaSeguridadEstructural')
             ->first();
 
-        $extension = $constancia?->constanciaSeguridadEstructural;
-        if ($aplica('constancia_seguridad_estructural') && $extension !== null && $extension->perito_registro_vigencia !== null && $constancia->fecha_emision !== null) {
-            $anioRegistro = date('Y', strtotime($extension->perito_registro_vigencia));
-            $anioEmision = date('Y', strtotime($constancia->fecha_emision));
-
-            if ($anioRegistro !== $anioEmision) {
-                $violaciones['constancia_seguridad_estructural'] = 'Constancia de Seguridad Estructural: el año del registro del perito no coincide con el año de emisión.';
-            }
+        $vencimientoRegistro = $constancia?->constanciaSeguridadEstructural?->perito_registro_vencimiento;
+        if ($vencimientoRegistro === null || $constancia->fecha_emision === null || $vencimientoRegistro >= $constancia->fecha_emision) {
+            return [];
         }
 
-        return $violaciones;
+        $fecha = date('d/m/Y', strtotime($vencimientoRegistro));
+
+        return ['constancia_seguridad_estructural' => "Constancia de Seguridad Estructural: el registro del profesional indica vencimiento el {$fecha}, anterior a la emisión de la constancia. SEDEQ lo confirmará en la revisión."];
     }
 
     /**
