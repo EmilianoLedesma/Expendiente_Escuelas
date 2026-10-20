@@ -1,7 +1,8 @@
 # Compendio Maestro — Sistema de Incorporación de Escuelas (SEDEQ)
 
 > Documento vivo. Se actualiza conforme avanza la definición del proyecto y se comparten nuevos documentos normativos.
-> Última actualización: **hueco mayor cerrado** — obtenidos y documentados los Acuerdos Secretariales 357 (Preescolar), 254 (Primaria) y 255 (Secundaria) directamente de fuentes oficiales SEP. El Motor de Validación de Capacidad Instalada queda completo para los 4 niveles de Educación Básica (superficie + personal).
+> Última actualización (2026-10-20): **auditoría normativa de la carga documental del Paso 2** — se agregó fundamento legal confirmado para identidad/representación (LEEQ, LPAEQ), pago de derechos (LHEQ), Constancia de Seguridad Estructural/DRO (Reglamento de Construcción del Municipio de Querétaro) y Visto Bueno de Protección Civil (Reglamento de Protección Civil del Municipio de Querétaro). Se corrigieron dos reglas sin fundamento verificado ("año de registro = año de emisión" y la vigencia de 30 días de Protección Civil, ambas ahora "Pendiente de SEDEQ"). Ver sección 9, "Hallazgos normativos y decisiones pendientes de formalización".
+> Anterior: obtenidos y documentados los Acuerdos Secretariales 357 (Preescolar), 254 (Primaria) y 255 (Secundaria) directamente de fuentes oficiales SEP. El Motor de Validación de Capacidad Instalada queda completo para los 4 niveles de Educación Básica (superficie + personal).
 
 ---
 
@@ -80,7 +81,7 @@ Esta elección **activa dinámicamente** qué documentos son obligatorios.
 | 2m | Escritura o poder notarial de facultades del representante legal (sobre inmueble y trámites de funcionamiento) | — | ✔️ | — |
 | 3 | Escritura del bien inmueble | ✔️ (valida si está a nombre del solicitante) | ✔️ | Original se coteja en la visita de verificación |
 | 4 | Dictamen de Uso de Suelo vigente | ✔️ | ✔️ | **Vigencia: la que indique el propio documento** (cédula municipal TR-170100-017, Municipio de Querétaro, actualizada 06/nov/2024). El sistema captura la fecha de vencimiento si el documento la trae y no inventa una si no la trae. La "antigüedad máxima de 1 mes" que antes se aplicaba como bloqueo era una regla operativa confirmada por el dueño del proyecto que **no aparece en los documentos normativos fuente**; **desde 2026-10-19 ya no bloquea** y queda como pregunta abierta para SEDEQ (ver `docs/decisions/PENDIENTE-dictamenes-por-nivel.md` y `docs/reports/2026-10-19-dictamen-uso-suelo.md`). |
-| 5 | Constancia de Seguridad Estructural y de Ocupación (incluye datos del perito/DRO) | ✔️ | ✔️ | Un solo documento a cargar; el formulario de captura incluye campos del perito (nombre, cédula profesional, número de registro como DRO, autoridad que expide, vigencia del registro) además de los datos de la propia constancia. Regla de validación: el año del registro del perito debe coincidir con el año de emisión de la constancia. |
+| 5 | Constancia de Seguridad Estructural y de Ocupación (incluye datos del perito/DRO) | ✔️ | ✔️ | Un solo documento a cargar; el formulario de captura incluye campos del perito (nombre, cédula profesional, número de registro, calidad en que firma, folio, vigencia declarada) además de los datos de la propia constancia. **Actualizado 2026-10-20**: el Reglamento de Construcción del Municipio de Querétaro no nombra un instrumento llamado literalmente así — ver "Fundamento normativo de la Constancia de Seguridad Estructural y de Ocupación / DRO" más abajo; distingue Visto Bueno de Seguridad y Operación (art. 274, firma el DRO) de Constancia de Seguridad Estructural (art. 277, renovación quinquenal, firma el Corresponsable en Seguridad Estructural) — hoy el sistema los trata como un solo documento. La regla "el año del registro del perito debe coincidir con el año de emisión de la constancia" **no se encontró en ningún artículo revisado**; queda como **Pendiente de SEDEQ** (ver `docs/decisions/PENDIENTE-constancia-seguridad-estructural.md`) — ya no es un bloqueo en el sistema. |
 | 6 | Formato de pago de derechos (RecaudaNet) | ✔️ | ✔️ | — |
 
 > **Decisión de diseño — fusión de documentos**: se había manejado "Constancia de Seguridad Estructural" y "Carta responsiva del DRO" como dos documentos separados. Al contrastar con `req_inicial.docx` ("Constancia... emitida por perito que compruebe su calidad de Director Responsable de Obra") y con el checklist Excel (que solo tiene una entrada para esto), se confirma que son el **mismo documento**. Se modela como **un solo PDF a cargar**, con un formulario de captura que incluye todos los campos relevantes de la constancia y del perito/DRO. **Pendiente de confirmar con SEDEQ** si en la práctica real se manejan como archivos separados — de ser así, es un ajuste menor al formulario, no al modelo de datos.
@@ -324,6 +325,31 @@ Consecuencias de diseño:
 - **No hay plazo mínimo de contrato** común a todos los niveles: el "ciclo escolar completo" proviene de los requisitos de Básica; media superior pide "vigencia" sin cifra, y Superior no fija plazo.
 - La suficiencia jurídica de "otro instrumento" y de las facultades del arrendador o comodante la decide la autoridad; el sistema solo captura metadatos.
 
+### Fundamento normativo de identidad y representación legal del solicitante (consultado 2026-10-20)
+
+La Ley de Educación del Estado de Querétaro (LEEQ) **no regula** qué documentos de identidad o de representación debe presentar el solicitante — sus arts. 48-49 (los que rigen la autorización) solo exigen personal con preparación adecuada, instalaciones higiénicas/seguras/pedagógicas (con autorización por cada plantel) y planes y programas (salvo en básica). Los documentos de identidad concretos (INE, acta de nacimiento, CURP, Constancia de Situación Fiscal) son enteramente administrativos — provienen del documento interno de SEDEQ "Requisitos Autorización Educación Básica 2024", que no se pudo consultar directamente en esta investigación (no se logró abrir el PDF desde el portal público) — y deben tratarse como **"Pendiente de SEDEQ"**, no como requisito legal, mientras no se obtenga y cite textualmente.
+
+**Representación (sí tiene fundamento legal confirmado)** — Ley de Procedimientos Administrativos del Estado de Querétaro (LPAEQ), Periódico Oficial No. 15, 27-feb-2009, vigente (reformas verificadas hasta 2022; no se verificó cambio en 2023-2026):
+
+| Figura | Fundamento | Requisito exacto | Certeza |
+|---|---|---|---|
+| Representación de persona moral | LPAEQ art. 20, párr. 2 | "La representación de las personas físicas o morales ante las autoridades administrativas, deberá acreditarse mediante instrumento público." | Confirmado (texto leído; versión Prontuario 2023, no se contrastó la de 2026) |
+| Representación de persona física (alternativa al poder notarial) | LPAEQ art. 20, párrs. 1-3 | Puede actuar "por sí o por medio de representante o apoderado"; para persona física también es válida una **carta poder firmada ante dos testigos, con firmas ratificadas ante la propia autoridad o ante fedatario público** — no exige poder notarial en todos los casos | Confirmado |
+| Gestor / tercero autorizado | LPAEQ art. 20 | Se puede "autorizar, por escrito, a quien se estime pertinente para realizar trámites, gestiones y comparecencias"; la ley **no usa el término "gestor"** ni distingue poder general de poder especial | Confirmado |
+| Límite a los requisitos exigibles | LPAEQ arts. 2 y 15, fr. VI | La autoridad no puede exigir requisitos no previstos en la norma aplicable al trámite | Confirmado |
+| Reglamento de la LEEQ o de incorporación/revalidación | — | **No se encontró ningún reglamento vigente**; el art. 17 original de la LEEQ remitía a un reglamento del Gobernador, sustituido en la reforma de 2014 por una remisión genérica a "leyes federales y estatales y demás ordenamientos aplicables" | Histórico/no vigente (la remisión a reglamento del Gobernador ya no aplica) |
+
+**Implicación de diseño**: el documento `poder_gestor` del catálogo (exigido hoy como "Poder general para actos de administración") podría ser más estricto de lo que exige la ley para persona física representada por tercero — la LPAEQ admite también carta poder ratificada ante dos testigos. Esto es una discrepancia a revisar con SEDEQ, no un cambio automático del catálogo.
+
+**Pago de derechos y Formato de Solicitud** — fundamento fiscal (antes ausente en el Compendio):
+
+| Documento | Fundamento | Requisito exacto | Certeza |
+|---|---|---|---|
+| Recibo de pago de derechos | Ley de Hacienda del Estado de Querétaro (LHEQ), P.O. No. 41, 21-jul-2014, Título Cuarto, Capítulo Sexto "Por los servicios prestados por las autoridades de educación" | En la versión consolidada revisada (no la de 2026), art. 130: autorización de educación básica/normal/formación de maestros = 64 UMA; RVOE media superior/formación para el trabajo = 100 UMA; RVOE superior = 170 UMA; cambio de titular = 64 UMA. **No se confirmó el número de artículo ni las cuotas en UMA vigentes para el ejercicio fiscal 2026** (hubo reforma fiscal en diciembre de 2025 que pudo modificarlas) | Documentado, no contrastado — requiere verificar contra el Prontuario 2026 antes de usarse como cifra definitiva |
+| Pago exclusivo vía portal-tributario.queretaro.gob.mx | LHEQ art. 7 | Los pagos pueden hacerse "en las Administraciones Regionales, Oficinas Recaudadoras o a través de medios electrónicos" — la ley **no dice que el portal sea el único canal válido**; que lo sea en la práctica sería una regla operativa de SEDEQ/Finanzas, no legal | Confirmado el texto del art. 7; la exclusividad del portal es decisión administrativa, no legal |
+| Firma autógrafa vs. electrónica | Ley de Firma Electrónica Avanzada del Estado de Querétaro y su Reglamento | La FEA "produce los mismos efectos jurídicos que la firma autógrafa", pero el usuario puede optar por firma autógrafa salvo que el trámite esté incorporado al Registro Estatal de Trámites para vía electrónica — **no se verificó si el trámite de incorporación de SEDEQ está habilitado para FEA** | Documentado, no contrastado |
+| Autorización (SEDEQ) vs. RVOE (SEP/SEDEQ) son actos distintos | LEEQ arts. 13-VII, 14-III y 48; Ley General de Educación art. 146 (DOF 30-sep-2019) | Básica requiere "autorización expresa" de SEDEQ (exclusiva); para "estudios distintos" se otorga RVOE (concurrente con SEP), vigente 5 años. El art. 13-VII incluye Inicial como materia de autorización, pero el art. 56 la trata como servicio sin RVOE — hay una tensión interna en la ley, sin resolver aquí | Confirmado el texto; la tensión interna queda como observación |
+
 ---
 
 ## 5. Motor de Validación de Capacidad Instalada (funcionalidad — Etapa 2)
@@ -455,6 +481,44 @@ El documento de requisitos de Básica **no incluye** las proporciones de m²/alu
 - **Acuerdo 255** (Secundaria)
 
 Sin estos acuerdos, el motor de validación automática de **superficie** solo cubre Educación Inicial. Las reglas de **personal** (sección 5.1 siguiente) sí están cubiertas para Inicial, Preescolar y Primaria vía Profesiogramas.
+
+---
+
+### Fundamento normativo de la Constancia de Seguridad Estructural y de Ocupación / DRO (consultado 2026-10-20; corregido 2026-10-20 contra una segunda lectura más profunda del mismo Reglamento)
+
+Fuente: Reglamento de Construcción para el Municipio de Querétaro, texto con reformas hasta la Gaceta Municipal No. 14 (29-mar-2022) — no se halló reforma posterior en ninguna de las dos lecturas (no concluyente). **Solo cubre el Municipio de Querétaro (capital)**; no se investigaron otros municipios. Detalle completo y las 9 preguntas abiertas para SEDEQ: `docs/decisions/PENDIENTE-constancia-seguridad-estructural.md`.
+
+> **Corrección respecto a una primera lectura parcial del mismo día**: una primera pasada de esta investigación (limitada a los artículos 1-142 y a la cédula de trámite TR-170100-002) concluyó erróneamente que el "Visto Bueno de Seguridad y Operación" no existe en Querétaro y que no hay renovación quinquenal. Una lectura posterior y más completa del Reglamento (arts. 273-297) corrige ambos puntos — ver tabla abajo. El Comprobante de Terminación de Obra (TR-170100-002) sigue siendo un trámite real y distinto, pero no es el equivalente de la Constancia de Seguridad Estructural.
+
+| Hallazgo | Fundamento (artículo) | Certeza |
+|---|---|---|
+| Escuelas son construcción **Grupo A** ("cuya falla estructural podría causar la pérdida de un porcentaje elevado de vidas") | Reglamento de Construcción, art. 120 | **Confirmado**, solo Municipio de Querétaro |
+| Las escuelas, por ser Grupo A, **requieren Visto Bueno de Seguridad y Operación** | Reglamento de Construcción, art. 274, inciso a) | **Confirmado** — corrige la conclusión anterior de que era terminología ajena a Querétaro |
+| Grupo A: debe registrarse una **Constancia de Seguridad Estructural, renovada cada cinco años**, en la que un **Corresponsable en Seguridad Estructural** hace constar las condiciones de seguridad | Reglamento de Construcción, art. 277 | **Confirmado** — corrige la conclusión anterior de que no había renovación quinquenal |
+| Cambio de uso del inmueble: Visto Bueno en 90 días naturales, con la Constancia de Seguridad Estructural "en su caso" | Reglamento de Construcción, art. 279 | **Confirmado** |
+| El **DRO** da su responsiva al suscribir el Visto Bueno de Seguridad y Operación | Reglamento de Construcción, art. 289, fr. III | **Confirmado** — el DRO firma el VoBo; la Constancia de Seguridad Estructural la firma el **Corresponsable en Seguridad Estructural** (art. 277). **DRO y Corresponsable en Seguridad Estructural no son la misma calidad ni firman el mismo documento** |
+| Registro, refrendo y padrón anual de DRO y Corresponsables | Reglamento de Construcción, arts. 291, 293-295, 297 | **Confirmado** el texto; aplicación práctica de refrendo pendiente de detalle |
+| El Reglamento **no nombra** ningún instrumento llamado literalmente "Constancia de Seguridad Estructural **y de Ocupación**" | — | El nombre compuesto es de SEDEQ, no del Reglamento municipal — puede corresponder a la CSE del art. 277, al VoBo del art. 274, a la autorización de ocupación del art. 275, o a un formato propio que combine datos de varios |
+| **Punto crítico — "el año de vigencia del registro del perito debe coincidir con el año de emisión de la constancia"** | — | **Ningún artículo del Reglamento revisado lo establece.** La regla proviene de los requisitos de SEDEQ de Básica citados por el propio Compendio, cuyos PDF no se pudieron leer directamente (error del servidor en ambas lecturas). **Pendiente de SEDEQ**, no regla jurídica confirmada |
+| Sanciones al DRO/Corresponsable/propietario (incluye multa del 10% del valor catastral en ciertos supuestos) | Reglamento de Construcción, art. 333 | **Confirmado** |
+
+**Implicación de diseño**: el catálogo (`constancia_seguridad_estructural`) probablemente debería distinguir, cuando SEDEQ lo confirme, entre el Visto Bueno de Seguridad y Operación (firma el DRO, art. 274/289-III) y la Constancia de Seguridad Estructural propiamente dicha (firma el Corresponsable en Seguridad Estructural, renovación quinquenal, art. 277) — hoy se capturan como un solo documento con un solo firmante, criterio que el Compendio ya marcaba como pendiente de confirmar con SEDEQ y que esta investigación no cierra. El refactor técnico correspondiente (campos de calidad del firmante, folio, vigencia declarada, retiro de la regla bloqueante de año) ya se implementó en paralelo — ver `docs/reports/2026-10-20-constancia-seguridad.md` y `docs/decisions/PENDIENTE-constancia-seguridad-estructural.md`.
+
+**Implicación de diseño**: el nombre `constancia_seguridad_estructural` en el catálogo (`TiposDocumentosSeeder`) probablemente corresponde, en la práctica, al Comprobante de Terminación de Obra municipal (u a otro documento que SEDEQ exige específicamente y que no coincide con ningún trámite público municipal localizado) — esto debe confirmarse con SEDEQ antes de asumir que ambos son el mismo documento. La regla de "año de registro = año de emisión" **no tiene fundamento verificado** y no debería seguir operando como validación bloqueante sin que SEDEQ la confirme explícitamente (paralelo exacto al caso ya resuelto del plazo de 30 días del Dictamen de Uso de Suelo).
+
+### Fundamento normativo del Visto Bueno de Protección Civil (consultado 2026-10-20)
+
+Fuente: Reglamento de Protección Civil para el Municipio de Querétaro (texto consultado vía `municipiodequeretaro.gob.mx`; última reforma identificada en el texto: Periódico Oficial No. 62, 21-nov-2008 — **no se halló evidencia de una reforma posterior en esta búsqueda**, lo cual es ausencia de evidencia, no confirmación de que no exista). Solo cubre el Municipio de Querétaro (capital).
+
+| Hallazgo | Fundamento | Certeza |
+|---|---|---|
+| El visto bueno de Protección Civil se exige antes de trámites de licencia de funcionamiento o construcción, cuando la Unidad lo considere necesario por el riesgo | Reglamento de Protección Civil Municipio de Querétaro, arts. 14-XVI y 26-XIV | **Confirmado** |
+| **El texto no fija una vigencia en días o meses para el visto bueno en sí** | — | El Reglamento no establece un plazo de vigencia/caducidad del visto bueno; lo que sí fija el art. 14-XVI es un **plazo de 30 días naturales para acreditar cumplimiento mediante evidencia digital después de obtener el visto bueno vía Carta Compromiso** — es un concepto distinto de "vigencia del documento" |
+| **Implicación directa para el sistema**: `vigencia_max_dias = 30` configurado hoy en `TiposDocumentosSeeder` para `visto_bueno_proteccion_civil` | COMPENDIO_MAESTRO (regla operativa interna) | **Sin fundamento verificado como vigencia del documento** — el "30 días" que sí existe en la norma es un plazo de acreditación posterior a la obtención del visto bueno (Carta Compromiso), no la vigencia del visto bueno ya emitido. Esto es estructuralmente el mismo problema ya resuelto para el Dictamen de Uso de Suelo (ver `docs/reports/2026-10-19-dictamen-uso-suelo.md`) y **debería revisarse con el mismo criterio** |
+| Clasificación de riesgo: las escuelas **no tienen categoría propia** — se clasifican como cualquier otro inmueble por aforo (alto riesgo: más de 250 personas; mediano: 15-250; bajo: lo demás) y por superficie (más de 3,000 m² = alto riesgo) | Reglamento de Protección Civil Municipio de Querétaro, art. 23 | **Confirmado** — contradice una eventual asunción de que existen reglas de Protección Civil diferenciadas por nivel educativo; **no las hay** en este reglamento municipal |
+| Requisitos según nivel de riesgo (alto: Programa Interno de Protección Civil, brigadas, dictámenes eléctrico/gas/estructural, simulacro, póliza de responsabilidad civil; mediano: plan de emergencia, constancias de capacitación, revisiones eléctrica/gas; bajo: botiquín, señalética, extintores, curso de primeros auxilios) | Reglamento de Protección Civil Municipio de Querétaro, art. 23 bis | **Confirmado** |
+
+**Implicación de diseño**: la "vigencia" de 30 días bloqueante hoy configurada para Protección Civil está en la misma situación normativa que tenía el Dictamen de Uso de Suelo antes del 2026-10-19 (regla operativa sin fundamento verificado tratada como vigencia jurídica). No se modifica el sistema en esta tarea (fuera de alcance — solo investigación/documentación), pero el hallazgo debe registrarse como pendiente de decisión del dueño del proyecto, en paralelo al PENDIENTE de dictámenes por nivel.
 
 ---
 
@@ -690,6 +754,13 @@ Precarga de datos ya validados de un plantel para nuevas escuelas o niveles, ges
 - [ ] Localizar la fuente documental del "Formato de autoevaluación CEPPEMS" (Media Superior) — dato nuevo mencionado por el usuario, sin confirmar en los documentos revisados hasta ahora.
 - [ ] Confirmar si el orden de 6 pasos por nivel (inmueble, infraestructura, mobiliario, plan de estudios, plantilla docente, matrícula) aplica igual a Media Superior y Superior, o tiene variantes.
 - [ ] Revisar mockups compartidos (app "incorporacion-app") contra este compendio cuando se puedan visualizar (capturas de pantalla pendientes).
+- [ ] **(2026-10-20)** Obtener y citar textualmente el documento interno de SEDEQ "Requisitos Autorización Educación Básica 2024" — es la fuente real de los requisitos documentales concretos (identidad, representación) y no se pudo abrir desde el portal público en esta investigación.
+- [ ] **(2026-10-20)** Confirmar el artículo y las cuotas en UMA vigentes para 2026 del pago de derechos en la Ley de Hacienda del Estado de Querétaro (hubo reforma fiscal en diciembre de 2025); lo documentado en este Compendio corresponde a una versión consolidada anterior, no contrastada contra el Prontuario 2026.
+- [ ] **(2026-10-20)** Verificar con SEDEQ si el documento que el sistema llama "Constancia de Seguridad Estructural y de Ocupación" corresponde al Comprobante de Terminación de Obra municipal (TR-170100-002) o a otro documento distinto; no se localizó un trámite municipal con ese nombre literal.
+- [ ] **(2026-10-20)** Obtener el texto del artículo 295 del Reglamento de Construcción del Municipio de Querétaro (requisitos del Corresponsable en Seguridad Estructural) y revisar el reglamento completo (excede 140 páginas; solo se revisaron fragmentos) para la regla de "año de registro = año de emisión de la constancia" y la eventual renovación quinquenal.
+- [ ] **(2026-10-20)** Verificar si existe reforma posterior a 2008 (P.O. No. 62, 21-nov-2008) del Reglamento de Protección Civil para el Municipio de Querétaro.
+- [ ] **(2026-10-20)** Investigar los reglamentos de construcción y protección civil de los municipios de Querétaro distintos a la capital (Corregidora, El Marqués, San Juan del Río, Pedro Escobedo, Huimilpan, etc.) — esta investigación solo cubrió el Municipio de Querétaro.
+- [ ] **(2026-10-20)** Completar la investigación normativa de las categorías F (Plano o croquis del inmueble), G (Certificado de número oficial — ya con hallazgo parcial, ver tabla de trámites municipales) e I (documentos específicos por nivel: Formato CEPPEMS de Media Superior, Formato COEPES/ENOPEES de Superior, requisitos de Posgrado) — no se investigaron a fondo en esta pasada por límite de alcance de la sesión; quedan pendientes para una siguiente ronda de investigación normativa.
 
 ---
 
@@ -708,3 +779,73 @@ Precarga de datos ya validados de un plantel para nuevas escuelas o niveles, ges
 - Acuerdo Secretarial 254 (Primaria) — `normatecainterna.sep.gob.mx` (DOF 26/marzo/1999)
 - Acuerdo Secretarial 255 (Secundaria) — `evaluacion.septlaxcala.gob.mx/docs/ACUERDO 255 AUTORIZACION SECUNDARIA.pdf` (DOF 13/abril/1999)
 - `PROFESIOGRAMA_SECUNDARIA.pdf`
+- Ley de Educación del Estado de Querétaro — `legislaturaqueretaro.gob.mx/app/uploads/2016/01/LEY026.pdf` (consultado 2026-10-20)
+- Ley de Procedimientos Administrativos del Estado de Querétaro — Prontuario 2023, `queretaro.gob.mx` (consultado 2026-10-20)
+- Ley de Hacienda del Estado de Querétaro — `queretaro.gob.mx` y Orden Jurídica Nacional (consultado 2026-10-20; versión 2026 no contrastada)
+- Ley de Ingresos del Estado de Querétaro, Ejercicio Fiscal 2026 — `queretaro.gob.mx` (consultado 2026-10-20)
+- Reglamento de Construcción para el Municipio de Querétaro — `webservices.municipiodequeretaro.gob.mx` (consultado 2026-10-20; texto con reformas hasta Gaceta Municipal No. 14, 29-mar-2022; arts. 120, 274, 277, 279, 289, 291-297, 333)
+- Catálogo de trámites municipales de Desarrollo Urbano, Municipio de Querétaro — `tramitesqro.municipiodequeretaro.gob.mx` (consultado 2026-10-20)
+- Reglamento de Protección Civil para el Municipio de Querétaro — `municipiodequeretaro.gob.mx` (consultado 2026-10-20)
+
+---
+
+## 9. Hallazgos normativos y decisiones pendientes de formalización (2026-10-20)
+
+> Sección generada por la auditoría normativa del 2026-10-20 (ver spec de la tarea). Resume lo confirmado, lo corregido y lo que sigue abierto. No cierra ningún `PENDIENTE-*.md` ni crea ADR — esas decisiones siguen correspondiendo al dueño del proyecto y a SEDEQ.
+
+### Normas confirmadas con texto leído (nuevas en esta pasada)
+
+- **Ley de Educación del Estado de Querétaro (LEEQ)**, P.O. No. 55, 31-jul-2009, vigente — arts. 13-VII, 14-III, 48, 49, 55, 56. Fija la competencia de SEDEQ y los únicos tres requisitos legales de fondo para la autorización (personal, instalaciones, planes/programas). No regula documentos de identidad ni representación.
+- **Ley de Procedimientos Administrativos del Estado de Querétaro (LPAEQ)**, P.O. No. 15, 27-feb-2009 — arts. 2, 13, 14, 15-VI, 20. Única fuente legal confirmada para los requisitos de representación (persona física: carta poder ratificada o instrumento público; persona moral: instrumento público) y para el límite a lo que la autoridad puede exigir.
+- **Reglamento de Construcción para el Municipio de Querétaro**, texto con reformas hasta Gaceta Municipal No. 14 (29-mar-2022) — art. 120 (escuelas = Grupo A), art. 274-a (Visto Bueno de Seguridad y Operación obligatorio para Grupo A), art. 277 (Constancia de Seguridad Estructural, renovación quinquenal, firma el Corresponsable en Seguridad Estructural), art. 279 (cambio de uso), art. 289-III (el DRO firma el VoBo), arts. 291/293-295/297 (registro y refrendo de DRO y Corresponsables), art. 333 (sanciones). Detalle completo en `docs/decisions/PENDIENTE-constancia-seguridad-estructural.md`.
+- **Reglamento de Protección Civil para el Municipio de Querétaro**, última reforma identificada P.O. No. 62, 21-nov-2008 — arts. 14-XVI, 23, 23 bis, 26-XIV, 28, 44, 52 (visto bueno, clasificación de riesgo por aforo/superficie, requisitos por nivel de riesgo).
+
+### Normas abrogadas o con reformas detectadas
+
+- Ninguna abrogación nueva detectada en esta pasada sobre lo ya documentado en §4 (Acuerdo 450, Acuerdo 17/11/17 siguen vigentes según lo ya verificado el 2026-10-19).
+- El art. 17 original de la LEEQ (remisión a un reglamento del Gobernador) fue sustituido en la reforma de 2014 — se etiqueta como histórico/no vigente.
+
+### Reglas existentes sin fundamento confirmado (corrección de grado de certeza)
+
+| Regla | Estado anterior en el Compendio | Estado tras esta investigación |
+|---|---|---|
+| "El año de registro del perito/DRO debe coincidir con el año de emisión de la constancia" | Tratada como regla de validación bloqueante del sistema | **No encontrada en ningún artículo del Reglamento de Construcción** (120, 274, 277, 279, 289, 291, 293-297, 333 revisados) — Pendiente de SEDEQ. Ya se retiró como bloqueo en el código (ver `docs/reports/2026-10-20-constancia-seguridad.md`); el vencimiento del registro ahora solo avisa |
+| DRO y Corresponsable en Seguridad Estructural tratados como una sola calidad de firmante | Un solo campo de "DRO" en el formulario | **Son calidades distintas**: el DRO firma el Visto Bueno de Seguridad y Operación (art. 289-III); el Corresponsable en Seguridad Estructural firma la Constancia de Seguridad Estructural (art. 277). El sistema ya captura la calidad del firmante (DRO / Corresponsable / otra) en paralelo a esta investigación |
+| `vigencia_max_dias = 30` para `visto_bueno_proteccion_civil` | Configurado como vigencia bloqueante | El único "30 días" que existe en el Reglamento de Protección Civil es un **plazo de acreditación de cumplimiento posterior a la obtención del visto bueno (Carta Compromiso)**, no la vigencia del documento — misma situación que tuvo el Dictamen de Uso de Suelo antes del 2026-10-19 |
+| Documentos de identidad (INE, acta de nacimiento, CURP, Constancia de Situación Fiscal) como requisito del trámite | Documentados sin fundamento legal explícito | Confirmado que **no provienen de la LEEQ** — son administrativos de SEDEQ; sin poder citar el documento fuente textualmente en esta pasada |
+
+### Requisitos distintos por nivel educativo (nuevo, no documentado antes)
+
+- La clasificación de riesgo de Protección Civil del Municipio de Querétaro **no distingue por nivel educativo** — solo por aforo y superficie del inmueble, igual para todos los niveles.
+- La vigencia del Dictamen de Uso de Suelo (ya resuelto el 2026-10-19) tampoco distingue por nivel — es "la que indique el documento", sin relación con el nivel educativo que se tramite.
+
+### Preguntas pendientes para SEDEQ (nuevas, se suman a `PENDIENTE-dictamenes-por-nivel.md`)
+
+1. ¿El documento interno "Requisitos Autorización Educación Básica 2024" puede obtenerse en texto completo para citarlo en el Compendio? (Dirección de Educación, Blvd. Centro Sur 75, tel. 442 262 0330 ext. 301, según el hallazgo de la investigación).
+2. ¿La "Constancia de Seguridad Estructural y de Ocupación" que pide SEDEQ corresponde a la Constancia de Seguridad Estructural del art. 277 (firma el Corresponsable, renovación quinquenal), al Visto Bueno de Seguridad y Operación del art. 274 (firma el DRO), a ambos en un solo documento, o a un formato propio de SEDEQ? Ver las 9 preguntas completas en `docs/decisions/PENDIENTE-constancia-seguridad-estructural.md`.
+3. ¿De dónde proviene la regla de "año de registro del perito = año de emisión de la constancia"? ¿Es un criterio interno de revisión de SEDEQ, no normado en ningún reglamento?
+4. ¿SEDEQ acepta la carta poder ratificada ante dos testigos (LPAEQ art. 20) como alternativa al poder notarial para persona física representada por gestor, o exige siempre instrumento público en la práctica?
+5. ¿Qué cuota de derechos aplica para 2026 y bajo qué artículo exacto de la Ley de Hacienda del Estado de Querétaro reformada en diciembre de 2025?
+6. Para inmuebles fuera del Municipio de Querétaro (Corregidora, El Marqués, San Juan del Río, etc.), ¿qué documento y autoridad equivalentes acepta SEDEQ? El Reglamento de Construcción estudiado solo aplica a la capital.
+
+### Diferencias observadas entre normativa y formularios/sistema actuales
+
+- El catálogo (`TiposDocumentosSeeder`) nombra `constancia_seguridad_estructural` como un solo documento, pero el Reglamento distingue dos figuras con firmantes distintos (Visto Bueno de Seguridad y Operación → DRO; Constancia de Seguridad Estructural → Corresponsable en Seguridad Estructural) — ver tabla de hallazgos arriba y `docs/decisions/PENDIENTE-constancia-seguridad-estructural.md`.
+- El campo `vigencia_max_dias = 30` de `visto_bueno_proteccion_civil` no corresponde a ninguna vigencia normada del documento.
+- El documento `poder_gestor` (persona física con gestor) podría estar exigiendo más de lo que permite la LPAEQ (que admite carta poder ratificada, no solo poder notarial) — confirmar antes de ajustar el catálogo.
+
+### Fuentes oficiales consultadas en esta pasada (2026-10-20)
+
+- Ley de Educación del Estado de Querétaro — `legislaturaqueretaro.gob.mx/app/uploads/2016/01/LEY026.pdf`
+- Ley de Procedimientos Administrativos del Estado de Querétaro — `queretaro.gob.mx` (Prontuario 2023)
+- Ley de Hacienda del Estado de Querétaro — `queretaro.gob.mx/documents/.../XVIII.+LEY+DE+HACIENDA...pdf`; versión consolidada de la Orden Jurídica Nacional
+- Ley de Ingresos del Estado de Querétaro para el Ejercicio Fiscal 2026 — `queretaro.gob.mx/documents/.../20_LEY_DE_INGRESOS...2026.pdf`
+- Reglamento de la Ley de Firma Electrónica Avanzada del Estado de Querétaro — `ceaqueretaro.gob.mx`
+- Reglamento de Construcción para el Municipio de Querétaro — `webservices.municipiodequeretaro.gob.mx/mejora_regulatoria/bin/files/REGLAMENTO%20DE%20CONSTRUCCI%C3%93N.pdf`
+- Catálogo de trámites municipales de Desarrollo Urbano — `tramitesqro.municipiodequeretaro.gob.mx`
+- Cédula TR-170100-002 (Comprobante de Terminación de Obra) — `tramitesqro.municipiodequeretaro.gob.mx/cedula.php?id=TR-170100-002`
+- Reglamento de Protección Civil para el Municipio de Querétaro — `municipiodequeretaro.gob.mx/municipio/repositorios/transparencia/a66/sayu/REGLAMENTODEPROTECCIONCIVILPARAELMUNICIPIODEQUERETARO.pdf`
+
+### Confirmación de alcance
+
+Solo se modificó `docs/COMPENDIO_MAESTRO_Sistema_Incorporacion.md` en esta tarea. No se tocó código, migraciones, seeders, reglas de validación, pruebas ni `docs/decisions/PENDIENTE-dictamenes-por-nivel.md`. No se hizo push ni merge.
