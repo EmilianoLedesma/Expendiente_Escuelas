@@ -365,10 +365,12 @@ class Paso2DocumentosTest extends TestCase
             ->set('constanciaForm.fechaEmision', now()->toDateString())
             ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
             ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->set('constanciaForm.tipoVigencia', 'fecha_expresa')
             ->set('constanciaForm.vigenciaConstancia', now()->addYear()->toDateString())
+            ->set('constanciaForm.calidadProfesional', 'corresponsable_seguridad_estructural')
             ->call('guardarConstancia')
             ->assertHasNoErrors();
-        $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez']);
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['perito_nombre' => 'Ing. Juan Pérez', 'calidad_profesional' => 'corresponsable_seguridad_estructural']);
     }
 
     public function test_sube_dictamen_antes_que_acreditacion_demuestra_orden_independiente(): void
@@ -638,7 +640,9 @@ class Paso2DocumentosTest extends TestCase
             ->set('constanciaForm.fechaEmision', now()->toDateString())
             ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
             ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
+            ->set('constanciaForm.tipoVigencia', 'fecha_expresa')
             ->set('constanciaForm.vigenciaConstancia', now()->addYear()->toDateString())
+            ->set('constanciaForm.calidadProfesional', 'dro')
             ->set('constanciaForm.peritoCedulaProfesional', '1234567')
             ->set('constanciaForm.peritoRegistroAutoridad', 'Colegio de Ingenieros')
             ->call('guardarConstancia')
@@ -767,7 +771,8 @@ class Paso2DocumentosTest extends TestCase
             ->assertDontSeeHtml('id="acreditacionForm.fechaEscritura"');
     }
 
-    public function test_constancia_pide_vigencia_de_la_constancia_y_la_guarda(): void
+    /** Escuela lista para capturar la constancia: los documentos previos del plantel ya subidos. */
+    private function escuelaParaConstancia(): Escuela
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
@@ -776,23 +781,183 @@ class Paso2DocumentosTest extends TestCase
         foreach (['ine', 'acta_nacimiento', 'escritura_inmueble', 'dictamen_uso_suelo'] as $clave) {
             $registrar->ejecutar($escuela->id, $clave, UploadedFile::fake()->create("{$clave}.pdf", 10, 'application/pdf'), new DatosDocumento);
         }
+
+        return $escuela;
+    }
+
+    /** Llena la constancia con captura válida; $campos pisa lo que cada prueba necesite. @param  array<string, string>  $campos */
+    private function llenarConstancia(Testable $componente, array $campos = []): Testable
+    {
+        $valores = [
+            'fechaEmision' => now()->subDays(10)->toDateString(),
+            'peritoNombre' => 'Ing. Juan Pérez',
+            'calidadProfesional' => 'corresponsable_seguridad_estructural',
+            'peritoRegistroDro' => 'CSE-100',
+            'tipoVigencia' => 'sin_fecha_expresa',
+            ...$campos,
+        ];
+        $componente->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'));
+        foreach ($valores as $campo => $valor) {
+            $componente->set("constanciaForm.{$campo}", $valor);
+        }
+
+        return $componente;
+    }
+
+    public function test_constancia_pide_indicar_si_el_documento_trae_fecha_de_vencimiento_y_la_guarda(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
         $vigencia = now()->addYear()->toDateString();
 
         $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="constanciaForm.tipoVigencia"')
+            ->assertDontSeeHtml('id="constanciaForm.vigenciaConstancia"');
+        $this->llenarConstancia($component, ['tipoVigencia' => ''])
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.tipoVigencia']);
+        $this->assertDatabaseCount('constancias_seguridad_estructural', 0);
+
+        $component->set('constanciaForm.tipoVigencia', 'fecha_expresa')
             ->assertSeeHtml('id="constanciaForm.vigenciaConstancia"')
-            ->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
-            ->set('constanciaForm.fechaEmision', now()->toDateString())
-            ->set('constanciaForm.peritoNombre', 'Ing. Juan Pérez')
-            ->set('constanciaForm.peritoRegistroDro', 'DRO-100')
             ->call('guardarConstancia')
             ->assertHasErrors(['constanciaForm.vigenciaConstancia']);
-        $this->assertDatabaseCount('constancias_seguridad_estructural', 0);
 
         $component->set('constanciaForm.vigenciaConstancia', $vigencia)
             ->call('guardarConstancia')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('constancias_seguridad_estructural', ['vigencia_constancia' => $vigencia]);
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['tipo_vigencia' => 'fecha_expresa', 'vigencia_constancia' => $vigencia]);
+    }
+
+    public function test_constancia_sin_fecha_expresa_se_guarda_sin_inventar_vencimiento(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $this->llenarConstancia($component, ['tipoVigencia' => 'fecha_expresa', 'vigenciaConstancia' => now()->addYear()->toDateString()])
+            ->set('constanciaForm.tipoVigencia', 'sin_fecha_expresa')
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['tipo_vigencia' => 'sin_fecha_expresa', 'vigencia_constancia' => null]);
+        $this->assertDatabaseHas('documentos_plantel', ['fecha_vigencia' => null]);
+    }
+
+    public function test_constancia_rechaza_emision_futura_y_vencimiento_anterior_a_la_emision(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $this->llenarConstancia($component, ['fechaEmision' => now()->addDay()->toDateString()])
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.fechaEmision']);
+
+        $component->set('constanciaForm.fechaEmision', '2026-05-10')
+            ->set('constanciaForm.tipoVigencia', 'fecha_expresa')
+            ->set('constanciaForm.vigenciaConstancia', '2026-05-09')
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.vigenciaConstancia']);
+        $this->assertDatabaseCount('constancias_seguridad_estructural', 0);
+    }
+
+    public function test_constancia_calidad_profesional_es_obligatoria_y_otra_pide_descripcion(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="constanciaForm.calidadProfesional"')
+            ->assertDontSeeHtml('id="constanciaForm.calidadProfesionalOtra"');
+        $this->llenarConstancia($component, ['calidadProfesional' => ''])
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.calidadProfesional']);
+
+        $component->set('constanciaForm.calidadProfesional', 'otra')
+            ->assertSeeHtml('id="constanciaForm.calidadProfesionalOtra"')
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.calidadProfesionalOtra']);
+
+        $component->set('constanciaForm.calidadProfesionalOtra', 'Perito estructurista externo')
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['calidad_profesional' => 'otra', 'calidad_profesional_otra' => 'Perito estructurista externo']);
+    }
+
+    public function test_constancia_cambiar_de_otra_a_dro_no_guarda_la_descripcion_vieja(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $this->llenarConstancia($component, ['calidadProfesional' => 'otra', 'calidadProfesionalOtra' => 'Perito externo'])
+            ->set('constanciaForm.calidadProfesional', 'dro')
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['calidad_profesional' => 'dro', 'calidad_profesional_otra' => null]);
+    }
+
+    public function test_constancia_guarda_folio_y_fechas_del_registro_del_profesional(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSeeHtml('id="constanciaForm.folioConstancia"')
+            ->assertSeeHtml('id="constanciaForm.peritoRegistroFecha"')
+            ->assertSeeHtml('id="constanciaForm.peritoRegistroVencimiento"');
+        $this->llenarConstancia($component, ['folioConstancia' => '  CSE-2026-001 ', 'peritoRegistroFecha' => '2026-02-10', 'peritoRegistroVencimiento' => '2027-02-09'])
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('constancias_seguridad_estructural', ['folio_constancia' => 'CSE-2026-001', 'perito_registro_fecha' => '2026-02-10', 'perito_registro_vencimiento' => '2027-02-09']);
+    }
+
+    public function test_constancia_rechaza_vencimiento_del_registro_anterior_a_su_fecha(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $this->llenarConstancia($component, ['peritoRegistroFecha' => '2026-02-10', 'peritoRegistroVencimiento' => '2026-02-09'])
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.peritoRegistroVencimiento']);
+    }
+
+    public function test_constancia_sin_los_obligatorios_marca_cada_campo(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10, 'application/pdf'))
+            ->call('guardarConstancia')
+            ->assertHasErrors(['constanciaForm.fechaEmision', 'constanciaForm.peritoNombre', 'constanciaForm.calidadProfesional', 'constanciaForm.peritoRegistroDro', 'constanciaForm.tipoVigencia']);
+    }
+
+    public function test_constancia_exige_un_pdf_de_hasta_10_mb(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $this->llenarConstancia($component)
+            ->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.pdf', 10241, 'application/pdf'))
+            ->call('guardarConstancia')
+            ->assertHasErrors(['archivos.constancia_seguridad_estructural']);
+
+        $component->set('archivos.constancia_seguridad_estructural', UploadedFile::fake()->create('constancia.txt', 10, 'text/plain'))
+            ->call('guardarConstancia')
+            ->assertHasErrors(['archivos.constancia_seguridad_estructural']);
+        $this->assertDatabaseCount('constancias_seguridad_estructural', 0);
+    }
+
+    public function test_constancia_con_registro_vencido_antes_de_la_emision_guarda_y_muestra_un_aviso_que_no_bloquea(): void
+    {
+        $escuela = $this->escuelaParaConstancia();
+
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+        $this->llenarConstancia($component, ['fechaEmision' => '2026-05-10', 'peritoRegistroVencimiento' => '2026-02-28'])
+            ->call('guardarConstancia')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('constancias_seguridad_estructural', 1);
+        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('vencimiento el 28/02/2026');
     }
 
     public function test_dictamen_pide_autoridad_folio_y_giro_y_los_guarda(): void
