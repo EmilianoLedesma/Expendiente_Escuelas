@@ -180,15 +180,7 @@ class Paso2Documentos extends Component
             fn () => $this->constanciaForm->validate(),
         );
 
-        if (! $this->intentarRegistrar($registrarDocumento, 'constancia_seguridad_estructural', new DatosDocumento(
-            fechaEmision: $this->constanciaForm->fechaEmision,
-            peritoNombre: $this->constanciaForm->peritoNombre,
-            peritoCedulaProfesional: $this->constanciaForm->peritoCedulaProfesional !== '' ? $this->constanciaForm->peritoCedulaProfesional : null,
-            peritoRegistroDro: $this->constanciaForm->peritoRegistroDro,
-            peritoRegistroAutoridad: $this->constanciaForm->peritoRegistroAutoridad !== '' ? $this->constanciaForm->peritoRegistroAutoridad : null,
-            peritoRegistroVigencia: $this->constanciaForm->peritoRegistroVigencia !== '' ? $this->constanciaForm->peritoRegistroVigencia : null,
-            vigenciaConstancia: $this->constanciaForm->vigenciaConstancia,
-        ))) {
+        if (! $this->intentarRegistrar($registrarDocumento, 'constancia_seguridad_estructural', new DatosDocumento(...$this->constanciaForm->datosParaDocumento()))) {
             return;
         }
         $this->archivos['constancia_seguridad_estructural'] = null;
@@ -408,6 +400,8 @@ class Paso2Documentos extends Component
             'municipios' => $catalogoGeografico->municipios($entidadNotaria !== '' ? (int) $entidadNotaria : null),
             // Solo para marcar la fila vencida; la regla sigue en ValidarVigenciaDocumentos.
             'vencidos' => $this->getErrorBag()->has('vigencia') ? $validarVigencia->ejecutar($this->escuela->id) : [],
+            // Observaciones que no impiden avanzar (p. ej. vencimiento del registro del profesional anterior a la emisión).
+            'avisos' => $validarVigencia->avisos($this->escuela->id),
         ])->layoutData(['escuelaId' => $this->escuela->id, 'seccionActual' => 'documentos']);
     }
 }
