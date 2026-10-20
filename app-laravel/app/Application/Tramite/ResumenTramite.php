@@ -277,7 +277,7 @@ class ResumenTramite
 
         $faltan = count($this->documentosCompletos->clavesPendientes($escuelaId, $tipoPersona));
 
-        return $faltan < count($this->documentosCompletos->clavesAplicables($tipoPersona)) ? 'en_curso' : 'pendiente';
+        return $faltan < count($this->documentosCompletos->clavesRequeridas($escuelaId, $tipoPersona)) ? 'en_curso' : 'pendiente';
     }
 
     /** @return array<int, SeccionTramite> */
