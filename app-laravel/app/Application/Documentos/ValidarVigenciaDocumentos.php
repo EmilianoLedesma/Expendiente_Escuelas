@@ -120,6 +120,23 @@ class ValidarVigenciaDocumentos
             }
         }
 
+        // Contrato de arrendamiento o comodato cuya vigencia declarada ya pasó. La vigencia mínima del contrato está
+        // normativamente sin resolver (informe 2026-10-19-acreditacion-ocupacion §4): se observa, no se exige.
+        if ($aplica('escritura_inmueble')) {
+            $acreditacion = DocumentoPlantel::where('plantel_id', $escuela->plantel_id)
+                ->where('tipo_documento_id', TipoDocumento::where('clave', 'escritura_inmueble')->value('id'))
+                ->with('acreditacionOcupacionLegal')
+                ->first()
+                ?->acreditacionOcupacionLegal;
+
+            if ($acreditacion !== null && in_array($acreditacion->tipo, ['arrendamiento', 'comodato'], true)
+                && $acreditacion->vigencia_indeterminada !== true && $acreditacion->vigencia_contrato !== null
+                && $acreditacion->vigencia_contrato < now()->toDateString()) {
+                $fecha = date('d/m/Y', strtotime($acreditacion->vigencia_contrato));
+                $avisos['escritura_inmueble'] = "Acreditación de la ocupación: el contrato indica vigencia hasta el {$fecha}, fecha ya pasada. SEDEQ revisará si sigue acreditando la ocupación.";
+            }
+        }
+
         $vistoBueno = $aplica('visto_bueno_proteccion_civil') ? $this->vistoBueno($escuela->plantel_id) : null;
         $avisoVistoBueno = $vistoBueno === null ? [] : $this->avisosVistoBueno($vistoBueno);
         if ($avisoVistoBueno !== []) {

@@ -2,6 +2,7 @@
 
 namespace App\Application\Validaciones;
 
+use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Tramite\TramiteEditable;
@@ -12,6 +13,7 @@ use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Infrastructure\Pdf\ReporteValidacionPdf;
 use App\Models\EscuelaNivel;
 use App\Models\EvaluacionValidacion;
+use App\Models\TipoDocumento;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -22,7 +24,9 @@ use Throwable;
  * escuela/plantel documents, then each level's Paso 2.4 documents — keep the
  * result as a PDF plus a row, and say whether the trámite may be sent
  * (ValidacionFinal::bloqueantes(): any documental no_cumple, and since WS-7a any capacity no_cumple or missing
- * capture; alerts and "no verificable por el sistema" do not).
+ * capture; alerts and "no verificable por el sistema" do not). Since 2026-10-20 the vigencia observations of
+ * ValidarVigenciaDocumentos::avisos() join the documental rows as `advertencia`, so the stored report SEDEQ reads
+ * carries them; they never block.
  *
  * Sending itself (state change to en_revision, edit lock) is WS-7 —
  * PENDIENTE-edicion-hasta-envio.md. It must re-run this, not trust an older
@@ -46,6 +50,7 @@ class EjecutarValidacionFinal
         private readonly ReporteValidacionPdf $pdf,
         private readonly EjecutarValidacionCapacidad $validacionCapacidad,
         private readonly TramiteEditable $tramiteEditable,
+        private readonly ValidarVigenciaDocumentos $vigencia = new ValidarVigenciaDocumentos,
     ) {}
 
     /** WS-7a: only while the trámite is editable; a sent trámite keeps the evaluation it was sent with. */
@@ -72,7 +77,7 @@ class EjecutarValidacionFinal
         }
 
         $reporte = $this->validacionDocumental->ejecutar($escuelaId);
-        $filas = $this->presentador->filas($reporte);
+        $filas = [...$this->presentador->filas($reporte), ...$this->observacionesDeVigencia($escuelaId)];
         $niveles = [];
 
         foreach (EscuelaNivel::with('nivelEducativo')->where('escuela_id', $escuelaId)->orderBy('id')->get() as $escuelaNivel) {
@@ -120,6 +125,28 @@ class EjecutarValidacionFinal
         }
 
         return new ValidacionFinal($evaluacion->id, $validacion->generadaEn, $validacion->listaParaEnvio, $validacion->filas, $validacion->capacidad, $validacion->niveles);
+    }
+
+    /**
+     * Observaciones que no impiden avanzar (registro del profesional vencido antes de la emisión, Protección Civil,
+     * contrato con vigencia declarada ya pasada) como filas `advertencia` del reporte. La regla que las decide sigue
+     * en ValidarVigenciaDocumentos; aquí solo se presentan.
+     *
+     * @return list<FilaValidacion>
+     */
+    private function observacionesDeVigencia(int $escuelaId): array
+    {
+        $avisos = $this->vigencia->avisos($escuelaId);
+        $nombres = TipoDocumento::whereIn('clave', array_keys($avisos))->pluck('nombre', 'clave');
+
+        return array_map(fn (string $clave, string $aviso) => new FilaValidacion(
+            clave: 'observacion_vigencia.'.$clave,
+            titulo: 'Observación: '.($nombres[$clave] ?? $clave),
+            estado: 'advertencia',
+            mensaje: $aviso,
+            documentos: [$clave => (string) ($nombres[$clave] ?? $clave)],
+            lineas: [],
+        ), array_keys($avisos), $avisos);
     }
 
     /** @return list<SeccionCapacidad> */

@@ -2,6 +2,7 @@
 
 namespace App\Application\Documentos;
 
+use App\Application\Documentos\DTO\FuenteDomicilio;
 use App\Domain\Documentos\ComparadorDomicilios;
 use App\Domain\Documentos\Domicilio;
 use App\Domain\Documentos\ResultadoComparacion;
@@ -20,6 +21,9 @@ use App\Models\EscuelaNivel;
  * Ausencia de evidencia no equivale a ausencia de discrepancia, y la coincidencia textual es evidencia, no
  * autoridad. La «discrepancia confirmada» solo puede venir de una decisión humana autorizada, aún no
  * implementada. Nada que envíe el solicitante interviene en el resultado.
+ *
+ * La evidencia sale de FuentesDomicilioMunicipal (sin el propio certificado, cada documento una vez). Hoy esa
+ * lista es vacía porque ningún otro documento municipal guarda un domicilio estructurado: el resultado lo dice.
  */
 class EvaluarAplicabilidadDocumentos
 {
@@ -30,7 +34,10 @@ class EvaluarAplicabilidadDocumentos
 
     private const FUNDAMENTO = 'COMPENDIO_MAESTRO §5 «Fundamento normativo del Certificado de Número Oficial»; requisitos de Educación Básica §16 (documentados, no contrastados)';
 
-    public function __construct(private readonly ComparadorDomicilios $comparador) {}
+    public function __construct(
+        private readonly ComparadorDomicilios $comparador,
+        private readonly FuentesDomicilioMunicipal $fuentes = new FuentesDomicilioMunicipal,
+    ) {}
 
     public function para(int $escuelaId, string $clave): ResultadoAplicabilidad
     {
@@ -48,15 +55,20 @@ class EvaluarAplicabilidadDocumentos
     }
 
     /**
-     * Domicilios declarados por los documentos municipales ya capturados, para contrastarlos con el del plantel.
-     * Hoy ningún documento capturado (aparte del propio certificado) guarda un domicilio, así que no hay
-     * evidencia: es el punto de extensión cuando otros documentos pasen a capturarlo.
+     * Fuentes independientes del certificado, una por documento (defensivo: FuentesDomicilioMunicipal ya lo garantiza).
      *
-     * @return list<Domicilio>
+     * @return array<int, FuenteDomicilio> documento_id => fuente
      */
-    protected function domiciliosMunicipales(int $plantelId): array
+    private function fuentesIndependientes(int $plantelId): array
     {
-        return [];
+        $porDocumento = [];
+        foreach ($this->fuentes->para($plantelId) as $fuente) {
+            if ($fuente->tipoDocumento !== self::CERTIFICADO_NUMERO_OFICIAL) {
+                $porDocumento[$fuente->documentoId] ??= $fuente;
+            }
+        }
+
+        return $porDocumento;
     }
 
     private function certificadoNumeroOficial(int $escuelaId): ResultadoAplicabilidad
@@ -90,25 +102,26 @@ class EvaluarAplicabilidadDocumentos
         $plantel = Escuela::findOrFail($escuelaId)->plantel;
         $referencia = new Domicilio($plantel->calle, $plantel->numero_ext, $plantel->numero_int, $plantel->colonia, $plantel->municipio, $plantel->codigo_postal);
 
-        $coinciden = 0;
+        $coinciden = [];
         $dudas = false;
-        foreach ($this->domiciliosMunicipales($plantel->id) as $fuente) {
-            if ($this->comparador->comparar($referencia, $fuente)->resultado === ResultadoComparacion::CoincidenciaAcreditada) {
-                $coinciden++;
+        foreach ($this->fuentesIndependientes($plantel->id) as $documentoId => $fuente) {
+            if ($this->comparador->comparar($referencia, $fuente->domicilio)->resultado === ResultadoComparacion::CoincidenciaAcreditada) {
+                $coinciden[] = $documentoId;
             } else {
                 $dudas = true;
             }
         }
 
-        if ($dudas || $coinciden < self::FUENTES_MINIMAS) {
+        if ($dudas || count($coinciden) < self::FUENTES_MINIMAS) {
             return new ResultadoAplicabilidad(
                 Aplicabilidad::PendienteDeterminar,
-                'La evidencia de coincidencia de domicilios no basta (se necesitan '.self::FUENTES_MINIMAS.' documentos municipales coincidentes y ninguno en duda); se trata como exigible.',
+                'La evidencia de coincidencia de domicilios no basta (se necesitan '.self::FUENTES_MINIMAS.' documentos municipales coincidentes y ninguno en duda; hoy se cuentan '.count($coinciden).'); se trata como exigible.',
                 self::FUNDAMENTO,
                 'Pendiente de SEDEQ',
+                $coinciden,
             );
         }
 
-        return new ResultadoAplicabilidad(Aplicabilidad::NoRequerido, 'Los domicilios de los documentos municipales coinciden con el del plantel.', self::FUNDAMENTO, 'Documentado, no contrastado');
+        return new ResultadoAplicabilidad(Aplicabilidad::NoRequerido, 'Los domicilios de los documentos municipales coinciden con el del plantel.', self::FUNDAMENTO, 'Documentado, no contrastado', $coinciden);
     }
 }

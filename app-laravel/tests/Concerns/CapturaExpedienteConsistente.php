@@ -97,6 +97,13 @@ trait CapturaExpedienteConsistente
                 domicilioMunicipio: 'QUERETARO', domicilioCodigoPostal: '76000',
             ),
             'dictamen_uso_suelo' => new DatosDocumento(fechaEmision: now()->toDateString()),
+            // Captura completa (vigencia determinada): sin ella ValidarVigenciaDocumentos::avisos() observa «vigencia no
+            // determinada», y un expediente consistente no debe traer observaciones.
+            'visto_bueno_proteccion_civil' => new DatosDocumento(
+                fechaEmision: now()->toDateString(), tipoInstrumento: 'visto_bueno',
+                autoridadEmisora: 'Coordinación Municipal de Protección Civil', jurisdiccionEmisora: 'municipio_queretaro',
+                folioDocumento: 'VB-001', clasificacionRiesgo: 'alto', ejercicio: (int) now()->year, tipoVigencia: 'sin_fecha_expresa',
+            ),
             default => new DatosDocumento,
         };
     }

@@ -257,6 +257,8 @@ class EnviarTramiteTest extends TestCase
         (new CatalogoMinimoSeeder)->run();
         $this->registrarResponsable($escuela);
         $this->subirTodosConDatos($escuela);
+        // Estado histórico: documentos capturados y ningún nivel (los documentos exigen un nivel desde 2026-10-20).
+        EscuelaNivel::where('escuela_id', $escuela->id)->delete();
 
         $this->rechaza(fn () => app(EnviarTramite::class)->ejecutar($escuela->id, $this->usuario($escuela)), EjecutarValidacionFinal::ETAPA, 'Completa todas las secciones');
         $this->assertSame(0, DB::table('historial_estados_expediente')->count());
