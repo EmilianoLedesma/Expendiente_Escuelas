@@ -223,3 +223,12 @@ Owner-requested two-phase task (normative audit + Compendio, then SDD/TDD refact
 - **Evidence.** Baseline 1728/1728; after the merge 1795/1795 (6386 assertions), Pint clean, PHPStan 0, run in the foreground.
 - **Open.** SEDEQ must confirm the per-level scope, the meaning of "discrepancia", the 2-en-1 single PDF, multi-level acceptance and other municipios; GitHub CI has not been checked for today's pushes; `hud-revision` must show the new fields in `ContenidoGeneralRevision`.
 - **Next.** Check CI on `master`; send the SEDEQ questions.
+
+### 2026-10-20 (`master` `e540003`, `--no-ff` merge of `worktree-numero-oficial-geografia`) — Certificado de Número Oficial: entidad and municipio from the geography catalog
+
+Owner request: reuse the entidad/municipio catalog of the documents flow (ADR-017) for the certificate's address. Spanish record: `docs/reports/2026-10-20-numero-oficial-geografia.md`.
+
+- **Evaluation.** Entidad and municipio become dependent dropdowns (local catalog, 32 entidades / 2478 municipios). Colonia and código postal stay text: no official INEGI API for them (postal codes belong to Correos de México; third-party sources unverified). INEGI's Catálogo Único de Claves Geoestadísticas web service exists (`gaia.inegi.org.mx/wscatgeo`) but is not called at runtime (ADR-017 imports to local tables); switching the import source to it is a separate improvement.
+- **Change.** `NumeroOficialForm` has `entidadFederativaId` and `municipioId` instead of the municipio text; `RegistrarDocumento` checks that the entidad exists and the municipio belongs to it (no municipio without entidad or the reverse) and **derives the municipio text from the catalog on the server** (the caller's text is ignored), so the validation engine keeps comparing the same text. Callers without ids keep the old text behavior. Migration `2026_10_20_000400` (nullable FKs `entidad_federativa_id`, `municipio_id`, reversible) applied to the dev DB on the owner's go-ahead; existing certificates untouched.
+- **Evidence.** Baseline 1795/1795; after 1810/1810 (6442 assertions), Pint clean, PHPStan 0 (two PHPStan notes fixed).
+- **Operational note.** The geography catalog must be imported (`php artisan geografia:importar`) or the certificate cannot be saved; the form shows a warning when it is empty.
