@@ -5,6 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Extensión de documentos_plantel para la acreditación de la ocupación legal del inmueble.
+ *
+ * @property int $documento_plantel_id
+ * @property string $tipo escritura_publica | arrendamiento | comodato | otro
+ * @property string|null $vigencia_contrato fin de vigencia declarado por el contrato (Y-m-d)
+ * @property bool|null $vigencia_indeterminada NULL en filas anteriores al dato
+ */
 class AcreditacionOcupacionLegal extends Model
 {
     public $timestamps = false;

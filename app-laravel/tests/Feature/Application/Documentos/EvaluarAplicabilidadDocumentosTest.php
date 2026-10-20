@@ -3,7 +3,9 @@
 namespace Tests\Feature\Application\Documentos;
 
 use App\Application\Documentos\Aplicabilidad;
+use App\Application\Documentos\DTO\FuenteDomicilio;
 use App\Application\Documentos\EvaluarAplicabilidadDocumentos;
+use App\Application\Documentos\FuentesDomicilioMunicipal;
 use App\Domain\Documentos\ComparadorDomicilios;
 use App\Domain\Documentos\Domicilio;
 use App\Domain\Validaciones\Documental\NormalizadorDomicilio;
@@ -52,22 +54,29 @@ class EvaluarAplicabilidadDocumentosTest extends TestCase
         return $escuela;
     }
 
-    /** @param  list<Domicilio>  $evidencia  domicilios de documentos municipales (hoy ningún documento capturado los guarda). */
+    /**
+     * @param  list<Domicilio|FuenteDomicilio>  $evidencia  domicilios de documentos municipales (hoy ningún documento
+     *                                                      capturado los guarda, ver FuentesDomicilioMunicipal); cada Domicilio es un documento distinto.
+     */
     private function evaluador(array $evidencia = []): EvaluarAplicabilidadDocumentos
     {
-        return new class(new ComparadorDomicilios(new NormalizadorDomicilio), $evidencia) extends EvaluarAplicabilidadDocumentos
-        {
-            /** @param  list<Domicilio>  $evidencia */
-            public function __construct(ComparadorDomicilios $comparador, private array $evidencia)
-            {
-                parent::__construct($comparador);
-            }
+        $fuentes = array_map(fn (Domicilio|FuenteDomicilio $d, int $i) => $d instanceof FuenteDomicilio ? $d : self::fuente($i + 1, $d), $evidencia, array_keys($evidencia));
 
-            protected function domiciliosMunicipales(int $plantelId): array
+        return new EvaluarAplicabilidadDocumentos(new ComparadorDomicilios(new NormalizadorDomicilio), new class($fuentes) extends FuentesDomicilioMunicipal
+        {
+            /** @param  list<FuenteDomicilio>  $fuentes */
+            public function __construct(private array $fuentes) {}
+
+            public function para(int $plantelId): array
             {
-                return $this->evidencia;
+                return $this->fuentes;
             }
-        };
+        });
+    }
+
+    private static function fuente(int $documentoId, Domicilio $domicilio, string $tipo = 'dictamen_uso_suelo'): FuenteDomicilio
+    {
+        return new FuenteDomicilio($documentoId, $tipo, $domicilio, 'Municipio de Querétaro', 'municipio_queretaro', 'captura_estructurada', 'Declarado por el solicitante');
     }
 
     /** @param  list<string>  $alcance */
@@ -186,5 +195,41 @@ class EvaluarAplicabilidadDocumentosTest extends TestCase
     public function test_solo_el_certificado_aparece_entre_los_documentos_condicionales(): void
     {
         $this->assertSame([self::CLAVE], array_keys($this->evaluador()->condicionales($this->escuela('primaria')->id)));
+    }
+
+    /** Una misma fuente (mismo documento) no se cuenta dos veces. */
+    public function test_el_mismo_documento_no_cuenta_dos_veces(): void
+    {
+        $this->alcance(['primaria']);
+        $escuela = $this->escuela('primaria');
+
+        $resultado = $this->evaluador([self::fuente(7, $this->coincidente()), self::fuente(7, $this->coincidente())])->para($escuela->id, self::CLAVE);
+
+        $this->assertSame(Aplicabilidad::PendienteDeterminar, $resultado->estado);
+    }
+
+    /** El certificado no puede demostrar que él mismo no se necesita. */
+    public function test_el_propio_certificado_no_es_evidencia_de_su_exencion(): void
+    {
+        $this->alcance(['primaria']);
+        $escuela = $this->escuela('primaria');
+
+        $resultado = $this->evaluador([
+            self::fuente(1, $this->coincidente()),
+            self::fuente(2, $this->coincidente(), self::CLAVE),
+        ])->para($escuela->id, self::CLAVE);
+
+        $this->assertSame(Aplicabilidad::PendienteDeterminar, $resultado->estado);
+    }
+
+    public function test_el_resultado_conserva_los_documentos_usados_como_evidencia(): void
+    {
+        $this->alcance(['primaria']);
+        $escuela = $this->escuela('primaria');
+
+        $resultado = $this->evaluador([self::fuente(3, $this->coincidente()), self::fuente(4, $this->coincidente())])->para($escuela->id, self::CLAVE);
+
+        $this->assertSame(Aplicabilidad::NoRequerido, $resultado->estado);
+        $this->assertSame([3, 4], $resultado->evidencia);
     }
 }
