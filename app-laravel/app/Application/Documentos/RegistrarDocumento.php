@@ -101,6 +101,10 @@ class RegistrarDocumento
 
         $this->validarDatosTipados($tipoDocumentoClave, $datos);
 
+        if ($tipoDocumentoClave === 'certificado_numero_oficial') {
+            $this->validarNumeroOficial($datos);
+        }
+
         if ($tipoDocumentoClave === 'escritura_inmueble' && $datos->tipoAcreditacion !== null) {
             $this->validarAcreditacion($datos);
         }
@@ -326,6 +330,10 @@ class RegistrarDocumento
                 'colonia' => $datos->domicilioColonia,
                 'municipio' => $datos->domicilioMunicipio,
                 'codigo_postal' => $datos->domicilioCodigoPostal,
+                'numero_int' => $datos->domicilioNumeroInt,
+                'autoridad_emisora' => $datos->autoridadEmisora,
+                'folio_certificado' => $datos->folioDocumento,
+                'clave_catastral' => $datos->claveCatastral,
             ]],
             'acervo_bibliografico_primaria', 'acervo_bibliografico_secundaria' => [RelacionAcervoBibliografico::class, 'documento_escuela_nivel_id', ['numero_titulos' => $datos->acervoTitulos]],
             default => [null, null, []],
@@ -335,7 +343,9 @@ class RegistrarDocumento
             return;
         }
 
-        $requeridos = array_filter($valores, fn (string $columna) => $columna !== 'numero_ext', ARRAY_FILTER_USE_KEY);
+        // Columnas opcionales: el domicilio puede ser «S/N» y el certificado no publica un formato de campos.
+        $opcionales = ['numero_ext', 'numero_int', 'autoridad_emisora', 'folio_certificado', 'clave_catastral'];
+        $requeridos = array_filter($valores, fn (string $columna) => ! in_array($columna, $opcionales, true), ARRAY_FILTER_USE_KEY);
 
         if (in_array(null, $requeridos, true)) {
             $modelo::where($llave, $documentoId)->delete();
@@ -396,6 +406,10 @@ class RegistrarDocumento
                 'colonia' => [$datos->domicilioColonia, 150, null],
                 'municipio' => [$datos->domicilioMunicipio, 150, null],
                 'codigoPostal' => [$datos->domicilioCodigoPostal, 10, Formatos::esCodigoPostal(...)],
+                'numeroInterior' => [$datos->domicilioNumeroInt, 20, null],
+                'autoridadEmisora' => [$datos->autoridadEmisora, 200, null],
+                'folioCertificado' => [$datos->folioDocumento, 50, null],
+                'claveCatastral' => [$datos->claveCatastral, 40, null],
             ]],
             default => [null, []],
         };
@@ -409,6 +423,28 @@ class RegistrarDocumento
                 $errores["{$form}.{$campo}"] = "Admite hasta {$maximo} caracteres.";
             } elseif ($formato !== null && ! $formato($valor)) {
                 $errores["{$form}.{$campo}"] = 'El dato no tiene un formato válido.';
+            }
+        }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
+    }
+
+    /**
+     * Certificado de Número Oficial: lo que no cubre el largo/formato de validarDatosTipados. Los metadatos son
+     * opcionales (la cédula TR-170200-013 no publica los campos impresos), pero lo que llegue no puede ser solo
+     * espacios y la fecha de expedición, si viene, debe ser válida y no futura. No hay vencimiento: la vigencia
+     * del certificado del Municipio de Querétaro es permanente. Rutas de error: NumeroOficialForm.
+     */
+    private function validarNumeroOficial(DatosDocumento $datos): void
+    {
+        $errores = [];
+
+        $this->validarFechaCampo($errores, 'numeroOficialForm', 'fechaExpedicion', $datos->fechaEmision, false, true);
+        foreach (['autoridadEmisora' => $datos->autoridadEmisora, 'folioCertificado' => $datos->folioDocumento] as $campo => $valor) {
+            if ($valor !== null && $valor !== '' && trim($valor) === '') {
+                $errores["numeroOficialForm.{$campo}"] = 'Este dato no puede estar en blanco.';
             }
         }
 

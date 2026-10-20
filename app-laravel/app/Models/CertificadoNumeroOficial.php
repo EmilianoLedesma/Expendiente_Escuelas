@@ -15,6 +15,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $colonia
  * @property string $municipio
  * @property string $codigo_postal
+ * @property string|null $numero_int
+ * @property string|null $autoridad_emisora
+ * @property string|null $folio_certificado
+ * @property string|null $clave_catastral
+ *
+ * El domicilio es el que dice el documento y no sustituye al del plantel. La fecha de expedición vive en
+ * documentos_plantel.fecha_emision; no hay vencimiento (vigencia permanente en el Municipio de Querétaro).
  */
 class CertificadoNumeroOficial extends Model
 {
@@ -33,6 +40,10 @@ class CertificadoNumeroOficial extends Model
         'colonia',
         'municipio',
         'codigo_postal',
+        'numero_int',
+        'autoridad_emisora',
+        'folio_certificado',
+        'clave_catastral',
     ];
 
     public function documento(): BelongsTo
