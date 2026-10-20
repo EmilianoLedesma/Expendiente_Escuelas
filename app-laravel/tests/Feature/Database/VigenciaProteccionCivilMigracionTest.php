@@ -54,10 +54,11 @@ class VigenciaProteccionCivilMigracionTest extends TestCase
         $this->assertNull($this->vigencia());
     }
 
-    public function test_el_seeder_siembra_30_dias_en_una_bd_nueva(): void
+    /** Los 30 días se retiraron con 2026_10_20_000200: una BD nueva ya no los siembra. */
+    public function test_el_seeder_ya_no_siembra_30_dias_en_una_bd_nueva(): void
     {
         (new TiposDocumentosSeeder)->run();
 
-        $this->assertSame(30, $this->vigencia());
+        $this->assertNull($this->vigencia());
     }
 }

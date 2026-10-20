@@ -21,6 +21,17 @@ final readonly class DatosDocumento
         public ?string $tipoVigencia = null,
         public ?string $fechaVencimientoDocumento = null,
         public ?string $condicionantes = null,
+        // visto_bueno_proteccion_civil (vistos_buenos_proteccion_civil): reutiliza tipoVigencia,
+        // fechaVencimientoDocumento y condicionantes. tipoInstrumento: visto_bueno | dictamen | otro;
+        // jurisdiccionEmisora: municipio_queretaro | otra; clasificacionRiesgo: alto | medio | bajo | no_indicado,
+        // tal como lo declara el documento; ejercicio: año de trámite que indique el documento.
+        public ?string $tipoInstrumento = null,
+        public ?string $tipoInstrumentoOtro = null,
+        public ?string $autoridadEmisora = null,
+        public ?string $jurisdiccionEmisora = null,
+        public ?string $folioDocumento = null,
+        public ?string $clasificacionRiesgo = null,
+        public ?int $ejercicio = null,
         // constancia_seguridad_estructural
         public ?string $peritoNombre = null,
         public ?string $peritoCedulaProfesional = null,

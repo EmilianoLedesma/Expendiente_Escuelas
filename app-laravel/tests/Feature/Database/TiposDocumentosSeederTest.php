@@ -33,7 +33,9 @@ class TiposDocumentosSeederTest extends TestCase
     {
         (new TiposDocumentosSeeder)->run();
 
-        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'visto_bueno_proteccion_civil', 'vigencia_max_dias' => 30]);
+        // Los 30 días de Protección Civil se retiraron el 2026-10-20: su vigencia es la que declara el documento
+        // o la del Reglamento de Querétaro (art. 46), no una antigüedad calculada (ver extensión del documento).
+        $this->assertDatabaseHas('tipos_documentos', ['clave' => 'visto_bueno_proteccion_civil', 'vigencia_max_dias' => null]);
         $this->assertDatabaseHas('tipos_documentos', ['clave' => 'dictamen_uso_suelo', 'vigencia_max_dias' => null]);
     }
 
@@ -68,7 +70,8 @@ class TiposDocumentosSeederTest extends TestCase
 
         // El dictamen declara su propia vigencia (dictamenes_uso_suelo); los 30 días eran una antigüedad
         // administrativa sin fundamento confirmado y ya no son regla (2026-10-19).
-        $this->assertEqualsCanonicalizing(['visto_bueno_proteccion_civil'], $conVigencia, 'control: el catálogo sí tiene claves con vigencia');
+        // Ni el dictamen ni Protección Civil tienen ya vigencia calculada (2026-10-19 y 2026-10-20).
+        $this->assertSame([], $conVigencia);
         $this->assertSame([], array_values(array_diff($conVigencia, Paso2Documentos::CON_DATOS_ESTRUCTURADOS)));
     }
 

@@ -162,9 +162,7 @@ class Paso2Documentos extends Component
             fn () => $this->proteccionCivilForm->validate(),
         );
 
-        if (! $this->intentarRegistrar($registrarDocumento, 'visto_bueno_proteccion_civil', new DatosDocumento(
-            fechaEmision: $this->proteccionCivilForm->fechaEmision,
-        ))) {
+        if (! $this->intentarRegistrar($registrarDocumento, 'visto_bueno_proteccion_civil', new DatosDocumento(...$this->proteccionCivilForm->datosParaDocumento()))) {
             return;
         }
         $this->archivos['visto_bueno_proteccion_civil'] = null;
