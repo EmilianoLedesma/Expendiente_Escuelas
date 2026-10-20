@@ -10,6 +10,8 @@ use App\Domain\Validaciones\Documental\NormalizadorDomicilio;
 use App\Livewire\Tramite\Paso2Documentos;
 use App\Models\CertificadoNumeroOficial;
 use App\Models\DocumentoPlantel;
+use App\Models\EntidadFederativa;
+use App\Models\Municipio;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -27,9 +29,21 @@ class Paso2NumeroOficialTest extends TestCase
     use CapturaExpedienteConsistente;
     use RefreshDatabase;
 
+    private EntidadFederativa $queretaro;
+
+    private EntidadFederativa $otra;
+
+    private Municipio $corregidora;
+
+    private Municipio $asientos;
+
     private function componente(): Testable
     {
         Storage::fake('documentos');
+        $this->queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $this->otra = EntidadFederativa::create(['clave' => 1, 'nombre' => 'AGUASCALIENTES']);
+        $this->corregidora = Municipio::create(['entidad_federativa_id' => $this->queretaro->id, 'clave' => 6, 'nombre' => 'CORREGIDORA']);
+        $this->asientos = Municipio::create(['entidad_federativa_id' => $this->otra->id, 'clave' => 2, 'nombre' => 'ASIENTOS']);
         $escuela = $this->crearEscuelaConPlantel();
         $this->registrarResponsable($escuela);
         $this->actingAs($escuela->solicitante->user);
@@ -40,7 +54,11 @@ class Paso2NumeroOficialTest extends TestCase
     /** @param  array<string, string>  $campos */
     private function llenar(Testable $componente, array $campos = []): Testable
     {
-        $valores = ['calle' => 'Av. Juárez', 'numeroExt' => '12', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigoPostal' => '76000', ...$campos];
+        $valores = [
+            'calle' => 'Av. Juárez', 'numeroExt' => '12', 'colonia' => 'Centro', 'codigoPostal' => '76000',
+            'entidadFederativaId' => (string) $this->queretaro->id, 'municipioId' => (string) $this->corregidora->id,
+            ...$campos,
+        ];
         $componente->set('archivos.certificado_numero_oficial', UploadedFile::fake()->create('cert.pdf', 10, 'application/pdf'));
         foreach ($valores as $campo => $valor) {
             $componente->set("numeroOficialForm.{$campo}", $valor);
@@ -53,7 +71,7 @@ class Paso2NumeroOficialTest extends TestCase
     {
         $componente = $this->componente();
 
-        foreach (['calle', 'numeroExt', 'numeroInterior', 'colonia', 'municipio', 'codigoPostal', 'fechaExpedicion', 'autoridadEmisora', 'folioCertificado', 'claveCatastral'] as $campo) {
+        foreach (['calle', 'numeroExt', 'numeroInterior', 'colonia', 'entidadFederativaId', 'municipioId', 'codigoPostal', 'fechaExpedicion', 'autoridadEmisora', 'folioCertificado', 'claveCatastral'] as $campo) {
             $componente->assertSeeHtml("id=\"numeroOficialForm.{$campo}\"");
         }
     }
@@ -133,7 +151,53 @@ class Paso2NumeroOficialTest extends TestCase
 
         $componente->set('archivos.certificado_numero_oficial', UploadedFile::fake()->create('cert.pdf', 10, 'application/pdf'))
             ->call('guardarNumeroOficial')
-            ->assertHasErrors(['numeroOficialForm.calle', 'numeroOficialForm.colonia', 'numeroOficialForm.municipio', 'numeroOficialForm.codigoPostal']);
+            ->assertHasErrors(['numeroOficialForm.calle', 'numeroOficialForm.colonia', 'numeroOficialForm.entidadFederativaId', 'numeroOficialForm.municipioId', 'numeroOficialForm.codigoPostal']);
+    }
+
+    public function test_entidad_y_municipio_son_listas_del_catalogo_y_el_municipio_sigue_a_la_entidad(): void
+    {
+        $componente = $this->componente();
+
+        $componente->assertSee('QUERÉTARO')->assertSee('AGUASCALIENTES')->assertDontSee('CORREGIDORA')->assertDontSee('ASIENTOS')
+            ->assertDontSeeHtml('wire:model.blur="numeroOficialForm.municipio"');
+        $componente->set('numeroOficialForm.entidadFederativaId', (string) $this->queretaro->id)->assertSee('CORREGIDORA')->assertDontSee('ASIENTOS');
+    }
+
+    public function test_cambiar_la_entidad_limpia_el_municipio_elegido(): void
+    {
+        $componente = $this->componente();
+
+        $componente->set('numeroOficialForm.entidadFederativaId', (string) $this->queretaro->id)
+            ->set('numeroOficialForm.municipioId', (string) $this->corregidora->id)
+            ->set('numeroOficialForm.entidadFederativaId', (string) $this->otra->id)
+            ->assertSet('numeroOficialForm.municipioId', '');
+    }
+
+    public function test_guarda_las_referencias_y_el_nombre_del_municipio_sale_del_catalogo(): void
+    {
+        $componente = $this->componente();
+
+        $this->llenar($componente)->call('guardarNumeroOficial')->assertHasNoErrors();
+
+        $fila = CertificadoNumeroOficial::sole();
+        $this->assertSame($this->queretaro->id, $fila->entidad_federativa_id);
+        $this->assertSame($this->corregidora->id, $fila->municipio_id);
+        $this->assertSame('CORREGIDORA', $fila->municipio);
+    }
+
+    public function test_rechaza_un_municipio_que_no_pertenece_a_la_entidad(): void
+    {
+        $componente = $this->componente();
+
+        $this->llenar($componente, ['municipioId' => (string) $this->asientos->id])->call('guardarNumeroOficial')->assertHasErrors(['numeroOficialForm.municipioId']);
+        $this->assertDatabaseCount('certificados_numero_oficial', 0);
+    }
+
+    public function test_colonia_y_codigo_postal_siguen_siendo_texto(): void
+    {
+        $componente = $this->componente();
+
+        $componente->assertSeeHtml('wire:model.blur="numeroOficialForm.colonia"')->assertSeeHtml('wire:model.blur="numeroOficialForm.codigoPostal"');
     }
 
     public function test_exige_un_pdf_de_hasta_10_mb(): void

@@ -86,7 +86,25 @@
                     <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" hint="Si el certificado dice «S/N», escríbalo así." optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroExt" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.numeroInterior" label="Número interior" hint="Solo si el certificado lo trae (por ejemplo, «A-3»)." optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroInterior" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.colonia" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.municipio" label="Municipio"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.municipio" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.entidadFederativaId" label="Entidad federativa" hint="Tal como aparece en el certificado.">
+                        <x-ui.select wire:model.live="numeroOficialForm.entidadFederativaId">
+                            <option value="">Seleccione…</option>
+                            @foreach ($entidades as $entidad)
+                                <option value="{{ $entidad['id'] }}">{{ $entidad['nombre'] }}</option>
+                            @endforeach
+                        </x-ui.select>
+                        @if ($entidades === [])
+                            <p class="mt-xs text-body-sm text-muted">Aún no hay entidades cargadas: pida a la persona administradora que importe el catálogo geográfico.</p>
+                        @endif
+                    </x-ui.field>
+                    <x-ui.field id="numeroOficialForm.municipioId" label="Municipio">
+                        <x-ui.select wire:model.blur="numeroOficialForm.municipioId" :disabled="$numeroOficialForm->entidadFederativaId === ''">
+                            <option value="">Seleccione…</option>
+                            @foreach ($municipiosCertificado as $municipio)
+                                <option value="{{ $municipio['id'] }}">{{ $municipio['nombre'] }}</option>
+                            @endforeach
+                        </x-ui.select>
+                    </x-ui.field>
                     <x-ui.field id="numeroOficialForm.codigoPostal" label="Código postal"><x-ui.input wire:model.blur="numeroOficialForm.codigoPostal" inputmode="numeric" maxlength="5" /></x-ui.field>
                     <p class="text-body-sm text-muted">Los datos siguientes son opcionales: capture solo los que aparecen en el documento. El certificado del Municipio de Querétaro es permanente, por eso no se pide vencimiento.</p>
                     <x-ui.field id="numeroOficialForm.fechaExpedicion" label="Fecha de expedición" optional><x-ui.input type="date" wire:model.blur="numeroOficialForm.fechaExpedicion" /></x-ui.field>

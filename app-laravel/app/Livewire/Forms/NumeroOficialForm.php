@@ -5,6 +5,7 @@ namespace App\Livewire\Forms;
 use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
 use App\Application\Captura\ReglasCaptura;
+use Illuminate\Validation\Rule;
 use Livewire\Form;
 
 /**
@@ -25,7 +26,10 @@ class NumeroOficialForm extends Form
 
     public string $colonia = '';
 
-    public string $municipio = '';
+    /** Ids del catálogo geográfico (ADR-017); '' = sin elegir. El nombre del municipio se deriva en el servidor. */
+    public string $entidadFederativaId = '';
+
+    public string $municipioId = '';
 
     #[Normalizar(Normalizacion::Digitos)]
     public string $codigoPostal = '';
@@ -46,7 +50,11 @@ class NumeroOficialForm extends Form
             'numeroExt' => ReglasCaptura::texto(max: 20),
             'numeroInterior' => ReglasCaptura::texto(max: 20),
             'colonia' => ReglasCaptura::texto(requerido: true, max: 150),
-            'municipio' => ReglasCaptura::texto(requerido: true, max: 150),
+            'entidadFederativaId' => ['required', 'integer', Rule::exists('entidades_federativas', 'id')],
+            'municipioId' => [
+                'required', 'integer',
+                Rule::exists('municipios', 'id')->where('entidad_federativa_id', $this->entidadFederativaId === '' ? 0 : (int) $this->entidadFederativaId),
+            ],
             'codigoPostal' => ReglasCaptura::codigoPostal(requerido: true),
             'fechaExpedicion' => ReglasCaptura::fechaPasada(),
             'autoridadEmisora' => ReglasCaptura::texto(max: 200),
@@ -62,7 +70,8 @@ class NumeroOficialForm extends Form
             'numeroExt' => 'número exterior',
             'numeroInterior' => 'número interior',
             'colonia' => 'colonia',
-            'municipio' => 'municipio',
+            'entidadFederativaId' => 'entidad federativa',
+            'municipioId' => 'municipio',
             'codigoPostal' => 'código postal',
             'fechaExpedicion' => 'fecha de expedición',
             'autoridadEmisora' => 'autoridad emisora',
@@ -71,11 +80,20 @@ class NumeroOficialForm extends Form
         ];
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'entidadFederativaId.exists' => 'La entidad federativa seleccionada no existe.',
+            'municipioId.exists' => 'El municipio no pertenece a la entidad federativa seleccionada.',
+        ];
+    }
+
     /**
      * Valores para DatosDocumento (clave = parámetro del DTO). La fecha de expedición viaja en
      * `fechaEmision`, la autoridad en `autoridadEmisora` y el folio en `folioDocumento`; cadena vacía = null.
      *
-     * @return array<string, string|null>
+     * @return array<string, int|string|null>
      */
     public function datosParaDocumento(): array
     {
@@ -86,7 +104,9 @@ class NumeroOficialForm extends Form
             'domicilioNumeroExt' => $texto($this->numeroExt),
             'domicilioNumeroInt' => $texto($this->numeroInterior),
             'domicilioColonia' => trim($this->colonia),
-            'domicilioMunicipio' => trim($this->municipio),
+            // El texto del municipio no viaja: RegistrarDocumento lo deriva del catálogo con estos ids.
+            'domicilioEntidadFederativaId' => $this->entidadFederativaId !== '' ? (int) $this->entidadFederativaId : null,
+            'domicilioMunicipioId' => $this->municipioId !== '' ? (int) $this->municipioId : null,
             'domicilioCodigoPostal' => $this->codigoPostal,
             'fechaEmision' => $texto($this->fechaExpedicion),
             'autoridadEmisora' => $texto($this->autoridadEmisora),

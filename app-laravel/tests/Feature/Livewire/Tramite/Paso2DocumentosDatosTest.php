@@ -7,6 +7,8 @@ use App\Models\CertificadoNumeroOficial;
 use App\Models\ConstanciaCurp;
 use App\Models\ConstanciaSituacionFiscal;
 use App\Models\CredencialIne;
+use App\Models\EntidadFederativa;
+use App\Models\Municipio;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
@@ -75,6 +77,8 @@ class Paso2DocumentosDatosTest extends TestCase
 
     public function test_constancias_y_certificado_se_suben_con_sus_datos(): void
     {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $municipio = Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 14, 'nombre' => 'QUERÉTARO']);
         $escuela = $this->crearEscuelaConPlantel();
         $this->registrarResponsable($escuela);
         $this->actingAs($escuela->solicitante->user);
@@ -92,7 +96,8 @@ class Paso2DocumentosDatosTest extends TestCase
             ->set('numeroOficialForm.calle', 'Av. Juárez')
             ->set('numeroOficialForm.numeroExt', '12')
             ->set('numeroOficialForm.colonia', 'Centro')
-            ->set('numeroOficialForm.municipio', 'Querétaro')
+            ->set('numeroOficialForm.entidadFederativaId', (string) $queretaro->id)
+            ->set('numeroOficialForm.municipioId', (string) $municipio->id)
             ->set('numeroOficialForm.codigoPostal', '76000')
             ->call('guardarNumeroOficial')
             ->assertHasNoErrors();
@@ -104,6 +109,8 @@ class Paso2DocumentosDatosTest extends TestCase
 
     public function test_el_certificado_exige_un_codigo_postal_de_cinco_digitos_y_rfc_valido(): void
     {
+        $queretaro = EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+        $municipio = Municipio::create(['entidad_federativa_id' => $queretaro->id, 'clave' => 14, 'nombre' => 'QUERÉTARO']);
         $escuela = $this->crearEscuelaConPlantel();
         $this->registrarResponsable($escuela);
         $this->actingAs($escuela->solicitante->user);
@@ -112,7 +119,8 @@ class Paso2DocumentosDatosTest extends TestCase
             ->set('archivos.certificado_numero_oficial', $this->pdf('cert.pdf'))
             ->set('numeroOficialForm.calle', 'Av. Juárez')
             ->set('numeroOficialForm.colonia', 'Centro')
-            ->set('numeroOficialForm.municipio', 'Querétaro')
+            ->set('numeroOficialForm.entidadFederativaId', (string) $queretaro->id)
+            ->set('numeroOficialForm.municipioId', (string) $municipio->id)
             ->set('numeroOficialForm.codigoPostal', '760')
             ->call('guardarNumeroOficial')
             ->assertHasErrors(['numeroOficialForm.codigoPostal'])
