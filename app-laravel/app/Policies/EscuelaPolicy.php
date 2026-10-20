@@ -33,12 +33,20 @@ class EscuelaPolicy
 
     /**
      * Reporte de validación final: SOLO el dueño. Cubre todos los niveles de la escuela y también se guarda
-     * en cada corrida previa al envío; SEDEQ no lo ve en el proyecto 1 (el proyecto 2 lo abrirá acotado por
-     * nivel y solo para la evaluación enviada).
+     * en cada corrida previa al envío; SEDEQ ve solo la evaluación enviada, por verReporteEnviado.
      */
     public function verReporte(User $user, Escuela $escuela): bool
     {
         return $this->esDueno($user, $escuela);
+    }
+
+    /**
+     * Reporte de la validación guardada al envío, para SEDEQ (2026-10-20): solo quien ve todos los niveles de la
+     * escuela (AccesoSedeq::puedeVerReporteEnviado). Lectura pura, separada de verReporte (dueño).
+     */
+    public function verReporteEnviado(User $user, Escuela $escuela): bool
+    {
+        return $this->accesoSedeq->puedeVerReporteEnviado($user, $escuela->getKey());
     }
 
     /** Hub "Resumen del trámite": el dueño, o un responsable con algún nivel de esta escuela (el DTO se acota a sus niveles). SEDEQ no entra: el hub trae enlaces de edición; SEDEQ lee por `sedeq.tramite` (`view`). */

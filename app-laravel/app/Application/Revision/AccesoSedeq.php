@@ -26,6 +26,17 @@ final class AccesoSedeq
         return $this->nivelesVisibles($usuario)?->whereKey($escuelaNivelId)->exists() ?? false;
     }
 
+    /**
+     * Reporte PDF de la validación guardada al envío: cubre todos los niveles de la escuela, así que solo lo ve quien
+     * ve todos (el supervisor, o un revisor asignado a cada nivel) y solo con la escuela entera fuera de captura.
+     */
+    public function puedeVerReporteEnviado(User $usuario, int $escuelaId): bool
+    {
+        $todos = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+
+        return $todos !== [] && $this->nivelesDeEscuela($usuario, $escuelaId) === $todos;
+    }
+
     /** @return list<int> ids de los niveles de la escuela que el usuario puede ver (vacío sin acceso). */
     public function nivelesDeEscuela(User $usuario, int $escuelaId): array
     {
