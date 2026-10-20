@@ -99,6 +99,10 @@ class RegistrarDocumento
             $this->validarRecibo($datos);
         }
 
+        if ($tipoDocumentoClave === 'certificado_numero_oficial') {
+            $datos = $this->aplicarUbicacionCatalogo($datos);
+        }
+
         $this->validarDatosTipados($tipoDocumentoClave, $datos);
 
         if ($tipoDocumentoClave === 'certificado_numero_oficial') {
@@ -334,6 +338,8 @@ class RegistrarDocumento
                 'autoridad_emisora' => $datos->autoridadEmisora,
                 'folio_certificado' => $datos->folioDocumento,
                 'clave_catastral' => $datos->claveCatastral,
+                'entidad_federativa_id' => $datos->domicilioEntidadFederativaId,
+                'municipio_id' => $datos->domicilioMunicipioId,
             ]],
             'acervo_bibliografico_primaria', 'acervo_bibliografico_secundaria' => [RelacionAcervoBibliografico::class, 'documento_escuela_nivel_id', ['numero_titulos' => $datos->acervoTitulos]],
             default => [null, null, []],
@@ -344,7 +350,7 @@ class RegistrarDocumento
         }
 
         // Columnas opcionales: el domicilio puede ser «S/N» y el certificado no publica un formato de campos.
-        $opcionales = ['numero_ext', 'numero_int', 'autoridad_emisora', 'folio_certificado', 'clave_catastral'];
+        $opcionales = ['numero_ext', 'numero_int', 'autoridad_emisora', 'folio_certificado', 'clave_catastral', 'entidad_federativa_id', 'municipio_id'];
         $requeridos = array_filter($valores, fn (string $columna) => ! in_array($columna, $opcionales, true), ARRAY_FILTER_USE_KEY);
 
         if (in_array(null, $requeridos, true)) {
@@ -429,6 +435,47 @@ class RegistrarDocumento
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
         }
+    }
+
+    /**
+     * Entidad y municipio del certificado desde el catálogo geográfico (ADR-017): la entidad debe existir, el
+     * municipio debe existir y pertenecerle, y no hay municipio sin entidad ni entidad sin municipio. Con ambas
+     * referencias el texto `domicilioMunicipio` se **deriva del catálogo** (lo que mande el llamador se ignora),
+     * de modo que el motor de validación sigue comparando el mismo texto. Sin ninguna referencia es un llamador
+     * anterior y se conserva el texto. Rutas de error: NumeroOficialForm.
+     */
+    private function aplicarUbicacionCatalogo(DatosDocumento $datos): DatosDocumento
+    {
+        $entidadId = $datos->domicilioEntidadFederativaId;
+        $municipioId = $datos->domicilioMunicipioId;
+
+        if ($entidadId === null && $municipioId === null) {
+            return $datos;
+        }
+
+        $errores = [];
+        $municipio = null;
+
+        if ($entidadId === null) {
+            $errores['numeroOficialForm.entidadFederativaId'] = 'Seleccione la entidad federativa del municipio.';
+        } elseif (! EntidadFederativa::whereKey($entidadId)->exists()) {
+            $errores['numeroOficialForm.entidadFederativaId'] = 'La entidad federativa seleccionada no existe.';
+        }
+
+        if ($municipioId === null) {
+            $errores['numeroOficialForm.municipioId'] = 'Seleccione el municipio.';
+        } elseif ($entidadId !== null) {
+            $municipio = Municipio::whereKey($municipioId)->where('entidad_federativa_id', $entidadId)->first();
+            if ($municipio === null && ! isset($errores['numeroOficialForm.entidadFederativaId'])) {
+                $errores['numeroOficialForm.municipioId'] = 'El municipio no pertenece a la entidad federativa seleccionada.';
+            }
+        }
+
+        if ($errores !== [] || $municipio === null) {
+            throw new DatosInvalidos($errores ?: ['numeroOficialForm.municipioId' => 'El municipio no pertenece a la entidad federativa seleccionada.']);
+        }
+
+        return new DatosDocumento(...[...get_object_vars($datos), 'domicilioMunicipio' => $municipio->nombre]);
     }
 
     /**

@@ -373,6 +373,13 @@ class Paso2Documentos extends Component
         $this->resetErrorBag('acreditacionForm.notarioMunicipioId');
     }
 
+    /** Igual que la notaría: cambiar la entidad del certificado invalida el municipio elegido. */
+    public function updatedNumeroOficialFormEntidadFederativaId(): void
+    {
+        $this->numeroOficialForm->municipioId = '';
+        $this->resetErrorBag('numeroOficialForm.municipioId');
+    }
+
     public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, DocumentosCapturadosQuery $documentosCapturados, ListarCatalogoGeografico $catalogoGeografico)
     {
         $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
@@ -393,6 +400,7 @@ class Paso2Documentos extends Component
             // Catálogo geográfico local (ADR-017) para los selectores de la notaría de la escritura.
             'entidades' => $catalogoGeografico->entidades(),
             'municipios' => $catalogoGeografico->municipios($entidadNotaria !== '' ? (int) $entidadNotaria : null),
+            'municipiosCertificado' => $catalogoGeografico->municipios($this->numeroOficialForm->entidadFederativaId !== '' ? (int) $this->numeroOficialForm->entidadFederativaId : null),
             // Solo para marcar la fila vencida; la regla sigue en ValidarVigenciaDocumentos.
             'vencidos' => $this->getErrorBag()->has('vigencia') ? $validarVigencia->ejecutar($this->escuela->id) : [],
             // Observaciones que no impiden avanzar (p. ej. vencimiento del registro del profesional anterior a la emisión).

@@ -95,6 +95,10 @@ final readonly class DatosDocumento
         // También del certificado (opcionales): la fecha de expedición viaja en fechaEmision, la autoridad en
         // autoridadEmisora y el folio en folioDocumento (campos compartidos con otros documentos).
         public ?string $domicilioNumeroInt = null,
+        // Ubicación desde el catálogo geográfico (ADR-017). Con ellas, `domicilioMunicipio` se deriva en el servidor;
+        // sin ellas (llamadores anteriores) se usa el texto de `domicilioMunicipio`.
+        public ?int $domicilioEntidadFederativaId = null,
+        public ?int $domicilioMunicipioId = null,
         public ?string $claveCatastral = null,
         // recibo_pago_derechos (recibos_pago_derechos, Paso 2.4)
         public ?string $folio = null,

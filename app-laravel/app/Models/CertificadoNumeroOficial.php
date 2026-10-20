@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $autoridad_emisora
  * @property string|null $folio_certificado
  * @property string|null $clave_catastral
+ * @property int|null $entidad_federativa_id catálogo geográfico (ADR-017); NULL en certificados anteriores
+ * @property int|null $municipio_id catálogo geográfico (ADR-017); `municipio` (texto) se deriva de él
  *
  * El domicilio es el que dice el documento y no sustituye al del plantel. La fecha de expedición vive en
  * documentos_plantel.fecha_emision; no hay vencimiento (vigencia permanente en el Municipio de Querétaro).
@@ -44,6 +46,8 @@ class CertificadoNumeroOficial extends Model
         'autoridad_emisora',
         'folio_certificado',
         'clave_catastral',
+        'entidad_federativa_id',
+        'municipio_id',
     ];
 
     public function documento(): BelongsTo
