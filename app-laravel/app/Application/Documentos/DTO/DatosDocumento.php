@@ -92,6 +92,10 @@ final readonly class DatosDocumento
         public ?string $domicilioColonia = null,
         public ?string $domicilioMunicipio = null,
         public ?string $domicilioCodigoPostal = null,
+        // También del certificado (opcionales): la fecha de expedición viaja en fechaEmision, la autoridad en
+        // autoridadEmisora y el folio en folioDocumento (campos compartidos con otros documentos).
+        public ?string $domicilioNumeroInt = null,
+        public ?string $claveCatastral = null,
         // recibo_pago_derechos (recibos_pago_derechos, Paso 2.4)
         public ?string $folio = null,
         public ?string $monto = null,

@@ -14,9 +14,16 @@ use RuntimeException;
  * llaman, ninguno de los dos recalcula la lista de claves aplicables por
  * su cuenta (docs/superpowers/specs/2026-09-10-paso2-documentos-design.md
  * §5).
+ *
+ * Aplicable ≠ requerido: `clavesAplicables` es lo que el catálogo muestra y acepta subir;
+ * `clavesRequeridas` descuenta lo que EvaluarAplicabilidadDocumentos declara `NoRequerido`
+ * (hoy, solo el Certificado de Número Oficial y solo si SEDEQ confirma el alcance: por defecto
+ * todo es requerido). `clavesPendientes` y `paraEscuela` se miden sobre las requeridas.
  */
 class DocumentosCompletos
 {
+    public function __construct(private readonly ?EvaluarAplicabilidadDocumentos $aplicabilidad = null) {}
+
     /**
      * Catálogo-driven desde WS-5a: antes de esto era un array fijo de 6
      * claves; ahora es tipos_documentos, filtrado por aplica_persona y
@@ -49,11 +56,41 @@ class DocumentosCompletos
         return $claves;
     }
 
+    /**
+     * Los aplicables que cuentan para la completitud: todos salvo los que la capa de aplicación declara
+     * `NoRequerido` para este expediente. Un documento ya cargado que deja de ser exigible se conserva.
+     *
+     * @return list<string>
+     */
+    public function clavesRequeridas(int $escuelaId, string $tipoPersona): array
+    {
+        $condicionales = $this->evaluador()->condicionales($escuelaId);
+
+        return array_values(array_filter(
+            $this->clavesAplicables($tipoPersona),
+            fn (string $clave) => ! isset($condicionales[$clave]) || $condicionales[$clave]->estado->exigeCarga(),
+        ));
+    }
+
+    /**
+     * Aplicabilidad (con motivo, fundamento y certeza) de los documentos aplicables cuya exigibilidad depende
+     * del expediente. Los demás son siempre obligatorios y no aparecen.
+     *
+     * @return array<string, ResultadoAplicabilidad>
+     */
+    public function aplicabilidad(int $escuelaId, string $tipoPersona): array
+    {
+        return array_intersect_key(
+            $this->evaluador()->condicionales($escuelaId),
+            array_flip($this->clavesAplicables($tipoPersona)),
+        );
+    }
+
     /** @return list<string> */
     public function clavesPendientes(int $escuelaId, string $tipoPersona): array
     {
         $escuela = Escuela::findOrFail($escuelaId);
-        $aplicables = $this->clavesAplicables($tipoPersona);
+        $aplicables = $this->clavesRequeridas($escuelaId, $tipoPersona);
         $idsAplicables = TipoDocumento::whereIn('clave', $aplicables)->pluck('id', 'clave');
 
         $completadasEscuela = DocumentoEscuela::where('escuela_id', $escuelaId)
@@ -77,5 +114,10 @@ class DocumentosCompletos
     public function paraEscuela(int $escuelaId, string $tipoPersona): bool
     {
         return $this->clavesPendientes($escuelaId, $tipoPersona) === [];
+    }
+
+    private function evaluador(): EvaluarAplicabilidadDocumentos
+    {
+        return $this->aplicabilidad ?? app(EvaluarAplicabilidadDocumentos::class);
     }
 }

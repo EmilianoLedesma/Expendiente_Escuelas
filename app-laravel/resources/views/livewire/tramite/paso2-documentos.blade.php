@@ -74,11 +74,25 @@
                 </x-tramite.documento-row>
             @elseif ($clave === 'certificado_numero_oficial')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarNumeroOficial">
+                    @if (($aplicabilidad[$clave] ?? null)?->estado === \App\Application\Documentos\Aplicabilidad::NoRequerido)
+                        <x-slot:extra>
+                            <p class="flex items-start gap-xxs text-body-sm text-body">
+                                <x-ui.icon nombre="exclamation-circle" class="mt-px h-5 w-5 shrink-0" />
+                                Para su trámite este documento no es obligatorio. Puede cargarlo de todos modos; no cuenta para el avance.
+                            </p>
+                        </x-slot:extra>
+                    @endif
                     <x-ui.field id="numeroOficialForm.calle" label="Calle" hint="Tal como aparece en el certificado."><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.calle" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroExt" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" hint="Si el certificado dice «S/N», escríbalo así." optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroExt" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.numeroInterior" label="Número interior" hint="Solo si el certificado lo trae (por ejemplo, «A-3»)." optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroInterior" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.colonia" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.municipio" label="Municipio"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.municipio" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.codigoPostal" label="Código postal"><x-ui.input wire:model.blur="numeroOficialForm.codigoPostal" inputmode="numeric" maxlength="5" /></x-ui.field>
+                    <p class="text-body-sm text-muted">Los datos siguientes son opcionales: capture solo los que aparecen en el documento. El certificado del Municipio de Querétaro es permanente, por eso no se pide vencimiento.</p>
+                    <x-ui.field id="numeroOficialForm.fechaExpedicion" label="Fecha de expedición" optional><x-ui.input type="date" wire:model.blur="numeroOficialForm.fechaExpedicion" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.autoridadEmisora" label="Autoridad emisora" hint="Tal como aparece en el documento." optional><x-ui.input maxlength="200" wire:model.blur="numeroOficialForm.autoridadEmisora" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.folioCertificado" label="Folio del certificado" optional><x-ui.input maxlength="50" wire:model.blur="numeroOficialForm.folioCertificado" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.claveCatastral" label="Clave catastral" optional><x-ui.input maxlength="40" wire:model.blur="numeroOficialForm.claveCatastral" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'escritura_inmueble')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarAcreditacion">

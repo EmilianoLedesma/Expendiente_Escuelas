@@ -236,13 +236,7 @@ class Paso2Documentos extends Component
             fn () => $this->numeroOficialForm->validate(),
         );
 
-        if (! $this->intentarRegistrar($registrarDocumento, 'certificado_numero_oficial', new DatosDocumento(
-            domicilioCalle: trim($this->numeroOficialForm->calle),
-            domicilioNumeroExt: trim($this->numeroOficialForm->numeroExt) !== '' ? trim($this->numeroOficialForm->numeroExt) : null,
-            domicilioColonia: trim($this->numeroOficialForm->colonia),
-            domicilioMunicipio: trim($this->numeroOficialForm->municipio),
-            domicilioCodigoPostal: $this->numeroOficialForm->codigoPostal,
-        ))) {
+        if (! $this->intentarRegistrar($registrarDocumento, 'certificado_numero_oficial', new DatosDocumento(...$this->numeroOficialForm->datosParaDocumento()))) {
             return;
         }
         $this->terminarGuardado('certificado_numero_oficial', $documentosCompletos);
@@ -382,6 +376,7 @@ class Paso2Documentos extends Component
     public function render(DocumentosCompletos $documentosCompletos, ValidarVigenciaDocumentos $validarVigencia, DocumentosCapturadosQuery $documentosCapturados, ListarCatalogoGeografico $catalogoGeografico)
     {
         $clavesAplicables = $documentosCompletos->clavesAplicables($this->tipoPersona());
+        $clavesRequeridas = $documentosCompletos->clavesRequeridas($this->escuela->id, $this->tipoPersona());
         $capturados = $this->documentosCapturados($documentosCapturados);
         $entidadNotaria = $this->acreditacionForm->notarioEntidadFederativaId;
 
@@ -389,8 +384,10 @@ class Paso2Documentos extends Component
             'clavesAplicables' => $clavesAplicables,
             'capturados' => $capturados,
             'nombres' => TipoDocumento::whereIn('clave', $clavesAplicables)->pluck('nombre', 'clave')->all(),
-            'totalAplicables' => count($clavesAplicables),
-            'totalCompletos' => $capturados->count(),
+            // Avance sobre lo requerido: un documento declarado «no requerido» se muestra pero no cuenta (la capa de aplicación lo decide).
+            'totalAplicables' => count($clavesRequeridas),
+            'totalCompletos' => $capturados->only($clavesRequeridas)->count(),
+            'aplicabilidad' => $documentosCompletos->aplicabilidad($this->escuela->id, $this->tipoPersona()),
             'encabezado' => ResumenTramite::encabezado('documentos'),
             'tipoPersona' => $this->tipoPersona(),
             // Catálogo geográfico local (ADR-017) para los selectores de la notaría de la escritura.

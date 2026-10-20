@@ -108,3 +108,22 @@ Estado: **parcialmente resuelto**. Lo técnico quedó resuelto; lo normativo con
 5. ¿Qué documento y autoridad se aceptan fuera del Municipio de Querétaro?
 6. ¿El Programa Interno de Protección Civil, el plan de evacuación o los simulacros se exigen como documentos independientes?
 7. En Educación Inicial, ¿cómo se relacionan los arts. 41-49 Bis de la Ley General de Prestación de Servicios para la Atención, Cuidado y Desarrollo Integral Infantil con el Visto Bueno municipal?
+
+## Actualización (2026-10-20): Certificado de Número Oficial
+
+Estado: **parcialmente resuelto**. Lo técnico quedó resuelto; el alcance normativo con SEDEQ sigue abierto. Este archivo no se renombra. Detalle en `docs/reports/2026-10-20-numero-oficial.md` y en `COMPENDIO_MAESTRO` §5 («Fundamento normativo del Certificado de Número Oficial») y §9.
+
+### Qué cambió
+
+- Se capturan, como opcionales, fecha de expedición, autoridad emisora, folio, número interior y clave catastral; `S/N` se admite; no hay vencimiento (vigencia permanente en el Municipio de Querétaro, cédulas TR-170200-013 y TR-170100-065).
+- La obligatoriedad **se conserva** para todo plantel y nivel: la condición «solo si hay domicilios diferentes» sigue siendo *Documentado, no contrastado*. Existe la arquitectura (`EvaluarAplicabilidadDocumentos`, política `documentos.numero_oficial.alcance_condicional`, hoy vacía) para aplicarla solo a los niveles que SEDEQ confirme.
+- Un `ComparadorDomicilios` independiente aporta evidencia de coincidencia; una diferencia de texto nunca se trata como discrepancia confirmada.
+
+### Preguntas que siguen abiertas para SEDEQ (no se asumen)
+
+1. ¿El certificado se exige solo cuando hay domicilios diferentes, y vale para Inicial, Media Superior y Superior o solo para Básica?
+2. ¿Qué documentos municipales se comparan y qué es una discrepancia (¿cuenta una diferencia de abreviaturas o nomenclatura?)
+3. ¿Quién resuelve una discrepancia dudosa?
+4. ¿Se acepta un único PDF del trámite «Dictamen de Uso de Suelo con Número Oficial (2 en 1)» para ambos requisitos?
+5. ¿Se acepta el mismo certificado para varios niveles del plantel?
+6. Para planteles fuera del Municipio de Querétaro, ¿qué documento y autoridad aceptan?
