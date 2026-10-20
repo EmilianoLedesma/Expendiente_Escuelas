@@ -108,6 +108,10 @@ class RegistrarDocumento
             $this->validarDictamen($datos);
         }
 
+        if ($tipoDocumentoClave === 'constancia_seguridad_estructural') {
+            $this->validarConstancia($datos);
+        }
+
         if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
             throw new DatosInvalidos(['acervo.titulos' => 'El número de títulos no puede ser negativo.']);
         }
@@ -130,8 +134,11 @@ class RegistrarDocumento
         $ruta = $almacen->guardar($tipo->ambito, $ownerId, $tipoDocumentoClave, $archivo);
 
         // La constancia de seguridad estructural declara su propia vigencia (no hay
-        // vigencia_max_dias): esa fecha alimenta el control de vencimiento genérico.
+        // vigencia_max_dias): solo una fecha expresa alimenta el control de vencimiento
+        // genérico; sin ella no se inventa ninguna (la regla de 5 años del art. 277 del
+        // Reglamento de Construcción de Querétaro no consta como fecha en el documento).
         $fechaVigencia = match (true) {
+            $tipoDocumentoClave === 'constancia_seguridad_estructural' => $this->tipoVigenciaConstancia($datos) === 'fecha_expresa' ? $datos->vigenciaConstancia : null,
             $datos->vigenciaConstancia !== null => $datos->vigenciaConstancia,
             $datos->fechaEmision !== null && $tipo->vigencia_max_dias !== null => date('Y-m-d', strtotime("{$datos->fechaEmision} +{$tipo->vigencia_max_dias} days")),
             default => null,
@@ -212,14 +219,7 @@ class RegistrarDocumento
                 if ($tipo->clave === 'constancia_seguridad_estructural') {
                     ConstanciaSeguridadEstructural::updateOrCreate(
                         ['documento_plantel_id' => $documento->getKey()],
-                        [
-                            'perito_nombre' => $datos->peritoNombre,
-                            'perito_cedula_profesional' => $datos->peritoCedulaProfesional,
-                            'perito_registro_dro' => $datos->peritoRegistroDro,
-                            'perito_registro_autoridad' => $datos->peritoRegistroAutoridad,
-                            'perito_registro_vigencia' => $datos->peritoRegistroVigencia,
-                            'vigencia_constancia' => $datos->vigenciaConstancia,
-                        ],
+                        $this->columnasConstancia($datos),
                     );
                 }
 
@@ -614,6 +614,93 @@ class RegistrarDocumento
             $this->validarFechaCampo($errores, 'dictamenForm', 'fechaVencimientoDocumento', $datos->fechaVencimientoDocumento, true, false);
             $this->validarNoAnterior($errores, 'dictamenForm', 'fechaVencimientoDocumento', $datos->fechaVencimientoDocumento, $datos->fechaEmision, 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.');
         }
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
+    }
+
+    /**
+     * 'fecha_expresa' | 'sin_fecha_expresa' | 'no_capturada'. Un DTO sin tipoVigencia es de un
+     * llamador anterior, cuando vigencia_constancia era siempre la fecha que declaraba el
+     * documento: con fecha → fecha_expresa; sin ella → no_capturada (nunca se supone "sin fecha").
+     */
+    private function tipoVigenciaConstancia(DatosDocumento $datos): string
+    {
+        return $datos->tipoVigencia ?? ($datos->vigenciaConstancia !== null ? 'fecha_expresa' : 'no_capturada');
+    }
+
+    /**
+     * Todas las columnas de la extensión (un reemplazo sobrescribe incluso con NULL: nada de un
+     * PDF reemplazado sobrevive). La descripción de la calidad y la fecha de vencimiento solo
+     * viajan con la opción que las justifica. perito_registro_vigencia es el dato histórico de
+     * semántica no determinada: solo lo manda un llamador anterior, el formulario nuevo no.
+     *
+     * @return array<string, string|null>
+     */
+    private function columnasConstancia(DatosDocumento $datos): array
+    {
+        $tipoVigencia = $this->tipoVigenciaConstancia($datos);
+
+        return [
+            'perito_nombre' => $datos->peritoNombre,
+            'perito_cedula_profesional' => $datos->peritoCedulaProfesional,
+            'perito_registro_dro' => $datos->peritoRegistroDro,
+            'perito_registro_autoridad' => $datos->peritoRegistroAutoridad,
+            'perito_registro_vigencia' => $datos->peritoRegistroVigencia,
+            'perito_registro_fecha' => $datos->peritoRegistroFecha,
+            'perito_registro_vencimiento' => $datos->peritoRegistroVencimiento,
+            'calidad_profesional' => $datos->calidadProfesional,
+            'calidad_profesional_otra' => $datos->calidadProfesional === 'otra' ? $datos->calidadProfesionalOtra : null,
+            'folio_constancia' => $datos->folioConstancia,
+            'tipo_vigencia' => $tipoVigencia,
+            'vigencia_constancia' => $tipoVigencia === 'fecha_expresa' ? $datos->vigenciaConstancia : null,
+        ];
+    }
+
+    /**
+     * Constancia de Seguridad Estructural: invariantes del caso de uso (spec 2026-10-20 §4-5).
+     * Solo son consistencia técnica de la captura; la suficiencia jurídica la revisa SEDEQ y ninguna
+     * fecha del registro profesional se exige como vigente (fundamento no confirmado). Con
+     * `tipoVigencia` la captura es completa y los datos esenciales son obligatorios; sin él es un
+     * llamador anterior y solo se revisa formato, largo y consistencia de lo que traiga.
+     * Las rutas de error son las de ConstanciaSeguridadForm.
+     */
+    private function validarConstancia(DatosDocumento $datos): void
+    {
+        $errores = [];
+        $captura = $datos->tipoVigencia !== null;
+        $formulario = 'constanciaForm';
+        $calidades = ['dro', 'corresponsable_seguridad_estructural', 'otra'];
+
+        if ($captura && ! in_array($datos->tipoVigencia, ['fecha_expresa', 'sin_fecha_expresa'], true)) {
+            $errores["{$formulario}.tipoVigencia"] = 'Indique si el documento trae fecha de vencimiento.';
+        }
+
+        $this->validarFechaCampo($errores, $formulario, 'fechaEmision', $datos->fechaEmision, $captura, true);
+        $this->validarTextoCampo($errores, $formulario, 'folioConstancia', $datos->folioConstancia, 50, false);
+        $this->validarTextoCampo($errores, $formulario, 'peritoNombre', $datos->peritoNombre, 200, $captura);
+        $this->validarTextoCampo($errores, $formulario, 'peritoCedulaProfesional', $datos->peritoCedulaProfesional, 50, false);
+        $this->validarTextoCampo($errores, $formulario, 'peritoRegistroDro', $datos->peritoRegistroDro, 50, $captura);
+        $this->validarTextoCampo($errores, $formulario, 'peritoRegistroAutoridad', $datos->peritoRegistroAutoridad, 150, false);
+
+        if ($datos->calidadProfesional === null ? $captura : ! in_array($datos->calidadProfesional, $calidades, true)) {
+            $errores["{$formulario}.calidadProfesional"] = 'Seleccione la calidad en que firma el profesional.';
+        }
+        if ($datos->calidadProfesional === 'otra') {
+            $this->validarTextoCampo($errores, $formulario, 'calidadProfesionalOtra', $datos->calidadProfesionalOtra, 150, true);
+        }
+
+        // Solo una fecha expresa lleva fecha; la ausencia de vencimiento no se completa con un plazo supuesto.
+        if ($datos->tipoVigencia !== 'sin_fecha_expresa') {
+            $this->validarFechaCampo($errores, $formulario, 'vigenciaConstancia', $datos->vigenciaConstancia, $datos->tipoVigencia === 'fecha_expresa', false);
+            $this->validarNoAnterior($errores, $formulario, 'vigenciaConstancia', $datos->vigenciaConstancia, $datos->fechaEmision, 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.');
+        }
+
+        $this->validarFechaCampo($errores, $formulario, 'peritoRegistroFecha', $datos->peritoRegistroFecha, false, true);
+        $this->validarFechaCampo($errores, $formulario, 'peritoRegistroVencimiento', $datos->peritoRegistroVencimiento, false, false);
+        $this->validarNoAnterior($errores, $formulario, 'peritoRegistroVencimiento', $datos->peritoRegistroVencimiento, $datos->peritoRegistroFecha, 'El vencimiento del registro no puede ser anterior a su fecha de registro o refrendo.');
+        $this->validarFechaCampo($errores, $formulario, 'peritoRegistroVigencia', $datos->peritoRegistroVigencia, false, false);
 
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
