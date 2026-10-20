@@ -108,6 +108,8 @@ class DictamenUsoSueloTest extends TestCase
     {
         $documento = $this->documentoDictamen();
         $tipoPc = TipoDocumento::where('clave', 'visto_bueno_proteccion_civil')->firstOrFail();
+        // El seeder ya no siembra los 30 días de Protección Civil: se fijan para comprobar que esta migración no los toca.
+        DB::table('tipos_documentos')->where('id', $tipoPc->id)->update(['vigencia_max_dias' => 30]);
         $pc = DocumentoPlantel::create(['plantel_id' => $documento->plantel_id, 'tipo_documento_id' => $tipoPc->id, 'archivo_path' => 'pc.pdf', 'fecha_emision' => '2026-09-01', 'fecha_vigencia' => '2026-10-01']);
 
         (require base_path('database/migrations/2026_10_19_000300_retirar_vigencia_calculada_del_dictamen.php'))->up();

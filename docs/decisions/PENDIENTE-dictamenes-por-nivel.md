@@ -87,3 +87,24 @@ Estado: **parcialmente resuelto**. Lo técnico quedó resuelto; la antigüedad d
 5. ¿El uso o giro debe indicar expresamente el servicio educativo y por nivel (relación con la pregunta de "dictámenes por nivel" de arriba)?
 
 Si SEDEQ confirma una antigüedad máxima, se implementaría como una regla **separada** (aviso o bloqueo según lo que se decida), nunca reutilizando la vigencia declarada por el documento.
+
+## Actualización (2026-10-20): Visto Bueno / Dictamen de Protección Civil
+
+Estado: **parcialmente resuelto**. Lo técnico quedó resuelto; lo normativo con SEDEQ sigue abierto. Este archivo no se renombra. Detalle en `docs/reports/2026-10-20-proteccion-civil.md` y en `COMPENDIO_MAESTRO` §4 y §9.
+
+### Qué cambió
+
+- Se retiró la caducidad calculada a 30 días del Visto Bueno de Protección Civil (`vigencia_max_dias = 30`): no tenía fundamento (los «30 días naturales» de la normativa eran la Carta Compromiso del Reglamento de 2008, abrogado).
+- Se captura tipo de documento, folio, autoridad, quién expide, riesgo declarado, año del Visto Bueno (solo Querétaro), vencimiento declarado y condicionantes en la tabla `vistos_buenos_proteccion_civil`.
+- Solo para el Visto Bueno del Municipio de Querétaro con año capturado se determina el vencimiento al 31 de diciembre de ese año (Reglamento de PC 2017, art. 46; cédulas TR-140600-007/-008/-009). Ese vencimiento bloquea; el resto de los casos sin vencimiento determinable solo muestran un aviso de revisión.
+- Un riesgo distinto de alto en un documento de Querétaro avisa con el art. 48, fr. I, inciso m); no bloquea.
+
+### Preguntas que siguen abiertas para SEDEQ (no se asumen)
+
+1. ¿El Visto Bueno de Protección Civil se exige por **plantel** o por **nivel** ofertado (Básica §14-15)? Hoy sigue por plantel.
+2. ¿Cuál es la denominación exacta del instrumento aceptado (visto bueno, dictamen, certificado, constancia)?
+3. ¿Se acepta el Visto Bueno del año anterior mientras se renueva (enero a mayo)? Hoy el vencimiento del 31-dic **bloquea** sin asumir prórroga; si SEDEQ lo acepta, pasaría a aviso.
+4. ¿Existe una antigüedad máxima de presentación distinta de la vigencia del documento? Hoy no se aplica ninguna.
+5. ¿Qué documento y autoridad se aceptan fuera del Municipio de Querétaro?
+6. ¿El Programa Interno de Protección Civil, el plan de evacuación o los simulacros se exigen como documentos independientes?
+7. En Educación Inicial, ¿cómo se relacionan los arts. 41-49 Bis de la Ley General de Prestación de Servicios para la Atención, Cuidado y Desarrollo Integral Infantil con el Visto Bueno municipal?
