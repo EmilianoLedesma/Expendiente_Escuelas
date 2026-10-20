@@ -3,6 +3,7 @@
 use App\Application\Revision\RutaInicio;
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
 use App\Http\Controllers\Tramite\DescargarDocumentoNivelController;
+use App\Http\Controllers\Tramite\DescargarReporteEnviadoController;
 use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
 use App\Http\Controllers\Tramite\EliminarTramiteController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
@@ -45,6 +46,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereNumber('escuela')
         ->middleware(['rol:supervisor|revisor', 'can:view,escuela'])
         ->name('sedeq.tramite');
+
+    // Reporte guardado al envío (2026-10-20): cubre todos los niveles, así que exige verlos todos (verReporteEnviado).
+    Route::get('/sedeq/tramite/{escuela}/reporte.pdf', DescargarReporteEnviadoController::class)
+        ->whereNumber('escuela')
+        ->middleware(['rol:supervisor|revisor', 'can:verReporteEnviado,escuela'])
+        ->name('sedeq.tramite.reporte');
 
     Route::get('/tramite', MisTramitesController::class)->name('tramite.index');
 
