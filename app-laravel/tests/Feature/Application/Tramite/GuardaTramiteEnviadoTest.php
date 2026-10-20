@@ -88,6 +88,10 @@ class GuardaTramiteEnviadoTest extends TestCase
                 notarioNombre: 'Lic. Ana Notaria',
             ))],
             'RegistrarDocumento dictamen de uso de suelo (plantel)' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'dictamen_uso_suelo', $pdf('dictamen.pdf'), DictamenDeEjemplo::conVigencia('sin_fecha_expresa'))],
+            'RegistrarDocumento visto bueno de protección civil (plantel)' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDocumento::class)->ejecutar($e->id, 'visto_bueno_proteccion_civil', $pdf('vb.pdf'), new DatosDocumento(
+                fechaEmision: '2026-02-10', tipoInstrumento: 'visto_bueno', autoridadEmisora: 'Coordinación Municipal de Protección Civil',
+                jurisdiccionEmisora: 'municipio_queretaro', clasificacionRiesgo: 'alto', ejercicio: 2026, tipoVigencia: 'sin_fecha_expresa',
+            ))],
             'RegistrarDatosNivel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDatosNivel::class)->ejecutar($n->id, 'vespertino', 'mixto')],
             'EjecutarValidacionFinal::ejecutar' => [fn (Escuela $e, EscuelaNivel $n) => app(EjecutarValidacionFinal::class)->ejecutar($e->id)],
         ];
