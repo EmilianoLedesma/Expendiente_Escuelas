@@ -141,7 +141,7 @@ class ConstruirContextoValidacion
         }
 
         $tipoPersona = $responsable->tipo_persona;
-        $requeridas = $this->documentosCompletos->clavesAplicables($tipoPersona);
+        $requeridas = $this->documentosCompletos->clavesRequeridas($escuelaId, $tipoPersona);
         $pendientes = $this->documentosCompletos->clavesPendientes($escuelaId, $tipoPersona);
         /** @var Plantel $plantel */
         $plantel = $escuela->plantel;
