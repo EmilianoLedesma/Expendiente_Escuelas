@@ -3,10 +3,12 @@
 namespace App\Application\Preregistro;
 
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Geografia\ListarCatalogoGeografico;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\DTO\ResultadoPreregistro;
 use App\Domain\Captura\Formatos;
 use App\Models\Escuela;
+use App\Models\Municipio;
 use App\Models\Plantel;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -26,19 +28,23 @@ use InvalidArgumentException;
  * (PlantelesDelSolicitante); si no, lanza PlantelNoDisponible. Compartir un
  * plantel entre solicitantes distintos requeriría un mecanismo explícito —
  * ver docs/decisions/PENDIENTE-plantel-solicitante-cardinalidad.md.
+ *
+ * Municipio (ADR-008, 2026-10-20): con `municipioId` se exige un municipio de Querétaro del catálogo local y el
+ * texto se deriva de él; sin id se conserva el texto recibido (dato heredado, sin vincular).
  */
 class IniciarTramiteNuevo
 {
     public function ejecutar(DatosPreregistro $datos, int $solicitanteId): ResultadoPreregistro
     {
-        $this->validar($datos);
+        $municipio = $datos->bifurcacion === 'nuevo' ? $this->municipioDelCatalogo($datos->municipioId) : null;
+        $this->validar($datos, $municipio);
 
         if ($datos->bifurcacion === 'existente'
             && ! PlantelesDelSolicitante::query($solicitanteId)->whereKey($datos->plantelId)->exists()) {
             throw new PlantelNoDisponible;
         }
 
-        return DB::transaction(function () use ($datos, $solicitanteId) {
+        return DB::transaction(function () use ($datos, $solicitanteId, $municipio) {
             $plantelId = $datos->bifurcacion === 'nuevo'
                 ? Plantel::create([
                     'calle' => $datos->calle,
@@ -46,7 +52,8 @@ class IniciarTramiteNuevo
                     'numero_int' => $datos->numeroInt,
                     'colonia' => $datos->colonia,
                     'localidad' => $datos->localidad,
-                    'municipio' => $datos->municipio,
+                    'municipio' => $municipio !== null ? $municipio->nombre : $datos->municipio,
+                    'municipio_id' => $municipio?->id,
                     'codigo_postal' => $datos->codigoPostal,
                     'telefono' => $datos->telefono,
                     'correo_electronico' => $datos->correoElectronico,
@@ -74,7 +81,21 @@ class IniciarTramiteNuevo
         });
     }
 
-    private function validar(DatosPreregistro $datos): void
+    /** @throws DatosInvalidos si el id no es un municipio de Querétaro del catálogo */
+    private function municipioDelCatalogo(?int $municipioId): ?Municipio
+    {
+        if ($municipioId === null) {
+            return null;
+        }
+
+        $municipio = Municipio::whereKey($municipioId)
+            ->whereHas('entidadFederativa', fn ($entidad) => $entidad->where('clave', ListarCatalogoGeografico::CLAVE_QUERETARO))
+            ->first();
+
+        return $municipio ?? throw new DatosInvalidos(['municipioId' => 'Selecciona un municipio de Querétaro de la lista.']);
+    }
+
+    private function validar(DatosPreregistro $datos, ?Municipio $municipio): void
     {
         if ($datos->bifurcacion === 'existente') {
             if ($datos->plantelId === null) {
@@ -88,7 +109,7 @@ class IniciarTramiteNuevo
             throw new InvalidArgumentException("bifurcacion desconocida: {$datos->bifurcacion}");
         }
 
-        foreach (['calle' => $datos->calle, 'colonia' => $datos->colonia, 'municipio' => $datos->municipio, 'codigoPostal' => $datos->codigoPostal] as $campo => $valor) {
+        foreach (['calle' => $datos->calle, 'colonia' => $datos->colonia, 'municipio' => $municipio !== null ? $municipio->nombre : $datos->municipio, 'codigoPostal' => $datos->codigoPostal] as $campo => $valor) {
             if ($valor === null || $valor === '') {
                 throw new InvalidArgumentException("bifurcacion \"nuevo\" requiere {$campo}.");
             }

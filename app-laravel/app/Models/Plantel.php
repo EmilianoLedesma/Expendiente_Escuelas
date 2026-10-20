@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $numero_int
  * @property string $colonia
  * @property string|null $localidad
- * @property string $municipio
+ * @property string $municipio texto; si hay municipio_id, es el nombre del catálogo
+ * @property int|null $municipio_id municipios.id (catálogo geográfico local, ADR-008/ADR-017); NULL en filas no vinculadas
  * @property string $codigo_postal
  * @property string|null $telefono
  * @property string|null $correo_electronico
@@ -38,6 +39,7 @@ class Plantel extends Model
         'colonia',
         'localidad',
         'municipio',
+        'municipio_id',
         'codigo_postal',
         'telefono',
         'correo_electronico',

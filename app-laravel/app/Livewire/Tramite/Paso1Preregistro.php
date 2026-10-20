@@ -6,12 +6,14 @@ use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
 use App\Application\Captura\ReglasCaptura;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Geografia\ListarCatalogoGeografico;
 use App\Application\Preregistro\DTO\DatosPreregistro;
 use App\Application\Preregistro\IniciarTramiteNuevo;
 use App\Application\Preregistro\ListarPlantelesDisponibles;
 use App\Application\Preregistro\PlantelNoDisponible;
 use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Concerns\NotificaToast;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -19,7 +21,9 @@ use Livewire\Component;
 /**
  * Presentación pura: enlaza campos, valida forma, llama a
  * IniciarTramiteNuevo, reacciona al resultado. Ninguna regla de negocio ni
- * acceso a Eloquent/DB vive aquí (ADR-001).
+ * acceso a Eloquent/DB vive aquí (ADR-001). Con el catálogo geográfico importado
+ * el municipio se elige de los de Querétaro (ADR-008/ADR-017); sin él se conserva
+ * el campo de texto. IniciarTramiteNuevo vuelve a validar el id.
  */
 #[Layout('layouts.tramite')]
 class Paso1Preregistro extends Component
@@ -42,6 +46,9 @@ class Paso1Preregistro extends Component
 
     public string $municipio = '';
 
+    /** municipios.id de Querétaro; '' = sin elegir. El nombre lo deriva el caso de uso. */
+    public string $municipioId = '';
+
     #[Normalizar(Normalizacion::Digitos)]
     public string $codigoPostal = '';
 
@@ -63,11 +70,23 @@ class Paso1Preregistro extends Component
             'numeroInt' => [...ReglasCaptura::texto(max: 20), 'regex:/^\d+$/'],
             'colonia' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
             'localidad' => ReglasCaptura::texto(max: 150),
-            'municipio' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
+            ...$this->reglasMunicipio($siEsNuevo),
             'codigoPostal' => ReglasCaptura::codigoPostal(requerido: $siEsNuevo),
             'telefono' => ReglasCaptura::telefono(),
             'correoElectronico' => ReglasCaptura::correo(max: 150),
         ];
+    }
+
+    /** @return array<string, list<mixed>> */
+    private function reglasMunicipio(string $siEsNuevo): array
+    {
+        $queretaro = app(ListarCatalogoGeografico::class)->idDeQueretaro();
+
+        if ($queretaro === null) {
+            return ['municipio' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150)];
+        }
+
+        return ['municipioId' => [$siEsNuevo, 'nullable', 'integer', Rule::exists('municipios', 'id')->where('entidad_federativa_id', $queretaro)]];
     }
 
     /** Mismo texto que PlantelNoDisponible: no revelar si el plantel existe para otro solicitante. */
@@ -76,6 +95,8 @@ class Paso1Preregistro extends Component
         return [
             'plantelId.exists' => (new PlantelNoDisponible)->getMessage(),
             'numeroInt.regex' => 'El número interior solo puede contener dígitos.',
+            'municipioId.required_if' => 'Selecciona el municipio.',
+            'municipioId.exists' => 'Selecciona un municipio de Querétaro de la lista.',
         ];
     }
 
@@ -95,6 +116,7 @@ class Paso1Preregistro extends Component
             codigoPostal: $this->codigoPostal !== '' ? $this->codigoPostal : null,
             telefono: $this->telefono !== '' ? $this->telefono : null,
             correoElectronico: $this->correoElectronico !== '' ? $this->correoElectronico : null,
+            municipioId: $this->bifurcacion === 'nuevo' && $this->municipioId !== '' ? (int) $this->municipioId : null,
         );
 
         try {
@@ -122,13 +144,14 @@ class Paso1Preregistro extends Component
         $this->redirectRoute('tramite.paso2', ['escuela' => $resultado->escuelaId]);
     }
 
-    public function render(ListarPlantelesDisponibles $listarPlantelesDisponibles)
+    public function render(ListarPlantelesDisponibles $listarPlantelesDisponibles, ListarCatalogoGeografico $catalogoGeografico)
     {
         return view('livewire.tramite.paso1-preregistro', [
             'planteles' => $this->bifurcacion === 'existente'
                 ? $listarPlantelesDisponibles->ejecutar(auth()->user()->solicitante->getKey())
                 : collect(),
             'encabezado' => ResumenTramite::encabezado('plantel'),
+            'municipiosQueretaro' => $this->bifurcacion === 'nuevo' ? $catalogoGeografico->municipiosDeQueretaro() : [],
         ]);
     }
 }
