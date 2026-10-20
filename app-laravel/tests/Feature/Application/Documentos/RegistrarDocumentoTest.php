@@ -77,7 +77,8 @@ class RegistrarDocumentoTest extends TestCase
         ]);
     }
 
-    public function test_visto_bueno_proteccion_civil_vence_a_los_30_dias(): void
+    /** Los 30 días se retiraron el 2026-10-20 (sin fundamento): ninguna fecha se calcula a partir de la emisión. */
+    public function test_visto_bueno_proteccion_civil_ya_no_calcula_vigencia_a_los_30_dias(): void
     {
         Storage::fake('documentos');
         (new TiposDocumentosSeeder)->run();
@@ -88,7 +89,7 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertDatabaseHas('documentos_plantel', [
             'plantel_id' => $escuela->plantel_id,
             'fecha_emision' => '2026-09-01',
-            'fecha_vigencia' => '2026-10-01',
+            'fecha_vigencia' => null,
         ]);
     }
 
@@ -1455,7 +1456,7 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertEquals($antes, $despues);
         $this->assertDatabaseCount('documentos_plantel', 3);
         $this->assertDatabaseCount('acreditaciones_ocupacion_legal', 1);
-        $this->assertSame('2026-10-01', DB::table('documentos_plantel')->where('tipo_documento_id', TipoDocumento::where('clave', 'visto_bueno_proteccion_civil')->value('id'))->value('fecha_vigencia'));
+        $this->assertNull(DB::table('documentos_plantel')->where('tipo_documento_id', TipoDocumento::where('clave', 'visto_bueno_proteccion_civil')->value('id'))->value('fecha_vigencia'));
     }
 
     public function test_un_dictamen_invalido_al_reemplazar_conserva_fila_y_archivo_previos(): void

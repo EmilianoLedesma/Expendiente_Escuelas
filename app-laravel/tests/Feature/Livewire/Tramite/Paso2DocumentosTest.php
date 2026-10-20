@@ -222,10 +222,9 @@ class Paso2DocumentosTest extends TestCase
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
 
-        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSee('Visto Bueno / Dictamen de Protección Civil')
-            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
-            ->set('proteccionCivilForm.fechaEmision', now()->toDateString())
+        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertSee('Visto Bueno / Dictamen de Protección Civil');
+        $this->llenarProteccionCivil($component)
             ->call('guardarProteccionCivil')
             ->assertHasNoErrors();
 
@@ -233,28 +232,186 @@ class Paso2DocumentosTest extends TestCase
         $this->assertDatabaseCount('documentos_escuela', 0);
     }
 
-    public function test_proteccion_civil_pide_fecha_de_emision_y_vence_a_los_30_dias(): void
+    /**
+     * Llena el Visto Bueno de Protección Civil con una captura válida del Municipio de Querétaro;
+     * $campos pisa lo que cada prueba necesite. @param  array<string, string>  $campos
+     */
+    private function llenarProteccionCivil(Testable $componente, array $campos = []): Testable
+    {
+        $valores = [
+            'tipoInstrumento' => 'visto_bueno',
+            'fechaEmision' => now()->subDays(10)->toDateString(),
+            'autoridadEmisora' => 'Coordinación Municipal de Protección Civil',
+            'jurisdiccionEmisora' => 'municipio_queretaro',
+            'ejercicio' => (string) now()->year,
+            'clasificacionRiesgo' => 'alto',
+            'tipoVigencia' => 'sin_fecha_expresa',
+            ...$campos,
+        ];
+        $componente->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'));
+        foreach ($valores as $campo => $valor) {
+            $componente->set("proteccionCivilForm.{$campo}", $valor);
+        }
+
+        return $componente;
+    }
+
+    private function componenteProteccionCivil(): Testable
     {
         Storage::fake('documentos');
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
-        $fecha = now()->subDays(5);
 
-        $component = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertSeeHtml('id="proteccionCivilForm.fechaEmision"')
-            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
+        return Livewire::test(Paso2Documentos::class, ['escuela' => $escuela]);
+    }
+
+    public function test_proteccion_civil_muestra_los_grupos_y_los_campos_condicionales(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        foreach (['tipoInstrumento', 'fechaEmision', 'folioDocumento', 'autoridadEmisora', 'jurisdiccionEmisora', 'clasificacionRiesgo', 'tipoVigencia', 'condicionantes'] as $campo) {
+            $componente->assertSeeHtml("id=\"proteccionCivilForm.{$campo}\"");
+        }
+        $componente->assertDontSeeHtml('id="proteccionCivilForm.tipoInstrumentoOtro"')
+            ->assertDontSeeHtml('id="proteccionCivilForm.fechaVencimientoDocumento"')
+            ->assertDontSeeHtml('id="proteccionCivilForm.ejercicio"');
+
+        $componente->set('proteccionCivilForm.tipoInstrumento', 'otro')->assertSeeHtml('id="proteccionCivilForm.tipoInstrumentoOtro"');
+        $componente->set('proteccionCivilForm.tipoInstrumento', 'visto_bueno')->set('proteccionCivilForm.jurisdiccionEmisora', 'municipio_queretaro')
+            ->assertSeeHtml('id="proteccionCivilForm.ejercicio"');
+        $componente->set('proteccionCivilForm.jurisdiccionEmisora', 'otra')->assertDontSeeHtml('id="proteccionCivilForm.ejercicio"');
+        $componente->set('proteccionCivilForm.tipoVigencia', 'fecha_expresa')->assertSeeHtml('id="proteccionCivilForm.fechaVencimientoDocumento"');
+    }
+
+    public function test_proteccion_civil_sin_los_obligatorios_marca_cada_campo(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        $componente->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10, 'application/pdf'))
             ->call('guardarProteccionCivil')
-            ->assertHasErrors(['proteccionCivilForm.fechaEmision']);
+            ->assertHasErrors(['proteccionCivilForm.tipoInstrumento', 'proteccionCivilForm.fechaEmision', 'proteccionCivilForm.autoridadEmisora', 'proteccionCivilForm.jurisdiccionEmisora', 'proteccionCivilForm.clasificacionRiesgo', 'proteccionCivilForm.tipoVigencia']);
         $this->assertDatabaseCount('documentos_plantel', 0);
+    }
 
-        $component->set('proteccionCivilForm.fechaEmision', $fecha->toDateString())
+    public function test_proteccion_civil_guarda_la_captura_sin_calcular_30_dias_y_con_el_vencimiento_normativo(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+        $fecha = now()->subDays(40)->toDateString();
+
+        $this->llenarProteccionCivil($componente, ['fechaEmision' => $fecha, 'folioDocumento' => '  VB-001 ', 'condicionantes' => 'Aforo máximo.'])
             ->call('guardarProteccionCivil')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('documentos_plantel', [
-            'fecha_emision' => $fecha->toDateString(),
-            'fecha_vigencia' => $fecha->copy()->addDays(30)->toDateString(),
+        $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => $fecha, 'fecha_vigencia' => null]);
+        $this->assertDatabaseHas('vistos_buenos_proteccion_civil', [
+            'tipo_instrumento' => 'visto_bueno', 'jurisdiccion_emisora' => 'municipio_queretaro', 'folio_documento' => 'VB-001',
+            'clasificacion_riesgo' => 'alto', 'ejercicio' => now()->year, 'regimen_normativo' => 'reglamento_pc_queretaro_2017',
+            'fecha_vencimiento_normativo' => now()->year.'-12-31', 'tipo_vigencia' => 'sin_fecha_expresa', 'condicionantes' => 'Aforo máximo.',
         ]);
+    }
+
+    public function test_proteccion_civil_de_otra_autoridad_no_guarda_ejercicio_ni_vencimiento_normativo(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        $this->llenarProteccionCivil($componente, ['jurisdiccionEmisora' => 'otra'])
+            ->call('guardarProteccionCivil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('vistos_buenos_proteccion_civil', ['jurisdiccion_emisora' => 'otra', 'ejercicio' => null, 'regimen_normativo' => null, 'fecha_vencimiento_normativo' => null]);
+    }
+
+    public function test_proteccion_civil_con_fecha_expresa_la_pide_y_la_guarda_y_sin_ella_no_inventa_ninguna(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+        $vence = now()->addMonths(3)->toDateString();
+
+        $this->llenarProteccionCivil($componente, ['tipoVigencia' => 'fecha_expresa'])
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.fechaVencimientoDocumento']);
+
+        $componente->set('proteccionCivilForm.fechaVencimientoDocumento', $vence)->call('guardarProteccionCivil')->assertHasNoErrors();
+        $this->assertDatabaseHas('vistos_buenos_proteccion_civil', ['tipo_vigencia' => 'fecha_expresa', 'fecha_vencimiento_documento' => $vence]);
+
+        $componente->set('proteccionCivilForm.tipoVigencia', 'sin_fecha_expresa')
+            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb2.pdf', 10, 'application/pdf'))
+            ->call('guardarProteccionCivil')->assertHasNoErrors();
+        $this->assertDatabaseHas('vistos_buenos_proteccion_civil', ['tipo_vigencia' => 'sin_fecha_expresa', 'fecha_vencimiento_documento' => null]);
+    }
+
+    public function test_proteccion_civil_rechaza_fechas_incoherentes(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        $this->llenarProteccionCivil($componente, ['fechaEmision' => now()->addDay()->toDateString()])
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.fechaEmision']);
+
+        $componente->set('proteccionCivilForm.fechaEmision', '2026-05-10')
+            ->set('proteccionCivilForm.tipoVigencia', 'fecha_expresa')
+            ->set('proteccionCivilForm.fechaVencimientoDocumento', '2026-05-09')
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.fechaVencimientoDocumento']);
+
+        $componente->set('proteccionCivilForm.tipoVigencia', 'sin_fecha_expresa')
+            ->set('proteccionCivilForm.ejercicio', '2016')
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.ejercicio']);
+        $this->assertDatabaseCount('documentos_plantel', 0);
+    }
+
+    public function test_proteccion_civil_otro_pide_descripcion_y_cambiar_de_otro_no_la_conserva(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        $this->llenarProteccionCivil($componente, ['tipoInstrumento' => 'otro'])
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.tipoInstrumentoOtro']);
+
+        $componente->set('proteccionCivilForm.tipoInstrumentoOtro', 'Opinión técnica')->set('proteccionCivilForm.tipoInstrumento', 'dictamen')
+            ->call('guardarProteccionCivil')->assertHasNoErrors();
+        $this->assertDatabaseHas('vistos_buenos_proteccion_civil', ['tipo_instrumento' => 'dictamen', 'tipo_instrumento_otro' => null]);
+    }
+
+    public function test_proteccion_civil_acepta_solo_pdf_de_hasta_10_mb(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        $this->llenarProteccionCivil($componente)
+            ->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.pdf', 10241, 'application/pdf'))
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['archivos.visto_bueno_proteccion_civil']);
+        $componente->set('archivos.visto_bueno_proteccion_civil', UploadedFile::fake()->create('vb.txt', 10, 'text/plain'))
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['archivos.visto_bueno_proteccion_civil']);
+        $this->assertDatabaseCount('documentos_plantel', 0);
+    }
+
+    public function test_proteccion_civil_con_riesgo_medio_en_queretaro_guarda_y_muestra_un_aviso_que_no_bloquea(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+
+        $this->llenarProteccionCivil($componente, ['clasificacionRiesgo' => 'medio'])
+            ->call('guardarProteccionCivil')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('vistos_buenos_proteccion_civil', 1);
+        $componente->assertSee('art. 48, fr. I, inciso m)');
+    }
+
+    public function test_proteccion_civil_reemplazo_conserva_el_pdf_anterior_si_la_captura_es_invalida(): void
+    {
+        $componente = $this->componenteProteccionCivil();
+        $this->llenarProteccionCivil($componente)->call('guardarProteccionCivil')->assertHasNoErrors();
+        $ruta = DocumentoPlantel::first()->archivo_path;
+
+        $componente->call('toggleReemplazar', 'visto_bueno_proteccion_civil');
+        $this->llenarProteccionCivil($componente, ['autoridadEmisora' => ''])
+            ->call('guardarProteccionCivil')
+            ->assertHasErrors(['proteccionCivilForm.autoridadEmisora']);
+
+        $this->assertSame($ruta, DocumentoPlantel::first()->archivo_path);
+        Storage::disk('documentos')->assertExists($ruta);
     }
 
     public function test_proteccion_civil_ya_no_se_sube_por_la_via_generica(): void

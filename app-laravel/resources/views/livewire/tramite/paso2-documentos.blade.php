@@ -174,7 +174,66 @@
                 </x-tramite.documento-row>
             @elseif ($clave === 'visto_bueno_proteccion_civil')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarProteccionCivil">
+                    @isset($avisos[$clave])
+                        <x-slot:extra>
+                            <p class="flex items-start gap-xxs text-body-sm text-body">
+                                <x-ui.icon nombre="exclamation-circle" class="mt-px h-5 w-5 shrink-0" />
+                                {{ $avisos[$clave] }}
+                            </p>
+                        </x-slot:extra>
+                    @endisset
+                    <p class="text-body-sm text-muted">Capture lo que dice el documento. El sistema no valora si es suficiente; SEDEQ lo revisa.</p>
+
+                    <h3 class="text-body-md font-semibold text-ink">Identificación del documento</h3>
+                    <x-ui.field id="proteccionCivilForm.tipoInstrumento" label="Tipo de documento">
+                        <x-ui.select wire:model.live="proteccionCivilForm.tipoInstrumento">
+                            <option value="">Seleccione…</option>
+                            <option value="visto_bueno">Visto Bueno</option>
+                            <option value="dictamen">Dictamen</option>
+                            <option value="otro">Otro</option>
+                        </x-ui.select>
+                    </x-ui.field>
+                    @if ($proteccionCivilForm->tipoInstrumento === 'otro')
+                        <x-ui.field id="proteccionCivilForm.tipoInstrumentoOtro" label="¿Cuál documento es?" hint="Tal como se llama en el documento."><x-ui.input maxlength="150" wire:model.blur="proteccionCivilForm.tipoInstrumentoOtro" /></x-ui.field>
+                    @endif
+                    <x-ui.field id="proteccionCivilForm.folioDocumento" label="Folio del documento" hint="Solo si el documento lo trae." optional><x-ui.input maxlength="50" wire:model.blur="proteccionCivilForm.folioDocumento" /></x-ui.field>
                     <x-ui.field id="proteccionCivilForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="proteccionCivilForm.fechaEmision" /></x-ui.field>
+
+                    <h3 class="text-body-md font-semibold text-ink">Autoridad emisora</h3>
+                    <x-ui.field id="proteccionCivilForm.jurisdiccionEmisora" label="¿Quién expide el documento?">
+                        <x-ui.select wire:model.live="proteccionCivilForm.jurisdiccionEmisora">
+                            <option value="">Seleccione…</option>
+                            <option value="municipio_queretaro">Coordinación Municipal de Protección Civil del Municipio de Querétaro</option>
+                            <option value="otra">Otra autoridad (otro municipio, estatal u otra)</option>
+                        </x-ui.select>
+                    </x-ui.field>
+                    <x-ui.field id="proteccionCivilForm.autoridadEmisora" label="Autoridad emisora" hint="Tal como aparece en el documento."><x-ui.input maxlength="200" wire:model.blur="proteccionCivilForm.autoridadEmisora" /></x-ui.field>
+                    @if ($proteccionCivilForm->pideEjercicio())
+                        <x-ui.field id="proteccionCivilForm.ejercicio" label="Año del Visto Bueno" hint="El año que indica el documento (por ejemplo, «Visto Bueno 2026»). Con él se determina que vale hasta el 31 de diciembre de ese año (Reglamento de Protección Civil del Municipio de Querétaro, art. 46). Si no lo indica, déjelo vacío." optional><x-ui.input inputmode="numeric" maxlength="4" wire:model.blur="proteccionCivilForm.ejercicio" /></x-ui.field>
+                    @endif
+
+                    <h3 class="text-body-md font-semibold text-ink">Clasificación de riesgo</h3>
+                    <x-ui.field id="proteccionCivilForm.clasificacionRiesgo" label="Riesgo que indica el documento" hint="Tal como aparece en el documento; el sistema no la calcula.">
+                        <x-ui.select wire:model.live="proteccionCivilForm.clasificacionRiesgo">
+                            <option value="">Seleccione…</option>
+                            <option value="alto">Alto</option>
+                            <option value="medio">Medio</option>
+                            <option value="bajo">Bajo</option>
+                            <option value="no_indicado">El documento no lo indica</option>
+                        </x-ui.select>
+                    </x-ui.field>
+
+                    <h3 class="text-body-md font-semibold text-ink">Vigencia y condicionantes</h3>
+                    <x-ui.radio-group
+                        id="proteccionCivilForm.tipoVigencia"
+                        legend="¿El documento indica una fecha de vencimiento?"
+                        wire:model.live="proteccionCivilForm.tipoVigencia"
+                        :opciones="['fecha_expresa' => 'Sí, el documento indica una fecha de vencimiento', 'sin_fecha_expresa' => 'No, el documento no indica fecha de vencimiento']"
+                    />
+                    @if ($proteccionCivilForm->tipoVigencia === 'fecha_expresa')
+                        <x-ui.field id="proteccionCivilForm.fechaVencimientoDocumento" label="Fecha de vencimiento" hint="Tal como aparece en el documento."><x-ui.input type="date" wire:model.blur="proteccionCivilForm.fechaVencimientoDocumento" /></x-ui.field>
+                    @endif
+                    <x-ui.field id="proteccionCivilForm.condicionantes" label="Condicionantes u observaciones" hint="Restricciones o medidas que aparezcan en el documento." optional><x-ui.textarea wire:model.blur="proteccionCivilForm.condicionantes" maxlength="1000" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'constancia_seguridad_estructural')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarConstancia">

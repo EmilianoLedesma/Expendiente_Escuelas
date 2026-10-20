@@ -28,6 +28,7 @@ use App\Models\Municipio;
 use App\Models\ReciboPagoDerechos;
 use App\Models\RelacionAcervoBibliografico;
 use App\Models\TipoDocumento;
+use App\Models\VistoBuenoProteccionCivil;
 use DateTimeImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -110,6 +111,10 @@ class RegistrarDocumento
 
         if ($tipoDocumentoClave === 'constancia_seguridad_estructural') {
             $this->validarConstancia($datos);
+        }
+
+        if ($tipoDocumentoClave === 'visto_bueno_proteccion_civil') {
+            $this->validarProteccionCivil($datos);
         }
 
         if ($datos->acervoTitulos !== null && $datos->acervoTitulos < 0) {
@@ -220,6 +225,13 @@ class RegistrarDocumento
                     ConstanciaSeguridadEstructural::updateOrCreate(
                         ['documento_plantel_id' => $documento->getKey()],
                         $this->columnasConstancia($datos),
+                    );
+                }
+
+                if ($tipo->clave === 'visto_bueno_proteccion_civil') {
+                    VistoBuenoProteccionCivil::updateOrCreate(
+                        ['documento_plantel_id' => $documento->getKey()],
+                        $this->columnasProteccionCivil($datos),
                     );
                 }
 
@@ -618,6 +630,91 @@ class RegistrarDocumento
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
         }
+    }
+
+    /**
+     * Visto Bueno / Dictamen de Protección Civil (spec 2026-10-20 §4). Con `tipoVigencia` la captura es
+     * completa y los datos esenciales son obligatorios; sin él es un llamador anterior y solo se revisa
+     * formato y largo. Es consistencia técnica: la suficiencia jurídica del instrumento la decide SEDEQ y
+     * no se fija ninguna antigüedad máxima (sin fundamento confirmado). Rutas de error: ProteccionCivilForm.
+     */
+    private function validarProteccionCivil(DatosDocumento $datos): void
+    {
+        $errores = [];
+        $captura = $datos->tipoVigencia !== null;
+        $f = 'proteccionCivilForm';
+
+        $this->validarFechaCampo($errores, $f, 'fechaEmision', $datos->fechaEmision, $captura, true);
+
+        if ($datos->tipoInstrumento === null ? $captura : ! in_array($datos->tipoInstrumento, ['visto_bueno', 'dictamen', 'otro'], true)) {
+            $errores["{$f}.tipoInstrumento"] = 'Seleccione el tipo de documento.';
+        }
+        if ($datos->tipoInstrumento === 'otro') {
+            $this->validarTextoCampo($errores, $f, 'tipoInstrumentoOtro', $datos->tipoInstrumentoOtro, 150, true);
+        }
+
+        $this->validarTextoCampo($errores, $f, 'autoridadEmisora', $datos->autoridadEmisora, 200, $captura);
+        if ($datos->jurisdiccionEmisora === null ? $captura : ! in_array($datos->jurisdiccionEmisora, ['municipio_queretaro', 'otra'], true)) {
+            $errores["{$f}.jurisdiccionEmisora"] = 'Indique qué autoridad expide el documento.';
+        }
+        $this->validarTextoCampo($errores, $f, 'folioDocumento', $datos->folioDocumento, 50, false);
+        if ($datos->clasificacionRiesgo === null ? $captura : ! in_array($datos->clasificacionRiesgo, ['alto', 'medio', 'bajo', 'no_indicado'], true)) {
+            $errores["{$f}.clasificacionRiesgo"] = 'Indique la clasificación de riesgo que aparece en el documento.';
+        }
+
+        if ($captura && ! in_array($datos->tipoVigencia, ['fecha_expresa', 'sin_fecha_expresa'], true)) {
+            $errores["{$f}.tipoVigencia"] = 'Indique si el documento trae fecha de vencimiento.';
+        }
+        if ($datos->tipoVigencia === 'fecha_expresa') {
+            $this->validarFechaCampo($errores, $f, 'fechaVencimientoDocumento', $datos->fechaVencimientoDocumento, true, false);
+            $this->validarNoAnterior($errores, $f, 'fechaVencimientoDocumento', $datos->fechaVencimientoDocumento, $datos->fechaEmision, 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.');
+        }
+
+        if ($datos->ejercicio !== null) {
+            $maximo = (int) now()->year + 1;
+            if ($datos->ejercicio < 2017 || $datos->ejercicio > $maximo) {
+                $errores["{$f}.ejercicio"] = "El año debe estar entre 2017 y {$maximo}.";
+            } elseif ($datos->fechaEmision !== null && ! isset($errores["{$f}.fechaEmision"]) && $datos->ejercicio < (int) substr($datos->fechaEmision, 0, 4)) {
+                $errores["{$f}.ejercicio"] = 'El año no puede ser anterior al año de emisión.';
+            }
+        }
+
+        $this->validarTextoCampo($errores, $f, 'condicionantes', $datos->condicionantes, 1000, false);
+
+        if ($errores !== []) {
+            throw new DatosInvalidos($errores);
+        }
+    }
+
+    /**
+     * Todas las columnas de la extensión (un reemplazo sobrescribe incluso con NULL). El vencimiento
+     * normativo se determina solo para el Visto Bueno del Municipio de Querétaro con el año de trámite
+     * capturado: 31 de diciembre de ese año (Reglamento PC 2017, art. 46; cédulas TR-140600-007/-008/-009),
+     * guardado con su régimen de origen. Nada se infiere de la fecha de emisión ni se aplica a otros emisores.
+     *
+     * @return array<string, int|string|null>
+     */
+    private function columnasProteccionCivil(DatosDocumento $datos): array
+    {
+        $queretaro = $datos->jurisdiccionEmisora === 'municipio_queretaro';
+        $ejercicio = $queretaro && $datos->tipoInstrumento === 'visto_bueno' ? $datos->ejercicio : null;
+        $fechaExpresa = $datos->tipoVigencia === 'fecha_expresa';
+
+        return [
+            'tipo_instrumento' => $datos->tipoInstrumento,
+            'tipo_instrumento_otro' => $datos->tipoInstrumento === 'otro' ? $datos->tipoInstrumentoOtro : null,
+            'autoridad_emisora' => $datos->autoridadEmisora,
+            'jurisdiccion_emisora' => $datos->jurisdiccionEmisora,
+            'folio_documento' => $datos->folioDocumento,
+            'clasificacion_riesgo' => $datos->clasificacionRiesgo,
+            'ejercicio' => $ejercicio,
+            'tipo_vigencia' => $datos->tipoVigencia ?? 'no_capturada',
+            'fecha_vencimiento_documento' => $fechaExpresa ? $datos->fechaVencimientoDocumento : null,
+            'regimen_normativo' => $queretaro ? 'reglamento_pc_queretaro_2017' : null,
+            'fecha_vencimiento_normativo' => $ejercicio !== null ? "{$ejercicio}-12-31" : null,
+            'condicionantes' => $datos->condicionantes,
+            'fecha_calculada_30_dias_historica' => null,
+        ];
     }
 
     /**
