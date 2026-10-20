@@ -16,7 +16,6 @@ use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
-use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Database\Seeders\AsignaturasSeeder;
@@ -36,6 +35,7 @@ use Illuminate\Support\Facades\Storage;
  */
 trait CapturaExpedienteConsistente
 {
+    use CompletaPaso2;
     use CompletaPaso24;
 
     protected const CURP_TITULAR = 'PEGJ800101HQTRML09';
@@ -57,7 +57,14 @@ trait CapturaExpedienteConsistente
         return Escuela::create(['plantel_id' => $plantelId, 'solicitante_id' => Solicitante::factory()->create()->id]);
     }
 
+    /** Responsable y, en el orden de 2026-10-20, el nivel primaria: lo mínimo para subir documentos generales. */
     protected function registrarResponsable(Escuela $escuela, string $tipoPersona = 'fisica'): void
+    {
+        $this->registrarSoloResponsable($escuela, $tipoPersona);
+        $this->elegirNivel($escuela->id, 'primaria');
+    }
+
+    protected function registrarSoloResponsable(Escuela $escuela, string $tipoPersona = 'fisica'): void
     {
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(
             tipoPersona: $tipoPersona,
@@ -125,12 +132,7 @@ trait CapturaExpedienteConsistente
         $this->registrarResponsable($escuela, $tipoPersona);
         $this->subirTodosConDatos($escuela, $tipoPersona, $reemplazos);
 
-        $escuelaNivel = EscuelaNivel::create([
-            'escuela_id' => $escuela->id,
-            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
-            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
-            'tipo_tramite' => 'alta_nueva',
-        ]);
+        $escuelaNivel = $this->elegirNivel($escuela->id, 'primaria');
 
         // WS-5b: Paso 3 stays locked until the level's Paso 2.4 is complete.
         $this->completarPaso24($escuelaNivel->id);

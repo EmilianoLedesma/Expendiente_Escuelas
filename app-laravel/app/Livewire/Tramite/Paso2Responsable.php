@@ -37,6 +37,8 @@ use Livewire\Component;
  * y RegistrarNivelesSeleccionados son las únicas escrituras.
  * Desde WS-7b-1 el responsable se edita hasta el envío: con responsable la
  * página nunca redirige; `?seccion=responsable|niveles` elige la fase.
+ * Desde 2026-10-20 los niveles van antes que los documentos generales: tras el
+ * responsable sigue la fase 'niveles' y tras los niveles, los documentos.
  */
 #[Layout('layouts.tramite')]
 class Paso2Responsable extends Component
@@ -126,8 +128,8 @@ class Paso2Responsable extends Component
         $this->fase = match (true) {
             $this->seccion === 'niveles' => 'niveles',
             $this->seccion === 'responsable' => 'responsable',
-            // Primera vez con Paso 2 completo: el siguiente paso natural es elegir niveles.
-            $sinNiveles && $estadoPaso2->etapaFaltante($escuela->id) === null => 'niveles',
+            // 2026-10-20: con responsable y sin niveles, el siguiente paso es elegirlos (antes que los documentos).
+            $sinNiveles => 'niveles',
             default => 'responsable',
         };
     }
@@ -316,25 +318,18 @@ class Paso2Responsable extends Component
         $this->editando = true;
         $this->tipoPersonaGuardado = $this->tipoPersona;
 
-        // Primera captura: mismo gate que antes (EstadoPaso2: completitud Y vigencia).
-        if ($estadoPaso2->etapaFaltante($this->escuela->id) !== null) {
-            $this->toastAlRedirigir('Responsable legal guardado', 'Ahora sube los documentos.');
-            $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $this->escuela->id]);
-
-            return;
-        }
-
-        $this->fase = 'niveles';
+        // Primera captura: el siguiente paso es elegir los niveles (EstadoPaso2::puedeSeleccionarNiveles ya se cumple).
+        $this->fase = $estadoPaso2->puedeSeleccionarNiveles($this->escuela->id) ? 'niveles' : 'responsable';
         $this->toast('Responsable legal guardado', 'Ahora elige los niveles.');
     }
 
-    public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados, ResumenEliminacionNivel $resumenEliminacion): void
+    public function guardarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados, ResumenEliminacionNivel $resumenEliminacion, EstadoPaso2 $estadoPaso2): void
     {
         $this->validate($this->reglasNiveles());
         [$agregar, $quitar] = $this->cambiosDeNiveles();
 
         if ($agregar === [] && $quitar === []) {
-            $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
+            $this->irAlSiguientePaso($estadoPaso2, huboCambios: false);
 
             return;
         }
@@ -348,14 +343,14 @@ class Paso2Responsable extends Component
             return;
         }
 
-        $this->aplicarNiveles($registrarNivelesSeleccionados, $resumenEliminacion, $agregar, $quitar, $conteos);
+        $this->aplicarNiveles($registrarNivelesSeleccionados, $resumenEliminacion, $agregar, $quitar, $conteos, $estadoPaso2);
     }
 
-    public function confirmarQuitarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados, ResumenEliminacionNivel $resumenEliminacion): void
+    public function confirmarQuitarNiveles(RegistrarNivelesSeleccionados $registrarNivelesSeleccionados, ResumenEliminacionNivel $resumenEliminacion, EstadoPaso2 $estadoPaso2): void
     {
         [$agregar, $quitar] = $this->cambiosDeNiveles();
 
-        $this->aplicarNiveles($registrarNivelesSeleccionados, $resumenEliminacion, $agregar, $quitar, $this->porEliminar);
+        $this->aplicarNiveles($registrarNivelesSeleccionados, $resumenEliminacion, $agregar, $quitar, $this->porEliminar, $estadoPaso2);
     }
 
     public function cancelarQuitarNiveles(): void
@@ -386,7 +381,7 @@ class Paso2Responsable extends Component
      * @param  list<int>  $quitar
      * @param  array<int, array<string, int>>  $confirmado
      */
-    private function aplicarNiveles(RegistrarNivelesSeleccionados $registrar, ResumenEliminacionNivel $resumenEliminacion, array $agregar, array $quitar, array $confirmado): void
+    private function aplicarNiveles(RegistrarNivelesSeleccionados $registrar, ResumenEliminacionNivel $resumenEliminacion, array $agregar, array $quitar, array $confirmado, EstadoPaso2 $estadoPaso2): void
     {
         try {
             $registrar->ejecutar($this->escuela->id, agregar: $agregar, quitar: $quitar, confirmado: $confirmado);
@@ -399,7 +394,7 @@ class Paso2Responsable extends Component
                 return;
             }
 
-            // Paso 2 pendiente (p. ej. agregar y quitar a la vez) o trámite enviado:
+            // Sin responsable o trámite enviado:
             // no se aplica nada y se explica el motivo sin salir de la página.
             $this->porEliminar = [];
             $this->addError('nivelesSeleccionados', $e->getMessage());
@@ -415,7 +410,27 @@ class Paso2Responsable extends Component
         }
 
         $this->porEliminar = [];
-        $this->toastAlRedirigir('Niveles guardados', $quitar === [] ? 'Ya puedes capturar los datos de cada nivel.' : 'Se quitaron los niveles que desmarcaste.');
+        $this->irAlSiguientePaso($estadoPaso2, $quitar === [] ? null : 'Se quitaron los niveles que desmarcaste.');
+    }
+
+    /**
+     * Tras guardar los niveles: si los documentos generales aún no están satisfechos (primera vez, o un nivel nuevo
+     * los hizo exigibles) se sigue con ellos; si no, al resumen. La decisión es de EstadoPaso2.
+     */
+    private function irAlSiguientePaso(EstadoPaso2 $estadoPaso2, ?string $detalle = null, bool $huboCambios = true): void
+    {
+        if ($estadoPaso2->etapaFaltante($this->escuela->id) === EstadoPaso2::DOCUMENTOS) {
+            if ($huboCambios) {
+                $this->toastAlRedirigir('Niveles guardados', $detalle ?? 'Ahora sube los documentos generales.');
+            }
+            $this->redirectRoute('tramite.paso2-documentos', ['escuela' => $this->escuela->id]);
+
+            return;
+        }
+
+        if ($huboCambios) {
+            $this->toastAlRedirigir('Niveles guardados', $detalle ?? 'Ya puedes capturar los datos de cada nivel.');
+        }
         $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 

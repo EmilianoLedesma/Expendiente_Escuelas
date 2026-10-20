@@ -45,6 +45,7 @@ class RegistrarDocumentoTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => $tipoPersona]);
+        $this->elegirNivel($escuela->id);
 
         return $escuela;
     }
@@ -653,12 +654,7 @@ class RegistrarDocumentoTest extends TestCase
     {
         (new TiposDocumentosSeeder)->run();
         $escuela = $this->crearEscuela();
-        $escuelaNivel = EscuelaNivel::create([
-            'escuela_id' => $escuela->id,
-            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
-            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
-            'tipo_tramite' => 'alta_nueva',
-        ]);
+        $escuelaNivel = $this->elegirNivel($escuela->id, 'primaria');
 
         try {
             (new RegistrarDocumento)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $escuelaNivel->id);
@@ -1216,6 +1212,7 @@ class RegistrarDocumentoTest extends TestCase
         $escuela = $this->escuelaConAcreditacion();
         $hermana = Escuela::create(['plantel_id' => $escuela->plantel_id, 'solicitante_id' => $escuela->solicitante_id]);
         ResponsableLegal::create(['escuela_id' => $hermana->id, 'tipo_persona' => 'fisica']);
+        $this->elegirNivel($hermana->id);
         $this->assertContains('escritura_inmueble', app(DocumentosCompletos::class)->clavesPendientes($hermana->id, 'fisica'));
 
         $this->registrarAcreditacion($escuela, $this->datosAcreditacion('escritura_publica'));

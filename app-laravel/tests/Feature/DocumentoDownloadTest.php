@@ -17,10 +17,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class DocumentoDownloadTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Solicitante $solicitante;
@@ -42,6 +44,7 @@ class DocumentoDownloadTest extends TestCase
         (new RegistrarResponsableLegal)->ejecutar($this->escuela->id, $tipoPersona === 'moral'
             ? new DatosResponsableLegal(tipoPersona: 'moral', domicilioNotificaciones: 'Calle 1', razonSocial: 'Colegio SA', nombreRepresentanteLegal: 'Juan Pérez')
             : new DatosResponsableLegal(tipoPersona: 'fisica', domicilioNotificaciones: 'Calle 1', nombre: 'Juana Pérez'));
+        $this->elegirNivel($this->escuela->id);
     }
 
     private function capturar(string $clave, string $contenido = 'PDF'): void

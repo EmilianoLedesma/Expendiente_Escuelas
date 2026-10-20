@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 /**
@@ -29,6 +30,7 @@ use Tests\TestCase;
  */
 class RegistrarNumeroOficialGeografiaTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private EntidadFederativa $queretaro;
@@ -55,6 +57,7 @@ class RegistrarNumeroOficialGeografiaTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => Solicitante::factory()->create()->id]);
         ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+        $this->elegirNivel($escuela->id);
 
         return $escuela;
     }

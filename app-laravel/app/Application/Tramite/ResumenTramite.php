@@ -54,12 +54,18 @@ class ResumenTramite
      */
     private const REVISABLES = ['plantel', 'responsable', 'niveles', 'documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
 
-    /** @var array<string, array{string, string}> */
+    /**
+     * Orden de las secciones generales (2026-10-20): los niveles se eligen antes que los documentos generales,
+     * porque la exigibilidad de los documentos depende del alcance educativo. El orden de este arreglo es el
+     * del resumen, del recorrido y de la numeración «Paso X de N».
+     *
+     * @var array<string, array{string, string}>
+     */
     private const GENERALES = [
         'plantel' => ['Datos del plantel', 'Domicilio y datos de contacto del plantel.'],
         'responsable' => ['Responsable legal', 'Persona física o moral que solicita la incorporación y terna de nombres.'],
-        'documentos' => ['Documentos', 'Identificación y documentos del inmueble, en PDF.'],
         'niveles' => ['Niveles educativos', 'Niveles que se solicita incorporar.'],
+        'documentos' => ['Documentos generales', 'Identificación y documentos del inmueble, en PDF.'],
     ];
 
     /** Secciones de cada nivel: Paso 2.4 (Documentos del nivel) y los sub-pasos de Paso 3. @var array<string, array{string, string}> */
@@ -252,26 +258,34 @@ class ResumenTramite
                 $tipoPersona !== null ? route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'responsable']) : $rutaPaso2,
                 null,
             ),
-            $this->seccion(
-                'documentos',
-                $this->estadoDocumentos($escuela->id, $tipoPersona, $etapaFaltante),
-                route('tramite.paso2-documentos', ['escuela' => $escuela->id]),
-                $tipoPersona === null ? self::completaPrimero('responsable') : null,
-            ),
             $escuela->escuelaNiveles->isNotEmpty()
                 ? $this->seccion('niveles', 'completado', $rutaNiveles, null)
-                : $this->seccion('niveles', 'pendiente', $rutaNiveles, $etapaFaltante === null ? null : self::completaPrimero($etapaFaltante)),
+                : $this->seccion('niveles', 'pendiente', $rutaNiveles, $tipoPersona === null ? self::completaPrimero(EstadoPaso2::RESPONSABLE) : null),
+            $this->seccion(
+                'documentos',
+                $this->estadoDocumentos($escuela->id, $tipoPersona),
+                route('tramite.paso2-documentos', ['escuela' => $escuela->id]),
+                match (true) {
+                    $tipoPersona === null => self::completaPrimero(EstadoPaso2::RESPONSABLE),
+                    $escuela->escuelaNiveles->isEmpty() => self::completaPrimero(EstadoPaso2::NIVELES),
+                    default => null,
+                },
+            ),
         ];
     }
 
-    /** en_curso = algunos documentos pero no todos, o todos con una vigencia vencida (EstadoPaso2 decide qué es completo). */
-    private function estadoDocumentos(int $escuelaId, ?string $tipoPersona, ?string $etapaFaltante): string
+    /**
+     * Estado propio de los documentos generales, independiente de las demás etapas: un expediente histórico con
+     * todos sus documentos y sin niveles los ve «completado» (y bloqueados hasta elegir niveles), no «en curso».
+     * en_curso = algunos documentos pero no todos, o todos con una vigencia vencida (EstadoPaso2 decide qué es completo).
+     */
+    private function estadoDocumentos(int $escuelaId, ?string $tipoPersona): string
     {
         if ($tipoPersona === null) {
             return 'pendiente';
         }
 
-        if ($etapaFaltante === null) {
+        if ($this->estadoPaso2->documentosCompletos($escuelaId) && $this->estadoPaso2->documentosVigentes($escuelaId)) {
             return 'completado';
         }
 
@@ -376,7 +390,7 @@ class ResumenTramite
         );
     }
 
-    /** @param string $etapa EstadoPaso2::RESPONSABLE|EstadoPaso2::DOCUMENTOS — coinciden con claves de GENERALES. */
+    /** @param string $etapa EstadoPaso2::RESPONSABLE|NIVELES|DOCUMENTOS — coinciden con claves de GENERALES. */
     private static function completaPrimero(string $etapa): string
     {
         return 'Completa primero: '.self::GENERALES[$etapa][0];

@@ -67,7 +67,8 @@ class Paso24DocumentosNivel extends Component
     {
         $this->escuelaNivel = $escuelaNivel;
 
-        if (! $estadoPaso2->puedeSeleccionarNiveles($escuelaNivel->escuela_id)) {
+        // Los documentos generales completos y vigentes son la precondición de 2.4 (no solo haber elegido niveles).
+        if (! $estadoPaso2->generalesSatisfechos($escuelaNivel->escuela_id)) {
             $this->redirigirAPaso2($escuelaNivel->escuela_id);
 
             return;

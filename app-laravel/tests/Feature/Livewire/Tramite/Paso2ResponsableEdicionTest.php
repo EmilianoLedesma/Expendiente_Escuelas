@@ -74,7 +74,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $escuela = $this->escuela();
         $this->registrar($escuela, 'moral');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertSet('fase', 'responsable')
             ->assertSet('tipoPersona', 'moral')
             ->assertSet('domicilioNotificaciones', 'Calle Falsa 123, Centro')
@@ -91,7 +92,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $escuela = $this->escuela();
         $this->registrar($escuela, 'fisica_con_gestor');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertSet('tipoPersona', 'fisica_con_gestor')
             ->assertSet('personaFisicaForm.nombre', 'Juana Pérez')
             ->assertSet('personaFisicaForm.fechaNacimiento', '1985-06-20')
@@ -105,7 +107,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $escuela = $this->escuela();
         $this->registrar($escuela, 'fisica');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('domicilioNotificaciones', 'Av. Universidad 200')
             ->call('guardarResponsable')
             ->assertHasNoErrors()
@@ -124,7 +127,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $escuela = $this->escuela();
         $this->registrar($escuela, 'fisica');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertDontSee(self::AVISO_TIPO)
             ->set('tipoPersona', 'moral')
             ->set('personaMoralForm.razonSocial', 'Colegio Reforma S.C.')
@@ -141,6 +145,7 @@ class Paso2ResponsableEdicionTest extends TestCase
     public function test_el_enlace_del_aviso_abre_documentos_aunque_esten_completos(): void
     {
         $escuela = $this->escuela();
+        $this->elegirNivel($escuela->id);
         $this->completarPaso2($escuela->id);
         $this->registrar($escuela, 'moral');
         $registrar = app(RegistrarDocumento::class);
@@ -169,12 +174,14 @@ class Paso2ResponsableEdicionTest extends TestCase
     {
         $escuela = $this->escuela();
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertDontSee(self::AVISO_BORRADO);
 
         $this->registrar($escuela, 'fisica');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertSee(self::AVISO_BORRADO);
     }
 
@@ -184,7 +191,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $escuela = $this->escuela();
         $this->registrar($escuela, 'fisica');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->set('nombrePropuesto3', 'COLEGIO REFORMA')
             ->call('guardarResponsable')
             ->assertHasErrors(['nombrePropuesto3']);
@@ -209,6 +217,7 @@ class Paso2ResponsableEdicionTest extends TestCase
         $this->completarPaso2($escuela->id, 'fisica_con_gestor');
         $this->registrar($escuela, 'fisica_con_gestor');
 
+        // Sin niveles elegidos la página arranca en la fase de niveles, con el resumen del responsable.
         Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertSet('fase', 'niveles')
             ->assertSee('Carlos Gómez')
@@ -226,7 +235,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $this->completarPaso2($escuela->id);
         app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, [(int) NivelEducativo::where('clave', 'primaria')->value('id')]);
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertSee('se descartará el Formato de Solicitud firmado');
     }
 
@@ -246,7 +256,8 @@ class Paso2ResponsableEdicionTest extends TestCase
         $escuela = $this->escuela();
         $this->registrar($escuela, 'fisica');
 
-        Livewire::test(Paso2Responsable::class, ['escuela' => $escuela])
+        // El hub abre el formulario con ?seccion=responsable (sin niveles, la página arranca en los niveles, 2026-10-20).
+        Livewire::withQueryParams(['seccion' => 'responsable'])->test(Paso2Responsable::class, ['escuela' => $escuela])
             ->assertDontSee('se descartará el Formato de Solicitud firmado');
     }
 

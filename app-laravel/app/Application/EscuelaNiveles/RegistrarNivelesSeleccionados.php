@@ -24,7 +24,8 @@ use InvalidArgumentException;
  *
  * WS-7b-1 U3: entradas explícitas `agregar` y `quitar` (ids de nivel educativo), no el
  * conjunto completo, para que una pestaña vieja no borre un nivel agregado en otra.
- * Agregar exige Paso 2 completo; quitar no. Quitar borra el nivel y todo lo que cuelga de
+ * Agregar exige el responsable legal (desde 2026-10-20 los niveles se eligen ANTES de los documentos generales:
+ * EstadoPaso2::puedeSeleccionarNiveles); quitar no. Quitar borra el nivel y todo lo que cuelga de
  * él (ON DELETE CASCADE), sus archivos después del commit y la cuenta de cada responsable
  * que se queda sin accesos (ADR-015, misma regla que RevocarResponsableNivel).
  */
@@ -45,7 +46,7 @@ class RegistrarNivelesSeleccionados
      * @param  list<int>  $quitar  nivel_educativo_id a borrar
      * @param  array<int, array<string, int>>  $confirmado  conteos que el usuario confirmó (ResumenEliminacionNivel::ejecutar)
      *
-     * @throws PrecondicionIncumplida si se agrega sin Paso 2 completo, si los datos crecieron desde la confirmación o si el trámite ya se envió.
+     * @throws PrecondicionIncumplida si se agrega sin responsable legal, si los datos crecieron desde la confirmación o si el trámite ya se envió.
      */
     public function ejecutar(int $escuelaId, array $agregar, array $quitar = [], array $confirmado = []): void
     {
@@ -65,13 +66,11 @@ class RegistrarNivelesSeleccionados
             throw new InvalidArgumentException('Nivel educativo fuera de Educación Básica.');
         }
 
-        // WS-1.2: sin esto, seleccionar niveles justo después de Paso 1 creaba
-        // escuela_niveles sin responsable ni documentos y saltaba Paso 2 entero.
-        if ($agregar !== []) {
-            $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
-            if ($etapaFaltante !== null) {
-                throw new PrecondicionIncumplida($etapaFaltante, 'Completa el responsable legal y los documentos (Paso 2) antes de seleccionar niveles.');
-            }
+        // WS-1.2: sin esto, seleccionar niveles justo después de Paso 1 creaba escuela_niveles sin responsable.
+        // Los documentos generales ya no se exigen aquí: se capturan después, sobre el alcance ya elegido, y
+        // 2.4 y Paso 3 los siguen exigiendo (EstadoPaso2::generalesSatisfechos).
+        if ($agregar !== [] && ! $this->estadoPaso2->puedeSeleccionarNiveles($escuelaId)) {
+            throw new PrecondicionIncumplida(EstadoPaso2::RESPONSABLE, 'Captura el responsable legal (Paso 2) antes de seleccionar niveles.');
         }
 
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');

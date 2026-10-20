@@ -14,6 +14,7 @@ use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
  */
 class RegistrarDatosDeDocumentoTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private Escuela $escuela;
@@ -35,6 +37,7 @@ class RegistrarDatosDeDocumentoTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $this->escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => Solicitante::factory()->create()->id]);
         ResponsableLegal::create(['escuela_id' => $this->escuela->id, 'tipo_persona' => 'fisica']);
+        $this->elegirNivel($this->escuela->id);
     }
 
     private function subir(string $clave, DatosDocumento $datos): void

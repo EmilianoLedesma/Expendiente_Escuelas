@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,7 @@ use Tests\TestCase;
  */
 class RegistrarConstanciaSeguridadTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -39,6 +41,7 @@ class RegistrarConstanciaSeguridadTest extends TestCase
         $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+        $this->elegirNivel($escuela->id);
 
         return $escuela;
     }

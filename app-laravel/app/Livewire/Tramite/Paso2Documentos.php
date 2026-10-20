@@ -99,6 +99,13 @@ class Paso2Documentos extends Component
             return;
         }
 
+        // 2026-10-20: los documentos generales se capturan sobre los niveles ya elegidos.
+        if (! $estadoPaso2->puedeCapturarDocumentosGenerales($escuela->id)) {
+            $this->redirectRoute('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'niveles']);
+
+            return;
+        }
+
         $tipoPersona = $this->tipoPersona();
 
         if ($this->corregir !== null && in_array($this->corregir, $documentosCompletos->clavesAplicables($tipoPersona), true)) {
@@ -294,7 +301,9 @@ class Paso2Documentos extends Component
                 return false;
             }
 
-            $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
+            $this->redirectRoute('tramite.paso2', $e->etapaFaltante === EstadoPaso2::NIVELES
+                ? ['escuela' => $this->escuela->id, 'seccion' => 'niveles']
+                : ['escuela' => $this->escuela->id]);
 
             return false;
         }
@@ -348,16 +357,9 @@ class Paso2Documentos extends Component
             return;
         }
 
-        // Con niveles ya elegidos, /tramite/paso2 abriría el formulario del responsable: se vuelve al resumen.
-        if ($this->escuela->escuelaNiveles()->exists()) {
-            $this->toastAlRedirigir('Documentos completos', 'Continúa desde el resumen de tu trámite.');
-            $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
-
-            return;
-        }
-
-        $this->toastAlRedirigir('Documentos completos', 'Continúa con la selección de niveles.');
-        $this->redirectRoute('tramite.paso2', ['escuela' => $this->escuela->id]);
+        // Los niveles ya se eligieron antes (2026-10-20): lo siguiente son los documentos de cada nivel, desde el resumen.
+        $this->toastAlRedirigir('Documentos completos', 'Continúa con los documentos de cada nivel desde el resumen de tu trámite.');
+        $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 
     private function tipoPersona(): string

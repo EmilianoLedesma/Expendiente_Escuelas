@@ -8,7 +8,6 @@ use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\DocumentoPlantel;
 use App\Models\Escuela;
-use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableLegal;
@@ -20,10 +19,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\CompletaPaso2;
 use Tests\TestCase;
 
 class ValidarVigenciaDocumentosTest extends TestCase
 {
+    use CompletaPaso2;
     use RefreshDatabase;
 
     private function crearEscuela(): Escuela
@@ -33,6 +34,7 @@ class ValidarVigenciaDocumentosTest extends TestCase
         $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
         // WS-2.4b: RegistrarDocumento ahora exige responsable legal capturado antes de escribir.
         ResponsableLegal::create(['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+        $this->elegirNivel($escuela->id);
 
         return $escuela;
     }
@@ -448,12 +450,7 @@ class ValidarVigenciaDocumentosTest extends TestCase
             'clave' => 'documento_nivel_con_vigencia', 'nombre' => 'Documento con vigencia', 'aplica_persona' => 'ambas',
             'ambito' => 'escuela_nivel', 'vigencia_max_dias' => 30, 'created_at' => now(), 'updated_at' => now(),
         ]);
-        $escuelaNivel = EscuelaNivel::create([
-            'escuela_id' => $this->crearEscuela()->id,
-            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
-            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
-            'tipo_tramite' => 'alta_nueva',
-        ]);
+        $escuelaNivel = $this->elegirNivel($this->crearEscuela()->id, 'primaria');
         $documento = DocumentoEscuelaNivel::create([
             'escuela_nivel_id' => $escuelaNivel->id, 'tipo_documento_id' => $tipoId,
             'archivo_path' => 'x.pdf', 'fecha_vigencia' => now()->toDateString(),
@@ -476,12 +473,7 @@ class ValidarVigenciaDocumentosTest extends TestCase
             'ambito' => 'escuela_nivel', 'nivel_educativo_id' => NivelEducativo::where('clave', 'secundaria')->value('id'),
             'vigencia_max_dias' => 30, 'created_at' => now(), 'updated_at' => now(),
         ]);
-        $primaria = EscuelaNivel::create([
-            'escuela_id' => $this->crearEscuela()->id,
-            'nivel_educativo_id' => NivelEducativo::where('clave', 'primaria')->value('id'),
-            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
-            'tipo_tramite' => 'alta_nueva',
-        ]);
+        $primaria = $this->elegirNivel($this->crearEscuela()->id, 'primaria');
         DocumentoEscuelaNivel::create([
             'escuela_nivel_id' => $primaria->id, 'tipo_documento_id' => $tipoId,
             'archivo_path' => 'x.pdf', 'fecha_vigencia' => now()->subDay()->toDateString(),

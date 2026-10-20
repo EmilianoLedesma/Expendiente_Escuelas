@@ -105,7 +105,8 @@ class ResumenTramiteTest extends TestCase
         $resumen = $this->resumen($escuela);
         $g = $this->porClave($resumen->generales);
 
-        $this->assertSame(['plantel', 'responsable', 'documentos', 'niveles'], array_keys($g));
+        // 2026-10-20: los niveles se eligen antes que los documentos generales.
+        $this->assertSame(['plantel', 'responsable', 'niveles', 'documentos'], array_keys($g));
         $this->assertSame(['completado', 'pendiente', 'pendiente', 'pendiente'], array_map(fn (SeccionTramite $s) => $s->estado, $resumen->generales));
         $this->assertSame('revisar', $g['plantel']->accion, 'WS-7b-1: teléfono y correo del plantel se editan hasta el envío.');
         $this->assertSame(route('tramite.plantel', ['escuela' => $escuela->id]), $g['plantel']->href);
@@ -135,16 +136,34 @@ class ResumenTramiteTest extends TestCase
         $this->assertSame('completado', $g['responsable']->estado);
         $this->assertSame('revisar', $g['responsable']->accion, 'WS-7b-1: el responsable se edita hasta el envío.');
         $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'responsable']), $g['responsable']->href);
+        $this->assertSame('pendiente', $g['niveles']->estado);
+        $this->assertSame('comenzar', $g['niveles']->accion);
+        $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'niveles']), $g['niveles']->href);
+        $this->assertNull($g['niveles']->motivoBloqueo);
+        $this->assertSame('pendiente', $g['documentos']->estado);
+        $this->assertNull($g['documentos']->accion);
+        $this->assertSame('Completa primero: Niveles educativos', $g['documentos']->motivoBloqueo);
+    }
+
+    public function test_con_responsable_y_niveles_los_documentos_se_pueden_comenzar(): void
+    {
+        $escuela = $this->escuela();
+        $this->responsable($escuela);
+        $this->nivel($escuela, 'primaria');
+
+        $g = $this->porClave($this->resumen($escuela)->generales);
+
+        $this->assertSame('completado', $g['niveles']->estado);
         $this->assertSame('pendiente', $g['documentos']->estado);
         $this->assertSame('comenzar', $g['documentos']->accion);
         $this->assertSame(route('tramite.paso2-documentos', ['escuela' => $escuela->id]), $g['documentos']->href);
-        $this->assertSame('Completa primero: Documentos', $g['niveles']->motivoBloqueo);
     }
 
     public function test_documentos_parciales_quedan_en_curso(): void
     {
         $escuela = $this->escuela();
         $this->responsable($escuela);
+        $this->nivel($escuela, 'primaria');
         $this->documentos($escuela, 'ine', 'acta_nacimiento', 'escritura_inmueble');
 
         $documentos = $this->porClave($this->resumen($escuela)->generales)['documentos'];
@@ -157,19 +176,20 @@ class ResumenTramiteTest extends TestCase
     {
         $escuela = $this->escuela();
         $this->responsable($escuela);
+        $this->nivel($escuela, 'primaria');
         $this->documentos($escuela, ...array_diff(app(DocumentosCompletos::class)->clavesAplicables('fisica'), ['dictamen_uso_suelo']));
         app(RegistrarDocumento::class)->ejecutar($escuela->id, 'dictamen_uso_suelo', UploadedFile::fake()->create('d.pdf', 10, 'application/pdf'), DictamenDeEjemplo::vencido());
-        $this->nivel($escuela, 'primaria');
 
         $resumen = $this->resumen($escuela);
         $inmueble = $this->porClave($resumen->niveles[0]->secciones)['inmueble'];
 
         $this->assertSame('en_curso', $this->porClave($resumen->generales)['documentos']->estado);
-        $this->assertSame('Completa primero: Documentos', $inmueble->motivoBloqueo);
+        $this->assertSame('Completa primero: Documentos generales', $inmueble->motivoBloqueo);
         $this->assertNull($inmueble->accion);
         $this->assertNull($inmueble->href);
     }
 
+    /** Histórico: documentos completos capturados antes de elegir niveles (orden anterior a 2026-10-20). */
     public function test_paso2_completo_sin_niveles(): void
     {
         $escuela = $this->escuela();
@@ -178,8 +198,9 @@ class ResumenTramiteTest extends TestCase
         $g = $this->porClave($this->resumen($escuela)->generales);
 
         // Migrado de ProgresoTest::test_con_documentos_completos_y_vigentes_documentos_es_completado.
-        $this->assertSame('completado', $g['documentos']->estado);
+        $this->assertSame('completado', $g['documentos']->estado, 'Los documentos ya capturados se conservan como completos.');
         $this->assertNull($g['documentos']->accion);
+        $this->assertSame('Completa primero: Niveles educativos', $g['documentos']->motivoBloqueo);
         $this->assertSame('pendiente', $g['niveles']->estado);
         $this->assertSame('comenzar', $g['niveles']->accion);
         $this->assertSame(route('tramite.paso2', ['escuela' => $escuela->id, 'seccion' => 'niveles']), $g['niveles']->href);
@@ -266,7 +287,7 @@ class ResumenTramiteTest extends TestCase
 
         $documentosNivel = $this->porClave($this->resumen($escuela)->niveles[0]->secciones)['documentos_nivel'];
 
-        $this->assertSame('Completa primero: Documentos', $documentosNivel->motivoBloqueo);
+        $this->assertSame('Completa primero: Documentos generales', $documentosNivel->motivoBloqueo);
         $this->assertNull($documentosNivel->href);
     }
 
@@ -380,7 +401,8 @@ class ResumenTramiteTest extends TestCase
     {
         return [
             'plantel' => ['plantel', null, ['paso' => 1, 'total' => 4]],
-            'niveles' => ['niveles', null, ['paso' => 4, 'total' => 4]],
+            'niveles' => ['niveles', null, ['paso' => 3, 'total' => 4]],
+            'documentos generales' => ['documentos', null, ['paso' => 4, 'total' => 4]],
             'documentos del nivel primaria' => ['documentos_nivel', 'primaria', ['paso' => 5, 'total' => 10]],
             'inmueble primaria' => ['inmueble', 'primaria', ['paso' => 6, 'total' => 10]],
             'infraestructura primaria' => ['infraestructura', 'primaria', ['paso' => 7, 'total' => 10]],

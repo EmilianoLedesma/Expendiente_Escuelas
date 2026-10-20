@@ -55,10 +55,12 @@ Cada página de paso muestra arriba "{Grupo} · Paso X de N" y abajo una barra d
 - **Terna de nombres propuestos** para la escuela (las tres son obligatorias).
 
 **Qué esperar:**
-- Al guardar te lleva a **Documentos**.
+- Al guardar sigues con la **selección de niveles** (desde 2026-10-20 los niveles van antes que los documentos generales).
 - Puedes volver a revisar y editar el responsable (tipo de persona, datos, terna, domicilio de notificaciones) hasta el envío: al volver ves el formulario prellenado y un resumen. Si cambias el tipo de persona, la página te avisa que revises tus documentos; si cambias algo que imprime el Formato de Solicitud, se descarta el Formato firmado y hay que descargarlo, firmarlo y subirlo de nuevo.
 
-### Paso 2.2 — Documentos (`/tramite/paso2/{escuela}/documentos`)
+### Paso 2.3 — Documentos generales (`/tramite/paso2/{escuela}/documentos`)
+
+> Desde 2026-10-20 esta página exige al menos un nivel elegido; sin niveles redirige a la selección de niveles.
 **Qué ves:** una lista con todos los documentos que aplican y un contador "X de Y documentos completos". Puedes subirlos en cualquier orden.
 
 **Documentos (6):** INE; acta de nacimiento (persona física) **o** escritura/poder de facultades (persona moral); escritura del inmueble; Dictamen de Uso de Suelo; Constancia de Seguridad Estructural + DRO; Formato de Solicitud.
@@ -75,10 +77,10 @@ Cada página de paso muestra arriba "{Grupo} · Paso X de N" y abajo una barra d
 
 **Para avanzar:** los 6 documentos completos **y vigentes**. Un Dictamen de Uso de Suelo vencido te detiene aquí.
 
-### Paso 2.3 — Selección de niveles (misma URL de Paso 2)
+### Paso 2.2 — Selección de niveles (misma URL de Paso 2, `?seccion=niveles`)
 **Qué capturas:** uno o más niveles de **Educación Básica** (Inicial, Preescolar, Primaria, Secundaria). Cada escuela + nivel es un expediente independiente.
 
-**Qué esperar:** solo se puede seleccionar con Paso 2 completo (responsable + documentos vigentes); ni siquiera una llamada directa lo permite (WS-1.2). Al guardar entras a Paso 3 del primer nivel.
+**Qué esperar:** desde 2026-10-20 basta el responsable legal (antes se exigían los documentos completos y vigentes); sin responsable ni una llamada directa lo permite (WS-1.2). Al guardar sigues con los documentos generales; los documentos de cada nivel (2.4) y Paso 3 siguen exigiendo los documentos generales completos y vigentes.
 
 ### Paso 3.1 — Datos del inmueble (`/tramite/paso3/{escuelaNivel}`)
 **Qué ves:**
