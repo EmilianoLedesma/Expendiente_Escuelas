@@ -495,6 +495,9 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->set("espacios.{$this->idTipo('direccion')}.cantidad", 1)
             ->set("espacios.{$this->idTipo('direccion')}.superficieM2", 18.5)
+            ->set("espacios.{$this->idTipo('direccion')}.ventilacionNatural", false)
+            ->set("espacios.{$this->idTipo('campo_futbol')}.superficieM2", 800)
+            ->set("espacios.{$this->idTipo('campo_futbol')}.campoFutbolFormato", '7')
             ->set("espacios.{$this->idTipo('biblioteca')}.cantidad", 1)
             ->set("materialesBiblioteca.{$librosId}.numeroTitulos", 300)
             ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
@@ -511,6 +514,9 @@ class Paso3InfraestructuraNivelTest extends TestCase
     {
         $primaria = $this->capturarPrimaria();
         $direccionId = $this->idTipo('direccion');
+        // Bacinicas solo existen en alumnado_maternal (lo captura Inicial): se siembra directo.
+        $maternalId = DB::table('sanitarios')->insertGetId(['plantel_id' => $this->plantel->id, 'categoria' => 'alumnado_maternal', 'cantidad_retretes' => 2, 'superficie_m2' => 8]);
+        DB::table('sanitarios_bacinicas')->insert(['sanitario_id' => $maternalId, 'cantidad_bacinicas' => 3]);
 
         Livewire::actingAs($this->solicitante->user)
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
@@ -527,6 +533,55 @@ class Paso3InfraestructuraNivelTest extends TestCase
         // La edición reemplaza la fila entera: lo que no se tocó se reenvía y no se pierde.
         $this->assertDatabaseHas('biblioteca_materiales', ['numero_titulos' => 300]);
         $this->assertDatabaseHas('sanitarios', ['plantel_id' => $this->plantel->id, 'categoria' => 'alumnado_masculino', 'cantidad_retretes' => 4]);
+        $this->assertFalse($direccion->ventilacion_natural, 'false es un valor: no debe volverse null.');
+        $this->assertNull($direccion->iluminacion_natural);
+        $this->assertDatabaseHas('sanitarios_bacinicas', ['sanitario_id' => $maternalId, 'cantidad_bacinicas' => 3]);
+        $campoId = DB::table('instalaciones_espacios')->where('tipo_espacio_id', $this->idTipo('campo_futbol'))->value('id');
+        $this->assertDatabaseHas('campos_futbol', ['instalacion_espacio_id' => $campoId, 'formato' => '7']);
+    }
+
+    public function test_guardar_no_descarta_cambios_sin_guardar_en_lo_ya_registrado(): void
+    {
+        $primaria = $this->capturarPrimaria();
+        $direccionId = $this->idTipo('direccion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("edicionEspacios.{$direccionId}.cantidad", 5)
+            ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
+            ->call('guardar')
+            ->assertHasErrors('edicionPendiente')
+            ->assertNoRedirect();
+
+        $this->assertSame(1, (int) DB::table('instalaciones_espacios')->where('tipo_espacio_id', $direccionId)->value('cantidad'));
+    }
+
+    public function test_marcar_quitar_sin_guardar_tambien_bloquea_guardar(): void
+    {
+        $primaria = $this->capturarPrimaria();
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set('edicionSanitarios.alumnado_masculino.quitar', true)
+            ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
+            ->call('guardar')
+            ->assertHasErrors('edicionPendiente')
+            ->assertNoRedirect();
+    }
+
+    public function test_lo_ya_registrado_sin_tocar_no_bloquea_guardar(): void
+    {
+        $primaria = $this->capturarPrimaria();
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set('numeroAulas', 7)
+            ->set('superficieAulasM2', 250)
+            ->call('guardar')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('tramite.paso3-mobiliario', ['escuelaNivel' => $primaria->id]));
     }
 
     public function test_el_responsable_por_nivel_no_puede_editar_lo_capturado(): void
@@ -594,6 +649,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
             ->call('guardarEdicion')
             ->assertNoRedirect()
-            ->assertHasErrors('plantel');
+            ->assertHasErrors('plantel')
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'Un trámite de este plantel ya se envió a SEDEQ.');
     }
 }

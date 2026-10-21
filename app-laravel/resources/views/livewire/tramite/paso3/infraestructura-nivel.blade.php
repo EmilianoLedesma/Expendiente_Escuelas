@@ -165,7 +165,7 @@
 
                     {{-- type="button": este formulario vive dentro del de «por capturar» (no se anidan forms). --}}
                     <div class="mt-md">
-                        <x-ui.button-secondary type="button" wire:click="guardarEdicion" wire:loading.attr="disabled" wire:target="guardarEdicion">Guardar cambios a lo ya registrado</x-ui.button-secondary>
+                        <x-ui.button-secondary id="edicionPendiente" type="button" wire:click="guardarEdicion" wire:loading.attr="disabled" wire:target="guardarEdicion">Guardar cambios a lo ya registrado</x-ui.button-secondary>
                     </div>
                 @endif
             </x-ui.section>
