@@ -9,6 +9,8 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DTO\DatosInmueble;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\RegistroCompartidoBloqueado;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use App\Models\InmuebleEstudioActual;
 use App\Models\Plantel;
@@ -18,16 +20,17 @@ use Illuminate\Support\Facades\DB;
 /**
  * Caso de uso de PRD §5 Paso 3, sub-paso 1 (Datos del inmueble).
  *
- * Todo lo que escribe es del plantel, así que solo escribe la primera vez:
- * al reutilizar un plantel ya capturado el paso se marca completado sin
- * reescribir nada. La verificación se hace aquí y no solo en el componente
- * —el caso de uso no confía en que la presentación haya escondido el
- * formulario.
+ * Todo lo que escribe es del plantel (WS-7b-2): es editable mientras ningún otro
+ * nivel del plantel tenga datos propios de Paso 3; con otro nivel con datos solo
+ * se completan los campos nulos y los conjuntos hijos vacíos. La verificación se
+ * hace aquí y no solo en el componente —el caso de uso no confía en que la
+ * presentación haya escondido o bloqueado el formulario.
  */
 class RegistrarDatosInmueble
 {
     public function __construct(
-        private readonly DatosInmuebleYaCapturados $yaCapturados,
+        private readonly RegistroCompartidoBloqueado $registroBloqueado,
+        private readonly TramiteEditable $tramiteEditable,
         private readonly MarcarPasoCompletado $marcarPasoCompletado,
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
@@ -40,24 +43,38 @@ class RegistrarDatosInmueble
         $this->verificarPrecondicion($escuelaNivelId);
 
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
-            // WS-7a: orden escuela_niveles → escuelas; la guarda de MarcarPasoCompletado bloquea la escuela al final.
-            EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
+            // WS-7b-2: FOR UPDATE sobre todos los niveles del plantel, primero (orden escuela_niveles → escuelas);
+            // reemplaza el FOR SHARE del nivel y serializa esta edición contra la de otro nivel y contra el envío.
+            $this->registroBloqueado->bloquearNiveles($plantelId);
+            $this->tramiteEditable->asegurarPlantel($plantelId);
 
-            if (! $this->yaCapturados->ejecutar($plantelId)) {
-                Plantel::where('id', $plantelId)->update([
-                    'metros_totales' => $datos->metrosTotales,
-                    'metros_construidos' => $datos->metrosConstruidos,
-                    'colindancia_norte' => $datos->colindanciaNorte,
-                    'colindancia_sur' => $datos->colindanciaSur,
-                    'colindancia_este' => $datos->colindanciaEste,
-                    'colindancia_oeste' => $datos->colindanciaOeste,
-                    'latitud' => $datos->latitud,
-                    'longitud' => $datos->longitud,
-                    'area_civica_m2' => $datos->areaCivicaM2,
-                    'tiene_asta_bandera' => $datos->tieneAstaBandera,
-                    'updated_at' => now(),
-                ]);
+            $campos = [
+                'metros_totales' => $datos->metrosTotales,
+                'metros_construidos' => $datos->metrosConstruidos,
+                'colindancia_norte' => $datos->colindanciaNorte,
+                'colindancia_sur' => $datos->colindanciaSur,
+                'colindancia_este' => $datos->colindanciaEste,
+                'colindancia_oeste' => $datos->colindanciaOeste,
+                'latitud' => $datos->latitud,
+                'longitud' => $datos->longitud,
+                'area_civica_m2' => $datos->areaCivicaM2,
+                'tiene_asta_bandera' => $datos->tieneAstaBandera,
+            ];
+            $bloqueado = $this->registroBloqueado->bloqueado($plantelId, $escuelaNivelId);
 
+            if ($bloqueado) {
+                // Otro nivel ya tiene datos propios de Paso 3: solo se completa lo que está en NULL (false es un valor).
+                $actual = Plantel::where('id', $plantelId)->first(array_keys($campos))?->getAttributes() ?? [];
+                $campos = array_filter($campos, fn ($valor, $columna) => $valor !== null && ($actual[$columna] ?? null) === null, ARRAY_FILTER_USE_BOTH);
+            }
+
+            if ($campos !== []) {
+                Plantel::where('id', $plantelId)->update($campos + ['updated_at' => now()]);
+            }
+
+            // Los conjuntos se reemplazan salvo que estén bloqueados, y entonces solo se aportan si el plantel no tiene ninguno.
+            if (! $bloqueado || ! ServicioCercano::where('plantel_id', $plantelId)->exists()) {
+                ServicioCercano::where('plantel_id', $plantelId)->delete();
                 foreach ($datos->serviciosCercanos as $servicio) {
                     ServicioCercano::create([
                         'plantel_id' => $plantelId,
@@ -68,7 +85,10 @@ class RegistrarDatosInmueble
                         'distancia_unidad' => $servicio['distanciaUnidad'],
                     ]);
                 }
+            }
 
+            if (! $bloqueado || ! InmuebleEstudioActual::where('plantel_id', $plantelId)->exists()) {
+                InmuebleEstudioActual::where('plantel_id', $plantelId)->delete();
                 foreach ($datos->estudiosActuales as $estudio) {
                     InmuebleEstudioActual::create([
                         'plantel_id' => $plantelId,

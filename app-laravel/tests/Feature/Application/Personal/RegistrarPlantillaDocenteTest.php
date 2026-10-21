@@ -50,6 +50,20 @@ class RegistrarPlantillaDocenteTest extends TestCase
         $this->assertSame(1, Personal::where('escuela_nivel_id', $escuelaNivel->id)->count());
     }
 
+    public function test_se_puede_volver_a_guardar_y_los_datos_quedan_reemplazados(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('primaria', 'plantilla_docente');
+        $registrar = app(RegistrarPlantillaDocente::class);
+        $director = $this->cargoId('primaria', 'Director Técnico');
+        $titular = $this->cargoId('primaria', 'Docente Titular de Grupo');
+
+        $registrar->ejecutar($escuelaNivel->id, [$this->persona($director, 'Ana López'), $this->persona($titular, 'Luis Pérez')]);
+        $registrar->ejecutar($escuelaNivel->id, [$this->persona($director, 'Marta Ruiz')]);
+
+        $this->assertSame(['Marta Ruiz'], Personal::where('escuela_nivel_id', $escuelaNivel->id)->pluck('nombre')->all());
+        $this->assertTrue($this->pasoCompletado($escuelaNivel, 'plantilla_docente'));
+    }
+
     public function test_inicial_asigna_sala_a_responsables_y_asistentes(): void
     {
         $escuelaNivel = $this->nivelListoPara('inicial', 'plantilla_docente');

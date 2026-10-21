@@ -31,7 +31,7 @@ class RegistrarMobiliarioNivel
     ) {}
 
     /**
-     * @param  array<int, int>  $cantidadesPorConcepto  concepto_id => cantidad_declarada
+     * @param  array<int, int|null>  $cantidadesPorConcepto  concepto_id => cantidad_declarada; null borra la fila del concepto
      *
      * @throws PrecondicionIncumplida si Paso 2 no está completo o el sub-paso "mobiliario" aún no es alcanzable.
      */
@@ -66,12 +66,25 @@ class RegistrarMobiliarioNivel
             EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
 
             foreach ($cantidadesPorConcepto as $conceptoId => $cantidad) {
+                if ($cantidad === null) {
+                    // Vaciar el campo borra la cantidad declarada de ese concepto.
+                    MobiliarioNivel::where('escuela_nivel_id', $escuelaNivelId)->where('concepto_id', $conceptoId)->delete();
+
+                    continue;
+                }
+
                 // ponytail: updateOrCreate sobre el UNIQUE(escuela_nivel_id, concepto_id)
                 // hace que reenviar el formulario corrija cantidades en vez de fallar.
                 MobiliarioNivel::updateOrCreate(
                     ['escuela_nivel_id' => $escuelaNivelId, 'concepto_id' => $conceptoId],
                     ['cantidad_declarada' => $cantidad],
                 );
+            }
+
+            // Guarda para otros adaptadores: tras los borrados debe quedar al menos un concepto
+            // (lanzar revierte la transacción completa, nada queda borrado).
+            if (! MobiliarioNivel::where('escuela_nivel_id', $escuelaNivelId)->exists()) {
+                throw new InvalidArgumentException('Debe quedar al menos un concepto de mobiliario con cantidad declarada.');
             }
 
             $this->marcarPasoCompletado->ejecutar($escuelaNivelId, 'mobiliario');

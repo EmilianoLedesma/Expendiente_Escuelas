@@ -88,7 +88,7 @@ class TramiteEditable
         $escuelas = Escuela::where('plantel_id', $plantelId)->orderBy('id')->sharedLock()->pluck('id');
 
         if (! self::todosEnCaptura(EscuelaNivel::whereIn('escuela_id', $escuelas)->pluck('estado_id'), self::idEnCaptura())) {
-            throw new PrecondicionIncumplida(self::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ: los datos compartidos del plantel (documentos, espacios y sanitarios) ya no pueden modificarse.');
+            throw new PrecondicionIncumplida(self::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ: los datos compartidos del plantel (documentos, espacios, sanitarios y datos del inmueble) ya no pueden modificarse.');
         }
     }
 }

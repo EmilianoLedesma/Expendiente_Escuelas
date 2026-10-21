@@ -283,6 +283,55 @@ class RegistrarInfraestructuraNivelTest extends TestCase
         $this->assertDatabaseHas('aulas_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'numero_aulas' => 8]);
     }
 
+    // Guarda de ADR-005: el cambio de bloqueo no debe tocar la regla "agregar lo que el plantel aún no tiene".
+    public function test_agregar_un_tipo_nuevo_sigue_permitido_aunque_otro_nivel_ya_capturo(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $primaria->id, $this->datos(6));
+        $preescolar = $this->escuelaNivel('preescolar');
+
+        $nuevo = new DatosInfraestructuraNivel(
+            espacios: [[
+                'tipoEspacioId' => $this->idTipo('sala_maestros'),
+                'cantidad' => 1,
+                'superficieM2' => 10.0,
+                'capacidadPromedio' => null,
+                'ventilacionNatural' => null,
+                'iluminacionNatural' => null,
+                'destinadoA' => null,
+                'campoFutbol' => null,
+                'materialesBiblioteca' => [],
+            ]],
+            sanitarios: [],
+            numeroAulas: 3,
+            superficieAulasM2: 90.0,
+        );
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $preescolar->id, $nuevo);
+
+        $this->assertSame(1, DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->where('tipo_espacio_id', $this->idTipo('sala_maestros'))->count());
+        $this->assertSame(5, DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->count());
+    }
+
+    public function test_la_transaccion_toma_el_bloqueo_de_todos_los_niveles_del_plantel_primero(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $this->escuelaNivel('preescolar');
+        $sql = [];
+        DB::listen(function ($query) use (&$sql) {
+            $sql[] = $query->sql;
+        });
+
+        app(RegistrarInfraestructuraNivel::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+
+        $bloqueos = array_values(array_filter($sql, fn (string $s) => str_ends_with($s, 'for update') || str_ends_with($s, 'for share')));
+        $this->assertNotEmpty($bloqueos);
+        $this->assertMatchesRegularExpression('/^select .* from "escuela_niveles" .* for update$/', $bloqueos[0], 'El primer bloqueo debe ser FOR UPDATE sobre todos los niveles del plantel.');
+        $primerEscuelas = array_search(true, array_map(fn (string $s) => preg_match('/from "escuelas".* for share$/', $s) === 1, $bloqueos), true);
+        $this->assertNotFalse($primerEscuelas);
+        $this->assertGreaterThan(0, $primerEscuelas, 'escuelas se bloquea después de escuela_niveles.');
+    }
+
     /** @return list<array<string, mixed>> */
     private function soloSanitarios(): array
     {
@@ -403,8 +452,8 @@ class RegistrarInfraestructuraNivelTest extends TestCase
     }
 
     // WS-2 item 1 — un espacio cuyo único dato es campo_futbol (tipoSuperficie
-    // o formato) debe escribirse: tieneDatosSignificativos() ignoraba
-    // campoFutbol y el espacio se perdía en silencio aunque el formulario ya
+    // o formato) debe escribirse: la regla de "¿trae dato?" (hoy
+    // FilaSignificativa::espacio()) ignoraba campoFutbol y el espacio se perdía en silencio aunque el formulario ya
     // lo hubiera construido.
     public function test_espacio_con_solo_campo_futbol_declarado_se_escribe(): void
     {

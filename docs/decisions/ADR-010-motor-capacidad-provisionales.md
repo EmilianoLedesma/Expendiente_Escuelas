@@ -76,7 +76,7 @@ Los espacios se capturan por plantel, no por nivel.
 
 ## P9. "Revisar la captura" hacia Datos del inmueble
 
-Las observaciones de predio y superficie construida enlazan a "Datos del inmueble". Esa página, una vez completa, sigue siendo de solo lectura y redirige hacia adelante (WS-7, `PENDIENTE-edicion-hasta-envio.md`). El enlace no permite corregir hasta que WS-7 abra la edición. Infraestructura, Mobiliario, Plan de estudios, Plantilla y Matrícula sí se pueden reabrir y guardar de nuevo.
+Las observaciones de predio y superficie construida enlazan a "Datos del inmueble". Desde WS-7b-2 (`ADR-019-edicion-hasta-envio.md`) esa página se abre precargada para el dueño y permite corregir mientras el trámite esté en captura (con los campos con valor de solo lectura si otro nivel ya capturó). Infraestructura, Mobiliario, Plan de estudios, Plantilla y Matrícula sí se pueden reabrir y guardar de nuevo.
 
 ## P10. Educación Física en Secundaria
 

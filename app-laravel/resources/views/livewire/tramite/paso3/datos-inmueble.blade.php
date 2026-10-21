@@ -22,26 +22,30 @@
     <form novalidate wire:submit="guardar" class="mt-xl">
         <x-ui.error-summary />
 
+        @if ($bloqueado)
+            <x-ui.alert tipo="warning" class="mb-xl">Otro nivel ya capturó: solo puedes completar campos vacíos</x-ui.alert>
+        @endif
+
         <x-ui.section title="Dimensiones">
             <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 <x-ui.field id="metrosTotales" label="Superficie del predio (m²)">
-                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosTotales" />
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosTotales" :disabled="$fijo['metrosTotales'] ?? false" />
                 </x-ui.field>
                 <x-ui.field id="metrosConstruidos" label="Superficie construida (m²)">
-                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosConstruidos" />
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="metrosConstruidos" :disabled="$fijo['metrosConstruidos'] ?? false" />
                 </x-ui.field>
                 <x-ui.field id="areaCivicaM2" label="Área cívica (m²)" optional>
-                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="areaCivicaM2" />
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="areaCivicaM2" :disabled="$fijo['areaCivicaM2'] ?? false" />
                 </x-ui.field>
             </div>
-            <x-ui.checkbox id="tieneAstaBandera" wire:model.blur="tieneAstaBandera">Cuenta con asta bandera</x-ui.checkbox>
+            <x-ui.checkbox id="tieneAstaBandera" wire:model.blur="tieneAstaBandera" :disabled="$fijo['tieneAstaBandera'] ?? false">Cuenta con asta bandera</x-ui.checkbox>
         </x-ui.section>
 
         <x-ui.section title="Colindancias">
             <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 @foreach (['Norte' => 'colindanciaNorte', 'Sur' => 'colindanciaSur', 'Este' => 'colindanciaEste', 'Oeste' => 'colindanciaOeste'] as $etiqueta => $propiedad)
                     <x-ui.field :id="$propiedad" :label="$etiqueta" optional>
-                        <x-ui.input wire:model.blur="{{ $propiedad }}" />
+                        <x-ui.input wire:model.blur="{{ $propiedad }}" :disabled="$fijo[$propiedad] ?? false" />
                     </x-ui.field>
                 @endforeach
             </div>
@@ -50,10 +54,10 @@
         <x-ui.section title="Ubicación geográfica">
             <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 <x-ui.field id="latitud" label="Latitud" hint="En grados decimales." optional>
-                    <x-ui.input type="number" inputmode="decimal" step="0.0000001" wire:model.blur="latitud" />
+                    <x-ui.input type="number" inputmode="decimal" step="0.0000001" wire:model.blur="latitud" :disabled="$fijo['latitud'] ?? false" />
                 </x-ui.field>
                 <x-ui.field id="longitud" label="Longitud" hint="En grados decimales." optional>
-                    <x-ui.input type="number" inputmode="decimal" step="0.0000001" wire:model.blur="longitud" />
+                    <x-ui.input type="number" inputmode="decimal" step="0.0000001" wire:model.blur="longitud" :disabled="$fijo['longitud'] ?? false" />
                 </x-ui.field>
             </div>
         </x-ui.section>
@@ -64,35 +68,39 @@
                     <legend class="px-xxs text-body-sm font-semibold text-ink">Institución {{ $indice + 1 }}</legend>
                     <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                         <x-ui.field id="serviciosCercanos.{{ $indice }}.nombre" label="Nombre" class="sm:col-span-2">
-                            <x-ui.input wire:model.blur="serviciosCercanos.{{ $indice }}.nombre" />
+                            <x-ui.input wire:model.blur="serviciosCercanos.{{ $indice }}.nombre" :disabled="$serviciosFijos" />
                         </x-ui.field>
                         <x-ui.field id="serviciosCercanos.{{ $indice }}.tipo" label="Tipo">
-                            <x-ui.select wire:model.blur="serviciosCercanos.{{ $indice }}.tipo">
+                            <x-ui.select wire:model.blur="serviciosCercanos.{{ $indice }}.tipo" :disabled="$serviciosFijos">
                                 <option value="salud">Salud</option>
                                 <option value="emergencia">Emergencia</option>
                             </x-ui.select>
                         </x-ui.field>
                         <x-ui.field id="serviciosCercanos.{{ $indice }}.distanciaValor" label="Distancia" optional>
                             <div class="flex gap-xs">
-                                <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaValor" />
-                                <x-ui.select id="serviciosCercanos.{{ $indice }}.distanciaUnidad" aria-label="Unidad de distancia" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaUnidad" class="w-24">
+                                <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaValor" :disabled="$serviciosFijos" />
+                                <x-ui.select id="serviciosCercanos.{{ $indice }}.distanciaUnidad" aria-label="Unidad de distancia" wire:model.blur="serviciosCercanos.{{ $indice }}.distanciaUnidad" :disabled="$serviciosFijos" class="w-24">
                                     <option value="m">m</option>
                                     <option value="km">km</option>
                                 </x-ui.select>
                             </div>
                         </x-ui.field>
-                        <x-ui.checkbox id="serviciosCercanos.{{ $indice }}.esPublico" wire:model.blur="serviciosCercanos.{{ $indice }}.esPublico">Institución pública</x-ui.checkbox>
+                        <x-ui.checkbox id="serviciosCercanos.{{ $indice }}.esPublico" wire:model.blur="serviciosCercanos.{{ $indice }}.esPublico" :disabled="$serviciosFijos">Institución pública</x-ui.checkbox>
                     </div>
+                    @unless ($serviciosFijos)
                     <button type="button" wire:click="quitarServicio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink">
                         <x-ui.icon nombre="x-mark" class="h-5 w-5" />
                         Quitar<span class="sr-only"> institución {{ $indice + 1 }}</span>
                     </button>
+                    @endunless
                 </fieldset>
             @endforeach
+            @unless ($serviciosFijos)
             <x-ui.button-secondary type="button" wire:click="agregarServicio">
                 <x-ui.icon nombre="plus" class="h-5 w-5" />
                 Agregar institución
             </x-ui.button-secondary>
+            @endunless
         </x-ui.section>
 
         <x-ui.section title="Estudios que el inmueble ya imparte">
@@ -101,7 +109,7 @@
                     <legend class="px-xxs text-body-sm font-semibold text-ink">Estudio {{ $indice + 1 }}</legend>
                     <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                         <x-ui.field id="estudiosActuales.{{ $indice }}.nivelEducativoId" label="Nivel">
-                            <x-ui.select wire:model.blur="estudiosActuales.{{ $indice }}.nivelEducativoId">
+                            <x-ui.select wire:model.blur="estudiosActuales.{{ $indice }}.nivelEducativoId" :disabled="$estudiosFijos">
                                 <option value="">Otro (especificar)</option>
                                 @foreach ($niveles as $nivel)
                                     <option value="{{ $nivel->id }}">{{ $nivel->nombre }}</option>
@@ -109,22 +117,26 @@
                             </x-ui.select>
                         </x-ui.field>
                         <x-ui.field id="estudiosActuales.{{ $indice }}.otroNivelTexto" label="Otro nivel" optional>
-                            <x-ui.input wire:model.blur="estudiosActuales.{{ $indice }}.otroNivelTexto" />
+                            <x-ui.input wire:model.blur="estudiosActuales.{{ $indice }}.otroNivelTexto" :disabled="$estudiosFijos" />
                         </x-ui.field>
                         <x-ui.field id="estudiosActuales.{{ $indice }}.numeroAlumnos" label="Número de alumnos">
-                            <x-ui.input type="number" inputmode="numeric" min="0" wire:model.blur="estudiosActuales.{{ $indice }}.numeroAlumnos" />
+                            <x-ui.input type="number" inputmode="numeric" min="0" wire:model.blur="estudiosActuales.{{ $indice }}.numeroAlumnos" :disabled="$estudiosFijos" />
                         </x-ui.field>
                     </div>
+                    @unless ($estudiosFijos)
                     <button type="button" wire:click="quitarEstudio({{ $indice }})" class="mt-sm inline-flex min-h-11 items-center gap-xxs font-semibold text-error-ink">
                         <x-ui.icon nombre="x-mark" class="h-5 w-5" />
                         Quitar<span class="sr-only"> estudio {{ $indice + 1 }}</span>
                     </button>
+                    @endunless
                 </fieldset>
             @endforeach
+            @unless ($estudiosFijos)
             <x-ui.button-secondary type="button" wire:click="agregarEstudio">
                 <x-ui.icon nombre="plus" class="h-5 w-5" />
                 Agregar estudio
             </x-ui.button-secondary>
+            @endunless
         </x-ui.section>
 
         <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
