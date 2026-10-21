@@ -54,6 +54,20 @@ class RegistrarMatriculaTest extends TestCase
         $this->assertSame(1, DB::table('matricula_grados')->where('escuela_nivel_id', $escuelaNivel->id)->count());
     }
 
+    public function test_se_puede_volver_a_guardar_y_los_datos_quedan_reemplazados(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('primaria', 'matricula');
+        $registrar = app(RegistrarMatricula::class);
+
+        $registrar->ejecutar($escuelaNivel->id, new DatosMatricula(grupos: [['gradoId' => $this->gradoId('primaria', 1), 'grupo' => 'A', 'alumnos' => 25], ['gradoId' => $this->gradoId('primaria', 2), 'grupo' => 'A', 'alumnos' => 20]]));
+        $registrar->ejecutar($escuelaNivel->id, new DatosMatricula(grupos: [['gradoId' => $this->gradoId('primaria', 1), 'grupo' => 'A', 'alumnos' => 30]]));
+
+        $filas = DB::table('matricula_grados')->where('escuela_nivel_id', $escuelaNivel->id)->get();
+        $this->assertCount(1, $filas);
+        $this->assertSame(30, (int) $filas->first()->cantidad_alumnos);
+        $this->assertTrue($this->pasoCompletado($escuelaNivel, 'matricula'));
+    }
+
     public function test_inicial_guarda_alumnos_por_sala(): void
     {
         $escuelaNivel = $this->nivelListoPara('inicial', 'matricula');
