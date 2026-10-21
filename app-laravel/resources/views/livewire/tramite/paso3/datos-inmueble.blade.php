@@ -22,6 +22,10 @@
     <form novalidate wire:submit="guardar" class="mt-xl">
         <x-ui.error-summary />
 
+        @if ($bloqueado)
+            <x-ui.alert tipo="warning" class="mb-xl">Otro nivel ya capturó: solo puedes completar campos vacíos</x-ui.alert>
+        @endif
+
         <x-ui.section title="Dimensiones">
             <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 <x-ui.field id="metrosTotales" label="Superficie del predio (m²)">
