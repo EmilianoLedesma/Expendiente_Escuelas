@@ -24,6 +24,7 @@ use App\Models\TipoEspacio;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -80,6 +81,7 @@ class InfraestructuraNivel extends Component
     public float|int|string|null $superficieAulasM2 = null;
 
     /** Dueño del trámite: "ya capturado" se edita (si no, solo lectura). */
+    #[Locked]
     public bool $puedeEditar = false;
 
     /** @var array<int, array<string, mixed>> tipo_espacio_id => campos de la fila ya capturada (+ quitar) */
@@ -152,6 +154,15 @@ class InfraestructuraNivel extends Component
 
     public function guardar(RegistrarInfraestructuraNivel $registrarInfraestructura): void
     {
+        // guardar() no escribe lo ya registrado: si se editó y no se guardó aparte, se perdería en silencio.
+        if ($this->edicionPendiente()) {
+            $mensaje = 'Tienes cambios sin guardar en lo ya registrado. Usa «Guardar cambios a lo ya registrado» antes de continuar.';
+            $this->addError('edicionPendiente', $mensaje);
+            $this->toast('No se guardó', $mensaje, 'error');
+
+            return;
+        }
+
         $this->validate();
 
         try {
@@ -198,39 +209,11 @@ class InfraestructuraNivel extends Component
 
         $this->validate($this->conPrefijoEdicion($this->rules()), [], $this->conPrefijoEdicion((array) trans('validation.attributes')));
 
-        $espacios = $quitarEspacios = $sanitarios = $quitarSanitarios = [];
-
-        foreach ($this->espaciosCapturados() as $capturado) {
-            $tipo = $capturado->tipoEspacio;
-            $entrada = $this->edicionEspacios[$tipo->id] ?? [];
-
-            if (! empty($entrada['quitar'])) {
-                $quitarEspacios[] = (int) $tipo->id;
-
-                continue;
-            }
-
-            // La edición reemplaza la fila entera: se reenvía todo, hijos incluidos.
-            $espacios[] = $this->filaEspacio($tipo, $entrada, $tipo->permite_material_biblioteca ? $this->materialesDeclarados($this->edicionMateriales) : []);
-        }
-
-        foreach ($this->categoriasCapturadas as $categoria) {
-            $entrada = $this->edicionSanitarios[$categoria] ?? [];
-
-            if (! empty($entrada['quitar'])) {
-                $quitarSanitarios[] = $categoria;
-
-                continue;
-            }
-
-            $sanitarios[] = $this->filaSanitario($categoria, $entrada);
-        }
-
         try {
             $editarInfraestructura->ejecutar(
                 $this->plantelId(),
                 $this->escuelaNivel->id,
-                new DatosEdicionInfraestructura($espacios, $sanitarios, $quitarEspacios, $quitarSanitarios),
+                $this->datosEdicion($this->edicionEspacios, $this->edicionSanitarios, $this->edicionMateriales),
             );
         } catch (DatosInvalidos $e) {
             foreach ($e->errores as $campo => $mensaje) {
@@ -250,6 +233,60 @@ class InfraestructuraNivel extends Component
         // Recarga la pantalla: lo quitado vuelve a ofrecerse en «por capturar».
         $this->toastAlRedirigir('Infraestructura actualizada', 'Los cambios a lo ya capturado se guardaron.');
         $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $this->escuelaNivel->id]);
+    }
+
+    /**
+     * Arma la edición de lo ya capturado. Sirve también para comparar el formulario con lo
+     * guardado: misma normalización en ambos lados (casts, nulos, casillas de quitar).
+     *
+     * @param  array<int|string, array<string, mixed>>  $espacios
+     * @param  array<int|string, array<string, mixed>>  $sanitarios
+     * @param  array<int|string, array<string, mixed>>  $materiales
+     */
+    private function datosEdicion(array $espacios, array $sanitarios, array $materiales): DatosEdicionInfraestructura
+    {
+        $filasEspacios = $quitarEspacios = $filasSanitarios = $quitarSanitarios = [];
+
+        foreach ($this->espaciosCapturados() as $capturado) {
+            $tipo = $capturado->tipoEspacio;
+            $entrada = $espacios[$tipo->id] ?? [];
+
+            if (! empty($entrada['quitar'])) {
+                $quitarEspacios[] = (int) $tipo->id;
+
+                continue;
+            }
+
+            // La edición reemplaza la fila entera: se reenvía todo, hijos incluidos.
+            $filasEspacios[] = $this->filaEspacio($tipo, $entrada, $tipo->permite_material_biblioteca ? $this->materialesDeclarados($materiales) : []);
+        }
+
+        foreach ($this->categoriasCapturadas as $categoria) {
+            $entrada = $sanitarios[$categoria] ?? [];
+
+            if (! empty($entrada['quitar'])) {
+                $quitarSanitarios[] = $categoria;
+
+                continue;
+            }
+
+            $filasSanitarios[] = $this->filaSanitario($categoria, $entrada);
+        }
+
+        return new DatosEdicionInfraestructura($filasEspacios, $filasSanitarios, $quitarEspacios, $quitarSanitarios);
+    }
+
+    /** ¿El dueño cambió algo en «lo ya registrado» sin guardarlo con guardarEdicion()? */
+    private function edicionPendiente(): bool
+    {
+        if (! $this->puedeEditar) {
+            return false;
+        }
+
+        $guardado = app(CatalogosInfraestructura::class)->edicionCapturada($this->plantelId());
+
+        return (array) $this->datosEdicion($this->edicionEspacios, $this->edicionSanitarios, $this->edicionMateriales)
+            !== (array) $this->datosEdicion($guardado['espacios'], $guardado['sanitarios'], $guardado['materiales']);
     }
 
     /**
