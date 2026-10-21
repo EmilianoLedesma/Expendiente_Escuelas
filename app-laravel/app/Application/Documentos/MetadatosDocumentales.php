@@ -64,7 +64,7 @@ class MetadatosDocumentales
             'otro_fecha_expedicion' => 'Fecha de expedición', 'otro_autoridad' => 'Autoridad', 'otro_derecho' => 'Derecho que otorga',
             'observaciones' => 'Observaciones',
         ], true],
-        'recibo_pago_derechos' => ['recibos_pago_derechos', 'documento_escuela_nivel_id', ['folio' => 'Folio', 'monto' => 'Monto', 'fecha_pago' => 'Fecha de pago'], false],
+        'recibo_pago_derechos' => ['recibos_pago_derechos', 'documento_escuela_nivel_id', ['folio' => 'Folio', 'monto' => 'Monto', 'fecha_pago' => 'Fecha de pago', 'portal_referencia' => 'Referencia del portal de pago'], false],
         'acervo_bibliografico_primaria' => ['relaciones_acervo_bibliografico', 'documento_escuela_nivel_id', ['numero_titulos' => 'Número de títulos'], false],
         'acervo_bibliografico_secundaria' => ['relaciones_acervo_bibliografico', 'documento_escuela_nivel_id', ['numero_titulos' => 'Número de títulos'], false],
     ];
@@ -225,6 +225,7 @@ class MetadatosDocumentales
         return match (true) {
             $valor === null || $valor === '' => self::NO_CAPTURADO,
             is_bool($valor) => $valor ? 'Sí' : 'No',
+            $columna === 'monto' && is_numeric($valor) => '$'.number_format((float) $valor, 2),
             isset(self::TEXTOS[$columna][(string) $valor]) => self::TEXTOS[$columna][(string) $valor],
             preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $valor) === 1 => self::fecha((string) $valor),
             default => (string) $valor,
