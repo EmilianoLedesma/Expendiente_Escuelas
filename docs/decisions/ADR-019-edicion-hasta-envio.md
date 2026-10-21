@@ -2,7 +2,7 @@
 
 **Estado:** resuelto el 2026-10-21 (WS-7b-1 cerró Paso 1 y Paso 2; WS-7b-2 cerró Paso 3)
 **Fecha:** 2026-09-24
-**Relacionado:** `PENDIENTE-inmueble-relectura-datos.md` (D8), ADR-002, ADR-004, ADR-005, brief de remediación §WS-7
+**Relacionado:** `ADR-013-inmueble-relectura-datos.md` (D8), ADR-002, ADR-004, ADR-005, brief de remediación §WS-7
 
 ## Contexto
 
