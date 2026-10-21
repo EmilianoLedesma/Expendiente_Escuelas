@@ -66,6 +66,7 @@ class MobiliarioNivel extends Component
     {
         $this->validate();
 
+        /** @var array<int, int|null> $declaradas */
         $declaradas = [];
         foreach ($this->cantidades as $conceptoId => $cantidad) {
             if ($cantidad === '' || $cantidad === null) {
@@ -79,6 +80,14 @@ class MobiliarioNivel extends Component
             $this->toast('No se guardó', 'Declara la cantidad de al menos un concepto de mobiliario.', 'error');
 
             return;
+        }
+
+        // Un campo vaciado que tenía fila se envía como null para borrarla.
+        $conFila = MobiliarioNivelModel::where('escuela_nivel_id', $this->escuelaNivel->id)->pluck('concepto_id');
+        foreach ($conFila as $conceptoId) {
+            if (! array_key_exists((int) $conceptoId, $declaradas)) {
+                $declaradas[(int) $conceptoId] = null;
+            }
         }
 
         try {

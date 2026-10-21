@@ -30,6 +30,21 @@ class RegistrarPlanEstudiosTest extends TestCase
         $this->assertTrue($this->pasoCompletado($escuelaNivel, 'plan_estudios'));
     }
 
+    public function test_se_puede_volver_a_guardar_y_los_datos_quedan_reemplazados(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('secundaria', 'plan_estudios');
+        $registrar = app(RegistrarPlanEstudios::class);
+
+        $registrar->ejecutar($escuelaNivel->id, new DatosPlanEstudios(modalidad: 'mixta', planEstudiosReferencia: 'Plan viejo', plataformaEducativaTipo: 'propia'));
+        $registrar->ejecutar($escuelaNivel->id, new DatosPlanEstudios(modalidad: 'escolarizada', planEstudiosReferencia: 'Plan nuevo'));
+
+        $escuelaNivel->refresh();
+        $this->assertSame('escolarizada', $escuelaNivel->modalidad);
+        $this->assertSame('Plan nuevo', $escuelaNivel->plan_estudios_referencia);
+        $this->assertNull($escuelaNivel->plataforma_educativa_tipo);
+        $this->assertTrue($this->pasoCompletado($escuelaNivel, 'plan_estudios'));
+    }
+
     public function test_fuera_de_la_modalidad_escolarizada_exige_la_plataforma(): void
     {
         $escuelaNivel = $this->nivelListoPara('secundaria', 'plan_estudios');

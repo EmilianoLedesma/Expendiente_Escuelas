@@ -4,7 +4,7 @@
 **Origen:** `docs/reports/2026-09-30-evaluacion-motor-validacion.md` (evaluación) y `docs/reports/2026-09-30-motor-validacion-integracion.md` (implementación).
 **Rama:** `spike/validation-engine-eval` (no mergeada).
 
-Relación con otros documentos: independiente de `PENDIENTE-origen-de-magnitud.md` (motor de **capacidad instalada**, Paso 3). Comparte solo los tipos de resultado (`app/Domain/Validaciones/Resultado/`). El **envío** del trámite sigue en `PENDIENTE-edicion-hasta-envio.md` (WS-7).
+Relación con otros documentos: independiente de `PENDIENTE-origen-de-magnitud.md` (motor de **capacidad instalada**, Paso 3). Comparte solo los tipos de resultado (`app/Domain/Validaciones/Resultado/`). El **envío** del trámite sigue en `ADR-019-edicion-hasta-envio.md` (WS-7).
 
 ---
 
@@ -111,7 +111,7 @@ Detalle, supuestos y evidencia: `docs/reports/2026-09-30-motor-validacion-integr
 
 ## Pendiente, fuera de este ADR
 
-- **Envío y candado de edición:** WS-7 (`PENDIENTE-edicion-hasta-envio.md`).
+- **Envío y candado de edición:** WS-7 (`ADR-019-edicion-hasta-envio.md`).
 - **RFC de persona moral:** `personas_morales` no tiene columna `rfc`. Agregarla permitiría validar el RFC de las morales.
 - **Retención de evaluaciones/PDF:** cada visita a la página final crea una evaluación nueva. No hay política de limpieza.
   - Resuelto en parte (2026-10-06, `EliminarTramite`): eliminar el trámite borra sus evaluaciones y sus PDF. La política general de limpieza sigue abierta.

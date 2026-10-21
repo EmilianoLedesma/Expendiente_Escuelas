@@ -36,8 +36,138 @@
         @if ($yaCapturado !== [])
             <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Infraestructura del plantel (ya registrada)">
             <x-ui.section title="Infraestructura del plantel (ya registrada)">
-                <p class="text-body-sm text-muted">Estos datos son del plantel y ya fueron capturados. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
-                <x-ui.summary-list :filas="$yaCapturado" />
+                @if (! $puedeEditar)
+                    <p class="text-body-sm text-muted">Estos datos son del plantel y ya fueron capturados. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
+                    <x-ui.summary-list :filas="$yaCapturado" />
+                @else
+                    @php
+                        // Con bloqueo, lo ya guardado (no nulo) no se edita: el caso de uso solo completa vacíos.
+                        $fijo = fn ($valor) => $bloqueado && $valor !== null;
+                    @endphp
+                    <p class="text-body-sm text-muted">Estos datos son del plantel: corregirlos aquí cambia lo que ven todos sus niveles. Guarda los cambios antes de continuar con lo que falta por capturar.</p>
+                    @if ($bloqueado)
+                        <x-ui.alert tipo="warning" class="mt-sm">Otro nivel ya capturó: solo puedes completar campos vacíos</x-ui.alert>
+                    @endif
+
+                    @foreach ($espaciosCapturados as $capturado)
+                        @php
+                            $tipo = $capturado->tipoEspacio;
+                            $base = "edicionEspacios.{$tipo->id}";
+                            $original = $guardado['espacios'][$tipo->id] ?? [];
+                        @endphp
+                        <div wire:key="edicion-tipo-{{ $tipo->id }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                            <div class="grid grid-cols-1 gap-sm md:items-start {{ $columnas }}">
+                                <p id="{{ $base }}.tipoEspacioId" tabindex="-1" class="text-body-md font-semibold text-ink">{{ $tipo->nombre }}</p>
+                                @foreach (['cantidad' => ['Cantidad', 'numeric', null], 'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'], 'capacidadPromedio' => ['Capacidad', 'numeric', null]] as $campo => [$texto, $modo, $paso])
+                                    <div>
+                                        <label for="{{ $base }}.{{ $campo }}" class="{{ $etiqueta }}">{{ $texto }}<span class="sr-only"> — {{ $tipo->nombre }}</span></label>
+                                        <x-ui.input id="{{ $base }}.{{ $campo }}" type="number" inputmode="{{ $modo }}" min="0" :step="$paso" :disabled="$fijo($original[$campo] ?? null)" wire:model.blur="{{ $base }}.{{ $campo }}" />
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
+                                <div>
+                                    <label for="{{ $base }}.destinadoA" class="{{ $etiqueta }}">Destinado a<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
+                                    @if ($tipo->clave === 'bodega')
+                                        <x-ui.select id="{{ $base }}.destinadoA" :disabled="$fijo($original['destinadoA'] ?? null)" wire:model.blur="{{ $base }}.destinadoA">
+                                            <option value="">Selecciona…</option>
+                                            <option value="limpieza">Limpieza</option>
+                                            <option value="general">General</option>
+                                            <option value="otro">Otro</option>
+                                        </x-ui.select>
+                                    @else
+                                        <x-ui.input id="{{ $base }}.destinadoA" :disabled="$fijo($original['destinadoA'] ?? null)" wire:model.blur="{{ $base }}.destinadoA" />
+                                    @endif
+                                </div>
+                                <div class="flex flex-wrap gap-x-md">
+                                    <x-ui.checkbox id="{{ $base }}.ventilacionNatural" :disabled="$fijo($original['ventilacionNatural'] ?? null)" wire:model.blur="{{ $base }}.ventilacionNatural">Ventilación natural<span class="sr-only"> — {{ $tipo->nombre }}</span></x-ui.checkbox>
+                                    <x-ui.checkbox id="{{ $base }}.iluminacionNatural" :disabled="$fijo($original['iluminacionNatural'] ?? null)" wire:model.blur="{{ $base }}.iluminacionNatural">Iluminación natural<span class="sr-only"> — {{ $tipo->nombre }}</span></x-ui.checkbox>
+                                </div>
+                            </div>
+
+                            @if ($tipo->permite_campo_futbol)
+                                @php $campoFijo = $bloqueado && ($original['tieneCampoFutbol'] ?? false); @endphp
+                                <div class="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
+                                    <div>
+                                        <label for="{{ $base }}.campoFutbolTipoSuperficie" class="{{ $etiqueta }}">Tipo de superficie<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
+                                        <x-ui.input id="{{ $base }}.campoFutbolTipoSuperficie" :disabled="$campoFijo" wire:model.blur="{{ $base }}.campoFutbolTipoSuperficie" />
+                                    </div>
+                                    <div>
+                                        <label for="{{ $base }}.campoFutbolFormato" class="{{ $etiqueta }}">Formato<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
+                                        <x-ui.select id="{{ $base }}.campoFutbolFormato" :disabled="$campoFijo" wire:model.blur="{{ $base }}.campoFutbolFormato">
+                                            <option value="">Selecciona…</option>
+                                            <option value="11">11</option>
+                                            <option value="7">7</option>
+                                            <option value="5">5</option>
+                                            <option value="baby_fut">Baby fut</option>
+                                        </x-ui.select>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if ($tipo->permite_material_biblioteca)
+                                @php $acervoFijo = $bloqueado && ($guardado['materiales'] ?? []) !== []; @endphp
+                                <fieldset id="edicionMateriales" class="mt-md border-l-4 border-hairline pl-md">
+                                    <legend class="text-body-sm font-semibold text-ink">Material de la biblioteca</legend>
+                                    @foreach ($materiales as $material)
+                                        <div wire:key="edicion-material-{{ $material->id }}" class="grid grid-cols-2 gap-sm py-xs md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:items-center">
+                                            <p class="col-span-2 text-body-md text-ink md:col-span-1">{{ $material->nombre }}</p>
+                                            @foreach (['numeroTitulos' => 'Títulos', 'numeroVolumenes' => 'Volúmenes'] as $campo => $texto)
+                                                <div>
+                                                    <label for="edicionMateriales.{{ $material->id }}.{{ $campo }}" class="{{ $etiqueta }}">{{ $texto }}<span class="sr-only"> — {{ $material->nombre }}</span></label>
+                                                    <x-ui.input id="edicionMateriales.{{ $material->id }}.{{ $campo }}" type="number" inputmode="numeric" min="0" :disabled="$acervoFijo" wire:model.blur="edicionMateriales.{{ $material->id }}.{{ $campo }}" />
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endforeach
+                                </fieldset>
+                            @endif
+
+                            @unless ($bloqueado)
+                                <x-ui.checkbox id="{{ $base }}.quitar" wire:model="{{ $base }}.quitar">Quitar este registro al guardar<span class="sr-only"> — {{ $tipo->nombre }}</span></x-ui.checkbox>
+                            @endunless
+                        </div>
+                    @endforeach
+
+                    @foreach ($sanitariosCapturados as $capturado)
+                        @php
+                            $categoria = $capturado->categoria;
+                            $base = "edicionSanitarios.{$categoria}";
+                            $original = $guardado['sanitarios'][$categoria] ?? [];
+                            $nombre = str_replace('_', ' ', $categoria);
+                        @endphp
+                        <div wire:key="edicion-sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                            <p id="{{ $base }}.categoria" tabindex="-1" class="text-body-md font-semibold text-ink">Sanitarios {{ $nombre }}</p>
+                            <div class="mt-sm grid grid-cols-2 gap-sm md:grid-cols-4">
+                                @foreach (array_filter([
+                                    'cantidadRetretes' => ['Retretes', 'numeric', null],
+                                    'cantidadMingitorios' => ['Mingitorios', 'numeric', null],
+                                    'cantidadLavabos' => ['Lavabos', 'numeric', null],
+                                    'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'],
+                                    'cantidadBacinicas' => $categoria === 'alumnado_maternal' ? ['Bacinicas', 'numeric', null] : null,
+                                ]) as $campo => [$texto, $modo, $paso])
+                                    <div>
+                                        <label for="{{ $base }}.{{ $campo }}" class="{{ $etiqueta }}">{{ $texto }}<span class="sr-only"> — {{ $nombre }}</span></label>
+                                        <x-ui.input id="{{ $base }}.{{ $campo }}" type="number" inputmode="{{ $modo }}" min="0" :step="$paso" :disabled="$fijo($original[$campo] ?? null)" wire:model.blur="{{ $base }}.{{ $campo }}" />
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="mt-sm flex flex-wrap gap-x-md">
+                                <x-ui.checkbox id="{{ $base }}.ventilacionNatural" :disabled="$fijo($original['ventilacionNatural'] ?? null)" wire:model.blur="{{ $base }}.ventilacionNatural">Ventilación natural<span class="sr-only"> — {{ $nombre }}</span></x-ui.checkbox>
+                                <x-ui.checkbox id="{{ $base }}.iluminacionNatural" :disabled="$fijo($original['iluminacionNatural'] ?? null)" wire:model.blur="{{ $base }}.iluminacionNatural">Iluminación natural<span class="sr-only"> — {{ $nombre }}</span></x-ui.checkbox>
+                                @unless ($bloqueado)
+                                    <x-ui.checkbox id="{{ $base }}.quitar" wire:model="{{ $base }}.quitar">Quitar este registro al guardar<span class="sr-only"> — {{ $nombre }}</span></x-ui.checkbox>
+                                @endunless
+                            </div>
+                        </div>
+                    @endforeach
+
+                    {{-- type="button": este formulario vive dentro del de «por capturar» (no se anidan forms). --}}
+                    <div class="mt-md">
+                        <x-ui.button-secondary id="edicionPendiente" type="button" wire:click="guardarEdicion" wire:loading.attr="disabled" wire:target="guardarEdicion">Guardar cambios a lo ya registrado</x-ui.button-secondary>
+                    </div>
+                @endif
             </x-ui.section>
             </x-ui.stepper-panel>
         @endif
