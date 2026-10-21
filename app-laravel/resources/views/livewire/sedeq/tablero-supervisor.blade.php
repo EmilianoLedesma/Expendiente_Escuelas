@@ -91,6 +91,7 @@
                                     <td class="px-sm py-xs">
                                         <a href="{{ route('sedeq.tramite', ['escuela' => $fila->escuelaId]) }}" class="break-words font-semibold text-primary hover:underline">{{ $fila->plantel }}</a>
                                         <span class="block text-caption text-muted">{{ $fila->nivel }}</span>
+                                        <a href="{{ route('sedeq.revision', ['escuelaNivel' => $fila->escuelaNivelId]) }}" class="text-caption font-semibold text-primary hover:underline">Revisar</a>
                                     </td>
                                     <td class="px-sm py-xs">
                                         <label for="prioridad-{{ $fila->escuelaNivelId }}" class="sr-only">Prioridad del trámite {{ $fila->escuelaNivelId }}</label>

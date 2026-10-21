@@ -5,6 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $documento_plantel_id
+ * @property string $tipo
+ * @property string|null $numero_escritura
+ * @property string|null $fecha_escritura
+ * @property string|null $notario_nombre
+ * @property string|null $notario_numero
+ * @property string|null $notario_localidad
+ * @property string|null $folio_rpp
+ * @property string|null $fecha_inscripcion_rpp
+ * @property string|null $arrendador_comodante
+ * @property string|null $arrendatario_comodatario
+ * @property string|null $fecha_contrato
+ * @property string|null $vigencia_contrato
+ * @property string|null $uso_autorizado
+ * @property bool|null $ratificado_notario
+ * @property string|null $otro_especifique
+ * @property string|null $observaciones
+ */
 class AcreditacionOcupacionLegal extends Model
 {
     public $timestamps = false;
