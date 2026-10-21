@@ -92,12 +92,18 @@ class RevisionNivel extends Component
      * Pistas del motor por paso: corren una vez por página (persisten entre acciones) porque no cambian
      * mientras el nivel está en revisión; recalcularlas en cada clic reejecutaría todo el motor.
      *
-     * @return array<string, list<FilaValidacion>>
+     * Se persisten como arreglos: con un cache que serializa (database) Livewire no recupera objetos
+     * FilaValidacion (__PHP_Incomplete_Class) y reejecutaría el motor en cada render.
+     *
+     * @return array<string, list<array<string, mixed>>>
      */
     #[Computed(persist: true)]
     public function pistas(): array
     {
-        return app(PistasDeRevision::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId);
+        return array_map(
+            fn (array $filas) => array_map(fn (FilaValidacion $f) => $f->aArreglo(), $filas),
+            app(PistasDeRevision::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId),
+        );
     }
 
     public function render()
@@ -108,7 +114,7 @@ class RevisionNivel extends Component
             'revision' => $revision,
             'paso' => collect($revision['pasos'])->firstWhere('clave', $this->pasoAbierto),
             'contenido' => app(ContenidoPasoRevision::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId, $this->pasoAbierto),
-            'pistas' => $this->pistas[$this->pasoAbierto] ?? [],
+            'pistas' => array_map(FilaValidacion::desdeArreglo(...), $this->pistas[$this->pasoAbierto] ?? []),
             'volver' => RutaInicio::para(auth()->user()),
         ]);
     }

@@ -116,6 +116,18 @@ class RevisionNivelTest extends TestCase
             ->call('abrir', 'plantel')->call('abrir', 'documentos')->set('motivo', 'x')->assertSee('El RFC no coincide');
     }
 
+    public function test_las_pistas_persistidas_son_arreglos_y_no_objetos(): void
+    {
+        $fila = new FilaValidacion('rfc_coincide', 'RFC', 'no_cumple', 'El RFC no coincide', [], []);
+        $this->mock(EjecutarValidacionFinal::class)->shouldReceive('evaluar')
+            ->andReturn(new ValidacionFinal(null, now(), false, [$fila]));
+
+        $pistas = $this->pagina()->call('abrir', 'documentos')->instance()->pistas;
+
+        $this->assertIsArray($pistas['documentos'][0]);
+        $this->assertSame('rfc_coincide', $pistas['documentos'][0]['clave']);
+    }
+
     public function test_si_el_motor_falla_la_pagina_carga_sin_pistas(): void
     {
         $this->mock(EjecutarValidacionFinal::class)->shouldReceive('evaluar')->andThrow(new \RuntimeException('motor roto'));
