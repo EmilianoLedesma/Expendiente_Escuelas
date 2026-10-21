@@ -122,6 +122,42 @@ class Paso3MobiliarioNivelTest extends TestCase
         ]);
     }
 
+    public function test_vaciar_un_campo_con_fila_borra_esa_cantidad(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuelaNivel = $this->crearEscuelaNivel($solicitante, 'inicial');
+        [$a, $b] = DB::table('mobiliario_conceptos')->orderBy('id')->limit(2)->pluck('id')->all();
+        foreach ([$a => 3, $b => 4] as $conceptoId => $cantidad) {
+            DB::table('mobiliario_nivel')->insert(['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $conceptoId, 'cantidad_declarada' => $cantidad]);
+        }
+
+        Livewire::actingAs($solicitante->user)
+            ->test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->set("cantidades.{$a}", '')
+            ->call('guardar')
+            ->assertRedirect(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $escuelaNivel->id]));
+
+        $this->assertDatabaseMissing('mobiliario_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $a]);
+        $this->assertDatabaseHas('mobiliario_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $b, 'cantidad_declarada' => 4]);
+    }
+
+    public function test_vaciar_todos_los_campos_muestra_el_error_sin_borrar_nada(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $escuelaNivel = $this->crearEscuelaNivel($solicitante, 'inicial');
+        $conceptoId = (int) DB::table('mobiliario_conceptos')->orderBy('id')->value('id');
+        DB::table('mobiliario_nivel')->insert(['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $conceptoId, 'cantidad_declarada' => 3]);
+
+        Livewire::actingAs($solicitante->user)
+            ->test(MobiliarioNivel::class, ['escuelaNivel' => $escuelaNivel])
+            ->set("cantidades.{$conceptoId}", '')
+            ->call('guardar')
+            ->assertHasErrors('cantidades')
+            ->assertNoRedirect();
+
+        $this->assertDatabaseHas('mobiliario_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $conceptoId, 'cantidad_declarada' => 3]);
+    }
+
     public function test_rechaza_una_cantidad_negativa_sin_escribir(): void
     {
         $solicitante = Solicitante::factory()->create();

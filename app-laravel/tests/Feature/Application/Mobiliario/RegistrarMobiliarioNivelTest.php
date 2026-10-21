@@ -110,6 +110,36 @@ class RegistrarMobiliarioNivelTest extends TestCase
         ]);
     }
 
+    public function test_null_borra_la_cantidad_declarada_del_concepto(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel('inicial');
+        $cantidades = $this->dosConceptos();
+        [$primero, $segundo] = array_keys($cantidades);
+        app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, $cantidades);
+
+        app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, [$primero => null]);
+
+        $this->assertDatabaseMissing('mobiliario_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $primero]);
+        $this->assertDatabaseHas('mobiliario_nivel', ['escuela_nivel_id' => $escuelaNivel->id, 'concepto_id' => $segundo, 'cantidad_declarada' => 7]);
+    }
+
+    public function test_no_puede_quedar_sin_ningun_concepto_con_valor(): void
+    {
+        $escuelaNivel = $this->crearEscuelaNivel('inicial');
+        $cantidades = $this->dosConceptos();
+        app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, $cantidades);
+
+        try {
+            app(RegistrarMobiliarioNivel::class)->ejecutar($escuelaNivel->id, array_map(fn () => null, $cantidades));
+            $this->fail('Debió lanzar InvalidArgumentException.');
+        } catch (InvalidArgumentException) {
+            // esperado
+        }
+
+        // La transacción revierte: nada quedó borrado.
+        $this->assertSame(2, DB::table('mobiliario_nivel')->where('escuela_nivel_id', $escuelaNivel->id)->count());
+    }
+
     public function test_rechaza_un_nivel_distinto_de_inicial(): void
     {
         $escuelaNivel = $this->crearEscuelaNivel('preescolar');
