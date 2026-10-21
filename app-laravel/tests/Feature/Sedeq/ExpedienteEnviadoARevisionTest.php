@@ -194,6 +194,8 @@ class ExpedienteEnviadoARevisionTest extends TestCase
         $this->actingAs($revisor)->get(route('sedeq.tramite.reporte', ['escuela' => $this->escuela->id]))->assertForbidden();
         $this->actingAs($revisor)->get(route('tramite.paso2-nivel-documentos.descargar', ['escuelaNivel' => $this->preescolar->id, 'clave' => 'recibo_pago_derechos']))->assertForbidden();
         $this->actingAs($revisor)->get(route('tramite.paso2-nivel-documentos.descargar', ['escuelaNivel' => $this->primaria->id, 'clave' => 'recibo_pago_derechos']))->assertOk();
+        // Los documentos generales son de la escuela, compartidos por sus niveles (AccesoSedeq): un nivel asignado basta.
+        $this->actingAs($revisor)->get(route('tramite.paso2-documentos.descargar', ['escuela' => $this->escuela->id, 'clave' => 'ine']))->assertOk();
     }
 
     public function test_la_pagina_sedeq_muestra_metadatos_y_el_resultado_rotulado_como_almacenado(): void

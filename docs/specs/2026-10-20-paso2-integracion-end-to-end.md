@@ -1,7 +1,7 @@
 # Especificación SDD — Paso 2 reordenado, motores integrados, geografía y lectura SEDEQ
 
 **Fecha:** 2026-10-20 · **Base:** `master` @ `c9a97cd` · **Rama:** `claude/gifted-franklin-7il8b2`
-**Estado:** implementada en la rama (ver `docs/reports/2026-10-20-paso2-integracion-end-to-end.md`).
+**Estado:** implementada en la rama (ver `docs/reports/2026-10-20-paso2-integracion-end-to-end.md` y `docs/decisions/ADR-018-orden-paso2-niveles-antes-de-documentos.md`).
 
 Esta especificación es versionada a propósito: `docs/superpowers/` está en `.gitignore` y no viaja con el repositorio.
 
@@ -77,7 +77,7 @@ Retrocesos derivados (nada se borra): agregar un nivel que cambia la aplicabilid
 | `generalesSatisfechos(e)` | `etapaFaltante(e) === null` | `Paso24DocumentosNivel::mount()`, `CompuertaPaso3` |
 | `etapaFaltante(e)` | primera etapa pendiente en el nuevo orden: `responsable` → `niveles` → `documentos` → `null` | casos de uso de 2.4 y Paso 3, `ResumenTramite`, `CompuertaSubPaso3` |
 
-Regla: ningún consumidor que necesite «documentación general satisfecha» usa `puedeSeleccionarNiveles()`. La prueba `EstadoPaso2ContratosTest` fija cada contrato.
+Regla: ningún consumidor que necesite «documentación general satisfecha» usa `puedeSeleccionarNiveles()`. La prueba `EstadoPaso2Test` fija cada contrato.
 
 **Puede entrar a 2.4:** el nivel pertenece al expediente (Policy `update`), `generalesSatisfechos`, trámite editable (Policy). **Puede acceder a Paso 3:** lo anterior + `EstadoPaso24::etapaFaltante === null` + orden de sub-pasos (`EstadoPaso3`). **Puede enviar:** `EnviarTramite` (sin cambio de diseño): bloqueo, todo en captura, `ResumenTramite::completo`, reevaluación documental y de capacidad dentro de la transacción, sin bloqueantes.
 
@@ -143,7 +143,7 @@ Sin cambios a `AccesoSedeq`. Los documentos generales siguen visibles a cualquie
 
 - `planteles.municipio_id` BIGINT NULL REFERENCES `municipios(id)` ON DELETE SET NULL, con índice. `planteles.municipio` (texto) se conserva y se deriva del catálogo en el servidor cuando llega un id.
 - Paso 1: selector limitado a Querétaro (entidad clave 22, ADR-008) desde `ListarCatalogoGeografico`. El caso de uso valida que el municipio exista y pertenezca a Querétaro. Si el catálogo no está importado se conserva el campo de texto (mismo criterio que el certificado: el caso de uso acepta texto heredado).
-- Vinculación histórica: `php artisan geografia:vincular-municipios` en modo simulación por omisión; con `--aplicar` asigna `municipio_id` solo a coincidencias inequívocas (nombre normalizado único dentro de Querétaro para planteles; dentro de la entidad elegida, o de Querétaro si no hay entidad, para certificados). Nunca sobrescribe texto ni un id existente; reporta ambigüedades y sin correspondencia.
+- Vinculación histórica: `php artisan geografia:vincular-municipios` en modo simulación por omisión; con `--aplicar` asigna `municipio_id` solo a coincidencias inequívocas (nombre normalizado único dentro de Querétaro para planteles; para certificados, dentro de la entidad elegida o, si no la tienen, en todo el catálogo, donde un nombre repetido es ambiguo y no se asume Querétaro). Nunca sobrescribe texto ni un id existente; reporta ambigüedades y sin correspondencia.
 - No se convierte `acreditaciones_ocupacion_legal.notario_localidad` (localidad, no municipio) ni nombres de autoridades.
 - `ComparadorDomicilios` compara el municipio por id cuando ambas fuentes lo traen; si no, por texto normalizado.
 - Procedencia: `api_info_mexico`, sin atribución oficial a INEGI (ADR-017).
