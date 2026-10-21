@@ -1,6 +1,6 @@
-# PENDIENTE — Edición de pasos anteriores hasta el envío
+# ADR-019 — Edición de pasos anteriores hasta el envío
 
-**Estado:** abierto (alcance decidido; reglas de detalle pendientes para el plan de WS-7)
+**Estado:** resuelto el 2026-10-21 (WS-7b-1 cerró Paso 1 y Paso 2; WS-7b-2 cerró Paso 3)
 **Fecha:** 2026-09-24
 **Relacionado:** `PENDIENTE-inmueble-relectura-datos.md` (D8), ADR-002, ADR-004, ADR-005, brief de remediación §WS-7
 
@@ -38,7 +38,7 @@ Estado actual (`master` en `ce3a154`):
 
 ## Cierre
 
-Este archivo se renombra a `ADR-00N-edicion-hasta-envio.md` en el mismo commit que implemente las reglas en WS-7, con las respuestas a las preguntas abiertas.
+Renombrado de `PENDIENTE-edicion-hasta-envio.md` a ADR-019 al cerrar WS-7b-2, con las respuestas de 7b-1 y 7b-2 abajo.
 
 ## Relación con la validación final (2026-09-30, rama `spike/validation-engine-eval`)
 
@@ -58,4 +58,18 @@ La lista "Estado actual" de arriba (`master` en `ce3a154`) es anterior a varios 
 - **Datos del plantel:** solo teléfono y correo; el domicilio sigue de solo lectura. Se rechaza si cualquier trámite del plantel ya se envió.
 - **Datos del plantel compartidos:** ver ADR-009.
 - **Formato de Solicitud (D1):** un cambio en lo que imprime descarta el Formato firmado de cada nivel.
-- Queda abierto para 7b-2: guardas de una sola escritura de Paso 3 y filas antiguas que no pueden enviarse. Este archivo se renombra a ADR cuando 7b-2 cierre el flujo de trabajo.
+- Queda abierto para 7b-2: guardas de una sola escritura de Paso 3 y filas antiguas que no pueden enviarse. Lo pendiente de 7b-2 se resuelve abajo.
+
+## Respuestas (WS-7b-2, 2026-10-21) — Paso 3
+
+Spec: `docs/superpowers/specs/2026-10-21-ws7b2-edicion-paso3-design.md`. Reporte: `docs/reports/2026-10-21-ws7b2-edicion-paso3.md`.
+
+- **Alcance:** cada sub-paso de Paso 3 abre precargado y editable mientras el trámite esté en captura. Datos del inmueble deja de ser de una sola escritura; infraestructura y sanitarios permiten corregir y quitar filas ya capturadas; mobiliario permite vaciar una cantidad (borra la fila).
+- **Datos compartidos del plantel (inmueble, infraestructura, sanitarios):** se bloquean en cuanto **otro nivel del plantel** (de cualquier escuela, ADR-009) ha capturado datos propios de Paso 3: filas en `aulas_nivel`, `mobiliario_nivel`, `personal`, matrícula o plan de estudios guardado. Las banderas de `escuela_nivel_pasos` no cuentan. La regla se calcula de los datos y vive en una sola clase (`RegistroCompartidoBloqueado`). El bloqueo cubre al nivel que escribió el dato y a los demás, y se levanta si los datos del otro nivel desaparecen.
+- **Qué bloquea y qué no:** bloquea cambiar o quitar lo ya capturado; **no** bloquea agregar un tipo de espacio o una categoría de sanitario que el plantel aún no tiene (ADR-005).
+- **Filas antiguas con nulos:** un registro bloqueado permite completar solo los campos nulos; los que ya tienen valor no cambian. `false` y `null` son distintos.
+- **Quién edita:** editar y borrar filas compartidas de infraestructura es solo del dueño del trámite (política `editarCompartido`). Un responsable por nivel conserva lo que ADR-015 le da (agregar filas de su nivel).
+- **Concurrencia:** todo escritor de datos compartidos bloquea todas las `escuela_niveles` del plantel con `FOR UPDATE`, ordenadas por id, como primera sentencia, y después evalúa la regla; llama a `TramiteEditable::asegurarPlantel`.
+- **Fila de infraestructura totalmente vacía:** se rechaza; borrar es una acción explícita.
+- **Banderas de `escuela_nivel_pasos`:** no se reinician; `EnviarTramite` reevalúa todo.
+- **Fuera de 7b-2:** el hueco M2 (una escuela hermana enviada cambia los insumos de reglas) pasa al proyecto 3 (HUD/devolución de SEDEQ, reevaluación contra insumos congelados). Las descargas tras el envío son una tarea pequeña aparte.

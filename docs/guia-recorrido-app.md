@@ -89,7 +89,7 @@ Cada página de paso muestra arriba "{Grupo} · Paso X de N" y abajo una barra d
 
 **Qué capturas:** metros totales (debe ser mayor a 0), coordenadas (latitud entre −90 y 90, longitud entre −180 y 180), servicios cercanos (salud/emergencia, distancia en m o km) y estudios que se imparten actualmente en el inmueble.
 
-**Si el plantel ya se capturó** con otro nivel, este sub-paso se marca completo solo y te pasa al siguiente. Esos datos **no se pueden corregir** desde el asistente (queda para WS-7).
+**Editable hasta el envío (WS-7b-2):** el sub-paso abre con lo ya capturado y puedes corregirlo mientras el trámite esté en captura. **Bloqueo:** si otro nivel del mismo plantel ya capturó datos propios de Paso 3 (infraestructura, mobiliario, plantilla, matrícula o plan de estudios), los datos del inmueble que ya tienen valor quedan de solo lectura, porque ese nivel se apoyó en ellos; solo puedes completar los campos que sigan vacíos. El bloqueo se levanta si esos datos del otro nivel desaparecen. Después del envío, cambiarlos requiere la devolución de SEDEQ.
 
 ### Paso 3.2 — Infraestructura del nivel (`/tramite/paso3/{escuelaNivel}/infraestructura`)
 **Qué capturas:** número de aulas y superficie; espacios que aplican al nivel (dirección, biblioteca con sus materiales, áreas verdes, campo de fútbol, bodega, etc.); sanitarios por categoría.
@@ -98,11 +98,11 @@ Cada página de paso muestra arriba "{Grupo} · Paso X de N" y abajo una barra d
 - Un espacio se guarda si llenas **cualquier** dato (por ejemplo, solo la superficie de las áreas verdes). Antes se perdía en silencio (WS-2.1).
 - Marcar y desmarcar una casilla sin escribir nada más **no** crea un espacio vacío.
 - Números negativos muestran error.
-- Lo que otro nivel del mismo plantel ya capturó aparece en "ya capturado" (solo lectura). Tú solo capturas lo que falta para tu nivel, por ejemplo el filtro de recepción de Inicial después de Primaria (ADR-005).
+- Lo que ya está capturado aparece en "Lo ya capturado", editable hasta el envío: puedes corregir o quitar filas. Si otro nivel del plantel ya capturó, esas filas quedan de solo lectura (solo se completan campos vacíos), pero siempre puedes agregar un espacio o una categoría de sanitarios que el plantel aún no tenga. Editar o quitar filas compartidas es del dueño del trámite; un responsable por nivel solo agrega las de su nivel. Tú solo capturas lo que falta para tu nivel, por ejemplo el filtro de recepción de Inicial después de Primaria (ADR-005).
 - **Nuevo en WS-3:** para **Educación Inicial** aparecen tres espacios opcionales más: **Salón de usos múltiples**, **Cocina** y **Comedor**. No aparecen en Preescolar, Primaria ni Secundaria.
 
 ### Paso 3.3 — Mobiliario (`/tramite/paso3/{escuelaNivel}/mobiliario`)
-- **Educación Inicial:** capturas el mobiliario por sala según el catálogo.
+- **Educación Inicial:** capturas el mobiliario por sala según el catálogo; si vacías una cantidad, esa fila se borra.
 - **Otros niveles:** no aplica; el sub-paso se marca completo solo y te devuelve al Resumen del trámite.
 
 ### Al terminar Paso 3 de un nivel
@@ -161,7 +161,7 @@ Ambos roles usan `/profile` (nombre y contraseña). **No pueden eliminar su cuen
 | **WS-4** Frontera de lecturas (ADR-006) | Nada visible. Mueve las decisiones de flujo y permisos que aún leen la base desde la presentación a consultas de Application, y agrega reglas automáticas de arquitectura. | Plan escrito y tu aprobación. **En pausa** por tu decisión (2026-09-25). |
 | **WS-5** Documentos completos y Formato | Documentos faltantes del checklist real: acta constitutiva y documentos del representante de persona moral, poder del gestor, Visto Bueno de Protección Civil, plano, certificado de número oficial. Nuevo **Paso 2.4 "Documentos por nivel"**: turno, tipo de alumnado, Formato de Solicitud por nivel (generar → firmar → subir), recibo de pago de derechos, acervo bibliográfico (Primaria/Secundaria), inventario de laboratorio (Secundaria). **Formato de Solicitud rehecho** con la estructura oficial. Paso 3 quedará detrás de Paso 2.4 para cada nivel. | Plan escrito y tu aprobación (decisiones D1–D3 ya tomadas). |
 | **WS-6** Aulas por sala en Inicial | En Inicial, el sub-paso 3.2 pedirá una fila por sala (capacidad, superficie, altura, ventilación, iluminación) en lugar de solo totales. Primaria/Secundaria/Preescolar no cambian. Incluye una **tabla nueva** (migración). | Plan escrito y tu aprobación (D4). |
-| **WS-7** Edición hasta el envío (**7b-1 hecho**: teléfono/correo del plantel, responsable legal y niveles agregar/quitar; **7b-2 pendiente**: Paso 3 y filas antiguas) | Podrás regresar a **cualquier** paso anterior (Preregistro, Responsable legal, niveles, Datos del inmueble, Infraestructura, etc.) y editar lo capturado en formularios precargados mientras el expediente siga en captura. El domicilio del plantel sigue siendo de solo lectura; los datos del inmueble se editan solo mientras el plantel lo usen únicamente tus niveles en captura (D8). Una edición que invalide pasos posteriores los vuelve a marcar como pendientes. Ver `docs/decisions/PENDIENTE-edicion-hasta-envio.md`. | Plan con las reglas de detalle y tu autorización (alcance decidido el 2026-09-24). |
+| **WS-7** Edición hasta el envío (**7b-1 hecho**: teléfono/correo del plantel, responsable legal y niveles agregar/quitar; **7b-2 pendiente**: Paso 3 y filas antiguas) | Podrás regresar a **cualquier** paso anterior (Preregistro, Responsable legal, niveles, Datos del inmueble, Infraestructura, etc.) y editar lo capturado en formularios precargados mientras el expediente siga en captura. El domicilio del plantel sigue siendo de solo lectura; los datos del inmueble se editan solo mientras el plantel lo usen únicamente tus niveles en captura (D8). Una edición que invalide pasos posteriores los vuelve a marcar como pendientes. Ver `docs/decisions/ADR-019-edicion-hasta-envio.md`. | Plan con las reglas de detalle y tu autorización (alcance decidido el 2026-09-24). |
 | **WS-8** Plan de estudios (Paso 3.4) | Nuevo sub-paso después de Mobiliario: modalidad (escolarizada, no escolarizada, mixta), referencia del plan de estudios y, si es mixta, tipo de plataforma. Aparece en el recorrido y en el Resumen del trámite. | Tu autorización (D9 ya decidida). |
 | **WS-9** Cierre documental | Nada visible. PRD/COMPENDIO actualizados, reporte consolidado y lista única de preguntas para SEDEQ. | Tu autorización. |
 
@@ -184,7 +184,7 @@ Ambos roles usan `/profile` (nombre y contraseña). **No pueden eliminar su cuen
 ## 5. Cosas que pueden sorprenderte al probar
 
 - **Base de desarrollo limpia (2026-09-25):** se vaciaron todas las tablas de captura (cuentas, planteles, escuelas, documentos, Paso 3) y los PDF subidos; solo quedan los catálogos. El plantel compartido entre dos solicitantes que existía antes de WS-1 ya no está, pero la pregunta de fondo sigue abierta (`PENDIENTE-plantel-solicitante-cardinalidad.md`).
-- **Hasta el envío se pueden revisar** el responsable legal, el teléfono y correo del plantel ("Datos del plantel") y los niveles (agregar o quitar; quitar un nivel con datos pide confirmación). El **domicilio del plantel sigue de solo lectura**. Los pasos de Paso 3 todavía no se pueden editar libremente (WS-7b-2).
+- **Hasta el envío se pueden revisar** el responsable legal, el teléfono y correo del plantel ("Datos del plantel") y los niveles (agregar o quitar; quitar un nivel con datos pide confirmación). El **domicilio del plantel sigue de solo lectura**. Los pasos de Paso 3 también se pueden volver a abrir y corregir hasta el envío (WS-7b-2), con el bloqueo de datos compartidos descrito en Paso 3.1.
 - **El nombre original del archivo** subido no se conserva.
 - **El Formato de Solicitud actual** es provisional: se genera antes de elegir niveles y no tiene la estructura oficial (WS-5 lo rehace).
 - **Pasos que se completan solos:** Datos del inmueble (plantel ya capturado) y Mobiliario (niveles distintos de Inicial) se marcan completos al entrar; es intencional.
