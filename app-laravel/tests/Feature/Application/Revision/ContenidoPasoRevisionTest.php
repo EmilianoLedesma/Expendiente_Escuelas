@@ -79,7 +79,7 @@ class ContenidoPasoRevisionTest extends TestCase
 
         $this->assertSame('Datos del plantel', $c['titulo']);
         $this->assertCount(1, $c['bloques']);
-        $this->assertSame(['Domicilio', 'Localidad', 'Teléfono', 'Correo electrónico'], array_column($c['bloques'][0]['filas'], 0));
+        $this->assertSame(['Domicilio', 'Localidad', 'Municipio', 'Municipio vinculado al catálogo', 'Teléfono', 'Correo electrónico'], array_column($c['bloques'][0]['filas'], 0));
         $this->assertStringContainsString($this->nivel->escuela->plantel->calle, $c['bloques'][0]['filas'][0][1]);
         $this->assertSame([], $c['bloques'][0]['documentos']);
     }
