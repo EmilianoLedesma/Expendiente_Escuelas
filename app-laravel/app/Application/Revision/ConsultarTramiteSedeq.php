@@ -45,6 +45,9 @@ final class ConsultarTramiteSedeq
         'escolarizada' => 'Escolarizada', 'no_escolarizada' => 'No escolarizada', 'mixta' => 'Mixta', 'virtual' => 'Virtual',
     ];
 
+    /** @var Collection<int, \stdClass>|null */
+    private ?Collection $catalogoPasos = null;
+
     public function __construct(
         private readonly AccesoSedeq $acceso,
         private readonly DocumentosCapturados $documentosCapturados,
@@ -168,8 +171,10 @@ final class ConsultarTramiteSedeq
     private function pasos(int $escuelaNivelId): array
     {
         $estados = DB::table('escuela_nivel_pasos')->where('escuela_nivel_id', $escuelaNivelId)->pluck('estado', 'paso_captura_id');
+        // Catálogo constante: se lee una vez por consulta, no por nivel.
+        $this->catalogoPasos ??= DB::table('pasos_captura')->orderBy('orden')->get(['id', 'nombre']);
 
-        return DB::table('pasos_captura')->orderBy('orden')->get(['id', 'nombre'])
+        return $this->catalogoPasos
             ->map(fn (object $paso) => ['nombre' => (string) $paso->nombre, 'estado' => (string) ($estados[$paso->id] ?? 'pendiente')])
             ->values()->all();
     }

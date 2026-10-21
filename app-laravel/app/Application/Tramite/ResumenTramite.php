@@ -263,7 +263,7 @@ class ResumenTramite
                 : $this->seccion('niveles', 'pendiente', $rutaNiveles, $tipoPersona === null ? self::completaPrimero(EstadoPaso2::RESPONSABLE) : null),
             $this->seccion(
                 'documentos',
-                $this->estadoDocumentos($escuela->id, $tipoPersona),
+                $this->estadoDocumentos($escuela->id, $tipoPersona, $etapaFaltante),
                 route('tramite.paso2-documentos', ['escuela' => $escuela->id]),
                 match (true) {
                     $tipoPersona === null => self::completaPrimero(EstadoPaso2::RESPONSABLE),
@@ -279,13 +279,20 @@ class ResumenTramite
      * todos sus documentos y sin niveles los ve «completado» (y bloqueados hasta elegir niveles), no «en curso».
      * en_curso = algunos documentos pero no todos, o todos con una vigencia vencida (EstadoPaso2 decide qué es completo).
      */
-    private function estadoDocumentos(int $escuelaId, ?string $tipoPersona): string
+    private function estadoDocumentos(int $escuelaId, ?string $tipoPersona, ?string $etapaFaltante): string
     {
         if ($tipoPersona === null) {
             return 'pendiente';
         }
 
-        if ($this->estadoPaso2->documentosCompletos($escuelaId) && $this->estadoPaso2->documentosVigentes($escuelaId)) {
+        // etapaFaltante ya evaluó completitud y vigencia salvo cuando se detuvo antes, en NIVELES (expediente histórico).
+        $satisfechos = match ($etapaFaltante) {
+            null => true,
+            EstadoPaso2::DOCUMENTOS => false,
+            default => $this->estadoPaso2->documentosCompletos($escuelaId) && $this->estadoPaso2->documentosVigentes($escuelaId),
+        };
+
+        if ($satisfechos) {
             return 'completado';
         }
 

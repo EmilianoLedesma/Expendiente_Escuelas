@@ -91,4 +91,34 @@ class AvisosEnValidacionFinalTest extends TestCase
 
         $this->assertSame([], $this->advertencias(app(EjecutarValidacionFinal::class)->evaluar($escuela->id)->filas));
     }
+
+    /**
+     * Revisión PR #15: cada observación sale una sola vez en el reporte (y por tanto en el PDF y en la vista SEDEQ).
+     * Ninguna regla del motor documental evalúa vigencias; solo observacionesDeVigencia() las presenta.
+     */
+    public function test_cada_observacion_aparece_una_sola_vez_en_todo_el_reporte(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela, reemplazos: [
+            'escritura_inmueble' => $this->contrato(now()->subMonth()->toDateString()),
+            'constancia_seguridad_estructural' => new DatosDocumento(
+                fechaEmision: now()->subMonth()->toDateString(), folioConstancia: 'CSE-1', tipoVigencia: 'sin_fecha_expresa',
+                peritoNombre: 'Ing. Juan Pérez', calidadProfesional: 'dro', peritoCedulaProfesional: '1234567', peritoRegistroDro: 'DRO-1',
+                peritoRegistroAutoridad: 'Municipio de Querétaro', peritoRegistroFecha: now()->subYears(3)->toDateString(),
+                peritoRegistroVencimiento: now()->subYear()->toDateString(),
+            ),
+        ]);
+
+        $validacion = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
+        $todas = [...$validacion->filas, ...array_merge(...array_map(fn ($s) => $s->filas, $validacion->niveles)), ...array_merge(...array_map(fn ($s) => $s->filas, $validacion->capacidad))];
+        $porDocumento = [];
+        foreach ($this->advertencias($todas) as $fila) {
+            foreach (array_keys($fila->documentos) as $clave) {
+                $porDocumento[$clave] = ($porDocumento[$clave] ?? 0) + 1;
+            }
+        }
+
+        $this->assertSame(['constancia_seguridad_estructural' => 1, 'escritura_inmueble' => 1], array_intersect_key($porDocumento, array_flip(['constancia_seguridad_estructural', 'escritura_inmueble'])));
+        $this->assertCount(count(app(ValidarVigenciaDocumentos::class)->avisos($escuela->id)), $this->advertencias($todas), 'una fila por aviso, ninguna repetida');
+    }
 }
