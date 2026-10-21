@@ -114,7 +114,7 @@ class ContenidoGeneralRevisionTest extends TestCase
         $escritura = DocumentoPlantel::create(['plantel_id' => $plantelId, 'tipo_documento_id' => TipoDocumento::where('clave', 'escritura_inmueble')->value('id'), 'archivo_path' => 'plantel/e.pdf']);
         AcreditacionOcupacionLegal::create(['documento_plantel_id' => $escritura->id, 'tipo' => 'arrendamiento', 'arrendador_comodante' => 'Inmobiliaria Sol', 'arrendatario_comodatario' => 'Juana Pérez', 'fecha_contrato' => '2024-01-10', 'vigencia_contrato' => '2029-01-10', 'ratificado_notario' => true]);
         $constancia = DocumentoPlantel::create(['plantel_id' => $plantelId, 'tipo_documento_id' => TipoDocumento::where('clave', 'constancia_seguridad_estructural')->value('id'), 'archivo_path' => 'plantel/c.pdf', 'fecha_emision' => '2026-02-20']);
-        ConstanciaSeguridadEstructural::create(['documento_plantel_id' => $constancia->id, 'perito_nombre' => 'Pedro Perito', 'perito_registro_dro' => 'DRO-77', 'vigencia_constancia' => '2027-02-20']);
+        ConstanciaSeguridadEstructural::create(['documento_plantel_id' => $constancia->id, 'perito_nombre' => 'Pedro Perito', 'perito_registro_dro' => 'DRO-77', 'vigencia_constancia' => '2027-02-20', 'tipo_vigencia' => 'fecha_expresa']);
 
         $acreditacion = $this->filas('documentos', 'Datos de '.TipoDocumento::where('clave', 'escritura_inmueble')->value('nombre'));
         $seguridad = $this->filas('documentos', 'Datos de '.TipoDocumento::where('clave', 'constancia_seguridad_estructural')->value('nombre'));
