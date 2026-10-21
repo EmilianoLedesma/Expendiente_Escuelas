@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble;
 use App\Application\Inmueble\RegistrarDatosInmueble;
+use App\Application\Tramite\TramiteEditable;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
@@ -143,7 +144,8 @@ class RegistrarDatosInmuebleTest extends TestCase
         ]);
     }
 
-    public function test_un_segundo_nivel_no_reescribe_el_plantel_pero_si_marca_su_paso(): void
+    /** WS-7b-2: un segundo nivel reemplaza el plantel mientras el otro no tenga datos propios de Paso 3 y lo conserva cuando sí. */
+    public function test_un_segundo_nivel_reemplaza_el_plantel_sin_bloqueo_y_lo_conserva_con_bloqueo(): void
     {
         $primaria = $this->escuelaNivel('primaria');
         app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $primaria->id, $this->datos(1200.5));
@@ -151,9 +153,16 @@ class RegistrarDatosInmuebleTest extends TestCase
         $preescolar = $this->escuelaNivel('preescolar');
         app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $preescolar->id, $this->datos(9999.0));
 
-        $this->assertEquals(1200.5, (float) $this->plantel->fresh()->metros_totales);
+        $this->assertEquals(9999.0, (float) $this->plantel->fresh()->metros_totales);
         $this->assertSame(2, DB::table('servicios_cercanos')->where('plantel_id', $this->plantel->id)->count());
         $this->assertSame(2, DB::table('inmueble_estudios_actuales')->where('plantel_id', $this->plantel->id)->count());
+
+        // Primaria declara datos propios de Paso 3: el plantel queda bloqueado para preescolar.
+        $primaria->update(['modalidad' => 'escolarizada']);
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $preescolar->id, $this->datos(5555.0));
+
+        $this->assertEquals(9999.0, (float) $this->plantel->fresh()->metros_totales);
+        $this->assertSame(2, DB::table('servicios_cercanos')->where('plantel_id', $this->plantel->id)->count());
 
         $pasoId = DB::table('pasos_captura')->where('clave', 'inmueble')->value('id');
         $this->assertDatabaseHas('escuela_nivel_pasos', [
@@ -161,6 +170,140 @@ class RegistrarDatosInmuebleTest extends TestCase
             'paso_captura_id' => $pasoId,
             'estado' => 'completado',
         ]);
+    }
+
+    public function test_reeditar_reemplaza_campos_y_conjuntos_cuando_no_esta_bloqueado(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos(1200.5));
+
+        $nuevos = new DatosInmueble(
+            metrosTotales: 800.0,
+            metrosConstruidos: 400.0,
+            tieneAstaBandera: false,
+            serviciosCercanos: [
+                ['nombre' => 'Hospital General', 'tipo' => 'salud', 'esPublico' => true, 'distanciaValor' => 2.0, 'distanciaUnidad' => 'km'],
+            ],
+        );
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $nuevos);
+
+        $plantel = $this->plantel->fresh();
+        $this->assertEquals(800.0, (float) $plantel->metros_totales);
+        $this->assertNull($plantel->colindancia_norte);
+        $this->assertNull($plantel->latitud);
+        $this->assertFalse((bool) $plantel->tiene_asta_bandera);
+        $this->assertSame(['Hospital General'], DB::table('servicios_cercanos')->where('plantel_id', $this->plantel->id)->pluck('nombre')->all());
+        $this->assertSame(0, DB::table('inmueble_estudios_actuales')->where('plantel_id', $this->plantel->id)->count());
+    }
+
+    /** Bloqueado: solo se completan campos nulos; false es un valor, null es completable. */
+    public function test_bloqueado_completa_solo_campos_nulos_y_no_cambia_los_que_tienen_valor(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $preescolar = $this->escuelaNivel('preescolar');
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $primaria->id, new DatosInmueble(
+            metrosTotales: 1000.0,
+            metrosConstruidos: 500.0,
+            colindanciaNorte: 'Calle Norte',
+            tieneAstaBandera: false,
+        ));
+        $primaria->update(['modalidad' => 'escolarizada']);
+
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $preescolar->id, new DatosInmueble(
+            metrosTotales: 7777.0,
+            metrosConstruidos: 7777.0,
+            colindanciaNorte: 'Otra calle',
+            colindanciaSur: 'Calle Sur',
+            latitud: 20.5,
+            tieneAstaBandera: true,
+        ));
+
+        $plantel = $this->plantel->fresh();
+        $this->assertEquals(1000.0, (float) $plantel->metros_totales);
+        $this->assertEquals(500.0, (float) $plantel->metros_construidos);
+        $this->assertSame('Calle Norte', $plantel->colindancia_norte);
+        $this->assertSame('Calle Sur', $plantel->colindancia_sur);
+        $this->assertEquals(20.5, (float) $plantel->latitud);
+        $this->assertFalse((bool) $plantel->tiene_asta_bandera, 'false es un valor: no se sobrescribe');
+        $this->assertNull($plantel->longitud);
+    }
+
+    public function test_bloqueado_completa_la_bandera_nula(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $preescolar = $this->escuelaNivel('preescolar');
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $primaria->id, new DatosInmueble(metrosTotales: 1000.0, metrosConstruidos: 500.0));
+        $primaria->update(['modalidad' => 'escolarizada']);
+
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $preescolar->id, new DatosInmueble(metrosTotales: 1.0, metrosConstruidos: 1.0, tieneAstaBandera: false));
+
+        $this->assertFalse($this->plantel->fresh()->tiene_asta_bandera);
+        $this->assertNotNull($this->plantel->fresh()->tiene_asta_bandera);
+    }
+
+    public function test_bloqueado_inserta_servicios_solo_si_no_habia_ninguno(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $preescolar = $this->escuelaNivel('preescolar');
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $primaria->id, new DatosInmueble(metrosTotales: 1000.0, metrosConstruidos: 500.0));
+        $primaria->update(['modalidad' => 'escolarizada']);
+
+        // Plantel sin servicios ni estudios: el nivel bloqueado los aporta.
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $preescolar->id, $this->datos());
+        $this->assertSame(2, DB::table('servicios_cercanos')->where('plantel_id', $this->plantel->id)->count());
+        $this->assertSame(2, DB::table('inmueble_estudios_actuales')->where('plantel_id', $this->plantel->id)->count());
+
+        // Ya los hay: un segundo envío bloqueado no los toca.
+        $otros = new DatosInmueble(
+            metrosTotales: 1.0,
+            metrosConstruidos: 1.0,
+            serviciosCercanos: [['nombre' => 'Otro', 'tipo' => 'salud', 'esPublico' => null, 'distanciaValor' => null, 'distanciaUnidad' => null]],
+            estudiosActuales: [['nivelEducativoId' => null, 'otroNivelTexto' => 'Otro', 'numeroAlumnos' => 1]],
+        );
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $preescolar->id, $otros);
+
+        $this->assertSame(2, DB::table('servicios_cercanos')->where('plantel_id', $this->plantel->id)->count());
+        $this->assertDatabaseMissing('servicios_cercanos', ['nombre' => 'Otro']);
+        $this->assertDatabaseMissing('inmueble_estudios_actuales', ['otro_nivel_texto' => 'Otro']);
+    }
+
+    public function test_un_tramite_hermano_enviado_rechaza_la_edicion(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $otraEscuela = Escuela::create(['plantel_id' => $this->plantel->id, 'solicitante_id' => Solicitante::factory()->create()->id]);
+        EscuelaNivel::create([
+            'escuela_id' => $otraEscuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'secundaria')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', '!=', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+
+        try {
+            app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
+        }
+        $this->assertNull($this->plantel->fresh()->metros_totales);
+    }
+
+    public function test_la_edicion_toma_el_bloqueo_de_todos_los_niveles_del_plantel_primero(): void
+    {
+        $escuelaNivel = $this->escuelaNivel('primaria');
+        $this->escuelaNivel('preescolar');
+        $sql = [];
+        DB::listen(function ($query) use (&$sql) {
+            $sql[] = $query->sql;
+        });
+
+        app(RegistrarDatosInmueble::class)->ejecutar($this->plantel->id, $escuelaNivel->id, $this->datos());
+
+        $bloqueos = array_values(array_filter($sql, fn (string $s) => str_ends_with($s, 'for update') || str_ends_with($s, 'for share')));
+        $this->assertNotEmpty($bloqueos);
+        $this->assertMatchesRegularExpression('/^select .* from "escuela_niveles" .* for update$/', $bloqueos[0], 'El primer bloqueo debe ser FOR UPDATE sobre todos los niveles del plantel.');
+        $primerEscuelas = array_search(true, array_map(fn (string $s) => preg_match('/from "escuelas".* for share$/', $s) === 1, $bloqueos), true);
+        $this->assertNotFalse($primerEscuelas);
+        $this->assertGreaterThan(0, $primerEscuelas, 'escuelas se bloquea después de escuela_niveles.');
     }
 
     public function test_ya_capturados_es_falso_antes_y_verdadero_despues(): void

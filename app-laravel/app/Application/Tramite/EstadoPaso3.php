@@ -50,6 +50,12 @@ class EstadoPaso3
         return $posicion === 0 || in_array($catalogo[$posicion - 1], $this->completados($escuelaNivelId), true);
     }
 
+    /** ¿El sub-paso `$pasoClave` de este nivel está marcado `completado`? Misma fuente que el orden del wizard. */
+    public function completado(int $escuelaNivelId, string $pasoClave): bool
+    {
+        return in_array($pasoClave, $this->completados($escuelaNivelId), true);
+    }
+
     /** @return list<string> */
     private function catalogo(): array
     {

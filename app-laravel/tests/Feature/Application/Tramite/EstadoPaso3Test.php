@@ -107,6 +107,23 @@ class EstadoPaso3Test extends TestCase
         $this->assertNull(app(EstadoPaso3::class)->primerPendiente($this->escuelaNivelId));
     }
 
+    public function test_completado_refleja_la_bandera_del_paso(): void
+    {
+        $estado = app(EstadoPaso3::class);
+        $this->assertFalse($estado->completado($this->escuelaNivelId, 'inmueble'));
+
+        DB::table('escuela_nivel_pasos')->insert([
+            'escuela_nivel_id' => $this->escuelaNivelId,
+            'paso_captura_id' => DB::table('pasos_captura')->where('clave', 'inmueble')->value('id'),
+            'estado' => 'en_progreso',
+        ]);
+        $this->assertFalse($estado->completado($this->escuelaNivelId, 'inmueble'));
+
+        $this->completar('inmueble');
+        $this->assertTrue($estado->completado($this->escuelaNivelId, 'inmueble'));
+        $this->assertFalse($estado->completado($this->escuelaNivelId, 'infraestructura'));
+    }
+
     public function test_una_clave_desconocida_es_un_error(): void
     {
         $this->expectException(InvalidArgumentException::class);
