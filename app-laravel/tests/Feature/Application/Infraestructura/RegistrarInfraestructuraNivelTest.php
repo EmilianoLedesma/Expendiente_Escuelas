@@ -452,8 +452,8 @@ class RegistrarInfraestructuraNivelTest extends TestCase
     }
 
     // WS-2 item 1 — un espacio cuyo único dato es campo_futbol (tipoSuperficie
-    // o formato) debe escribirse: tieneDatosSignificativos() ignoraba
-    // campoFutbol y el espacio se perdía en silencio aunque el formulario ya
+    // o formato) debe escribirse: la regla de "¿trae dato?" (hoy
+    // FilaSignificativa::espacio()) ignoraba campoFutbol y el espacio se perdía en silencio aunque el formulario ya
     // lo hubiera construido.
     public function test_espacio_con_solo_campo_futbol_declarado_se_escribe(): void
     {

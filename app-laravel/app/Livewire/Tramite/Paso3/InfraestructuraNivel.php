@@ -7,9 +7,12 @@ use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\CatalogosInfraestructura;
 use App\Application\Infraestructura\CategoriasSanitariosPorNivel;
+use App\Application\Infraestructura\DTO\DatosEdicionInfraestructura;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
+use App\Application\Infraestructura\EditarInfraestructuraCompartida;
 use App\Application\Infraestructura\InfraestructuraYaCapturada;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
+use App\Application\Tramite\RegistroCompartidoBloqueado;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Concerns\NotificaToast;
@@ -19,6 +22,7 @@ use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
 use App\Models\TipoEspacio;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -43,6 +47,10 @@ use Livewire\Component;
  * solo lo aplicable a este nivel que aún no existe). tiposAplicables() y
  * categoriasSanitarios() ya excluyen lo capturado, así que lo que se
  * renderiza como editable es exactamente lo que se envía en guardar().
+ *
+ * WS-7b-2: para el dueño (EscuelaNivelPolicy::editarCompartido) "ya capturado" es
+ * un segundo formulario: edicion* → guardarEdicion() → EditarInfraestructuraCompartida.
+ * El responsable por nivel lo sigue viendo de solo lectura.
  */
 #[Layout('layouts.tramite')]
 class InfraestructuraNivel extends Component
@@ -71,6 +79,18 @@ class InfraestructuraNivel extends Component
 
     public float|int|string|null $superficieAulasM2 = null;
 
+    /** Dueño del trámite: "ya capturado" se edita (si no, solo lectura). */
+    public bool $puedeEditar = false;
+
+    /** @var array<int, array<string, mixed>> tipo_espacio_id => campos de la fila ya capturada (+ quitar) */
+    public array $edicionEspacios = [];
+
+    /** @var array<string, array<string, mixed>> categoria => campos del sanitario ya capturado (+ quitar) */
+    public array $edicionSanitarios = [];
+
+    /** @var array<int, array<string, mixed>> tipo_material_id => acervo ya capturado de la biblioteca */
+    public array $edicionMateriales = [];
+
     public function mount(EscuelaNivel $escuelaNivel, InfraestructuraYaCapturada $yaCapturada): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -81,6 +101,14 @@ class InfraestructuraNivel extends Component
 
         $this->tiposCapturados = $yaCapturada->tiposCapturados($this->plantelId());
         $this->categoriasCapturadas = $yaCapturada->categoriasCapturadas($this->plantelId());
+
+        $this->puedeEditar = Gate::allows('editarCompartido', $escuelaNivel);
+        if ($this->puedeEditar) {
+            $edicion = app(CatalogosInfraestructura::class)->edicionCapturada($this->plantelId());
+            $this->edicionEspacios = $edicion['espacios'];
+            $this->edicionSanitarios = $edicion['sanitarios'];
+            $this->edicionMateriales = $edicion['materiales'];
+        }
 
         $aulas = AulaNivel::where('escuela_nivel_id', $escuelaNivel->id)->first();
         if ($aulas !== null) {
@@ -163,6 +191,89 @@ class InfraestructuraNivel extends Component
         $this->redirectRoute('tramite.paso3-mobiliario', ['escuelaNivel' => $this->escuelaNivel->id]);
     }
 
+    public function guardarEdicion(EditarInfraestructuraCompartida $editarInfraestructura): void
+    {
+        // El caso de uso no autoriza: solo el dueño edita lo compartido (403 al responsable por nivel).
+        Gate::authorize('editarCompartido', $this->escuelaNivel);
+
+        $this->validate($this->conPrefijoEdicion($this->rules()), [], $this->conPrefijoEdicion((array) trans('validation.attributes')));
+
+        $espacios = $quitarEspacios = $sanitarios = $quitarSanitarios = [];
+
+        foreach ($this->espaciosCapturados() as $capturado) {
+            $tipo = $capturado->tipoEspacio;
+            $entrada = $this->edicionEspacios[$tipo->id] ?? [];
+
+            if (! empty($entrada['quitar'])) {
+                $quitarEspacios[] = (int) $tipo->id;
+
+                continue;
+            }
+
+            // La edición reemplaza la fila entera: se reenvía todo, hijos incluidos.
+            $espacios[] = $this->filaEspacio($tipo, $entrada, $tipo->permite_material_biblioteca ? $this->materialesDeclarados($this->edicionMateriales) : []);
+        }
+
+        foreach ($this->categoriasCapturadas as $categoria) {
+            $entrada = $this->edicionSanitarios[$categoria] ?? [];
+
+            if (! empty($entrada['quitar'])) {
+                $quitarSanitarios[] = $categoria;
+
+                continue;
+            }
+
+            $sanitarios[] = $this->filaSanitario($categoria, $entrada);
+        }
+
+        try {
+            $editarInfraestructura->ejecutar(
+                $this->plantelId(),
+                $this->escuelaNivel->id,
+                new DatosEdicionInfraestructura($espacios, $sanitarios, $quitarEspacios, $quitarSanitarios),
+            );
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            // WS-7a §5.4: otro trámite del plantel ya se envió (o, con bloqueo, se pidió quitar).
+            $this->addError('plantel', $e->getMessage());
+            $this->toast('No se guardó', $e->getMessage(), 'error');
+
+            return;
+        }
+
+        // Recarga la pantalla: lo quitado vuelve a ofrecerse en «por capturar».
+        $this->toastAlRedirigir('Infraestructura actualizada', 'Los cambios a lo ya capturado se guardaron.');
+        $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $this->escuelaNivel->id]);
+    }
+
+    /**
+     * Mismas reglas (o nombres de atributo) que el formulario «por capturar», con las claves edicion*.
+     *
+     * @param  array<string, mixed>  $porClave  claves espacios.* / sanitarios.* / materialesBiblioteca.*
+     * @return array<string, mixed>
+     */
+    private function conPrefijoEdicion(array $porClave): array
+    {
+        $prefijos = ['espacios.' => 'edicionEspacios.', 'sanitarios.' => 'edicionSanitarios.', 'materialesBiblioteca.' => 'edicionMateriales.'];
+        $edicion = [];
+
+        foreach ($porClave as $clave => $valor) {
+            foreach ($prefijos as $de => $a) {
+                if (str_starts_with((string) $clave, $de)) {
+                    $edicion[$a.substr((string) $clave, strlen($de))] = $valor;
+                }
+            }
+        }
+
+        return $edicion;
+    }
+
     /** Tipos de espacio aplicables al nivel en curso y aún no capturados por el plantel, en orden de captura. */
     public function tiposAplicables(): Collection
     {
@@ -223,44 +334,60 @@ class InfraestructuraNivel extends Component
         $declarados = [];
 
         foreach ($this->tiposAplicables() as $tipo) {
-            $entrada = $this->espacios[$tipo->id] ?? [];
-            $materiales = $tipo->permite_material_biblioteca ? $this->materialesDeclarados() : [];
-            $cantidad = $entrada['cantidad'] ?? null;
-
             // WS-2 item 1: si el "¿trae dato?" se decidiera aquí Y en
-            // RegistrarInfraestructuraNivel::tieneDatosSignificativos(), las
-            // dos copias podían divergir (como pasó con campoFutbol, que
-            // esta regla contaba pero la del caso de uso ignoraba). Ahora se
-            // construye la entrada para todo tipo aplicable y el caso de uso
-            // decide solo, con una única regla.
-            $declarados[] = [
-                'tipoEspacioId' => (int) $tipo->id,
-                'cantidad' => ($cantidad === null || $cantidad === '') ? null : (int) $cantidad,
-                'superficieM2' => $this->numeroONull($entrada['superficieM2'] ?? null),
-                'capacidadPromedio' => ($entrada['capacidadPromedio'] ?? '') === '' ? null : (int) $entrada['capacidadPromedio'],
-                'ventilacionNatural' => isset($entrada['ventilacionNatural']) ? (bool) $entrada['ventilacionNatural'] : null,
-                'iluminacionNatural' => isset($entrada['iluminacionNatural']) ? (bool) $entrada['iluminacionNatural'] : null,
-                'destinadoA' => ($entrada['destinadoA'] ?? '') === '' ? null : (string) $entrada['destinadoA'],
-                'campoFutbol' => $tipo->permite_campo_futbol
-                    ? [
-                        'tipoSuperficie' => ($entrada['campoFutbolTipoSuperficie'] ?? '') === '' ? null : (string) $entrada['campoFutbolTipoSuperficie'],
-                        'formato' => ($entrada['campoFutbolFormato'] ?? '') === '' ? null : (string) $entrada['campoFutbolFormato'],
-                    ]
-                    : null,
-                'materialesBiblioteca' => $materiales,
-            ];
+            // FilaSignificativa::espacio(), las dos copias podían divergir
+            // (como pasó con campoFutbol, que esta regla contaba pero la del
+            // caso de uso ignoraba). Ahora se construye la entrada para todo
+            // tipo aplicable y el caso de uso decide solo, con una única regla.
+            $declarados[] = $this->filaEspacio(
+                $tipo,
+                $this->espacios[$tipo->id] ?? [],
+                $tipo->permite_material_biblioteca ? $this->materialesDeclarados($this->materialesBiblioteca) : [],
+            );
         }
 
         return $declarados;
     }
 
-    /** @return list<array<string, mixed>> */
-    private function materialesDeclarados(): array
+    /**
+     * Fila de espacio con la forma de DatosInfraestructuraNivel y DatosEdicionInfraestructura.
+     *
+     * @param  array<string, mixed>  $entrada
+     * @param  list<array<string, mixed>>  $materiales
+     * @return array<string, mixed>
+     */
+    private function filaEspacio(TipoEspacio $tipo, array $entrada, array $materiales): array
+    {
+        $cantidad = $entrada['cantidad'] ?? null;
+
+        return [
+            'tipoEspacioId' => (int) $tipo->id,
+            'cantidad' => ($cantidad === null || $cantidad === '') ? null : (int) $cantidad,
+            'superficieM2' => $this->numeroONull($entrada['superficieM2'] ?? null),
+            'capacidadPromedio' => ($entrada['capacidadPromedio'] ?? '') === '' ? null : (int) $entrada['capacidadPromedio'],
+            'ventilacionNatural' => isset($entrada['ventilacionNatural']) ? (bool) $entrada['ventilacionNatural'] : null,
+            'iluminacionNatural' => isset($entrada['iluminacionNatural']) ? (bool) $entrada['iluminacionNatural'] : null,
+            'destinadoA' => ($entrada['destinadoA'] ?? '') === '' ? null : (string) $entrada['destinadoA'],
+            'campoFutbol' => $tipo->permite_campo_futbol
+                ? [
+                    'tipoSuperficie' => ($entrada['campoFutbolTipoSuperficie'] ?? '') === '' ? null : (string) $entrada['campoFutbolTipoSuperficie'],
+                    'formato' => ($entrada['campoFutbolFormato'] ?? '') === '' ? null : (string) $entrada['campoFutbolFormato'],
+                ]
+                : null,
+            'materialesBiblioteca' => $materiales,
+        ];
+    }
+
+    /**
+     * @param  array<int|string, array<string, mixed>>  $fuente  tipo_material_id => titulos/volumenes
+     * @return list<array<string, mixed>>
+     */
+    private function materialesDeclarados(array $fuente): array
     {
         $declarados = [];
         $idsValidos = $this->materialesDisponibles()->pluck('id')->all();
 
-        foreach ($this->materialesBiblioteca as $tipoMaterialId => $entrada) {
+        foreach ($fuente as $tipoMaterialId => $entrada) {
             if (! in_array((int) $tipoMaterialId, $idsValidos, true)) {
                 continue;
             }
@@ -288,26 +415,32 @@ class InfraestructuraNivel extends Component
         $declarados = [];
 
         foreach ($this->categoriasSanitarios() as $categoria) {
-            $entrada = $this->sanitarios[$categoria] ?? [];
-
             // WS-2 item 1 / Minor 8: misma razón que espaciosDeclarados() —
-            // RegistrarInfraestructuraNivel::tieneDatosSignificativosSanitario()
-            // es la única fuente de "¿trae dato?".
-            $declarados[] = [
-                'categoria' => $categoria,
-                'cantidadRetretes' => ($entrada['cantidadRetretes'] ?? '') === '' ? null : (int) $entrada['cantidadRetretes'],
-                'cantidadMingitorios' => ($entrada['cantidadMingitorios'] ?? '') === '' ? null : (int) $entrada['cantidadMingitorios'],
-                'cantidadLavabos' => ($entrada['cantidadLavabos'] ?? '') === '' ? null : (int) $entrada['cantidadLavabos'],
-                'superficieM2' => $this->numeroONull($entrada['superficieM2'] ?? null),
-                'ventilacionNatural' => isset($entrada['ventilacionNatural']) ? (bool) $entrada['ventilacionNatural'] : null,
-                'iluminacionNatural' => isset($entrada['iluminacionNatural']) ? (bool) $entrada['iluminacionNatural'] : null,
-                'cantidadBacinicas' => $categoria === 'alumnado_maternal' && ($entrada['cantidadBacinicas'] ?? '') !== ''
-                    ? (int) $entrada['cantidadBacinicas']
-                    : null,
-            ];
+            // FilaSignificativa::sanitario() es la única fuente de "¿trae dato?".
+            $declarados[] = $this->filaSanitario($categoria, $this->sanitarios[$categoria] ?? []);
         }
 
         return $declarados;
+    }
+
+    /**
+     * @param  array<string, mixed>  $entrada
+     * @return array<string, mixed>
+     */
+    private function filaSanitario(string $categoria, array $entrada): array
+    {
+        return [
+            'categoria' => $categoria,
+            'cantidadRetretes' => ($entrada['cantidadRetretes'] ?? '') === '' ? null : (int) $entrada['cantidadRetretes'],
+            'cantidadMingitorios' => ($entrada['cantidadMingitorios'] ?? '') === '' ? null : (int) $entrada['cantidadMingitorios'],
+            'cantidadLavabos' => ($entrada['cantidadLavabos'] ?? '') === '' ? null : (int) $entrada['cantidadLavabos'],
+            'superficieM2' => $this->numeroONull($entrada['superficieM2'] ?? null),
+            'ventilacionNatural' => isset($entrada['ventilacionNatural']) ? (bool) $entrada['ventilacionNatural'] : null,
+            'iluminacionNatural' => isset($entrada['iluminacionNatural']) ? (bool) $entrada['iluminacionNatural'] : null,
+            'cantidadBacinicas' => $categoria === 'alumnado_maternal' && ($entrada['cantidadBacinicas'] ?? '') !== ''
+                ? (int) $entrada['cantidadBacinicas']
+                : null,
+        ];
     }
 
     private function numeroONull(mixed $valor): ?float
@@ -315,9 +448,14 @@ class InfraestructuraNivel extends Component
         return ($valor === null || $valor === '') ? null : (float) $valor;
     }
 
-    public function render()
+    public function render(RegistroCompartidoBloqueado $registroCompartidoBloqueado)
     {
+        $bloqueado = $this->puedeEditar && $registroCompartidoBloqueado->bloqueado($this->plantelId(), $this->escuelaNivel->id);
+
         return view('livewire.tramite.paso3.infraestructura-nivel', [
+            'bloqueado' => $bloqueado,
+            // Con bloqueo, lo ya guardado (no nulo) queda de solo lectura: el caso de uso solo completa nulos.
+            'guardado' => $bloqueado ? app(CatalogosInfraestructura::class)->edicionCapturada($this->plantelId()) : null,
             'encabezado' => ResumenTramite::encabezado('infraestructura', $this->escuelaNivel->nivelEducativo),
             'tipos' => $this->tiposAplicables(),
             'categorias' => $this->categoriasSanitarios(),

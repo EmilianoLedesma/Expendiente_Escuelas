@@ -4,13 +4,18 @@ namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Infraestructura\EditarInfraestructuraCompartida;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
+use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
+use App\Models\ResponsableNivel;
 use App\Models\Solicitante;
+use App\Models\User;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
@@ -478,5 +483,117 @@ class Paso3InfraestructuraNivelTest extends TestCase
             ->assertHasErrors('numeroAulas');
 
         $this->assertDatabaseCount('aulas_nivel', 0);
+    }
+
+    /** Primaria captura dirección, biblioteca con acervo y un sanitario; devuelve el escuela_nivel. */
+    private function capturarPrimaria(): EscuelaNivel
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $librosId = (int) DB::table('tipos_material_biblioteca')->where('clave', 'libros')->value('id');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("espacios.{$this->idTipo('direccion')}.cantidad", 1)
+            ->set("espacios.{$this->idTipo('direccion')}.superficieM2", 18.5)
+            ->set("espacios.{$this->idTipo('biblioteca')}.cantidad", 1)
+            ->set("materialesBiblioteca.{$librosId}.numeroTitulos", 300)
+            ->set('sanitarios.alumnado_masculino.cantidadRetretes', 4)
+            ->set('sanitarios.alumnado_masculino.superficieM2', 12)
+            ->set('numeroAulas', 6)
+            ->set('superficieAulasM2', 240)
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        return $primaria;
+    }
+
+    public function test_el_dueno_ve_lo_capturado_precargado_y_lo_edita(): void
+    {
+        $primaria = $this->capturarPrimaria();
+        $direccionId = $this->idTipo('direccion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->assertSet("edicionEspacios.{$direccionId}.cantidad", 1)
+            ->assertSet('edicionSanitarios.alumnado_masculino.cantidadRetretes', 4)
+            ->assertSeeHtml('id="edicionEspacios.'.$direccionId.'.cantidad"')
+            ->set("edicionEspacios.{$direccionId}.cantidad", 2)
+            ->call('guardarEdicion')
+            ->assertHasNoErrors();
+
+        $direccion = DB::table('instalaciones_espacios')->where('plantel_id', $this->plantel->id)->where('tipo_espacio_id', $direccionId)->first();
+        $this->assertSame(2, (int) $direccion->cantidad);
+        $this->assertEquals(18.5, (float) $direccion->superficie_m2);
+        // La edición reemplaza la fila entera: lo que no se tocó se reenvía y no se pierde.
+        $this->assertDatabaseHas('biblioteca_materiales', ['numero_titulos' => 300]);
+        $this->assertDatabaseHas('sanitarios', ['plantel_id' => $this->plantel->id, 'categoria' => 'alumnado_masculino', 'cantidad_retretes' => 4]);
+    }
+
+    public function test_el_responsable_por_nivel_no_puede_editar_lo_capturado(): void
+    {
+        $primaria = $this->capturarPrimaria();
+        $direccionId = $this->idTipo('direccion');
+        $delegado = User::factory()->create();
+        ResponsableNivel::create(['user_id' => $delegado->id, 'escuela_nivel_id' => $primaria->id, 'invitado_por_solicitante_id' => $this->solicitante->id]);
+
+        Livewire::actingAs($delegado)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->assertSee('Infraestructura del plantel (ya registrada)')
+            ->assertDontSeeHtml('id="edicionEspacios.'.$direccionId.'.cantidad"')
+            ->set("edicionEspacios.{$direccionId}", ['cantidad' => 9])
+            ->call('guardarEdicion')
+            ->assertForbidden();
+
+        $this->assertSame(1, (int) DB::table('instalaciones_espacios')->where('tipo_espacio_id', $direccionId)->value('cantidad'));
+    }
+
+    public function test_bloqueado_muestra_el_aviso_y_oculta_quitar(): void
+    {
+        $primaria = $this->capturarPrimaria();
+        $preescolar = $this->escuelaNivel('preescolar');
+        DB::table('aulas_nivel')->insert(['escuela_nivel_id' => $preescolar->id, 'numero_aulas' => 2, 'superficie_m2' => 60]);
+        $direccionId = $this->idTipo('direccion');
+
+        $html = Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->assertSee('Otro nivel ya capturó: solo puedes completar campos vacíos')
+            ->assertDontSee('Quitar este registro')
+            ->html();
+
+        // Lo ya capturado queda de solo lectura; lo vacío se puede completar.
+        $this->assertMatchesRegularExpression('/<input[^>]*id="edicionEspacios\.'.$direccionId.'\.cantidad"[^>]*disabled/s', $html);
+        $this->assertDoesNotMatchRegularExpression('/<input[^>]*id="edicionEspacios\.'.$direccionId.'\.capacidadPromedio"[^>]*disabled/s', $html);
+    }
+
+    public function test_error_de_validacion_se_muestra_en_el_campo(): void
+    {
+        $primaria = $this->capturarPrimaria();
+        $direccionId = $this->idTipo('direccion');
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->set("edicionEspacios.{$direccionId}.cantidad", null)
+            ->set("edicionEspacios.{$direccionId}.superficieM2", null)
+            ->call('guardarEdicion')
+            ->assertHasErrors(["edicionEspacios.{$direccionId}.tipoEspacioId"])
+            ->assertSeeHtml('id="edicionEspacios.'.$direccionId.'.tipoEspacioId"');
+
+        $this->assertSame(1, (int) DB::table('instalaciones_espacios')->where('tipo_espacio_id', $direccionId)->value('cantidad'));
+    }
+
+    public function test_tramite_hermano_enviado_muestra_el_error_de_plantel(): void
+    {
+        $primaria = $this->capturarPrimaria();
+
+        $this->mock(EditarInfraestructuraCompartida::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')
+                ->andThrow(new PrecondicionIncumplida(TramiteEditable::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ.'));
+        });
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->call('guardarEdicion')
+            ->assertNoRedirect()
+            ->assertHasErrors('plantel');
     }
 }
