@@ -21,9 +21,11 @@ use Livewire\Component;
 /**
  * Presentación pura: enlaza campos, valida forma, llama a
  * IniciarTramiteNuevo, reacciona al resultado. Ninguna regla de negocio ni
- * acceso a Eloquent/DB vive aquí (ADR-001). Con el catálogo geográfico importado
- * el municipio se elige de los de Querétaro (ADR-008/ADR-017); sin él se conserva
- * el campo de texto. IniciarTramiteNuevo vuelve a validar el id.
+ * acceso a Eloquent/DB vive aquí (ADR-001). Con municipios de Querétaro en el
+ * catálogo geográfico el municipio se elige de esa lista (ADR-008/ADR-017); sin ellos
+ * se conserva el campo de texto. Reglas y vista deciden con la misma lista. Cuando
+ * llega un id, IniciarTramiteNuevo lo vuelve a validar; un texto sin id lo acepta
+ * como dato heredado (mismo criterio que el certificado de número oficial).
  */
 #[Layout('layouts.tramite')]
 class Paso1Preregistro extends Component
@@ -77,16 +79,25 @@ class Paso1Preregistro extends Component
         ];
     }
 
+    /** Municipios de Querétaro del catálogo, leídos una vez por request (no en cada validación al salir de un campo). @var list<array{id: int, nombre: string}>|null */
+    private ?array $municipiosQueretaro = null;
+
+    /** @return list<array{id: int, nombre: string}> */
+    private function municipiosQueretaro(): array
+    {
+        return $this->municipiosQueretaro ??= app(ListarCatalogoGeografico::class)->municipiosDeQueretaro();
+    }
+
     /** @return array<string, list<mixed>> */
     private function reglasMunicipio(string $siEsNuevo): array
     {
-        $queretaro = app(ListarCatalogoGeografico::class)->idDeQueretaro();
+        $municipios = $this->municipiosQueretaro();
 
-        if ($queretaro === null) {
+        if ($municipios === []) {
             return ['municipio' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150)];
         }
 
-        return ['municipioId' => [$siEsNuevo, 'nullable', 'integer', Rule::exists('municipios', 'id')->where('entidad_federativa_id', $queretaro)]];
+        return ['municipioId' => [$siEsNuevo, 'nullable', 'integer', Rule::in(array_column($municipios, 'id'))]];
     }
 
     /** Mismo texto que PlantelNoDisponible: no revelar si el plantel existe para otro solicitante. */
@@ -96,7 +107,7 @@ class Paso1Preregistro extends Component
             'plantelId.exists' => (new PlantelNoDisponible)->getMessage(),
             'numeroInt.regex' => 'El número interior solo puede contener dígitos.',
             'municipioId.required_if' => 'Selecciona el municipio.',
-            'municipioId.exists' => 'Selecciona un municipio de Querétaro de la lista.',
+            'municipioId.in' => 'Selecciona un municipio de Querétaro de la lista.',
         ];
     }
 
@@ -144,14 +155,14 @@ class Paso1Preregistro extends Component
         $this->redirectRoute('tramite.paso2', ['escuela' => $resultado->escuelaId]);
     }
 
-    public function render(ListarPlantelesDisponibles $listarPlantelesDisponibles, ListarCatalogoGeografico $catalogoGeografico)
+    public function render(ListarPlantelesDisponibles $listarPlantelesDisponibles)
     {
         return view('livewire.tramite.paso1-preregistro', [
             'planteles' => $this->bifurcacion === 'existente'
                 ? $listarPlantelesDisponibles->ejecutar(auth()->user()->solicitante->getKey())
                 : collect(),
             'encabezado' => ResumenTramite::encabezado('plantel'),
-            'municipiosQueretaro' => $this->bifurcacion === 'nuevo' ? $catalogoGeografico->municipiosDeQueretaro() : [],
+            'municipiosQueretaro' => $this->bifurcacion === 'nuevo' ? $this->municipiosQueretaro() : [],
         ]);
     }
 }

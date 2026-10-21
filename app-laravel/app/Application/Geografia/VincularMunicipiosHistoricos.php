@@ -37,16 +37,20 @@ class VincularMunicipiosHistoricos
         }
 
         $todos = Municipio::query()->get(['id', 'entidad_federativa_id', 'nombre']);
+        // Índice por nombre normalizado, armado una vez: cada fila se resuelve sin volver a normalizar el catálogo.
+        $porNombre = $todos->groupBy(fn (Municipio $m) => $this->normalizador->normalizar($m->nombre))->toBase();
 
         $planteles = $this->clasificar(
             DB::table('planteles')->whereNull('municipio_id')->orderBy('id')->get(['id', 'municipio']),
-            fn (\stdClass $fila) => $todos->where('entidad_federativa_id', $queretaro),
+            $porNombre,
+            fn (\stdClass $fila) => $queretaro,
         );
 
         $certificados = $this->clasificar(
             DB::table('certificados_numero_oficial')->whereNull('municipio_id')->orderBy('documento_plantel_id')
                 ->get(['documento_plantel_id as id', 'municipio', 'entidad_federativa_id']),
-            fn (\stdClass $fila) => $fila->entidad_federativa_id === null ? $todos : $todos->where('entidad_federativa_id', (int) $fila->entidad_federativa_id),
+            $porNombre,
+            fn (\stdClass $fila) => $fila->entidad_federativa_id === null ? null : (int) $fila->entidad_federativa_id,
         );
 
         if ($aplicar) {
@@ -68,17 +72,20 @@ class VincularMunicipiosHistoricos
 
     /**
      * @param  Collection<int, \stdClass>  $filas
-     * @param  callable(\stdClass): Collection<int, Municipio>  $ambito
+     * @param  Collection<array-key, \Illuminate\Database\Eloquent\Collection<int, Municipio>>  $porNombre  municipios por nombre normalizado
+     * @param  callable(\stdClass): ?int  $ambito  entidad en la que se busca; null = todo el catálogo
      * @return array<string, list<array{id: int, texto: string, municipio_id?: int}>>
      */
-    private function clasificar(Collection $filas, callable $ambito): array
+    private function clasificar(Collection $filas, Collection $porNombre, callable $ambito): array
     {
         $resultado = ['vinculables' => [], 'ambiguos' => [], 'sin_correspondencia' => []];
 
         foreach ($filas as $fila) {
             $texto = (string) $fila->municipio;
             $buscado = $this->normalizador->normalizar($texto);
-            $candidatos = $buscado === '' ? collect() : $ambito($fila)->filter(fn (Municipio $m) => $this->normalizador->normalizar($m->nombre) === $buscado)->values();
+            $entidad = $ambito($fila);
+            $candidatos = $buscado === '' ? collect() : collect($porNombre->get($buscado, []))
+                ->filter(fn (Municipio $m) => $entidad === null || $m->entidad_federativa_id === $entidad)->values();
 
             match ($candidatos->count()) {
                 0 => $resultado['sin_correspondencia'][] = ['id' => (int) $fila->id, 'texto' => $texto],

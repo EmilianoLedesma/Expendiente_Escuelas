@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\Tramite;
 
 use App\Livewire\Tramite\Paso1Preregistro;
+use App\Models\EntidadFederativa;
 use App\Models\Plantel;
 use App\Models\Solicitante;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,6 +62,20 @@ class Paso1MunicipioCatalogoTest extends TestCase
 
     public function test_sin_catalogo_se_conserva_el_campo_de_texto(): void
     {
+        $this->pagina()
+            ->assertSeeHtml('wire:model.blur="municipio"')
+            ->set('municipio', 'Querétaro')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertNull(Plantel::sole()->municipio_id);
+    }
+
+    /** Revisión PR #15: con la entidad importada y sin municipios, la vista y las reglas deben decidir lo mismo (texto). */
+    public function test_con_la_entidad_pero_sin_municipios_se_usa_el_texto_y_se_puede_guardar(): void
+    {
+        EntidadFederativa::create(['clave' => 22, 'nombre' => 'QUERÉTARO']);
+
         $this->pagina()
             ->assertSeeHtml('wire:model.blur="municipio"')
             ->set('municipio', 'Querétaro')
