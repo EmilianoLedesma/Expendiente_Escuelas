@@ -32,4 +32,4 @@ El punto 5 y la relectura del inmueble (ADR-013) se absorben en WS-7; los demás
 
 ## Siguen abiertos (requieren a SEDEQ)
 
-`PENDIENTE-umbral-educacion-fisica.md` (incluye P1), `PENDIENTE-perfiles-trabajador-social-prefecto.md`, `PENDIENTE-dictamenes-por-nivel.md`, `PENDIENTE-matriz-espacios-por-nivel.md`. Preguntas redactadas en `docs/reports/2026-10-07-consulta-a-sedeq.md`. Y `PENDIENTE-edicion-hasta-envio.md`, que se cierra con el plan de WS-7.
+`PENDIENTE-umbral-educacion-fisica.md` (incluye P1), `PENDIENTE-perfiles-trabajador-social-prefecto.md`, `PENDIENTE-dictamenes-por-nivel.md`, `PENDIENTE-matriz-espacios-por-nivel.md`. Preguntas redactadas en `docs/reports/2026-10-07-consulta-a-sedeq.md`. Y `ADR-019-edicion-hasta-envio.md`, que se cierra con el plan de WS-7.

@@ -4,7 +4,7 @@
 
 ## Resolución (2026-10-07)
 
-Se resuelve dentro de WS-7 ("edición hasta el envío", `PENDIENTE-edicion-hasta-envio.md`): Datos del inmueble debe poder leerse y corregirse hasta el envío, con la misma rama de solo lectura/edición que ya tiene Infraestructura del nivel. No se hace nada por separado.
+Se resuelve dentro de WS-7 ("edición hasta el envío", `ADR-019-edicion-hasta-envio.md`): Datos del inmueble debe poder leerse y corregirse hasta el envío, con la misma rama de solo lectura/edición que ya tiene Infraestructura del nivel. No se hace nada por separado.
 
 ---
 **Abierto:** 2026-09-21
@@ -54,4 +54,4 @@ solo lectura, sin cambios de comportamiento. Este documento dejó constancia
 del problema; no lo corrigió.
 
 ## Actualización (2026-10-01)
-La decisión D8 del brief de remediación ya fue respondida por el dueño y quedó absorbida en WS-7 ("edición hasta el envío"): ver `PENDIENTE-edicion-hasta-envio.md`. Este archivo sigue abierto porque la relectura y corrección de los datos del inmueble en el asistente aún no está implementada.
+La decisión D8 del brief de remediación ya fue respondida por el dueño y quedó absorbida en WS-7 ("edición hasta el envío"): ver `ADR-019-edicion-hasta-envio.md`. Este archivo sigue abierto porque la relectura y corrección de los datos del inmueble en el asistente aún no está implementada.
