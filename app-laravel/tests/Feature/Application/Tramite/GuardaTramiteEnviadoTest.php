@@ -9,7 +9,9 @@ use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\EscuelaNiveles\ResumenEliminacionNivel;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Infraestructura\DTO\DatosEdicionInfraestructura;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
+use App\Application\Infraestructura\EditarInfraestructuraCompartida;
 use App\Application\Infraestructura\RegistrarInfraestructuraNivel;
 use App\Application\Inmueble\DTO\DatosInmueble;
 use App\Application\Inmueble\RegistrarDatosInmueble;
@@ -93,6 +95,7 @@ class GuardaTramiteEnviadoTest extends TestCase
                 jurisdiccionEmisora: 'municipio_queretaro', clasificacionRiesgo: 'alto', ejercicio: 2026, tipoVigencia: 'sin_fecha_expresa',
             ))],
             'RegistrarDatosNivel' => [fn (Escuela $e, EscuelaNivel $n) => app(RegistrarDatosNivel::class)->ejecutar($n->id, 'vespertino', 'mixto')],
+            'EditarInfraestructuraCompartida (plantel)' => [fn (Escuela $e, EscuelaNivel $n) => app(EditarInfraestructuraCompartida::class)->ejecutar($e->plantel_id, $n->id, new DatosEdicionInfraestructura(espacios: [], sanitarios: []))],
             'EjecutarValidacionFinal::ejecutar' => [fn (Escuela $e, EscuelaNivel $n) => app(EjecutarValidacionFinal::class)->ejecutar($e->id)],
         ];
     }

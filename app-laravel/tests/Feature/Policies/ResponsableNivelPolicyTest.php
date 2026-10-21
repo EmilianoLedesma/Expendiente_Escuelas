@@ -37,6 +37,21 @@ class ResponsableNivelPolicyTest extends TestCase
         }
     }
 
+    /** WS-7b-2: corregir o quitar filas compartidas del plantel (espacios, sanitarios) es solo del dueño. */
+    public function test_editar_compartido_es_solo_del_dueno_y_solo_en_captura(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($dueno);
+        $responsable = $this->responsableDe($nivel);
+
+        $this->assertTrue($dueno->user->can('editarCompartido', $nivel), 'dueño en captura');
+        $this->assertFalse($responsable->can('editarCompartido', $nivel), 'responsable por nivel');
+        $this->assertFalse(Solicitante::factory()->create()->user->can('editarCompartido', $nivel), 'ajeno');
+
+        $enviado = $this->nivelDe($dueno, 'primaria', 'en_revision');
+        $this->assertFalse($dueno->user->can('editarCompartido', $enviado), 'trámite enviado');
+    }
+
     public function test_verresumen_abre_al_responsable_pero_view_update_delete_siguen_siendo_del_dueno(): void
     {
         $dueno = Solicitante::factory()->create();
