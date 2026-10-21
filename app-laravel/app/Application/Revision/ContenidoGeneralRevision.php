@@ -4,21 +4,11 @@ namespace App\Application\Revision;
 
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\DocumentosNivelCompletos;
-use App\Models\AcreditacionOcupacionLegal;
-use App\Models\CertificadoNumeroOficial;
-use App\Models\ConstanciaCurp;
-use App\Models\ConstanciaSituacionFiscal;
-use App\Models\CredencialIne;
-use App\Models\DocumentoEscuela;
-use App\Models\DocumentoEscuelaNivel;
-use App\Models\DocumentoPlantel;
-use App\Models\Escuela;
+use App\Application\Documentos\MetadatosDocumentales;
 use App\Models\EscuelaNivel;
 use App\Models\Gestor;
 use App\Models\PersonaFisica;
 use App\Models\PersonaMoral;
-use App\Models\ReciboPagoDerechos;
-use App\Models\RelacionAcervoBibliografico;
 use App\Models\ResponsableLegal;
 use App\Models\TernaNombre;
 use App\Models\TipoDocumento;
@@ -29,13 +19,15 @@ use Illuminate\Support\Facades\DB;
  * Lo que el solicitante capturó en Paso 2 y que el resumen de ConsultarTramiteSedeq no trae: responsable completo,
  * datos estructurados de los documentos y de los documentos del nivel, y los niveles solicitados.
  * Solo lectura. Lo invoca ContenidoPasoRevision, que ya verificó el acceso al nivel; no revalida.
- * Solo muestra lo que la captura guarda: un dato vacío no genera fila.
+ * Los datos de los documentos los lee MetadatosDocumentales, el mismo lector de la vista de solo lectura de SEDEQ:
+ * un dato que el documento no guardó se muestra «No capturado», nunca se omite ni se da por incumplido.
  */
 final class ContenidoGeneralRevision
 {
     public function __construct(
         private readonly DocumentosCompletos $documentos,
         private readonly DocumentosNivelCompletos $documentosNivel,
+        private readonly MetadatosDocumentales $metadatos,
     ) {}
 
     /** @return list<array{titulo: string, filas: list<array{0: string, 1: string}>, documentos: list<array{nombre: string, archivo: string, href: string}>}> */
@@ -114,48 +106,10 @@ final class ContenidoGeneralRevision
         }
 
         $tipos = TipoDocumento::whereIn('clave', $this->documentos->clavesAplicables($tipoPersona))->orderBy('id')->get();
-        $plantel = DocumentoPlantel::with(['dictamenUsoSuelo', 'constanciaSeguridadEstructural', 'acreditacionOcupacionLegal'])
-            ->where('plantel_id', Escuela::findOrFail($escuelaId)->plantel_id)->get()->keyBy('tipo_documento_id');
-        $escuela = DocumentoEscuela::where('escuela_id', $escuelaId)->get()->keyBy('tipo_documento_id');
-        $oficial = CertificadoNumeroOficial::whereIn('documento_plantel_id', $plantel->pluck('id')->all())->get()->keyBy('documento_plantel_id');
-        $ine = CredencialIne::whereIn('documento_escuela_id', $escuela->pluck('id')->all())->get()->keyBy('documento_escuela_id');
-        $curp = ConstanciaCurp::whereIn('documento_escuela_id', $escuela->pluck('id')->all())->get()->keyBy('documento_escuela_id');
-        $fiscal = ConstanciaSituacionFiscal::whereIn('documento_escuela_id', $escuela->pluck('id')->all())->get()->keyBy('documento_escuela_id');
+        $datos = $this->metadatos->paraEscuela($escuelaId, $tipos->pluck('clave')->all());
 
         foreach ($tipos as $tipo) {
-            $p = $plantel->get($tipo->id);
-            $e = $escuela->get($tipo->id);
-            $filas = match ($tipo->clave) {
-                'escritura_inmueble' => $this->acreditacion($p?->acreditacionOcupacionLegal),
-                'dictamen_uso_suelo' => self::datos([
-                    'Fecha de emisión' => self::fecha($p?->fecha_emision),
-                    'Autoridad que expide' => $p?->dictamenUsoSuelo?->autoridad_expide,
-                    'Folio del dictamen' => $p?->dictamenUsoSuelo?->folio_dictamen,
-                    'Giro que autoriza' => $p?->dictamenUsoSuelo?->giro_autorizado,
-                ]),
-                'constancia_seguridad_estructural' => self::datos([
-                    'Fecha de emisión' => self::fecha($p?->fecha_emision),
-                    'Nombre del perito' => $p?->constanciaSeguridadEstructural?->perito_nombre,
-                    'Cédula profesional del perito' => $p?->constanciaSeguridadEstructural?->perito_cedula_profesional,
-                    'Registro DRO' => $p?->constanciaSeguridadEstructural?->perito_registro_dro,
-                    'Autoridad del registro' => $p?->constanciaSeguridadEstructural?->perito_registro_autoridad,
-                    'Vigencia del registro' => self::fecha($p?->constanciaSeguridadEstructural?->perito_registro_vigencia),
-                    'Vigencia de la constancia' => self::fecha($p?->constanciaSeguridadEstructural?->vigencia_constancia),
-                ]),
-                'visto_bueno_proteccion_civil' => self::datos(['Fecha de emisión' => self::fecha($p?->fecha_emision)]),
-                'certificado_numero_oficial' => self::datos([
-                    'Calle' => $oficial->get($p?->id)?->calle,
-                    'Número exterior' => $oficial->get($p?->id)?->numero_ext,
-                    'Colonia' => $oficial->get($p?->id)?->colonia,
-                    'Municipio' => $oficial->get($p?->id)?->municipio,
-                    'Código postal' => $oficial->get($p?->id)?->codigo_postal,
-                ]),
-                'ine' => self::datos(['Nombre en el documento' => $ine->get($e?->id)?->nombre, 'CURP' => $ine->get($e?->id)?->curp]),
-                'constancia_curp' => self::datos(['Nombre en el documento' => $curp->get($e?->id)?->nombre, 'CURP' => $curp->get($e?->id)?->curp]),
-                'constancia_situacion_fiscal' => self::datos(['Nombre o razón social' => $fiscal->get($e?->id)?->nombre_razon_social, 'RFC' => $fiscal->get($e?->id)?->rfc]),
-                default => [],
-            };
-
+            $filas = self::filasDe($datos[$tipo->clave] ?? []);
             if ($filas !== []) {
                 $bloques[] = self::bloque("Datos de {$tipo->nombre}", $filas);
             }
@@ -183,26 +137,11 @@ final class ContenidoGeneralRevision
             $bloques[] = self::bloque('Datos del nivel', $datos);
         }
 
-        $tipos = TipoDocumento::whereIn('clave', $this->documentosNivel->clavesAplicables($escuelaNivelId))->orderBy('id')->get()->keyBy('id');
-        $docs = DocumentoEscuelaNivel::where('escuela_nivel_id', $escuelaNivelId)->whereIn('tipo_documento_id', $tipos->keys()->all())->orderBy('id')->get();
-        $recibos = ReciboPagoDerechos::whereIn('documento_escuela_nivel_id', $docs->pluck('id')->all())->get()->keyBy('documento_escuela_nivel_id');
-        $acervos = RelacionAcervoBibliografico::whereIn('documento_escuela_nivel_id', $docs->pluck('id')->all())->get()->keyBy('documento_escuela_nivel_id');
+        $tipos = TipoDocumento::whereIn('clave', $this->documentosNivel->clavesAplicables($escuelaNivelId))->orderBy('id')->get();
+        $datos = $this->metadatos->paraEscuelaNivel($escuelaNivelId);
 
-        foreach ($docs as $doc) {
-            $tipo = $tipos[$doc->tipo_documento_id];
-            $recibo = $recibos->get($doc->id);
-            $acervo = $acervos->get($doc->id);
-            $filas = match (true) {
-                $tipo->clave === 'recibo_pago_derechos' => self::datos([
-                    'Folio del recibo' => $recibo?->folio,
-                    'Monto pagado' => $recibo?->monto === null ? null : '$'.number_format((float) $recibo->monto, 2),
-                    'Fecha de pago' => self::fecha($recibo?->fecha_pago),
-                    'Referencia del portal de pago' => $recibo?->portal_referencia,
-                ]),
-                $acervo !== null => self::datos(['Número de títulos' => (string) $acervo->numero_titulos]),
-                default => [],
-            };
-
+        foreach ($tipos as $tipo) {
+            $filas = self::filasDe($datos[$tipo->clave] ?? []);
             if ($filas !== []) {
                 $bloques[] = self::bloque("Datos de {$tipo->nombre}", $filas);
             }
@@ -225,29 +164,15 @@ final class ContenidoGeneralRevision
         return [self::bloque('Niveles solicitados', $filas)];
     }
 
-    /** @return list<array{0: string, 1: string}> */
-    private function acreditacion(?AcreditacionOcupacionLegal $a): array
+    /**
+     * Filas de MetadatosDocumentales como pares [etiqueta, valor]; un documento vencido lo dice en el valor.
+     *
+     * @param  list<array{etiqueta: string, valor: string, estado: string|null}>  $filas
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function filasDe(array $filas): array
     {
-        $tipos = ['escritura_publica' => 'Escritura pública', 'arrendamiento' => 'Arrendamiento', 'comodato' => 'Comodato', 'otro' => 'Otro'];
-
-        return self::datos([
-            'Tipo de acreditación' => $a === null ? null : ($tipos[$a->tipo] ?? $a->tipo),
-            'Número de escritura' => $a?->numero_escritura,
-            'Fecha de la escritura' => self::fecha($a?->fecha_escritura),
-            'Notario' => $a?->notario_nombre,
-            'Número del notario' => $a?->notario_numero,
-            'Localidad del notario' => $a?->notario_localidad,
-            'Folio del Registro Público de la Propiedad' => $a?->folio_rpp,
-            'Fecha de inscripción RPP' => self::fecha($a?->fecha_inscripcion_rpp),
-            'Arrendador / comodante' => $a?->arrendador_comodante,
-            'Arrendatario / comodatario' => $a?->arrendatario_comodatario,
-            'Fecha del contrato' => self::fecha($a?->fecha_contrato),
-            'Vigencia del contrato' => self::fecha($a?->vigencia_contrato),
-            'Uso autorizado' => $a?->uso_autorizado,
-            'Ratificado ante notario' => $a?->ratificado_notario === null ? null : ($a->ratificado_notario ? 'Sí' : 'No'),
-            'Especifique' => $a?->otro_especifique,
-            'Observaciones' => $a?->observaciones,
-        ]);
+        return array_map(fn (array $f) => [$f['etiqueta'], $f['estado'] === 'vencido' ? "{$f['valor']} (vencido)" : $f['valor']], $filas);
     }
 
     /**

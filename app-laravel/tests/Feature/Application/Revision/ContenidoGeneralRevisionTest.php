@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Revision;
 
+use App\Application\Documentos\MetadatosDocumentales;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Revision\ContenidoPasoRevision;
@@ -119,15 +120,27 @@ class ContenidoGeneralRevisionTest extends TestCase
         $acreditacion = $this->filas('documentos', 'Datos de '.TipoDocumento::where('clave', 'escritura_inmueble')->value('nombre'));
         $seguridad = $this->filas('documentos', 'Datos de '.TipoDocumento::where('clave', 'constancia_seguridad_estructural')->value('nombre'));
 
-        $this->assertContains(['Tipo de acreditación', 'Arrendamiento'], $acreditacion);
-        $this->assertContains(['Arrendador / comodante', 'Inmobiliaria Sol'], $acreditacion);
+        $this->assertContains(['Figura', 'Arrendamiento'], $acreditacion);
+        $this->assertContains(['Arrendador o comodante', 'Inmobiliaria Sol'], $acreditacion);
         $this->assertContains(['Fecha del contrato', '10/01/2024'], $acreditacion);
-        $this->assertContains(['Vigencia del contrato', '10/01/2029'], $acreditacion);
+        $this->assertContains(['Vigencia del contrato', 'Hasta el 10/01/2029'], $acreditacion);
         $this->assertContains(['Ratificado ante notario', 'Sí'], $acreditacion);
         $this->assertContains(['Fecha de emisión', '20/02/2026'], $seguridad);
-        $this->assertContains(['Nombre del perito', 'Pedro Perito'], $seguridad);
-        $this->assertContains(['Registro DRO', 'DRO-77'], $seguridad);
-        $this->assertContains(['Vigencia de la constancia', '20/02/2027'], $seguridad);
+        $this->assertContains(['Profesional que firma', 'Pedro Perito'], $seguridad);
+        $this->assertContains(['Número de registro profesional', 'DRO-77'], $seguridad);
+        $this->assertContains(['Vigencia declarada', 'Hasta el 20/02/2027'], $seguridad);
+    }
+
+    public function test_documentos_usa_el_mismo_lector_que_la_vista_de_solo_lectura_de_sedeq(): void
+    {
+        $this->registrar(new DatosResponsableLegal(tipoPersona: 'fisica', domicilioNotificaciones: 'Calle 1', nombre: 'Juana Pérez'));
+        $constancia = DocumentoPlantel::create(['plantel_id' => $this->nivel->escuela->plantel_id, 'tipo_documento_id' => TipoDocumento::where('clave', 'constancia_seguridad_estructural')->value('id'), 'archivo_path' => 'plantel/c.pdf']);
+        ConstanciaSeguridadEstructural::create(['documento_plantel_id' => $constancia->id, 'perito_nombre' => 'Pedro Perito', 'tipo_vigencia' => 'sin_fecha_expresa']);
+
+        $seguridad = $this->filas('documentos', 'Datos de '.TipoDocumento::where('clave', 'constancia_seguridad_estructural')->value('nombre'));
+
+        $this->assertContains(['Folio', MetadatosDocumentales::NO_CAPTURADO], $seguridad);
+        $this->assertContains(['Vigencia declarada', 'El documento no indica fecha de vencimiento'], $seguridad);
     }
 
     public function test_documentos_nivel_muestra_el_recibo_de_pago_y_el_acervo(): void
@@ -141,8 +154,8 @@ class ContenidoGeneralRevisionTest extends TestCase
         $reciboFilas = $this->filas('documentos_nivel', 'Datos de '.TipoDocumento::where('clave', 'recibo_pago_derechos')->value('nombre'));
         $acervoFilas = $this->filas('documentos_nivel', 'Datos de '.TipoDocumento::where('clave', 'acervo_bibliografico_primaria')->value('nombre'));
 
-        $this->assertContains(['Folio del recibo', 'F-100'], $reciboFilas);
-        $this->assertContains(['Monto pagado', '$1,234.50'], $reciboFilas);
+        $this->assertContains(['Folio', 'F-100'], $reciboFilas);
+        $this->assertContains(['Monto', '$1,234.50'], $reciboFilas);
         $this->assertContains(['Fecha de pago', '01/06/2026'], $reciboFilas);
         $this->assertContains(['Referencia del portal de pago', 'REF-9'], $reciboFilas);
         $this->assertContains(['Número de títulos', '250'], $acervoFilas);
