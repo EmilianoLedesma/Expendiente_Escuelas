@@ -45,7 +45,10 @@
                         'En revisión desde hace' => $espera($actual->diasEspera),
                         'Secciones revisadas' => $actual->revisadas.' de '.$actual->total,
                     ]" />
-                    <x-ui.button-secondary :href="route('sedeq.tramite', ['escuela' => $actual->escuelaId])">Ver trámite (solo lectura)</x-ui.button-secondary>
+                    <div class="flex flex-wrap gap-sm">
+                        <x-ui.button-primary :href="route('sedeq.revision', ['escuelaNivel' => $actual->escuelaNivelId])">Revisar</x-ui.button-primary>
+                        <x-ui.button-secondary :href="route('sedeq.tramite', ['escuela' => $actual->escuelaId])">Ver trámite (solo lectura)</x-ui.button-secondary>
+                    </div>
 
                     <section aria-labelledby="hallazgos-titulo" class="rounded-md border border-dashed border-hairline p-md">
                         <h3 id="hallazgos-titulo" class="text-body-md font-semibold text-ink">Hallazgos del motor</h3>
