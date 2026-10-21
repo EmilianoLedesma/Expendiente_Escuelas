@@ -11,7 +11,6 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\RegistroCompartidoBloqueado;
 use App\Application\Tramite\TramiteEditable;
-use App\Application\Validaciones\ConstruirDatosCapacidad;
 use App\Models\AulaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
@@ -31,8 +30,6 @@ use Illuminate\Support\Facades\DB;
  */
 class RegistrarInfraestructuraNivel
 {
-    private const FALTA_SUPERFICIE = 'Captura la superficie: la revisión de capacidad instalada la usa.';
-
     public function __construct(
         private readonly InfraestructuraYaCapturada $yaCapturada,
         private readonly MarcarPasoCompletado $marcarPasoCompletado,
@@ -185,9 +182,7 @@ class RegistrarInfraestructuraNivel
     {
         $errores = [];
 
-        // Además de "no negativo", el rango de la columna (SMALLINT, NUMERIC(10,2),
-        // NUMERIC(8,2), INTEGER): fuera de él sería un error de base de datos.
-        $fueraDeRango = fn (int|float|null $valor, int|float $maximo): bool => $valor !== null && $valor > $maximo;
+        $fueraDeRango = ReglasFilaInfraestructura::fueraDeRango(...);
 
         if ($datos->numeroAulas < 0) {
             $errores['numeroAulas'] = 'El número de aulas no puede ser negativo.';
@@ -208,12 +203,7 @@ class RegistrarInfraestructuraNivel
         // que lee una regla de capacidad queda vacío, la regla queda "falta capturar" para
         // siempre y bloquearía el envío sin forma de corregirlo: se exige solo en lo que
         // de verdad se va a escribir.
-        $tiposConSuperficie = DB::table('tipos_espacios')
-            ->where('categoria', ConstruirDatosCapacidad::CATEGORIA_RECREATIVA)
-            ->orWhere('clave', ConstruirDatosCapacidad::CLAVE_USOS_MULTIPLES)
-            ->pluck('id')
-            ->all();
-        $tiposBiblioteca = DB::table('tipos_espacios')->where('permite_material_biblioteca', true)->pluck('id')->all();
+        $reglas = ReglasFilaInfraestructura::cargar();
 
         $tiposAplicables = DB::table('niveles_tipos_espacios')
             ->where('nivel_educativo_id', $escuelaNivel->nivel_educativo_id)
@@ -234,41 +224,7 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
-            foreach (['cantidad' => ReglasCaptura::MAX_SMALLINT, 'superficieM2' => ReglasCaptura::MAX_NUMERIC_10_2, 'capacidadPromedio' => ReglasCaptura::MAX_SMALLINT] as $campo => $maximo) {
-                if ($espacio[$campo] !== null && $espacio[$campo] < 0) {
-                    $errores["{$prefijo}.{$campo}"] = 'No puede ser negativo.';
-                } elseif ($fueraDeRango($espacio[$campo], $maximo)) {
-                    $errores["{$prefijo}.{$campo}"] = "No debe ser mayor que {$maximo}.";
-                }
-            }
-
-            if (FilaSignificativa::espacio($espacio)) {
-                if ($espacio['superficieM2'] === null && in_array($espacio['tipoEspacioId'], $tiposConSuperficie, true)) {
-                    $errores["{$prefijo}.superficieM2"] = self::FALTA_SUPERFICIE;
-                }
-
-                if ($espacio['materialesBiblioteca'] === [] && in_array($espacio['tipoEspacioId'], $tiposBiblioteca, true)) {
-                    $errores['materialesBiblioteca'] = 'Captura el acervo de la biblioteca: al menos un tipo de material con su número de títulos.';
-                }
-            }
-
-            foreach ($espacio['materialesBiblioteca'] as $material) {
-                $prefijoMaterial = "materialesBiblioteca.{$material['tipoMaterialId']}";
-
-                if ($material['numeroTitulos'] === null) {
-                    $errores["{$prefijoMaterial}.numeroTitulos"] = 'Captura el número de títulos.';
-                } elseif ($material['numeroTitulos'] < 0) {
-                    $errores["{$prefijoMaterial}.numeroTitulos"] = 'No puede ser negativo.';
-                } elseif ($fueraDeRango($material['numeroTitulos'], ReglasCaptura::MAX_INTEGER)) {
-                    $errores["{$prefijoMaterial}.numeroTitulos"] = 'No debe ser mayor que '.ReglasCaptura::MAX_INTEGER.'.';
-                }
-
-                if ($material['numeroVolumenes'] !== null && $material['numeroVolumenes'] < 0) {
-                    $errores["{$prefijoMaterial}.numeroVolumenes"] = 'No puede ser negativo.';
-                } elseif ($fueraDeRango($material['numeroVolumenes'], ReglasCaptura::MAX_INTEGER)) {
-                    $errores["{$prefijoMaterial}.numeroVolumenes"] = 'No debe ser mayor que '.ReglasCaptura::MAX_INTEGER.'.';
-                }
-            }
+            $errores += $reglas->espacio($espacio, $prefijo, 'materialesBiblioteca');
         }
 
         $categoriasAplicables = $this->categoriasSanitariosPorNivel->paraNivel($escuelaNivel->nivelEducativo->clave);
@@ -287,25 +243,7 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
-            foreach (['cantidadRetretes', 'cantidadMingitorios', 'cantidadLavabos', 'cantidadBacinicas'] as $campo) {
-                if ($sanitario[$campo] !== null && $sanitario[$campo] < 0) {
-                    $errores["{$prefijo}.{$campo}"] = 'No puede ser negativo.';
-                } elseif ($fueraDeRango($sanitario[$campo], ReglasCaptura::MAX_SMALLINT)) {
-                    $errores["{$prefijo}.{$campo}"] = 'No debe ser mayor que '.ReglasCaptura::MAX_SMALLINT.'.';
-                }
-            }
-
-            if ($sanitario['superficieM2'] !== null && $sanitario['superficieM2'] < 0) {
-                $errores["{$prefijo}.superficieM2"] = 'No puede ser negativo.';
-            } elseif ($fueraDeRango($sanitario['superficieM2'], ReglasCaptura::MAX_NUMERIC_8_2)) {
-                $errores["{$prefijo}.superficieM2"] = 'No debe ser mayor que '.ReglasCaptura::MAX_NUMERIC_8_2.'.';
-            }
-
-            if ($sanitario['superficieM2'] === null
-                && str_starts_with($sanitario['categoria'], ConstruirDatosCapacidad::PREFIJO_SANITARIOS_ALUMNOS)
-                && FilaSignificativa::sanitario($sanitario)) {
-                $errores["{$prefijo}.superficieM2"] = self::FALTA_SUPERFICIE;
-            }
+            $errores += $reglas->sanitario($sanitario, $prefijo);
         }
 
         if ($errores !== []) {
