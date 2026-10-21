@@ -3,14 +3,19 @@
 namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\RegistrarDatosInmueble;
+use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
+use App\Models\ResponsableNivel;
+use App\Models\ServicioCercano;
 use App\Models\Solicitante;
 use App\Models\TernaNombre;
+use App\Models\User;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -230,6 +235,99 @@ class Paso3DatosInmuebleTest extends TestCase
             'paso_captura_id' => $pasoId,
             'estado' => 'completado',
         ]);
+    }
+
+    private function capturarComoDueno(EscuelaNivel $nivel): void
+    {
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $nivel])
+            ->set('metrosTotales', 900)
+            ->set('metrosConstruidos', 600)
+            ->set('colindanciaNorte', 'Calle Norte')
+            ->call('agregarServicio')
+            ->set('serviciosCercanos.0.nombre', 'Cruz Roja')
+            ->call('agregarEstudio')
+            ->set('estudiosActuales.0.otroNivelTexto', 'Academia')
+            ->set('estudiosActuales.0.numeroAlumnos', 30)
+            ->call('guardar');
+    }
+
+    // WS-7b-2: el dueño que vuelve a un paso ya completado edita, no rebota.
+    public function test_el_dueno_que_vuelve_ve_el_formulario_precargado(): void
+    {
+        $nivel = $this->escuelaNivel();
+        $this->capturarComoDueno($nivel);
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $nivel])
+            ->assertNoRedirect()
+            ->assertSet('soloLectura', false)
+            ->assertSet('metrosTotales', '900.00')
+            ->assertSet('metrosConstruidos', '600.00')
+            ->assertSet('colindanciaNorte', 'Calle Norte')
+            ->assertSet('serviciosCercanos.0.nombre', 'Cruz Roja')
+            ->assertSet('estudiosActuales.0.otroNivelTexto', 'Academia')
+            ->assertSet('estudiosActuales.0.numeroAlumnos', 30)
+            ->assertDontSee('Otro nivel ya capturó');
+    }
+
+    public function test_muestra_el_aviso_de_bloqueo_cuando_otro_nivel_capturo(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $this->capturarComoDueno($primaria);
+        $preescolar = $this->escuelaNivel('preescolar');
+        $preescolar->update(['modalidad' => 'escolarizada']);
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $primaria])
+            ->assertNoRedirect()
+            ->assertSee('Otro nivel ya capturó: solo puedes completar campos vacíos');
+    }
+
+    public function test_guardar_edicion_actualiza_y_vuelve_a_infraestructura(): void
+    {
+        $nivel = $this->escuelaNivel();
+        $this->capturarComoDueno($nivel);
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $nivel])
+            ->set('metrosTotales', 1000)
+            ->set('serviciosCercanos.0.nombre', 'Hospital General')
+            ->call('guardar')
+            ->assertRedirect(route('tramite.paso3-infraestructura', ['escuelaNivel' => $nivel->id]));
+
+        $this->assertEquals(1000, (float) $this->plantel->fresh()->metros_totales);
+        $this->assertSame(['Hospital General'], ServicioCercano::where('plantel_id', $this->plantel->id)->pluck('nombre')->all());
+    }
+
+    public function test_tramite_hermano_enviado_muestra_el_error_de_plantel(): void
+    {
+        $nivel = $this->escuelaNivel();
+        $this->capturarComoDueno($nivel);
+
+        $this->mock(RegistrarDatosInmueble::class, function ($mock) {
+            $mock->shouldReceive('ejecutar')
+                ->andThrow(new PrecondicionIncumplida(TramiteEditable::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ.'));
+        });
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $nivel])
+            ->call('guardar')
+            ->assertNoRedirect()
+            ->assertHasErrors('plantel');
+    }
+
+    public function test_un_responsable_por_nivel_sigue_siendo_solo_lectura_y_redirige(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $this->capturarComoDueno($primaria);
+        $preescolar = $this->escuelaNivel('preescolar');
+        $delegado = User::factory()->create();
+        ResponsableNivel::create(['user_id' => $delegado->id, 'escuela_nivel_id' => $preescolar->id, 'invitado_por_solicitante_id' => $this->solicitante->id]);
+
+        Livewire::actingAs($delegado)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $preescolar])
+            ->assertRedirect(route('tramite.paso3-infraestructura', ['escuelaNivel' => $preescolar->id]));
     }
 
     public function test_un_no_dueno_recibe_403(): void

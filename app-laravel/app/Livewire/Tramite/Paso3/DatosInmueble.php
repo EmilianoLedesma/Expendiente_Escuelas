@@ -9,15 +9,20 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Inmueble\DatosInmuebleYaCapturados;
 use App\Application\Inmueble\DTO\DatosInmueble as DatosInmuebleDTO;
 use App\Application\Inmueble\RegistrarDatosInmueble;
+use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\RegistroCompartidoBloqueado;
 use App\Application\Tramite\ResumenTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\AcreditacionOcupacionLegal;
 use App\Models\ConstanciaSeguridadEstructural;
 use App\Models\DocumentoPlantel;
 use App\Models\EscuelaNivel;
+use App\Models\InmuebleEstudioActual;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
+use App\Models\ServicioCercano;
 use App\Models\TernaNombre;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -85,6 +90,7 @@ class DatosInmueble extends Component
         EscuelaNivel $escuelaNivel,
         DatosInmuebleYaCapturados $yaCapturados,
         MarcarPasoCompletado $marcarPasoCompletado,
+        EstadoPaso3 $estadoPaso3,
     ): void {
         $this->escuelaNivel = $escuelaNivel;
 
@@ -92,14 +98,57 @@ class DatosInmueble extends Component
             return;
         }
 
-        // Auto-completado multi-nivel (spec §6): los datos son del plantel y ya
-        // están capturados, así que este nivel no tiene nada que capturar aquí.
+        $this->soloLectura = ! Gate::allows('updateInmueble', $escuelaNivel);
+
         if ($yaCapturados->ejecutar($this->plantelId())) {
+            // WS-7b-2: el dueño que ya completó este paso lo edita, precargado.
+            if (! $this->soloLectura && $estadoPaso3->completado($escuelaNivel->id, 'inmueble')) {
+                $this->precargar();
+
+                return;
+            }
+
+            // Auto-completado multi-nivel (spec §6): los datos son del plantel y ya
+            // están capturados, así que este nivel no tiene nada que capturar aquí.
             $marcarPasoCompletado->ejecutar($escuelaNivel->id, 'inmueble');
             $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $escuelaNivel->id]);
         }
+    }
 
-        $this->soloLectura = ! Gate::allows('updateInmueble', $escuelaNivel);
+    private function precargar(): void
+    {
+        $plantel = $this->plantel();
+
+        $this->metrosTotales = $plantel->metros_totales ?? '';
+        $this->metrosConstruidos = $plantel->metros_construidos;
+        $this->colindanciaNorte = (string) $plantel->colindancia_norte;
+        $this->colindanciaSur = (string) $plantel->colindancia_sur;
+        $this->colindanciaEste = (string) $plantel->colindancia_este;
+        $this->colindanciaOeste = (string) $plantel->colindancia_oeste;
+        $this->latitud = $plantel->latitud;
+        $this->longitud = $plantel->longitud;
+        $this->areaCivicaM2 = $plantel->area_civica_m2;
+        $this->tieneAstaBandera = (bool) $plantel->tiene_asta_bandera;
+
+        $this->serviciosCercanos = [];
+        foreach (ServicioCercano::where('plantel_id', $plantel->id)->orderBy('id')->get() as $s) {
+            $this->serviciosCercanos[] = [
+                'nombre' => $s->nombre,
+                'tipo' => $s->tipo,
+                'esPublico' => (bool) $s->es_publico,
+                'distanciaValor' => $s->distancia_valor,
+                'distanciaUnidad' => $s->distancia_unidad ?? 'm',
+            ];
+        }
+
+        $this->estudiosActuales = [];
+        foreach (InmuebleEstudioActual::where('plantel_id', $plantel->id)->orderBy('id')->get() as $e) {
+            $this->estudiosActuales[] = [
+                'nivelEducativoId' => $e->nivel_educativo_id ?? '',
+                'otroNivelTexto' => (string) $e->otro_nivel_texto,
+                'numeroAlumnos' => $e->numero_alumnos,
+            ];
+        }
     }
 
     public function agregarServicio(): void
@@ -187,7 +236,15 @@ class DatosInmueble extends Component
             $this->toastDatosInvalidos();
 
             return;
-        } catch (PrecondicionIncumplida) {
+        } catch (PrecondicionIncumplida $e) {
+            // WS-7a §5.4: otro trámite del plantel ya se envió; los datos compartidos no cambian.
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->addError('plantel', $e->getMessage());
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+
+                return;
+            }
+
             // WS-2.4b: reintenta la compuerta de mount() en vez de un 500.
             $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'inmueble');
 
@@ -272,9 +329,10 @@ class DatosInmueble extends Component
         return $valor === '' ? null : $valor;
     }
 
-    public function render()
+    public function render(RegistroCompartidoBloqueado $registroCompartidoBloqueado)
     {
         return view('livewire.tramite.paso3.datos-inmueble', [
+            'bloqueado' => ! $this->soloLectura && $registroCompartidoBloqueado->bloqueado($this->plantelId(), $this->escuelaNivel->id),
             'encabezado' => ResumenTramite::encabezado('inmueble', $this->escuelaNivel->nivelEducativo),
             'domicilio' => ResumenTramite::domicilio($this->plantel()),
             'plantel' => $this->plantel(),
