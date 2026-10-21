@@ -211,6 +211,12 @@ class ResumenTramite
             : ($nivel === null ? 'Datos generales' : $nivel->nombre)." · Paso {$posicion['paso']} de {$posicion['total']}";
     }
 
+    /** Título de una sección (general o de nivel); lo reutiliza la revisión del SEDEQ. */
+    public static function tituloSeccion(string $clave): string
+    {
+        return (self::GENERALES[$clave] ?? self::PASO3[$clave] ?? throw new \InvalidArgumentException("Sección desconocida: {$clave}"))[0];
+    }
+
     public static function domicilio(Plantel $plantel): string
     {
         $numeroExt = $plantel->numero_ext !== null ? trim($plantel->numero_ext) : '';
