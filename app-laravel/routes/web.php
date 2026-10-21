@@ -10,6 +10,7 @@ use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
 use App\Livewire\Sedeq\ColaRevisor;
+use App\Livewire\Sedeq\RevisionNivel;
 use App\Livewire\Sedeq\Revisores;
 use App\Livewire\Sedeq\TableroSupervisor;
 use App\Livewire\Sedeq\TramiteLectura;
@@ -45,6 +46,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereNumber('escuela')
         ->middleware(['rol:supervisor|revisor', 'can:view,escuela'])
         ->name('sedeq.tramite');
+
+    // El acceso lo imponen los casos de uso de revisión (AuthorizationException => 403).
+    Route::get('/sedeq/revision/{escuelaNivel}', RevisionNivel::class)
+        ->whereNumber('escuelaNivel')
+        ->middleware('rol:supervisor|revisor')
+        ->name('sedeq.revision');
 
     Route::get('/tramite', MisTramitesController::class)->name('tramite.index');
 
