@@ -9,6 +9,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
 use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\RegistroCompartidoBloqueado;
 use App\Application\Tramite\TramiteEditable;
 use App\Application\Validaciones\ConstruirDatosCapacidad;
 use App\Models\AulaNivel;
@@ -39,6 +40,7 @@ class RegistrarInfraestructuraNivel
         private readonly EstadoPaso3 $estadoPaso3,
         private readonly CategoriasSanitariosPorNivel $categoriasSanitariosPorNivel = new CategoriasSanitariosPorNivel,
         private readonly TramiteEditable $tramiteEditable = new TramiteEditable,
+        private readonly RegistroCompartidoBloqueado $registroCompartido = new RegistroCompartidoBloqueado,
     ) {}
 
     /** @throws PrecondicionIncumplida si Paso 2 no está completo, el sub-paso "infraestructura" aún no es alcanzable o el trámite (o, para espacios y sanitarios nuevos, un trámite del mismo plantel) ya se envió (WS-7a). */
@@ -49,9 +51,10 @@ class RegistrarInfraestructuraNivel
         $this->validar($plantelId, $escuelaNivel, $datos);
 
         DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
-            // WS-7a: orden escuela_niveles → escuelas; las guardas del plantel y de
+            // WS-7b-2: bloqueo de todos los niveles del plantel, primero. Orden
+            // escuela_niveles → escuelas; las guardas del plantel y de
             // MarcarPasoCompletado bloquean escuelas después.
-            EscuelaNivel::whereKey($escuelaNivelId)->sharedLock()->value('id');
+            $this->registroCompartido->bloquearNiveles($plantelId);
 
             // ponytail: aulas_nivel no tiene índice único sobre escuela_nivel_id,
             // así que updateOrCreate sobre esa clave es lo que evita filas dobles
@@ -90,7 +93,7 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
-            if (! $this->tieneDatosSignificativos($espacio)) {
+            if (! FilaSignificativa::espacio($espacio)) {
                 continue;
             }
 
@@ -127,51 +130,6 @@ class RegistrarInfraestructuraNivel
         }
     }
 
-    /**
-     * Única fuente de verdad de "¿este espacio trae dato?" (WS-2 item 1): el
-     * componente Livewire ya no pre-filtra por su cuenta — construye la
-     * entrada para todo tipo aplicable y delega la decisión de persistir
-     * aquí, para que no puedan divergir dos copias de la misma regla. Un
-     * booleano solo cuenta como dato cuando es `true`, y campoFutbol solo
-     * cuenta si trae tipoSuperficie o formato — de lo contrario un caller de
-     * API podría crear filas vacías, y por ADR-005 ese tipo quedaría
-     * "capturado" para siempre sin que el solicitante haya declarado nada.
-     *
-     * @param  array{cantidad: int|null, superficieM2: float|null, capacidadPromedio: int|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, destinadoA: string|null, campoFutbol: array{tipoSuperficie: string|null, formato: string|null}|null, materialesBiblioteca: list<array<string, mixed>>}  $espacio
-     */
-    private function tieneDatosSignificativos(array $espacio): bool
-    {
-        return $espacio['cantidad'] !== null
-            || $espacio['superficieM2'] !== null
-            || $espacio['capacidadPromedio'] !== null
-            || $espacio['destinadoA'] !== null
-            || $espacio['ventilacionNatural'] === true
-            || $espacio['iluminacionNatural'] === true
-            || $espacio['materialesBiblioteca'] !== []
-            || ($espacio['campoFutbol'] !== null
-                && ($espacio['campoFutbol']['tipoSuperficie'] !== null || $espacio['campoFutbol']['formato'] !== null));
-    }
-
-    /**
-     * Minor 8 — mismo espíritu que tieneDatosSignificativos() para espacios:
-     * un sanitario todo-null (booleanos solo cuentan si son `true`) no debe
-     * crear fila, para que un caller de API que no filtre como el
-     * componente no marque una categoría como "capturada" (ADR-005) sin
-     * datos reales.
-     *
-     * @param  array{cantidadRetretes: int|null, cantidadMingitorios: int|null, cantidadLavabos: int|null, superficieM2: float|null, ventilacionNatural: bool|null, iluminacionNatural: bool|null, cantidadBacinicas: int|null}  $sanitario
-     */
-    private function tieneDatosSignificativosSanitario(array $sanitario): bool
-    {
-        return $sanitario['cantidadRetretes'] !== null
-            || $sanitario['cantidadMingitorios'] !== null
-            || $sanitario['cantidadLavabos'] !== null
-            || $sanitario['superficieM2'] !== null
-            || $sanitario['cantidadBacinicas'] !== null
-            || $sanitario['ventilacionNatural'] === true
-            || $sanitario['iluminacionNatural'] === true;
-    }
-
     private function escribirSanitarios(int $plantelId, DatosInfraestructuraNivel $datos): void
     {
         $yaCapturadas = $this->yaCapturada->categoriasCapturadas($plantelId);
@@ -181,7 +139,7 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
-            if (! $this->tieneDatosSignificativosSanitario($sanitario)) {
+            if (! FilaSignificativa::sanitario($sanitario)) {
                 continue;
             }
 
@@ -284,7 +242,7 @@ class RegistrarInfraestructuraNivel
                 }
             }
 
-            if ($this->tieneDatosSignificativos($espacio)) {
+            if (FilaSignificativa::espacio($espacio)) {
                 if ($espacio['superficieM2'] === null && in_array($espacio['tipoEspacioId'], $tiposConSuperficie, true)) {
                     $errores["{$prefijo}.superficieM2"] = self::FALTA_SUPERFICIE;
                 }
@@ -345,7 +303,7 @@ class RegistrarInfraestructuraNivel
 
             if ($sanitario['superficieM2'] === null
                 && str_starts_with($sanitario['categoria'], ConstruirDatosCapacidad::PREFIJO_SANITARIOS_ALUMNOS)
-                && $this->tieneDatosSignificativosSanitario($sanitario)) {
+                && FilaSignificativa::sanitario($sanitario)) {
                 $errores["{$prefijo}.superficieM2"] = self::FALTA_SUPERFICIE;
             }
         }
