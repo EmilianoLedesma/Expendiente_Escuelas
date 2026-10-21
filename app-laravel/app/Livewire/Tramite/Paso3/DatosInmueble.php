@@ -329,13 +329,38 @@ class DatosInmueble extends Component
         return $valor === '' ? null : $valor;
     }
 
+    /**
+     * Con otro nivel con datos propios, RegistrarDatosInmueble solo completa NULL (false es un valor):
+     * los campos que ya tienen valor se muestran de solo lectura.
+     *
+     * @return array<string, bool> propiedad del componente => fijo
+     */
+    private function camposFijos(Plantel $plantel): array
+    {
+        $columnas = [
+            'metrosTotales' => 'metros_totales', 'metrosConstruidos' => 'metros_construidos',
+            'colindanciaNorte' => 'colindancia_norte', 'colindanciaSur' => 'colindancia_sur',
+            'colindanciaEste' => 'colindancia_este', 'colindanciaOeste' => 'colindancia_oeste',
+            'latitud' => 'latitud', 'longitud' => 'longitud', 'areaCivicaM2' => 'area_civica_m2',
+            'tieneAstaBandera' => 'tiene_asta_bandera',
+        ];
+
+        return array_map(fn (string $columna): bool => $plantel->getAttribute($columna) !== null, $columnas);
+    }
+
     public function render(RegistroCompartidoBloqueado $registroCompartidoBloqueado)
     {
+        $plantel = $this->plantel();
+        $bloqueado = ! $this->soloLectura && $registroCompartidoBloqueado->bloqueado($this->plantelId(), $this->escuelaNivel->id);
+
         return view('livewire.tramite.paso3.datos-inmueble', [
-            'bloqueado' => ! $this->soloLectura && $registroCompartidoBloqueado->bloqueado($this->plantelId(), $this->escuelaNivel->id),
+            'bloqueado' => $bloqueado,
+            'fijo' => $bloqueado ? $this->camposFijos($plantel) : [],
+            'serviciosFijos' => $bloqueado && ServicioCercano::where('plantel_id', $plantel->id)->exists(),
+            'estudiosFijos' => $bloqueado && InmuebleEstudioActual::where('plantel_id', $plantel->id)->exists(),
             'encabezado' => ResumenTramite::encabezado('inmueble', $this->escuelaNivel->nivelEducativo),
             'domicilio' => ResumenTramite::domicilio($this->plantel()),
-            'plantel' => $this->plantel(),
+            'plantel' => $plantel,
             'terna' => $this->terna(),
             'acreditacion' => $this->acreditacion(),
             'constancia' => $this->constancia(),

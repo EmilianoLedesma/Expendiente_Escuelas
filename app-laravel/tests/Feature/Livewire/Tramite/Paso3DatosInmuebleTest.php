@@ -284,6 +284,76 @@ class Paso3DatosInmuebleTest extends TestCase
             ->assertSee('Otro nivel ya capturó: solo puedes completar campos vacíos');
     }
 
+    private function bloqueadoConDatos(): EscuelaNivel
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $this->capturarComoDueno($primaria);
+        $this->escuelaNivel('preescolar')->update(['modalidad' => 'escolarizada']);
+
+        return $primaria;
+    }
+
+    private function etiquetaInput(string $html, string $id): string
+    {
+        preg_match('/<(?:input|select)[^>]*\bid="'.preg_quote($id, '/').'"[^>]*>/s', $html, $m);
+        $this->assertNotEmpty($m, "No se encontró el control {$id}");
+
+        return $m[0];
+    }
+
+    public function test_bloqueado_deshabilita_los_campos_con_valor_y_deja_editables_los_nulos(): void
+    {
+        $html = Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $this->bloqueadoConDatos()])
+            ->html();
+
+        $this->assertStringContainsString('disabled', $this->etiquetaInput($html, 'metrosTotales'));
+        $this->assertStringContainsString('disabled', $this->etiquetaInput($html, 'colindanciaNorte'));
+        $this->assertStringContainsString('disabled', $this->etiquetaInput($html, 'tieneAstaBandera'));
+        $this->assertStringNotContainsString('disabled', $this->etiquetaInput($html, 'colindanciaSur'));
+        $this->assertStringNotContainsString('disabled', $this->etiquetaInput($html, 'latitud'));
+        $this->assertStringNotContainsString('disabled', $this->etiquetaInput($html, 'areaCivicaM2'));
+        // Conjuntos ya capturados: solo lectura, sin agregar ni quitar.
+        $this->assertStringContainsString('disabled', $this->etiquetaInput($html, 'serviciosCercanos.0.nombre'));
+        $this->assertStringNotContainsString('Agregar institución', $html);
+        $this->assertStringNotContainsString('Quitar', $html);
+        $this->assertStringNotContainsString('Agregar estudio', $html);
+    }
+
+    public function test_desbloqueado_todos_los_campos_siguen_editables(): void
+    {
+        $nivel = $this->escuelaNivel();
+        $this->capturarComoDueno($nivel);
+
+        $html = Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $nivel])
+            ->html();
+
+        $this->assertStringNotContainsString('disabled', $this->etiquetaInput($html, 'metrosTotales'));
+        $this->assertStringNotContainsString('disabled', $this->etiquetaInput($html, 'serviciosCercanos.0.nombre'));
+        $this->assertStringContainsString('Agregar institución', $html);
+        $this->assertStringContainsString('Quitar', $html);
+    }
+
+    public function test_bloqueado_un_valor_alterado_en_un_campo_con_valor_no_se_guarda(): void
+    {
+        $primaria = $this->bloqueadoConDatos();
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(DatosInmueble::class, ['escuelaNivel' => $primaria])
+            ->set('metrosTotales', 5000)
+            ->set('colindanciaNorte', 'Alterada')
+            ->set('colindanciaSur', 'Calle Sur')
+            ->set('serviciosCercanos.0.nombre', 'Alterado')
+            ->call('guardar');
+
+        $plantel = $this->plantel->fresh();
+        $this->assertEquals(900, (float) $plantel->metros_totales);
+        $this->assertSame('Calle Norte', $plantel->colindancia_norte);
+        $this->assertSame('Calle Sur', $plantel->colindancia_sur);
+        $this->assertSame(['Cruz Roja'], ServicioCercano::where('plantel_id', $plantel->id)->pluck('nombre')->all());
+    }
+
     public function test_guardar_edicion_actualiza_y_vuelve_a_infraestructura(): void
     {
         $nivel = $this->escuelaNivel();

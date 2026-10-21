@@ -6,8 +6,8 @@
 1. **RegistroCompartidoBloqueado** (T1): clase única de consulta (`app/Application/`) que dice si otro nivel del plantel ya capturó datos propios de Paso 3, calculado de los datos. Incluye `bloquearNiveles`, que toma `FOR UPDATE` sobre todas las `escuela_niveles` del plantel, ordenadas por id, como primera sentencia.
 2. **RegistrarDatosInmueble editable** (T2): reemplaza campos del plantel y los conjuntos de servicios cercanos y estudios actuales en una transacción; con el registro bloqueado solo rellena nulos.
 3. **Pantalla Datos del inmueble precargada** (T3): ya no redirige para el dueño; usa `EstadoPaso3::completado`.
-4. **FilaSignificativa y bloqueo en RegistrarInfraestructuraNivel** (T4): una fila totalmente vacía se rechaza; el bloqueo de niveles reemplaza el `FOR SHARE` de una fila.
-5. **EditarInfraestructuraCompartida** (T5): editar y borrar filas compartidas de infraestructura y sanitarios, solo para el dueño (política `editarCompartido`); `ReglasFilaInfraestructura` comparte las reglas con el alta; la aplicabilidad usa la unión de niveles del plantel.
+4. **FilaSignificativa y bloqueo en RegistrarInfraestructuraNivel** (T4): una fila totalmente vacía se omite en el alta (el rechazo está solo en `EditarInfraestructuraCompartida`); el bloqueo de niveles reemplaza el `FOR SHARE` de una fila.
+5. **EditarInfraestructuraCompartida** (T5): editar y borrar filas compartidas de infraestructura y sanitarios, solo para el dueño (política `editarCompartido`); `ReglasFilaInfraestructura` comparte las reglas con el alta; la edición valida que el tipo ya esté capturado en el plantel (más estricto que la unión de niveles).
 6. **Sección «Lo ya capturado» editable** en la página de infraestructura (T6), con guarda para que «Guardar» nunca descarte en silencio cambios sin guardar de esa sección.
 7. **Mobiliario: vaciar una cantidad borra la fila** (T7).
 8. **Pruebas de caracterización** de plan de estudios, plantilla y matrícula (T8): los casos de uso ya reescribían; no se halló defecto.
@@ -47,7 +47,9 @@ Todo verde. Pint `--test`: limpio. PHPStan nivel 5 + PHPat: 0 errores. Línea ba
 - **Descargas tras el envío:** tarea pequeña aparte.
 - **Un responsable por nivel sigue sin ver el inmueble capturado** (ADR-015; se redirige).
 - **Plantel reutilizado por otra escuela:** su dueño puede sobrescribir datos del inmueble hasta que algún nivel capture Paso 3.
-- El comentario de `EjecutarValidacionFinal.php` aún cita el nombre viejo `PENDIENTE-edicion-hasta-envio` (código de producción, no se tocó en este cierre); los reportes antiguos conservan el nombre original por ser registros inmutables.
+- Los reportes antiguos conservan el nombre original `PENDIENTE-edicion-hasta-envio` por ser registros inmutables.
+- La pantalla de Datos del inmueble, con el registro bloqueado, muestra de solo lectura los campos con valor (falso cuenta como valor) y los conjuntos de servicios/estudios ya capturados; solo quedan editables los campos nulos (corrección de la revisión final).
+- `EditarInfraestructuraCompartida` no tiene precondición propia de Paso 2 ni de alcanzabilidad; depende de la compuerta del adaptador (página).
 
 ## Menores diferidos que vale la pena conservar
 - `bloqueado()` hace hasta 6 consultas `exists` y se repite en cada render de la pantalla; `plantel()` también se consulta varias veces.
@@ -56,6 +58,6 @@ Todo verde. Pint `--test`: limpio. PHPStan nivel 5 + PHPat: 0 errores. Línea ba
 - El constructor de `RegistrarInfraestructuraNivel` usa `new RegistroCompartidoBloqueado` por defecto (el revisor preferiría requerido); la prueba de bloqueo no demuestra que sea la primera sentencia de la transacción ni el orden por id.
 - Editar y quitar el mismo tipo en una llamada, o `tipoEspacioId` duplicado, no se rechaza en `validar()`; `tipoMaterialId` duplicado da error 500 por la unicidad en BD (previo a 7b-2).
 - `getAttributes()` en la comparación de valores crudos necesita comentario.
-- Mobiliario: sin prueba de «null para fila ausente no hace nada» ni de cantidad 0. **El constructor de datos de capacidad (`ConstruirDatosCapacidad`) no se auditó para filas de mobiliario borradas**, ni otros lectores de `mobiliario_nivel`.
+- Mobiliario: sin prueba de «null para fila ausente no hace nada» ni de cantidad 0. `ConstruirDatosCapacidad` se auditó en la revisión final: mobiliario borrado o infraestructura quitada pasa a `null` (`ConstruirDatosCapacidad.php:121-150,204-215`) y da `no_evaluable`, o `declarada ?? 0` da `no_cumple` (`EvaluadorMobiliario`); ambos bloquean el envío, y `EnviarTramite.php:47` vuelve a ejecutar `evaluar`, así que una bandera vieja no deja pasar datos incompletos.
 - `edicionPendiente` solo se muestra por toast; `categoriasCapturadas` es público; «quitar» es una casilla, no un botón.
 - Escrituras de prueba: la prueba de bloqueo usa solo la modalidad como fuente de bloqueo.

@@ -28,8 +28,8 @@ use Throwable;
  * ValidarVigenciaDocumentos::avisos() join the documental rows as `advertencia`, so the stored report SEDEQ reads
  * carries them; they never block.
  *
- * Sending itself (state change to en_revision, edit lock) is WS-7 —
- * PENDIENTE-edicion-hasta-envio.md. It must re-run this, not trust an older
+ * Sending itself (state change to en_revision, edit lock) is EnviarTramite —
+ * docs/decisions/ADR-019-edicion-hasta-envio.md. It re-runs this, not trusting an older
  * row: data can change after a validation.
  */
 class EjecutarValidacionFinal

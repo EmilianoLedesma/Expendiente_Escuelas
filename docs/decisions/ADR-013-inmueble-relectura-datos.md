@@ -54,4 +54,4 @@ solo lectura, sin cambios de comportamiento. Este documento dejó constancia
 del problema; no lo corrigió.
 
 ## Actualización (2026-10-01)
-La decisión D8 del brief de remediación ya fue respondida por el dueño y quedó absorbida en WS-7 ("edición hasta el envío"): ver `ADR-019-edicion-hasta-envio.md`. Este archivo sigue abierto porque la relectura y corrección de los datos del inmueble en el asistente aún no está implementada.
+La decisión D8 del brief de remediación ya fue respondida por el dueño y quedó absorbida en WS-7 ("edición hasta el envío"): ver `ADR-019-edicion-hasta-envio.md`. La relectura y corrección de los datos del inmueble en el asistente quedó implementada en WS-7b-2 (2026-10-21).
