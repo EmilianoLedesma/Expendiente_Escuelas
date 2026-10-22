@@ -6,6 +6,7 @@ use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
+use App\Application\Revision\ResultadosCambiados;
 use App\Livewire\Sedeq\TramiteLectura;
 use App\Models\AsignacionRevision;
 use App\Models\DocumentoEscuelaNivel;
@@ -109,6 +110,25 @@ class TramiteLecturaTest extends TestCase
         $this->abrir($this->supervisor())->assertOk()
             ->assertDontSee('Sin datos del responsable legal')
             ->assertDontSee('Sin documentos del plantel');
+    }
+
+    public function test_el_supervisor_ve_el_aviso_de_resultado_cambiado_solo_en_el_nivel_afectado(): void
+    {
+        $afectado = $this->nivelA->id;
+        $this->mock(ResultadosCambiados::class)->shouldReceive('ejecutar')
+            ->andReturnUsing(fn (int $actor, int $nivel) => $nivel === $afectado ? ['documentos' => ['RFC: antes cumplía y ahora «No cumple».']] : []);
+
+        $html = $this->abrir($this->supervisor())->assertOk()
+            ->assertSee('Resultado cambiado desde que se aceptó')
+            ->assertSee('Documentos generales: RFC: antes cumplía y ahora «No cumple».')
+            ->getContent();
+
+        $this->assertSame(1, substr_count($html, 'data-resultado-cambiado='), 'Solo el nivel afectado lleva el aviso.');
+    }
+
+    public function test_sin_resultados_cambiados_la_vista_del_supervisor_no_muestra_aviso(): void
+    {
+        $this->abrir($this->supervisor())->assertOk()->assertDontSee('Resultado cambiado desde que se aceptó');
     }
 
     public function test_el_supervisor_ve_todos_los_niveles_que_no_estan_en_captura(): void

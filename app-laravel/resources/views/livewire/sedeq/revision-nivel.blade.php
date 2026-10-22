@@ -21,7 +21,11 @@
                         <button type="button" wire:click="abrir('{{ $p['clave'] }}')" aria-current="{{ $abierto ? 'step' : 'false' }}"
                                 @class(['flex w-full min-h-11 cursor-pointer items-center justify-between gap-sm rounded-lg bg-canvas p-sm text-left transition-colors duration-150 hover:bg-surface-soft motion-reduce:transition-none',
                                     'border-2 border-primary' => $abierto, 'border border-hairline' => ! $abierto, 'bg-surface-soft' => $p['corregido']])>
-                            <span class="font-semibold text-ink">{{ $p['titulo'] }}</span>
+                            <span class="font-semibold text-ink">{{ $p['titulo'] }}
+                                @if ($p['estado'] === 'aceptado' && isset($cambiados[$p['clave']]))
+                                    <span class="mt-xxs flex items-center gap-xs text-body-sm font-normal text-warning-ink" data-resultado-cambiado-paso="{{ $p['clave'] }}"><x-ui.icon nombre="exclamation-triangle" class="h-4 w-4" />Resultado cambiado</span>
+                                @endif
+                            </span>
                             @if ($p['corregido'])
                                 <x-ui.status-tag estado="en_curso" texto="Corregido" />
                             @else
@@ -39,6 +43,10 @@
                     <p class="text-body-md font-semibold text-ink">Corregido por el solicitante</p>
                     <p class="text-body-sm text-muted">Motivo anterior: {{ $paso['ultimoMotivo'] }}</p>
                 </div>
+            @endif
+
+            @if ($paso['estado'] === 'aceptado' && isset($cambiados[$paso['clave']]))
+                @include('livewire.sedeq.partials.resultado-cambiado', ['descripciones' => $cambiados[$paso['clave']]])
             @endif
 
             <x-ui.section :title="$contenido['titulo']" class="!mt-0">
