@@ -3,6 +3,7 @@
 namespace Tests\Feature\Application\ResponsableLegal;
 
 use App\Application\Excepciones\DatosInvalidos;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EstadoPaso2;
@@ -19,6 +20,7 @@ use App\Models\ResponsableLegal;
 use App\Models\Solicitante;
 use App\Models\TernaNombre;
 use App\Models\TipoDocumento;
+use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,11 +29,13 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
 class RegistrarResponsableLegalTest extends TestCase
 {
     use CompletaPaso2;
+    use ConTramiteDevuelto;
     use RefreshDatabase;
 
     private function crearEscuela(): Escuela
@@ -386,5 +390,32 @@ class RegistrarResponsableLegalTest extends TestCase
         $this->assertNotNull($niveles);
         $this->assertNotNull($escuelaBloqueada);
         $this->assertLessThan($escuelaBloqueada, $niveles);
+    }
+
+    public function test_escribe_con_el_paso_responsable_reabierto(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = $this->nivelEn($escuela, 'primaria', 'en_revision');
+        $this->devolverTramite($escuela, [$nivel->id => ['responsable' => 'Falta el domicilio']]);
+
+        app(RegistrarResponsableLegal::class)->ejecutar($escuela->id, $this->datos('fisica'));
+
+        $this->assertDatabaseHas('responsables_legales', ['escuela_id' => $escuela->id, 'tipo_persona' => 'fisica']);
+    }
+
+    public function test_lanza_con_el_paso_responsable_aceptado(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = $this->nivelEn($escuela, 'primaria', 'en_revision');
+        $this->devolverTramite($escuela, [$nivel->id => ['plantel' => 'x']], [$nivel->id => ['responsable']]);
+
+        try {
+            app(RegistrarResponsableLegal::class)->ejecutar($escuela->id, $this->datos('fisica'));
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseMissing('responsables_legales', ['escuela_id' => $escuela->id]);
+        }
     }
 }
