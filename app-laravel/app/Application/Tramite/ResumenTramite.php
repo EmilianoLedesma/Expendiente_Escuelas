@@ -98,6 +98,9 @@ class ResumenTramite
     /** La vista es la de un responsable por nivel (no la del dueño); se fija en cada paraEscuela(). */
     private bool $vistaRestringida = false;
 
+    /** Lo activa sinCongelar() mientras arma su resumen. */
+    private bool $sinCongelar = false;
+
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
@@ -117,12 +120,12 @@ class ResumenTramite
         $escuela = Escuela::with(['plantel', 'escuelaNiveles.nivelEducativo', 'ternasNombres'])->findOrFail($escuelaId);
         $enCapturaId = $this->enCapturaId ??= TramiteEditable::idEnCaptura();
         // Estado del trámite completo, también en la vista restringida: un responsable pierde sus acciones igual que el dueño.
-        $this->enviado = TramiteEditable::enviado($escuela->escuelaNiveles->pluck('estado_id'), $enCapturaId);
+        $this->enviado = ! $this->sinCongelar && TramiteEditable::enviado($escuela->escuelaNiveles->pluck('estado_id'), $enCapturaId);
         $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
         $soloNivelIds = $usuarioId === null ? null : $this->nivelesVisibles($escuela, $usuarioId);
         $rondaCerrada = $this->pasosReabiertos->rondaCerrada($escuelaId);
         $observaciones = $rondaCerrada ? $this->observacionesDeEscuela->acotar($this->observacionesDeEscuela->todas($escuelaId), $soloNivelIds) : [];
-        $this->motivosReabiertos = $this->motivosPorSeccion($observaciones);
+        $this->motivosReabiertos = $this->sinCongelar ? [] : $this->motivosPorSeccion($observaciones);
         $this->vistaRestringida = $soloNivelIds !== null;
 
         $generales = $soloNivelIds === null ? $this->generales($escuela, $etapaFaltante) : [];
@@ -170,6 +173,21 @@ class ResumenTramite
             puedeReenviar: $rondaCerrada && $soloNivelIds === null,
             observaciones: $observaciones,
         );
+    }
+
+    /**
+     * Devolución (ReenviarCorrecciones): el resumen como si el trámite siguiera en captura — sin el congelamiento de
+     * «enviado» ni las secciones con_observaciones —, para saber si un paso reabierto vuelve a estar completo con
+     * las mismas compuertas que el hub en captura (EstadoPaso2, EstadoPaso24, escuela_nivel_pasos). Vista del dueño.
+     */
+    public function sinCongelar(int $escuelaId): ResumenTramiteDTO
+    {
+        $this->sinCongelar = true;
+        try {
+            return $this->paraEscuela($escuelaId);
+        } finally {
+            $this->sinCongelar = false;
+        }
     }
 
     /**
