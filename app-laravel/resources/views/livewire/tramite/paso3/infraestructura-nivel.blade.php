@@ -34,7 +34,8 @@
 
         <x-ui.stepper :pasos="$pasos">
         @if ($yaCapturado !== [])
-            <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Infraestructura del plantel (ya registrada)">
+            {{-- $indice++ dentro del atributo se evalúa dos veces (prop + attribute bag): se incrementa aparte. --}}
+            <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" titulo="Infraestructura del plantel (ya registrada)">
             <x-ui.section title="Infraestructura del plantel (ya registrada)">
                 @if (! $puedeEditar)
                     <p class="text-body-sm text-muted">Estos datos son del plantel y ya fueron capturados. Cambiarlos requiere autorización previa de la Dirección de Educación.</p>
@@ -170,10 +171,11 @@
                 @endif
             </x-ui.section>
             </x-ui.stepper-panel>
+            @php $indice++; @endphp
         @endif
 
         @foreach ($tipos->groupBy('categoria') as $categoria => $tiposCategoria)
-            <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" :titulo="$nombresCategoria[$categoria] ?? $categoria">
+            <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" :titulo="$nombresCategoria[$categoria] ?? $categoria">
             <x-ui.section :title="$nombresCategoria[$categoria] ?? $categoria">
                 <div class="hidden gap-sm text-body-sm font-semibold text-muted md:grid {{ $columnas }}" aria-hidden="true">
                     <span>Espacio</span><span>Cantidad</span><span>Superficie (m²)</span><span>Capacidad</span>
@@ -253,10 +255,11 @@
                 @endforeach
             </x-ui.section>
             </x-ui.stepper-panel>
+            @php $indice++; @endphp
         @endforeach
 
         @if (count($categorias) > 0)
-            <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Sanitarios">
+            <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" titulo="Sanitarios">
             <x-ui.section title="Sanitarios">
                 @foreach ($categorias as $categoria)
                     <div wire:key="sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
@@ -279,9 +282,10 @@
                 @endforeach
             </x-ui.section>
             </x-ui.stepper-panel>
+            @php $indice++; @endphp
         @endif
 
-        <x-ui.stepper-panel :indice="$indice++" :total="$totalPasos" titulo="Aulas del nivel">
+        <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" titulo="Aulas del nivel">
         <x-ui.section title="Aulas del nivel">
             <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
                 <x-ui.field id="numeroAulas" label="Número de aulas">

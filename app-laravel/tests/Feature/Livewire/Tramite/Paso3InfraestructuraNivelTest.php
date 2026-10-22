@@ -100,6 +100,7 @@ class Paso3InfraestructuraNivelTest extends TestCase
         preg_match_all('/data-paso="(\d+)"/', $html, $m);
         $ultimo = max(array_map('intval', $m[1]));
         $this->assertGreaterThanOrEqual(3, $ultimo);
+        $this->assertSame(range(0, $ultimo), array_map('intval', $m[1]), 'Cada panel lleva su propio índice, sin saltos.');
 
         $inicioUltimo = strpos($html, 'data-paso="'.$ultimo.'"');
         $this->assertSame(1, substr_count($html, 'Guardar y continuar'));
