@@ -52,7 +52,7 @@ class MarcarPasoCompletado
 
         $tramiteEditable = $this->tramiteEditable ?? app(TramiteEditable::class);
 
-        DB::transaction(function () use ($escuelaNivelId, $pasoCapturaId, $escuelaId, $tramiteEditable) {
+        DB::transaction(function () use ($escuelaNivelId, $pasoClave, $pasoCapturaId, $escuelaId, $tramiteEditable) {
             // WS-7a, orden escuela_niveles → escuelas: el nivel se bloquea antes de
             // cualquier escritura y antes de la guarda (que bloquea la escuela). Un
             // UPDATE de escuela_nivel_pasos no bloquea al nivel por la FK, así que se
@@ -69,9 +69,10 @@ class MarcarPasoCompletado
             );
 
             // WS-7a: los seis casos de uso de Paso 3 llaman aquí dentro de su propia
-            // transacción, así que una sola guarda los revierte a todos.
+            // transacción, así que una sola guarda los revierte a todos. Con la clave del
+            // paso y el nivel, un paso reabierto por una devolución también pasa la guarda.
             if ($escuelaId !== null) {
-                $tramiteEditable->asegurarEscuela((int) $escuelaId);
+                $tramiteEditable->asegurarEscuela((int) $escuelaId, $pasoClave, $escuelaNivelId);
             }
         });
     }
