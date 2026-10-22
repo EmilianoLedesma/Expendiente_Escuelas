@@ -4,6 +4,7 @@ namespace App\Application\Tramite;
 
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
+use App\Application\Revision\PasosRevision;
 use App\Application\Tramite\DTO\NivelDelTramite;
 use App\Application\Tramite\DTO\ResumenTramiteDTO;
 use App\Application\Tramite\DTO\SeccionTramite;
@@ -86,12 +87,22 @@ class ResumenTramite
     /** WS-7a: el trámite que se está resumiendo ya se envió; se fija al inicio de cada paraEscuela() y seccion() lo lee. */
     private bool $enviado = false;
 
+    /**
+     * Devolución: motivo por sección reabierta para quien mira, con la ronda cerrada; vacío con la ronda abierta.
+     * Clave 'g:{paso}' en las generales, 'n:{escuelaNivelId}:{paso}' en las del nivel. Se fija en cada paraEscuela().
+     *
+     * @var array<string, string>
+     */
+    private array $motivosReabiertos = [];
+
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
         private readonly EstadoPaso24 $estadoPaso24,
         private readonly DocumentosCompletos $documentosCompletos,
         private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
+        private readonly PasosReabiertos $pasosReabiertos,
+        private readonly ObservacionesDeEscuela $observacionesDeEscuela,
     ) {}
 
     /**
@@ -106,6 +117,9 @@ class ResumenTramite
         $this->enviado = TramiteEditable::enviado($escuela->escuelaNiveles->pluck('estado_id'), $enCapturaId);
         $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaId);
         $soloNivelIds = $usuarioId === null ? null : $this->nivelesVisibles($escuela, $usuarioId);
+        $rondaCerrada = $this->pasosReabiertos->rondaCerrada($escuelaId);
+        $observaciones = $rondaCerrada ? $this->observacionesDeEscuela->acotar($this->observacionesDeEscuela->todas($escuelaId), $soloNivelIds) : [];
+        $this->motivosReabiertos = $this->motivosPorSeccion($observaciones);
 
         $generales = $soloNivelIds === null ? $this->generales($escuela, $etapaFaltante) : [];
 
@@ -148,7 +162,29 @@ class ResumenTramite
             enviado: $this->enviado,
             fechaEnvio: $this->enviado ? $this->fechaEnvio($escuela->escuelaNiveles->pluck('id')) : null,
             reporteEnviadoId: $reporte === null ? null : (int) $reporte,
+            conObservaciones: $rondaCerrada,
+            puedeReenviar: $rondaCerrada && $soloNivelIds === null,
+            observaciones: $observaciones,
         );
+    }
+
+    /**
+     * @param  list<array{paso: string, titulo: string, nivel: ?string, escuelaNivelId: ?int, motivo: string}>  $observaciones
+     * @return array<string, string>
+     */
+    private function motivosPorSeccion(array $observaciones): array
+    {
+        $motivos = [];
+        foreach ($observaciones as $o) {
+            if (in_array($o['paso'], PasosRevision::GENERALES, true)) {
+                // Varios niveles pueden rechazar el mismo paso general: se junta cada motivo con su nivel.
+                $motivos['g:'.$o['paso']][] = ($o['nivel'] !== null ? $o['nivel'].': ' : '').$o['motivo'];
+            } else {
+                $motivos['n:'.$o['escuelaNivelId'].':'.$o['paso']][] = $o['motivo'];
+            }
+        }
+
+        return array_map(fn (array $m) => implode(' ', $m), $motivos);
     }
 
     /** @param Collection<array-key, mixed> $escuelaNivelIds */
@@ -329,6 +365,7 @@ class ResumenTramite
             route(self::RUTA_DOCUMENTOS_NIVEL, ['escuelaNivel' => $escuelaNivel->id]),
             $etapaFaltante === null ? null : self::completaPrimero($etapaFaltante),
             $nivelClave,
+            escuelaNivelId: $escuelaNivel->id,
         )];
         $anterior = self::PASO3['documentos_nivel'][0];
 
@@ -336,13 +373,13 @@ class ResumenTramite
             $clave = (string) $clave;
 
             if (! isset(self::RUTAS_PASO3[$clave])) {
-                $secciones[] = $this->seccion($clave, 'no_disponible', null, null, $nivelClave, (string) $nombreCatalogo);
+                $secciones[] = $this->seccion($clave, 'no_disponible', null, null, $nivelClave, (string) $nombreCatalogo, $escuelaNivel->id);
 
                 continue;
             }
 
             if ($clave === 'mobiliario' && $nivelClave !== self::NIVEL_CON_MOBILIARIO) {
-                $secciones[] = $this->seccion($clave, 'no_aplica', null, null, $nivelClave);
+                $secciones[] = $this->seccion($clave, 'no_aplica', null, null, $nivelClave, escuelaNivelId: $escuelaNivel->id);
 
                 continue;
             }
@@ -364,6 +401,7 @@ class ResumenTramite
                 route(self::RUTAS_PASO3[$clave], ['escuelaNivel' => $escuelaNivel->id]),
                 $motivo,
                 $nivelClave,
+                escuelaNivelId: $escuelaNivel->id,
             );
             $anterior = self::PASO3[$clave][0];
         }
@@ -371,9 +409,16 @@ class ResumenTramite
         return $secciones;
     }
 
-    private function seccion(string $clave, string $estado, ?string $href, ?string $motivoBloqueo, ?string $nivelClave = null, string $nombreCatalogo = ''): SeccionTramite
+    private function seccion(string $clave, string $estado, ?string $href, ?string $motivoBloqueo, ?string $nivelClave = null, string $nombreCatalogo = '', ?int $escuelaNivelId = null): SeccionTramite
     {
         [$nombre, $descripcion] = self::GENERALES[$clave] ?? self::PASO3[$clave] ?? [$nombreCatalogo, ''];
+        $posicion = self::posicion($clave, $nivelClave);
+
+        // Devolución: con la ronda cerrada, la sección reabierta se corrige; las demás siguen congeladas como en un envío.
+        $observacion = $this->motivosReabiertos[isset(self::GENERALES[$clave]) ? "g:{$clave}" : "n:{$escuelaNivelId}:{$clave}"] ?? null;
+        if ($observacion !== null && $href !== null) {
+            return new SeccionTramite($clave, $nombre, $descripcion, 'con_observaciones', 'corregir', $href, null, $posicion['paso'] ?? null, $posicion['total'] ?? null, $observacion, true);
+        }
 
         // Enviado = todo estaba completo al enviar (EnviarTramite lo exige). Se congela: una vigencia
         // que vence después (ValidarVigenciaDocumentos compara con hoy) no reabre ni bloquea secciones.
@@ -389,7 +434,6 @@ class ResumenTramite
             $estado === 'pendiente' => 'comenzar',
             default => null,
         };
-        $posicion = self::posicion($clave, $nivelClave);
 
         return new SeccionTramite(
             clave: $clave,
