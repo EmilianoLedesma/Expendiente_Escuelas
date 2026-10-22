@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosEdicionInfraestructura;
 use App\Application\Tramite\RegistroCompartidoBloqueado;
 use App\Application\Tramite\TramiteEditable;
+use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
 use App\Models\Sanitario;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,9 @@ class EditarInfraestructuraCompartida
             // Primero el bloqueo de todos los niveles del plantel (orden escuela_niveles → escuelas),
             // luego la guarda del plantel; el estado de bloqueo se lee ya serializado.
             $this->registroCompartido->bloquearNiveles($plantelId);
-            $this->tramiteEditable->asegurarPlantel($plantelId);
+            // `infraestructura` es un paso del nivel aunque se escriba a ámbito plantel: pasa el nivel que lo rechazó.
+            $escuelaId = (int) EscuelaNivel::where('id', $escuelaNivelId)->value('escuela_id');
+            $this->tramiteEditable->asegurarPlantel($plantelId, self::ETAPA, $escuelaId, $escuelaNivelId);
             $bloqueado = $this->registroCompartido->bloqueado($plantelId, $escuelaNivelId);
 
             if ($bloqueado && ($datos->quitarEspacios !== [] || $datos->quitarSanitarios !== [])) {
