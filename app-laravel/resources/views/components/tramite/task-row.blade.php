@@ -11,13 +11,16 @@
                 {{ $seccion->motivoBloqueo }}
             </p>
         @endif
+        @if ($seccion->observacion)
+            <p class="mt-xs rounded-md border-l-4 border-error-ink bg-surface-card p-sm text-body-sm text-ink"><span class="font-semibold">Observación del revisor:</span> {{ $seccion->observacion }}</p>
+        @endif
     </div>
 
     <div class="flex flex-wrap items-center gap-md sm:justify-end">
         <x-ui.status-tag :estado="$seccion->estado" />
         @if ($seccion->accion !== null && $seccion->href !== null)
             <a href="{{ $seccion->href }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
-                {{ ['comenzar' => 'Comenzar', 'continuar' => 'Continuar', 'revisar' => 'Revisar'][$seccion->accion] }}<span class="sr-only">: {{ $seccion->nombre }}</span>
+                {{ ['comenzar' => 'Comenzar', 'continuar' => 'Continuar', 'revisar' => 'Revisar', 'corregir' => 'Corregir'][$seccion->accion] }}<span class="sr-only">: {{ $seccion->nombre }}</span>
             </a>
         @endif
     </div>

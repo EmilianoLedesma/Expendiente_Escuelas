@@ -4,6 +4,7 @@
     [$icono, $etiqueta, $color] = match ($estado) {
         'completado' => ['check-circle', 'Completado', 'text-success-ink'],
         'en_curso' => ['arrow-path', 'En curso', 'text-warning-ink'],
+        'con_observaciones' => ['exclamation-circle', 'Con observaciones', 'text-error-ink'],
         'error' => ['exclamation-circle', 'Requiere corrección', 'text-error-ink'],
         'no_disponible' => ['clock', 'No disponible aún', 'text-muted'],
         'no_aplica' => ['no-symbol', 'No aplica para este nivel', 'text-muted'],
