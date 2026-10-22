@@ -88,8 +88,9 @@ class ReenviarCorrecciones
 
     /**
      * (a) Cada paso reabierto vuelve a estar completo según las compuertas de captura (sin el congelamiento de
-     * «enviado»). (b) La regla de envío sin nada que bloquee entre las filas documentales de la escuela y las de
-     * los niveles devueltos: un hermano aprobado no bloquea, el solicitante no puede corregirlo.
+     * «enviado»). (b) La regla de envío sin nada que bloquee entre las filas de los niveles devueltos y, solo si el
+     * paso `documentos` se reabrió, las documentales de la escuela: un hermano aprobado nunca bloquea, ni una fila
+     * de la escuela que el solicitante no puede corregir en esta ronda.
      *
      * @param  list<int>  $afectados  ids de los escuela_niveles con_observaciones
      */
@@ -107,7 +108,8 @@ class ReenviarCorrecciones
         }
 
         $faltan = [];
-        foreach ($this->pasosReabiertos->reabiertos($escuelaId) as $r) {
+        $reabiertos = $this->pasosReabiertos->reabiertos($escuelaId);
+        foreach ($reabiertos as $r) {
             $clave = in_array($r['paso'], PasosRevision::GENERALES, true) ? "g:{$r['paso']}" : "n:{$r['escuelaNivelId']}:{$r['paso']}";
             if (! in_array($estados[$clave] ?? null, self::COMPLETOS, true)) {
                 $faltan[PasosRevision::titulo($r['paso'])] = true;
@@ -118,8 +120,11 @@ class ReenviarCorrecciones
         }
 
         $evaluada = $this->validacionFinal->evaluar($escuelaId, exigirCompleto: false);
+        // Las filas documentales de la escuela solo bloquean si `documentos` se reabrió: si no, el solicitante no
+        // podría corregirlas (un cambio de responsable o niveles solo levanta la marca G6 para el revisor, spec decisión 6).
+        $documentosReabierto = in_array('documentos', array_column($reabiertos, 'paso'), true);
         $motivos = ValidacionFinal::bloqueantes(
-            $evaluada->filas,
+            $documentosReabierto ? $evaluada->filas : [],
             array_values(array_filter($evaluada->capacidad, fn (SeccionCapacidad $s) => in_array($s->escuelaNivelId, $afectados, true))),
             array_values(array_filter($evaluada->niveles, fn (SeccionNivel $s) => in_array($s->escuelaNivelId, $afectados, true))),
         );
