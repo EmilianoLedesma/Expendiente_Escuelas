@@ -14,6 +14,25 @@
                         @endforeach
                     </ul>
                 @endif
+                @if ($resumen->puedeReenviar)
+                    {{-- Mismo patrón de confirmación que «Enviar a SEDEQ» (validación final): <dialog> modal y solo su botón envía. --}}
+                    <x-ui.button-primary type="button" onclick="document.getElementById('reenviar-correcciones').showModal()" class="mt-md">
+                        Reenviar correcciones
+                    </x-ui.button-primary>
+                    <dialog id="reenviar-correcciones" aria-labelledby="reenviar-correcciones-titulo" onclick="if (event.target === this) this.close()" class="modal rounded-lg border border-hairline bg-canvas p-lg text-left text-body-md text-ink">
+                        <h2 id="reenviar-correcciones-titulo" class="text-title-md font-semibold text-ink">¿Reenviar las correcciones a SEDEQ?</h2>
+                        <p class="mt-sm">Revisamos que los pasos con observaciones estén completos. Una vez reenviado, el trámite ya no podrá modificarse mientras SEDEQ lo revisa.</p>
+                        <form method="POST" action="{{ route('tramite.reenviar', ['escuela' => $resumen->escuelaId]) }}" class="mt-lg flex flex-wrap justify-end gap-sm">
+                            @csrf
+                            <button type="button" onclick="this.closest('dialog').close()" class="inline-flex min-h-11 items-center justify-center rounded-md border border-control bg-canvas px-lg text-body-md font-semibold text-ink transition duration-150 hover:border-ink hover:bg-surface-card active:bg-surface-soft">
+                                Cancelar
+                            </button>
+                            <x-ui.button-primary type="submit">
+                                Sí, reenviar correcciones
+                            </x-ui.button-primary>
+                        </form>
+                    </dialog>
+                @endif
             </x-ui.alert>
         @elseif ($resumen->enviado)
             <x-ui.alert tipo="info" :titulo="'Enviado el '.$resumen->fechaEnvio?->format('d/m/Y').' — en revisión por SEDEQ'" class="mb-lg">
