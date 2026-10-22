@@ -155,17 +155,17 @@ class ResumenTramiteDevolucionTest extends TestCase
         $this->assertNotNull($s->href);
     }
 
-    public function test_el_banner_del_dueno_no_trae_boton_de_reenvio_ni_el_del_responsable_dice_reenviar(): void
+    public function test_el_banner_del_dueno_trae_el_reenvio_y_el_del_responsable_no(): void
     {
         [$dueno, $primaria, $secundaria] = $this->escuela();
         $this->devolverTramite($primaria->escuela, [$primaria->id => ['inmueble' => 'Falta el croquis'], $secundaria->id => ['matricula' => 'x']]);
         $url = route('tramite.resumen', ['escuela' => $primaria->escuela_id]);
 
         $this->actingAs($dueno->user)->get($url)->assertOk()
-            ->assertSee('corrige solo los pasos marcados y vuelve a enviar')->assertDontSee('Reenviar correcciones');
+            ->assertSee('corrige solo los pasos marcados y vuelve a enviar')->assertSee('Reenviar correcciones');
 
         $this->actingAs($this->responsableDe($primaria))->get($url)->assertOk()
-            ->assertSee('El titular del trámite corregirá y reenviará')->assertDontSee('vuelve a enviar');
+            ->assertSee('El titular del trámite corregirá y reenviará')->assertDontSee('vuelve a enviar')->assertDontSee('Reenviar correcciones');
     }
 
     public function test_el_responsable_sin_observaciones_propias_no_ve_lista_vacia(): void

@@ -8,6 +8,7 @@ use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
 use App\Http\Controllers\Tramite\EliminarTramiteController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
+use App\Http\Controllers\Tramite\ReenviarCorreccionesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
 use App\Livewire\Sedeq\ColaRevisor;
@@ -77,6 +78,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:delete,escuela')
         ->missing(fn () => redirect()->route('tramite.index')->with('toast', ['tipo' => 'info', 'titulo' => 'El trámite ya no existe']))
         ->name('tramite.eliminar');
+
+    // Devolución: el dueño reenvía las correcciones de una ronda cerrada (ReenviarCorrecciones).
+    Route::post('/tramite/{escuela}/reenviar', ReenviarCorreccionesController::class)
+        ->whereNumber('escuela')
+        ->middleware('can:reenviar,escuela')
+        ->name('tramite.reenviar');
 
     // WS-7b-1 U1: teléfono y correo del plantel, editables hasta el envío (el domicilio no).
     Route::get('/tramite/{escuela}/plantel', DatosPlantel::class)
