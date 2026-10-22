@@ -4,6 +4,7 @@ namespace Tests\Feature\Application\EscuelaNiveles;
 
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\EscuelaNiveles\ResumenEliminacionNivel;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsablesNivel\InvitarResponsableNivel;
 use App\Models\AulaNivel;
@@ -25,6 +26,7 @@ use RuntimeException;
 use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\CompletaPaso24;
 use Tests\Concerns\ConNivelParaResponsables;
+use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
 class RegistrarNivelesSeleccionadosTest extends TestCase
@@ -32,6 +34,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
     use CompletaPaso2;
     use CompletaPaso24;
     use ConNivelParaResponsables;
+    use ConTramiteDevuelto;
     use RefreshDatabase;
 
     private function crearEscuela(bool $conPaso2 = true): Escuela
@@ -405,5 +408,85 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         $this->assertSame(ResumenEliminacionNivel::CONCEPTOS, array_keys($resumen[$this->id('preescolar')]));
         $this->assertSame(ResumenEliminacionNivel::CONCEPTOS, array_keys(ResumenEliminacionNivel::ETIQUETAS));
         $this->assertFalse(ResumenEliminacionNivel::conDatos($resumen));
+    }
+
+    /** Primaria devuelta con `niveles` rechazado; la secundaria queda en el estado dado (ronda cerrada). */
+    private function escuelaConNivelesReabierto(string $estadoSecundaria = 'con_observaciones'): array
+    {
+        $escuela = $this->crearEscuela();
+        $primaria = $this->nivelEn($escuela, 'primaria', 'en_revision');
+        $secundaria = $this->nivelEn($escuela, 'secundaria', 'en_revision');
+        $rechazos = [$primaria->id => ['niveles' => 'Sobra un nivel']];
+        $aceptados = [];
+        if ($estadoSecundaria === 'con_observaciones') {
+            $aceptados[$secundaria->id] = ['niveles'];
+        }
+        $this->devolverTramite($escuela, $rechazos, $aceptados);
+        if ($estadoSecundaria !== 'con_observaciones') {
+            DB::table('escuela_niveles')->where('id', $secundaria->id)
+                ->update(['estado_id' => DB::table('estados_expediente')->where('clave', $estadoSecundaria)->value('id')]);
+        }
+
+        return [$escuela, $primaria, $secundaria];
+    }
+
+    public function test_no_permite_agregar_con_paso_reabierto(): void
+    {
+        [$escuela] = $this->escuelaConNivelesReabierto();
+
+        try {
+            $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar')]);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('agregar', $e->errores);
+        }
+
+        $this->assertDatabaseCount('escuela_niveles', 2);
+    }
+
+    public function test_no_permite_quitar_un_nivel_aprobado(): void
+    {
+        [$escuela] = $this->escuelaConNivelesReabierto('aprobado');
+
+        try {
+            $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('secundaria')]);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseCount('escuela_niveles', 2);
+        }
+    }
+
+    public function test_permite_quitar_un_nivel_con_observaciones(): void
+    {
+        [$escuela, $primaria, $secundaria] = $this->escuelaConNivelesReabierto();
+
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('primaria')]);
+
+        $this->assertDatabaseMissing('escuela_niveles', ['id' => $primaria->id]);
+        $this->assertDatabaseMissing('decisiones_revision', ['escuela_nivel_id' => $primaria->id]);
+        $this->assertDatabaseHas('escuela_niveles', ['id' => $secundaria->id]);
+    }
+
+    public function test_no_deja_la_escuela_sin_niveles(): void
+    {
+        [$escuela] = $this->escuelaConNivelesReabierto();
+
+        $this->expectException(InvalidArgumentException::class);
+        try {
+            $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('primaria'), $this->id('secundaria')]);
+        } finally {
+            $this->assertDatabaseCount('escuela_niveles', 2);
+        }
+    }
+
+    public function test_lanza_con_el_paso_niveles_aceptado(): void
+    {
+        $escuela = $this->crearEscuela();
+        $primaria = $this->nivelEn($escuela, 'primaria', 'en_revision');
+        $this->nivelEn($escuela, 'secundaria', 'en_revision');
+        $this->devolverTramite($escuela, [$primaria->id => ['plantel' => 'x']], [$primaria->id => ['niveles']]);
+
+        $this->expectException(PrecondicionIncumplida::class);
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('primaria')]);
     }
 }

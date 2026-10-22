@@ -15,11 +15,13 @@ use Database\Seeders\CatalogoMinimoSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
 /** WS-7b-1 U1: solo teléfono y correo del plantel se editan; el domicilio queda de solo lectura. */
 class ActualizarContactoPlantelTest extends TestCase
 {
+    use ConTramiteDevuelto;
     use RefreshDatabase;
 
     private function escuela(?Solicitante $solicitante = null, ?int $plantelId = null): Escuela
@@ -89,6 +91,35 @@ class ActualizarContactoPlantelTest extends TestCase
             'estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id'),
             'tipo_tramite' => 'alta_nueva',
         ]);
+
+        try {
+            app(ActualizarContactoPlantel::class)->ejecutar($escuela->id, $escuela->solicitante_id, '4421234567', null);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
+        }
+
+        $this->assertDatabaseHas('planteles', ['id' => $escuela->plantel_id, 'telefono' => '4420000000']);
+    }
+
+    public function test_escribe_con_el_paso_plantel_reabierto(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $escuela = $this->escuela();
+        $nivel = $this->nivelEn($escuela, 'primaria', 'en_revision');
+        $this->devolverTramite($escuela, [$nivel->id => ['plantel' => 'Teléfono equivocado']]);
+
+        app(ActualizarContactoPlantel::class)->ejecutar($escuela->id, $escuela->solicitante_id, '4421234567', 'nuevo@ejemplo.mx');
+
+        $this->assertDatabaseHas('planteles', ['id' => $escuela->plantel_id, 'telefono' => '4421234567', 'correo_electronico' => 'nuevo@ejemplo.mx']);
+    }
+
+    public function test_lanza_con_el_paso_plantel_aceptado(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $escuela = $this->escuela();
+        $nivel = $this->nivelEn($escuela, 'primaria', 'en_revision');
+        $this->devolverTramite($escuela, [$nivel->id => ['responsable' => 'x']], [$nivel->id => ['plantel']]);
 
         try {
             app(ActualizarContactoPlantel::class)->ejecutar($escuela->id, $escuela->solicitante_id, '4421234567', null);

@@ -50,7 +50,7 @@ class RegistrarResponsableLegal
             // WS-7a, orden escuela_niveles → escuelas. El bloqueo de los niveles también
             // serializa con la subida de un Formato (RegistrarDocumento bloquea el nivel).
             $nivelIds = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->pluck('id')->all();
-            $this->tramiteEditable->asegurarEscuela($escuelaId);
+            $this->tramiteEditable->asegurarEscuela($escuelaId, 'responsable');
 
             $responsable = ResponsableLegalModel::where('escuela_id', $escuelaId)->lockForUpdate()->first();
             $antes = $responsable === null ? null : $this->huellaFormato($responsable->id);
