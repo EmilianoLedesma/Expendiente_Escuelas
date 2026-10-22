@@ -47,12 +47,13 @@ class ResumenTramite
 
     /**
      * Secciones completadas cuya página se puede volver a abrir. Datos del plantel
-     * (teléfono y correo), Responsable legal y Niveles educativos se editan hasta el
-     * envío (WS-7b-1); Documentos e Inmueble siguen redirigiendo hacia adelante al estar
-     * completos (7b-2). Tras el envío (WS-7a) ninguna se ofrece. Documentos del nivel no
-     * redirige: el Formato firmado se puede reemplazar.
+     * (teléfono y correo), Responsable legal, Niveles educativos y Documentos generales se
+     * editan hasta el envío (WS-7b-1; la checklist de Documentos se abre para revisar o
+     * reemplazar). Inmueble sigue redirigiendo hacia adelante al estar completo (7b-2). Tras
+     * el envío (WS-7a) ninguna se ofrece. Documentos del nivel no redirige: el Formato
+     * firmado se puede reemplazar.
      */
-    private const REVISABLES = ['plantel', 'responsable', 'niveles', 'documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
+    private const REVISABLES = ['plantel', 'responsable', 'niveles', 'documentos', 'documentos_nivel', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
 
     /**
      * Orden de las secciones generales (2026-10-20): los niveles se eligen antes que los documentos generales,
