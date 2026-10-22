@@ -11,6 +11,7 @@ use App\Models\Solicitante;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
@@ -120,6 +121,34 @@ class TramiteEditableTest extends TestCase
 
         app(TramiteEditable::class)->asegurarPlantel($escuela->plantel_id, 'documentos', $escuela->id);
         $this->addToAssertionCount(1);
+    }
+
+    /** @return list<array{string}> */
+    public static function pasosDelNivelDePlantel(): array
+    {
+        return [['inmueble'], ['infraestructura']];
+    }
+
+    #[DataProvider('pasosDelNivelDePlantel')]
+    public function test_asegurar_plantel_paso_del_nivel_exige_el_id_del_nivel_que_lo_rechazo(string $paso): void
+    {
+        [$escuela, $primaria, $secundaria] = $this->escuelaConDosNiveles();
+        $this->devolverTramite($escuela, [$primaria->id => [$paso => 'x']], [$secundaria->id => [$paso]]);
+        $otra = Escuela::create(['plantel_id' => $escuela->plantel_id, 'solicitante_id' => $escuela->solicitante_id]);
+        $this->nivelEn($otra, 'primaria', 'en_revision');
+        $sut = app(TramiteEditable::class);
+
+        $sut->asegurarPlantel($escuela->plantel_id, $paso, $escuela->id, $primaria->id);
+        $this->addToAssertionCount(1);
+
+        foreach ([$secundaria->id, null] as $nivelId) {
+            try {
+                $sut->asegurarPlantel($escuela->plantel_id, $paso, $escuela->id, $nivelId);
+                $this->fail('debió lanzar con nivel '.var_export($nivelId, true));
+            } catch (PrecondicionIncumplida) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 
     public function test_asegurar_plantel_sigue_rechazando_si_otra_escuela_enviada_y_el_paso_no_esta_reabierto(): void

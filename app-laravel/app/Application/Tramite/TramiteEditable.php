@@ -89,15 +89,16 @@ class TramiteEditable
      * porque alimentan los datos y la capacidad del trámite enviado.
      *
      * Con $pasoClave y $escuelaId, el paso reabierto en esa escuela permite la escritura
-     * aunque otra escuela del plantel esté enviada.
+     * aunque otra escuela del plantel esté enviada. Los pasos del nivel que se escriben a
+     * ámbito plantel (inmueble, infraestructura) exigen $escuelaNivelId, el nivel que los rechazó.
      *
      * @throws PrecondicionIncumplida
      */
-    public function asegurarPlantel(int $plantelId, ?string $pasoClave = null, ?int $escuelaId = null): void
+    public function asegurarPlantel(int $plantelId, ?string $pasoClave = null, ?int $escuelaId = null, ?int $escuelaNivelId = null): void
     {
         $escuelas = Escuela::where('plantel_id', $plantelId)->orderBy('id')->sharedLock()->pluck('id');
 
-        if ($pasoClave !== null && $escuelaId !== null && $this->reabiertos->estaReabierto($escuelaId, $pasoClave)) {
+        if ($pasoClave !== null && $escuelaId !== null && $this->reabiertos->estaReabierto($escuelaId, $pasoClave, $escuelaNivelId)) {
             return;
         }
 
