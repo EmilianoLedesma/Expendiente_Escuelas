@@ -93,7 +93,7 @@ class RevisionFlujoCompletoTest extends TestCase
         $this->assertCount(1, app(ListarColaDelRevisor::class)->ejecutar($this->revisor->id));
     }
 
-    public function test_un_paso_rechazado_deja_con_observaciones_y_corregirlo_aprueba(): void
+    public function test_un_paso_rechazado_deja_con_observaciones_y_ya_no_se_corrige_hasta_el_reenvio(): void
     {
         $pasos = $this->pasos();
         $pagina = Livewire::actingAs($this->revisor)->test(RevisionNivel::class, ['escuelaNivel' => $this->nivel->id]);
@@ -110,8 +110,9 @@ class RevisionFlujoCompletoTest extends TestCase
         $this->assertSame('con_observaciones', $this->estadoNivel());
         $this->assertSame([count($pasos), count($pasos)], $this->avance());
 
+        // Con el solicitante: corregir la decisión ya no es posible hasta que reenvíe.
         $pagina->call('abrir', 'responsable')->call('aceptar');
 
-        $this->assertSame('aprobado', $this->estadoNivel());
+        $this->assertSame('con_observaciones', $this->estadoNivel());
     }
 }

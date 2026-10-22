@@ -7,12 +7,18 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\AsignarTramite;
 use App\Application\Revision\DecidirPaso;
 use App\Application\Revision\PasosRevision;
+use App\Application\Revision\RondaCerrada;
+use App\Application\Validaciones\DTO\ValidacionFinal;
+use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Models\EscuelaNivel;
 use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use RuntimeException;
 use Tests\Concerns\ConTramitesEnRevision;
 use Tests\TestCase;
 
@@ -212,19 +218,6 @@ class DecidirPasoTest extends TestCase
         $this->assertSame(1, $this->filasEstado($nivel));
     }
 
-    public function test_cambiar_el_ultimo_rechazo_a_aceptado_aprueba_desde_con_observaciones(): void
-    {
-        $nivel = $this->nivelEnRevision();
-        $pasos = PasosRevision::paraNivel('primaria');
-        $this->aceptar($nivel, array_slice($pasos, 0, 9));
-        $this->decidir($this->sup->id, $nivel, $pasos[9], 'rechazado', 'Falta documento');
-
-        $this->decidir($this->sup->id, $nivel, $pasos[9]);
-
-        $this->assertSame('aprobado', $this->claveEstado($nivel));
-        $this->assertSame(2, $this->filasEstado($nivel));
-    }
-
     public function test_dos_decisiones_sobre_el_mismo_paso_dejan_la_ultima_y_dos_filas_de_historial(): void
     {
         $nivel = $this->nivelEnRevision();
@@ -252,5 +245,145 @@ class DecidirPasoTest extends TestCase
 
         $this->assertSame('aprobado', $this->claveEstado($nivel));
         $this->assertSame(11, (int) DB::table('progreso_revision')->where('escuela_nivel_id', $nivel->id)->value('secciones_total'));
+    }
+
+    /** Decide todos los pasos del nivel: el primero rechazado, el resto aceptados. */
+    private function devolver(EscuelaNivel $nivel): void
+    {
+        $pasos = PasosRevision::paraNivel('primaria');
+        $this->decidir($this->sup->id, $nivel, $pasos[0], 'rechazado', 'Falta');
+        $this->aceptar($nivel, array_slice($pasos, 1));
+    }
+
+    public function test_no_se_decide_sobre_un_nivel_con_observaciones(): void
+    {
+        $nivel = $this->nivelEnRevision('con_observaciones');
+
+        try {
+            $this->decidir($this->sup->id, $nivel, 'plantel');
+            $this->fail('Debió lanzar PrecondicionIncumplida');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame('en_revision', $e->etapaFaltante);
+        }
+        $this->assertSame(0, DB::table('decisiones_revision')->count());
+    }
+
+    public function test_cierra_la_ronda_cuando_el_ultimo_nivel_se_decide(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $a = $this->nivelEnRevision();
+        $b = $this->nivelEn($a->escuela, 'secundaria', 'en_revision');
+        $pasosB = PasosRevision::paraNivel('secundaria');
+
+        $this->devolver($a);
+        Event::assertNotDispatched(RondaCerrada::class);
+        $this->aceptar($b, array_slice($pasosB, 0, -1));
+        $this->decidir($this->sup->id, $b, end($pasosB));
+
+        Event::assertDispatchedTimes(RondaCerrada::class, 1);
+        Event::assertDispatched(RondaCerrada::class, fn ($e) => $e->escuelaId === $a->escuela_id);
+    }
+
+    public function test_no_cierra_con_un_nivel_aun_en_revision(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $a = $this->nivelEnRevision();
+        $this->nivelEn($a->escuela, 'secundaria', 'en_revision');
+
+        $this->devolver($a);
+
+        $this->assertSame('con_observaciones', $this->claveEstado($a));
+        Event::assertNotDispatched(RondaCerrada::class);
+    }
+
+    public function test_escuela_de_un_solo_nivel_cierra_al_devolver(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $nivel = $this->nivelEnRevision();
+
+        $this->devolver($nivel);
+
+        Event::assertDispatchedTimes(RondaCerrada::class, 1);
+    }
+
+    public function test_aprobar_todo_no_cierra_la_ronda(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $nivel = $this->nivelEnRevision();
+
+        $this->aceptar($nivel, PasosRevision::paraNivel('primaria'));
+
+        $this->assertSame('aprobado', $this->claveEstado($nivel));
+        Event::assertNotDispatched(RondaCerrada::class);
+    }
+
+    public function test_guarda_una_evaluacion_como_linea_base_al_cerrar(): void
+    {
+        $nivel = $this->nivelEnRevision();
+        $validacion = new ValidacionFinal(null, Carbon::now(), true, [], [], []);
+        $mock = $this->mock(EjecutarValidacionFinal::class);
+        $mock->shouldReceive('evaluar')->once()->with($nivel->escuela_id)->andReturn($validacion);
+        $mock->shouldReceive('guardar')->once()->with($nivel->escuela_id, $validacion)->andReturn($validacion);
+
+        $this->devolver($nivel);
+    }
+
+    public function test_no_guarda_linea_base_si_la_ronda_no_cierra(): void
+    {
+        $nivel = $this->nivelEnRevision();
+        $this->nivelEn($nivel->escuela, 'secundaria', 'en_revision');
+        $mock = $this->mock(EjecutarValidacionFinal::class);
+        $mock->shouldNotReceive('evaluar');
+        $mock->shouldNotReceive('guardar');
+
+        $this->devolver($nivel);
+    }
+
+    public function test_si_falla_guardar_la_linea_base_la_decision_persiste(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $nivel = $this->nivelEnRevision();
+        $validacion = new ValidacionFinal(null, Carbon::now(), true, [], [], []);
+        $mock = $this->mock(EjecutarValidacionFinal::class);
+        $mock->shouldReceive('evaluar')->andReturn($validacion);
+        $mock->shouldReceive('guardar')->andThrow(new RuntimeException('pdf roto'));
+
+        $this->devolver($nivel);
+
+        $this->assertSame('con_observaciones', $this->claveEstado($nivel));
+        Event::assertDispatchedTimes(RondaCerrada::class, 1);
+    }
+
+    public function test_si_falla_evaluar_la_decision_persiste(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $nivel = $this->nivelEnRevision();
+        $mock = $this->mock(EjecutarValidacionFinal::class);
+        $mock->shouldReceive('evaluar')->andThrow(new PrecondicionIncumplida('tramite', 'incompleto'));
+        $mock->shouldNotReceive('guardar');
+
+        $this->devolver($nivel);
+
+        $this->assertSame('con_observaciones', $this->claveEstado($nivel));
+        Event::assertDispatchedTimes(RondaCerrada::class, 1);
+    }
+
+    public function test_rollback_de_la_decision_no_despacha_el_evento(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $nivel = $this->nivelEnRevision();
+        $pasos = PasosRevision::paraNivel('primaria');
+        $this->aceptar($nivel, array_slice($pasos, 1));
+
+        try {
+            DB::transaction(function () use ($nivel, $pasos) {
+                $this->decidir($this->sup->id, $nivel, $pasos[0], 'rechazado', 'Falta');
+                throw new RuntimeException('falla posterior');
+            });
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame('en_revision', $this->claveEstado($nivel));
+        Event::assertNotDispatched(RondaCerrada::class);
     }
 }
