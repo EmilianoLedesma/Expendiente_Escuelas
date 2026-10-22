@@ -120,7 +120,7 @@ class DecidirPaso
     {
         try {
             // Punto de guardado: un error de BD aquí no debe envenenar la transacción de la decisión.
-            DB::transaction(fn () => $this->validacionFinal->guardar($escuelaId, $this->validacionFinal->evaluar($escuelaId)));
+            DB::transaction(fn () => $this->validacionFinal->guardar($escuelaId, $this->validacionFinal->evaluar($escuelaId, exigirCompleto: false)));
         } catch (DeadlockException $e) {
             // Un deadlock aborta la transacción de PG: tragarlo convertiría el COMMIT en ROLLBACK silencioso.
             throw $e;
