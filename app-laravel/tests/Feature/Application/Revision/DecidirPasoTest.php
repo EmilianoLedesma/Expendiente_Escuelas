@@ -11,6 +11,7 @@ use App\Application\Revision\RondaCerrada;
 use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Models\EscuelaNivel;
+use App\Models\EvaluacionValidacion;
 use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -19,11 +20,13 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
+use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\Concerns\ConTramitesEnRevision;
 use Tests\TestCase;
 
 class DecidirPasoTest extends TestCase
 {
+    use CapturaExpedienteConsistente;
     use ConTramitesEnRevision;
     use RefreshDatabase;
 
@@ -322,10 +325,22 @@ class DecidirPasoTest extends TestCase
         $nivel = $this->nivelEnRevision();
         $validacion = new ValidacionFinal(null, Carbon::now(), true, [], [], []);
         $mock = $this->mock(EjecutarValidacionFinal::class);
-        $mock->shouldReceive('evaluar')->once()->with($nivel->escuela_id)->andReturn($validacion);
+        $mock->shouldReceive('evaluar')->once()->with($nivel->escuela_id, false)->andReturn($validacion);
         $mock->shouldReceive('guardar')->once()->with($nivel->escuela_id, $validacion)->andReturn($validacion);
 
         $this->devolver($nivel);
+    }
+
+    public function test_la_linea_base_real_se_guarda_sin_mocks_al_devolver_un_tramite_completo(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $nivel = $this->completarTramite($escuela);
+        DB::table('escuela_niveles')->where('id', $nivel->id)->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
+
+        $this->devolver($nivel);
+
+        $this->assertSame('con_observaciones', $this->claveEstado($nivel));
+        $this->assertSame(1, EvaluacionValidacion::where('escuela_id', $escuela->id)->count());
     }
 
     public function test_no_guarda_linea_base_si_la_ronda_no_cierra(): void
