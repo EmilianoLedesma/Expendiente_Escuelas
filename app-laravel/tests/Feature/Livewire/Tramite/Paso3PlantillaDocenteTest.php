@@ -37,6 +37,33 @@ class Paso3PlantillaDocenteTest extends TestCase
             ->assertCount('personas', 1);
     }
 
+    public function test_muestra_un_acordeon_con_una_sola_persona_abierta(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('primaria', 'plantilla_docente');
+        $this->actingAs($escuelaNivel->escuela->solicitante->user);
+
+        Livewire::test(PlantillaDocente::class, ['escuelaNivel' => $escuelaNivel])
+            ->call('agregarPersona')
+            ->assertSet('personaAbierta', 1)
+            ->assertSeeHtml('aria-expanded="true"')
+            ->assertSeeHtml('id="persona-panel-1"')
+            ->assertDontSeeHtml('id="persona-panel-0"');
+    }
+
+    public function test_pagina_las_personas_para_limitar_el_scroll(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('primaria', 'plantilla_docente');
+        $this->actingAs($escuelaNivel->escuela->solicitante->user);
+
+        Livewire::test(PlantillaDocente::class, ['escuelaNivel' => $escuelaNivel])
+            ->set('personas', array_fill(0, 6, $this->fila($this->cargoId('primaria', 'Docente Titular de Grupo'), 'Docente')))
+            ->call('irAPagina', 2)
+            ->assertSet('paginaPersonas', 2)
+            ->assertSee('Persona 6')
+            ->assertDontSee('Persona 1')
+            ->assertSee('Página 2 de 2');
+    }
+
     public function test_guarda_la_plantilla_y_continua_a_la_matricula(): void
     {
         $escuelaNivel = $this->nivelListoPara('primaria', 'plantilla_docente');

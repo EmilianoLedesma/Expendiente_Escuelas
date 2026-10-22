@@ -23,6 +23,8 @@ use Livewire\Component;
 #[Layout('layouts.tramite')]
 class PlantillaDocente extends Component
 {
+    private const PERSONAS_POR_PAGINA = 5;
+
     use CompuertaPaso3;
     use NotificaToast;
 
@@ -36,6 +38,10 @@ class PlantillaDocente extends Component
 
     /** @var list<array<string, string>> */
     public array $personas = [];
+
+    public int $personaAbierta = 0;
+
+    public int $paginaPersonas = 1;
 
     public function mount(EscuelaNivel $escuelaNivel, PlantillaCapturada $plantillaCapturada): void
     {
@@ -51,12 +57,58 @@ class PlantillaDocente extends Component
     public function agregarPersona(): void
     {
         $this->personas[] = self::FILA_VACIA;
+        $indice = count($this->personas) - 1;
+        $this->irAPagina(intdiv($indice, self::PERSONAS_POR_PAGINA) + 1);
+        $this->personaAbierta = $indice;
     }
 
     public function quitarPersona(int $indice): void
     {
         unset($this->personas[$indice]);
         $this->personas = array_values($this->personas);
+
+        if ($this->personas === []) {
+            $this->personaAbierta = 0;
+            $this->paginaPersonas = 1;
+
+            return;
+        }
+
+        $this->irAPagina($this->paginaPersonas);
+        $this->personaAbierta = min(
+            $indice < $this->personaAbierta ? $this->personaAbierta - 1 : $this->personaAbierta,
+            count($this->personas) - 1,
+        );
+    }
+
+    public function irAPagina(int $pagina): void
+    {
+        $this->paginaPersonas = max(1, min($pagina, $this->totalPaginas()));
+
+        $inicio = ($this->paginaPersonas - 1) * self::PERSONAS_POR_PAGINA;
+        if ($this->personaAbierta < $inicio || $this->personaAbierta >= $inicio + self::PERSONAS_POR_PAGINA) {
+            $this->personaAbierta = $inicio;
+        }
+    }
+
+    public function paginaAnterior(): void
+    {
+        $this->irAPagina($this->paginaPersonas - 1);
+    }
+
+    public function paginaSiguiente(): void
+    {
+        $this->irAPagina($this->paginaPersonas + 1);
+    }
+
+    public function alternarPersona(int $indice): void
+    {
+        $this->personaAbierta = $indice;
+    }
+
+    private function totalPaginas(): int
+    {
+        return max(1, (int) ceil(count($this->personas) / self::PERSONAS_POR_PAGINA));
     }
 
     public function guardar(RegistrarPlantillaDocente $registrarPlantillaDocente): void
@@ -101,6 +153,9 @@ class PlantillaDocente extends Component
             'cargos' => $plantillaCapturada->cargos($this->escuelaNivel->id),
             'salas' => $plantillaCapturada->salas(),
             'asignaturas' => $plantillaCapturada->asignaturas(),
+            'inicioPersonas' => ($this->paginaPersonas - 1) * self::PERSONAS_POR_PAGINA,
+            'finPersonas' => $this->paginaPersonas * self::PERSONAS_POR_PAGINA,
+            'totalPaginas' => $this->totalPaginas(),
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => 'plantilla_docente']);
     }
 }
