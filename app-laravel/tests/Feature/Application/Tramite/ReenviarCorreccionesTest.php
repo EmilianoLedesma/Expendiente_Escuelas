@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Tramite;
 
+use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\AsignarTramite;
 use App\Application\Revision\DecidirPaso;
@@ -214,7 +215,58 @@ class ReenviarCorreccionesTest extends TestCase
         $this->assertNotContains('escuelas', array_slice($bloqueos, 2), 'la escuela se bloquea una sola vez');
     }
 
-    public function test_reenvio_concurrente_con_decision_del_revisor_serializa(): void
+    public function test_un_no_cumple_documental_de_la_escuela_no_bloquea_si_documentos_no_se_reabrio(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $primaria = $this->completarTramite($escuela, reemplazos: [
+            'ine' => new DatosDocumento(identidadNombre: 'PEREZ GOMEZ JUAN', identidadCurp: 'PEGJ800101HQTRML08'),
+        ]);
+        $this->devolverTramite($escuela, [$primaria->id => ['responsable' => 'Revisa el CURP']]);
+        // Precondición: la fila documental de la escuela sí es no_cumple.
+        $this->assertNotSame([], app(EjecutarValidacionFinal::class)->evaluar($escuela->id, exigirCompleto: false)->conEstado('no_cumple'));
+
+        $this->reenviar($escuela);
+
+        $this->assertSame('en_revision', $this->estadoDe($primaria));
+    }
+
+    public function test_un_no_cumple_documental_de_la_escuela_bloquea_si_documentos_se_reabrio(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $primaria = $this->completarTramite($escuela, reemplazos: [
+            'ine' => new DatosDocumento(identidadNombre: 'PEREZ GOMEZ JUAN', identidadCurp: 'PEGJ800101HQTRML08'),
+        ]);
+        $this->devolverTramite($escuela, [$primaria->id => ['documentos' => 'La INE no coincide']]);
+
+        $this->rechaza(fn () => $this->reenviar($escuela), 'CURP');
+
+        $this->assertSame('con_observaciones', $this->estadoDe($primaria));
+    }
+
+    public function test_dos_niveles_devueltos_si_uno_bloquea_no_se_escribe_nada(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $primaria = $this->completarTramite($escuela);
+        $secundaria = $this->nivelEn($escuela, 'secundaria', 'con_observaciones');
+        $this->regla('secundaria', 'secundaria.superficie.aulas', 'Superficie de aulas');
+        $this->devolverTramite($escuela, [$primaria->id => ['plan_estudios' => 'x'], $secundaria->id => ['plantel' => 'y']]);
+        foreach ([$primaria, $secundaria] as $n) {
+            DB::table('progreso_revision')->insert(['escuela_nivel_id' => $n->id, 'secciones_total' => 10, 'secciones_revisadas' => 10]);
+        }
+        $antes = fn () => [
+            DB::table('decisiones_revision')->orderBy('escuela_nivel_id')->orderBy('paso_clave')->get()->toArray(),
+            DB::table('progreso_revision')->orderBy('escuela_nivel_id')->get()->toArray(),
+            DB::table('escuela_niveles')->orderBy('id')->pluck('estado_id')->all(),
+            DB::table('historial_estados_expediente')->count(),
+        ];
+        $foto = $antes();
+
+        $this->rechaza(fn () => $this->reenviar($escuela), 'Secundaria');
+
+        $this->assertEquals($foto, $antes());
+    }
+
+    public function test_tras_el_reenvio_el_revisor_vuelve_a_decidir_el_nivel(): void
     {
         [$escuela, $primaria] = $this->devuelto();
         $sup = $this->supervisor();
@@ -228,7 +280,7 @@ class ReenviarCorreccionesTest extends TestCase
 
         $this->reenviar($escuela);
 
-        // Quien decide después del reenvío (tras esperar su bloqueo del nivel) relee en_revision y decide.
+        // Secuencial: la evidencia del orden de bloqueo es test_bloquea_los_niveles_y_luego_la_escuela.
         app(DecidirPaso::class)->ejecutar($sup->id, $primaria->id, 'plan_estudios', 'aceptado');
         $this->assertSame('aceptado', DB::table('decisiones_revision')->where('escuela_nivel_id', $primaria->id)->where('paso_clave', 'plan_estudios')->value('estado'));
         $this->assertSame(3, (int) DB::table('progreso_revision')->where('escuela_nivel_id', $primaria->id)->value('secciones_revisadas'));
