@@ -110,8 +110,8 @@ class RevisionFlujoCompletoTest extends TestCase
         $this->assertSame('con_observaciones', $this->estadoNivel());
         $this->assertSame([count($pasos), count($pasos)], $this->avance());
 
-        // Con el solicitante: corregir la decisión ya no es posible hasta que reenvíe.
-        $pagina->call('abrir', 'responsable')->call('aceptar');
+        // Con el solicitante: los botones ya no se muestran y la decisión sigue como estaba hasta que reenvíe.
+        $pagina->call('abrir', 'responsable')->assertDontSee('Aceptar paso')->assertDontSee('Rechazar paso');
 
         $this->assertSame('con_observaciones', $this->estadoNivel());
     }

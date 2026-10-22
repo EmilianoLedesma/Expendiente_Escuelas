@@ -37,7 +37,8 @@ class RevisionNivel extends Component
     public function mount(int $escuelaNivel): void
     {
         $this->escuelaNivelId = $escuelaNivel;
-        $this->pasoAbierto = $this->revision()['pasos'][0]['clave'];
+        $pasos = $this->revision()['pasos'];
+        $this->pasoAbierto = (collect($pasos)->firstWhere('corregido', true) ?? $pasos[0])['clave'];
     }
 
     /** Solo se abre un paso que pertenezca al nivel; cualquier otra clave se ignora. */
@@ -112,6 +113,8 @@ class RevisionNivel extends Component
 
         return view('livewire.sedeq.revision-nivel', [
             'revision' => $revision,
+            // Los corregidos primero; el resto conserva su orden (sortBy es estable).
+            'lista' => collect($revision['pasos'])->sortBy(fn (array $p) => $p['corregido'] ? 0 : 1)->values()->all(),
             'paso' => collect($revision['pasos'])->firstWhere('clave', $this->pasoAbierto),
             'contenido' => app(ContenidoPasoRevision::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId, $this->pasoAbierto),
             'pistas' => array_map(FilaValidacion::desdeArreglo(...), $this->pistas[$this->pasoAbierto] ?? []),

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire\Sedeq;
 
+use App\Application\Revision\DecidirPaso;
+use App\Application\Revision\PasosRevision;
 use App\Application\Validaciones\DTO\FilaValidacion;
 use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Application\Validaciones\EjecutarValidacionFinal;
@@ -154,5 +156,56 @@ class RevisionNivelTest extends TestCase
             ->assertSee('Avance: 1 de 10');
 
         $this->assertSame('aceptado', DB::table('decisiones_revision')->where('paso_clave', 'documentos')->value('estado'));
+    }
+
+    /** Deja `responsable` rechazado y reenviado (corregido) y vuelve el nivel a en_revision. */
+    private function conPasoCorregido(string $motivo = 'Falta la identificación'): void
+    {
+        app(DecidirPaso::class)->ejecutar($this->revisor->id, $this->nivel->id, 'responsable', 'rechazado', $motivo);
+        DB::table('decisiones_revision')->where('escuela_nivel_id', $this->nivel->id)->where('estado', 'rechazado')->delete();
+        $this->nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
+    }
+
+    public function test_la_vista_lista_primero_los_corregidos(): void
+    {
+        $this->conPasoCorregido();
+
+        $this->pagina()
+            ->assertSeeInOrder(['Avance: 0 de 10', 'Responsable legal', 'Corregido', 'Datos del plantel'])
+            ->assertSet('pasoAbierto', 'responsable')
+            ->assertSee('Motivo anterior')
+            ->assertSee('Falta la identificación');
+    }
+
+    public function test_el_revisor_decide_solo_los_corregidos_y_el_nivel_sube_a_aprobado(): void
+    {
+        foreach (['plantel', 'documentos'] as $p) {
+            app(DecidirPaso::class)->ejecutar($this->revisor->id, $this->nivel->id, $p, 'aceptado', null);
+        }
+        $this->conPasoCorregido();
+        foreach (PasosRevision::paraNivel('primaria') as $p) {
+            if (! in_array($p, ['plantel', 'documentos', 'responsable'], true)) {
+                app(DecidirPaso::class)->ejecutar($this->revisor->id, $this->nivel->id, $p, 'aceptado', null);
+            }
+        }
+
+        $this->pagina()->call('aceptar')->assertSee('Avance: 10 de 10');
+
+        $this->assertSame('aprobado', DB::table('estados_expediente')->where('id', $this->nivel->fresh()->estado_id)->value('clave'));
+    }
+
+    public function test_con_observaciones_no_muestra_botones_y_explica_por_que(): void
+    {
+        $this->nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'con_observaciones')->value('id')]);
+
+        $this->pagina()
+            ->assertDontSee('Aceptar paso')->assertDontSee('Rechazar paso')
+            ->assertSee('Este trámite está con el solicitante para corregir; podrás decidir cuando lo reenvíe.')
+            ->assertSee('Datos del plantel');
+    }
+
+    public function test_en_revision_muestra_botones_y_no_la_nota(): void
+    {
+        $this->pagina()->assertSee('Aceptar paso')->assertDontSee('está con el solicitante');
     }
 }

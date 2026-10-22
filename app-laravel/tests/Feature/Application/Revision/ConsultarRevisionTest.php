@@ -10,6 +10,7 @@ use App\Models\EscuelaNivel;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\ConTramitesEnRevision;
 use Tests\TestCase;
 
@@ -127,5 +128,57 @@ class ConsultarRevisionTest extends TestCase
 
         $this->expectException(AuthorizationException::class);
         $this->consultar($this->revisor(), $nivel);
+    }
+
+    /** Simula el reenvío del solicitante: borra los rechazos vigentes (el historial queda) y vuelve el nivel a en_revision. */
+    private function reenviar(EscuelaNivel $nivel): void
+    {
+        DB::table('decisiones_revision')->where('escuela_nivel_id', $nivel->id)->where('estado', 'rechazado')->delete();
+        $nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
+    }
+
+    public function test_un_paso_corregido_se_marca_y_trae_el_ultimo_motivo(): void
+    {
+        $nivel = $this->nivelEnRevision();
+        $this->decidir($this->sup, $nivel, 'plantel', 'rechazado', 'Primer motivo');
+        $this->reenviar($nivel);
+        $this->decidir($this->sup, $nivel, 'plantel', 'rechazado', 'Segundo motivo');
+        $this->reenviar($nivel);
+
+        $paso = $this->consultar($this->sup, $nivel)['pasos'][0];
+
+        $this->assertTrue($paso['corregido']);
+        $this->assertSame('pendiente', $paso['estado']);
+        $this->assertSame('Segundo motivo', $paso['ultimoMotivo']);
+    }
+
+    public function test_un_paso_nunca_rechazado_no_es_corregido(): void
+    {
+        $nivel = $this->nivelEnRevision();
+        $this->decidir($this->sup, $nivel, 'plantel');
+
+        $pasos = $this->consultar($this->sup, $nivel)['pasos'];
+
+        foreach ($pasos as $paso) {
+            $this->assertFalse($paso['corregido']);
+            $this->assertNull($paso['ultimoMotivo']);
+        }
+    }
+
+    public function test_un_paso_con_su_rechazo_vigente_no_es_corregido(): void
+    {
+        $nivel = $this->nivelEnRevision();
+        $this->decidir($this->sup, $nivel, 'plantel', 'rechazado', 'Mal');
+
+        $paso = $this->consultar($this->sup, $nivel)['pasos'][0];
+
+        $this->assertFalse($paso['corregido']);
+        $this->assertSame('Mal', $paso['ultimoMotivo']);
+    }
+
+    public function test_editable_solo_en_revision_y_no_con_observaciones(): void
+    {
+        $this->assertTrue($this->consultar($this->sup, $this->nivelEnRevision())['editable']);
+        $this->assertFalse($this->consultar($this->sup, $this->nivelEnRevision('con_observaciones'))['editable']);
     }
 }

@@ -15,14 +15,18 @@
         <nav aria-label="Pasos de la revisión" class="lg:col-span-1">
             <p class="mb-sm text-body-sm font-semibold tabular-nums text-muted">Avance: {{ $revision['revisadas'] }} de {{ $revision['total'] }}</p>
             <ol class="space-y-xs">
-                @foreach ($revision['pasos'] as $p)
+                @foreach ($lista as $p)
                     @php($abierto = $p['clave'] === $pasoAbierto)
                     <li wire:key="paso-{{ $p['clave'] }}">
                         <button type="button" wire:click="abrir('{{ $p['clave'] }}')" aria-current="{{ $abierto ? 'step' : 'false' }}"
                                 @class(['flex w-full min-h-11 cursor-pointer items-center justify-between gap-sm rounded-lg bg-canvas p-sm text-left transition-colors duration-150 hover:bg-surface-soft motion-reduce:transition-none',
-                                    'border-2 border-primary' => $abierto, 'border border-hairline' => ! $abierto])>
+                                    'border-2 border-primary' => $abierto, 'border border-hairline' => ! $abierto, 'bg-surface-soft' => $p['corregido']])>
                             <span class="font-semibold text-ink">{{ $p['titulo'] }}</span>
-                            <x-ui.status-tag :estado="$tag[$p['estado']][0]" :texto="$tag[$p['estado']][1]" />
+                            @if ($p['corregido'])
+                                <x-ui.status-tag estado="en_curso" texto="Corregido" />
+                            @else
+                                <x-ui.status-tag :estado="$tag[$p['estado']][0]" :texto="$tag[$p['estado']][1]" />
+                            @endif
                         </button>
                     </li>
                 @endforeach
@@ -30,6 +34,13 @@
         </nav>
 
         <div class="lg:col-span-2">
+            @if ($paso['corregido'])
+                <div class="mb-md rounded-lg border-2 border-primary bg-surface-soft p-md" data-corregido>
+                    <p class="text-body-md font-semibold text-ink">Corregido por el solicitante</p>
+                    <p class="text-body-sm text-muted">Motivo anterior: {{ $paso['ultimoMotivo'] }}</p>
+                </div>
+            @endif
+
             <x-ui.section :title="$contenido['titulo']" class="!mt-0">
                 @forelse ($contenido['bloques'] as $bloque)
                     <div class="space-y-sm">
@@ -111,6 +122,10 @@
                         <x-ui.button-secondary wire:click="rechazar" wire:loading.attr="disabled">Rechazar paso</x-ui.button-secondary>
                     </div>
                 </x-ui.section>
+            @else
+                @if ($revision['estado'] === 'con_observaciones')
+                    <p class="mt-md text-body-md text-muted">Este trámite está con el solicitante para corregir; podrás decidir cuando lo reenvíe.</p>
+                @endif
             @endif
         </div>
     </div>

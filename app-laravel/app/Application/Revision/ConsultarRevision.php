@@ -24,7 +24,7 @@ final class ConsultarRevision
      *     escuelaNivelId: int, escuelaId: int, escuela: string|null, nivel: string, estado: string, editable: bool,
      *     revisadas: int, total: int,
      *     pasos: list<array{
-     *         clave: string, titulo: string, estado: string, motivo: string|null, por: string|null, cuando: string|null,
+     *         clave: string, titulo: string, estado: string, motivo: string|null, corregido: bool, ultimoMotivo: string|null, por: string|null, cuando: string|null,
      *         historial: list<array{estado: string, motivo: string|null, por: string, cuando: string}>,
      *         otrosNiveles: list<array{nivel: string, estado: string, por: string, cuando: string}>
      *     }>
@@ -65,17 +65,22 @@ final class ConsultarRevision
                 ?? TernaNombre::where('escuela_id', $nivel->escuela_id)->orderBy('numero_propuesta')->value('nombre_propuesto'),
             'nivel' => $nivel->nivelEducativo->nombre,
             'estado' => $estado,
-            'editable' => in_array($estado, [EnviarTramite::EN_REVISION, 'con_observaciones'], true),
+            // Con observaciones el trámite está con el solicitante: DecidirPaso rechaza cualquier decisión.
+            'editable' => $estado === EnviarTramite::EN_REVISION,
             'revisadas' => $actuales->only($pasos)->count(),
             'total' => count($pasos),
             'pasos' => array_map(function (string $clave) use ($actuales, $historial, $otros, $por, $fecha) {
                 $d = $actuales->all()[$clave] ?? null;
+                $rechazos = ($historial[$clave] ?? collect())->where('estado', 'rechazado');
 
                 return [
                     'clave' => $clave,
                     'titulo' => PasosRevision::titulo($clave),
                     'estado' => $d->estado ?? 'pendiente',
                     'motivo' => $d?->motivo,
+                    // Corregido: el solicitante reenvió (ya no hay decisión vigente) tras un rechazo que el historial conserva.
+                    'corregido' => $d === null && $rechazos->isNotEmpty(),
+                    'ultimoMotivo' => $rechazos->last()?->motivo,
                     'por' => $d ? $por($d->decidido_por) : null,
                     'cuando' => $d ? $fecha($d->decidido_at) : null,
                     'historial' => ($historial[$clave] ?? collect())->map(fn ($h) => [
