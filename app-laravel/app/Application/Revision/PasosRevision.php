@@ -8,7 +8,7 @@ use App\Application\Tramite\ResumenTramite;
 final class PasosRevision
 {
     /** Los cuatro generales del trámite, antes de los pasos propios de cada nivel. */
-    private const GENERALES = ['plantel', 'responsable', 'documentos', 'niveles'];
+    public const GENERALES = ['plantel', 'responsable', 'documentos', 'niveles'];
 
     /** Orden de revisión de los pasos del nivel; mobiliario solo aplica a ResumenTramite::NIVEL_CON_MOBILIARIO. */
     private const DEL_NIVEL = ['documentos_nivel', 'inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
