@@ -249,6 +249,19 @@ class ResumenTramiteTest extends TestCase
         }
     }
 
+    public function test_documentos_generales_completos_se_pueden_revisar_antes_del_envio(): void
+    {
+        $escuela = $this->escuela();
+        $this->completarPaso2($escuela->id);
+        $this->nivel($escuela, 'primaria');
+
+        $documentos = $this->porClave($this->resumen($escuela)->generales)['documentos'];
+
+        $this->assertSame('completado', $documentos->estado);
+        $this->assertSame('revisar', $documentos->accion);
+        $this->assertSame(route('tramite.paso2-documentos', ['escuela' => $escuela->id]), $documentos->href);
+    }
+
     public function test_con_documentos_del_nivel_completos_inmueble_se_puede_comenzar(): void
     {
         $escuela = $this->escuela();
