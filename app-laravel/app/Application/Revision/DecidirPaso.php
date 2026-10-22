@@ -7,11 +7,13 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EnviarTramite;
 use App\Application\Tramite\PasosReabiertos;
 use App\Application\Validaciones\EjecutarValidacionFinal;
+use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\HistorialDecisionRevision;
 use App\Models\ProgresoRevision;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\DeadlockException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -25,8 +27,8 @@ use Throwable;
  * con la ronda cerrada (ver PasosReabiertos::rondaCerrada), guarda una evaluación como
  * línea base y despacha RondaCerrada tras el commit.
  *
- * Orden de bloqueo: solo escuela_niveles (la fila del nivel), como el resto del proyecto.
- * El estado y las decisiones se leen ya bajo ese bloqueo.
+ * Orden de bloqueo: escuela_niveles (la fila del nivel) y luego escuelas, como EnviarTramite.
+ * El estado y las decisiones se leen ya bajo esos bloqueos.
  */
 class DecidirPaso
 {
@@ -66,7 +68,9 @@ class DecidirPaso
             if ($estadoClave !== EnviarTramite::EN_REVISION) {
                 throw new PrecondicionIncumplida(EnviarTramite::EN_REVISION, 'Solo se pueden revisar trámites en revisión.');
             }
-            $estabaCerrada = $this->pasosReabiertos->rondaCerrada($nivel->escuela_id);
+            // Orden niveles -> escuelas (como EnviarTramite): serializa los cierres por escuela, así el segundo
+            // en decidir ya ve confirmado el estado del primero (READ COMMITTED).
+            Escuela::whereKey($nivel->escuela_id)->lockForUpdate()->firstOrFail();
 
             $pasos = PasosRevision::paraNivel($nivelClave);
             if (! in_array($pasoClave, $pasos, true)) {
@@ -104,8 +108,8 @@ class DecidirPaso
                 $this->cambiarEstado($escuelaNivelId, $destino, $actorId);
             }
 
-            // Los demás niveles se leen sin bloquear (el orden de bloqueo es escuela_niveles y luego escuelas).
-            if (! $estabaCerrada && $this->pasosReabiertos->rondaCerrada($nivel->escuela_id)) {
+            // Una decisión cierra la ronda sii rondaCerrada es true tras escribir el nuevo estado (el nivel venía en revisión).
+            if ($this->pasosReabiertos->rondaCerrada($nivel->escuela_id)) {
                 $this->cerrarRonda($nivel->escuela_id);
             }
         });
@@ -117,6 +121,9 @@ class DecidirPaso
         try {
             // Punto de guardado: un error de BD aquí no debe envenenar la transacción de la decisión.
             DB::transaction(fn () => $this->validacionFinal->guardar($escuelaId, $this->validacionFinal->evaluar($escuelaId)));
+        } catch (DeadlockException $e) {
+            // Un deadlock aborta la transacción de PG: tragarlo convertiría el COMMIT en ROLLBACK silencioso.
+            throw $e;
         } catch (Throwable $e) {
             report($e);
         }
