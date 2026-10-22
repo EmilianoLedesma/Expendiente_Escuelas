@@ -86,8 +86,14 @@ class PasosReabiertosTest extends TestCase
     {
         $nivel = $this->nivelDe(Solicitante::factory()->create(), 'primaria', 'en_captura');
 
-        $this->assertTrue($this->sut()->rondaCerrada($nivel->escuela_id));
+        $this->assertFalse($this->sut()->rondaCerrada($nivel->escuela_id));
         $this->assertFalse($this->sut()->estaReabierto($nivel->escuela_id, 'inmueble', $nivel->id));
         $this->assertSame([], $this->sut()->reabiertos($nivel->escuela_id));
+
+        $aprobado = $this->nivelDe(Solicitante::factory()->create(), 'primaria', 'aprobado');
+        $this->assertFalse($this->sut()->rondaCerrada($aprobado->escuela_id));
+
+        $vacia = Escuela::create(['plantel_id' => $nivel->escuela->plantel_id, 'solicitante_id' => $nivel->escuela->solicitante_id]);
+        $this->assertFalse($this->sut()->rondaCerrada($vacia->id));
     }
 }
