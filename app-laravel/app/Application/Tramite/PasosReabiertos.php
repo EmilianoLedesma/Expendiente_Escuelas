@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Qué pasos del trámite vuelven a ser editables tras una devolución. Solo hay pasos
- * reabiertos con la ronda cerrada (ningún nivel de la escuela en revisión): un paso está
+ * reabiertos con la ronda cerrada (ningún nivel en revisión y al menos uno devuelto): un paso está
  * reabierto si un nivel en con_observaciones lo tiene rechazado. Un paso general
  * (plantel, responsable, niveles, documentos) se reabre si cualquier nivel lo rechazó;
  * uno del nivel, solo en el nivel que lo rechazó.
@@ -16,11 +16,13 @@ final class PasosReabiertos
 {
     public function rondaCerrada(int $escuelaId): bool
     {
-        return ! DB::table('escuela_niveles')
+        $claves = DB::table('escuela_niveles')
             ->join('estados_expediente', 'estados_expediente.id', '=', 'escuela_niveles.estado_id')
             ->where('escuela_niveles.escuela_id', $escuelaId)
-            ->where('estados_expediente.clave', EnviarTramite::EN_REVISION)
-            ->exists();
+            ->pluck('estados_expediente.clave');
+
+        // Cerrada: ningún nivel en revisión y al menos uno devuelto.
+        return ! $claves->contains(EnviarTramite::EN_REVISION) && $claves->contains('con_observaciones');
     }
 
     /** @param ?int $escuelaNivelId obligatorio para pasos del nivel; se ignora en los generales. */
