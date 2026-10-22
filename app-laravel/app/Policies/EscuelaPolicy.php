@@ -63,6 +63,17 @@ class EscuelaPolicy
     }
 
     /**
+     * Escribir un paso general: como `update`, y tras una devolución también si algún paso de la
+     * ruta está reabierto. Laravel reparte `can:editarPaso,escuela,a,b` en argumentos sueltos.
+     */
+    public function editarPaso(User $user, Escuela $escuela, string ...$pasos): bool
+    {
+        return $this->esDueno($user, $escuela)
+            && ($this->editable->esEditable($escuela->getKey())
+                || collect($pasos)->contains(fn (string $paso) => $this->editable->esEditable($escuela->getKey(), $paso)));
+    }
+
+    /**
      * Eliminar el trámite: SOLO el dueño, habilidad propia para que abrir
      * `view` a SEDEQ (o `update` a quien sea) nunca otorgue borrar. La regla
      * "todos los niveles en captura" vive en EliminarTramite, no aquí.
