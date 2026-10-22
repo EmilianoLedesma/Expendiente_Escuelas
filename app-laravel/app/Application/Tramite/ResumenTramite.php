@@ -95,6 +95,9 @@ class ResumenTramite
      */
     private array $motivosReabiertos = [];
 
+    /** La vista es la de un responsable por nivel (no la del dueño); se fija en cada paraEscuela(). */
+    private bool $vistaRestringida = false;
+
     public function __construct(
         private readonly EstadoPaso2 $estadoPaso2,
         private readonly EstadoPaso3 $estadoPaso3,
@@ -120,6 +123,7 @@ class ResumenTramite
         $rondaCerrada = $this->pasosReabiertos->rondaCerrada($escuelaId);
         $observaciones = $rondaCerrada ? $this->observacionesDeEscuela->acotar($this->observacionesDeEscuela->todas($escuelaId), $soloNivelIds) : [];
         $this->motivosReabiertos = $this->motivosPorSeccion($observaciones);
+        $this->vistaRestringida = $soloNivelIds !== null;
 
         $generales = $soloNivelIds === null ? $this->generales($escuela, $etapaFaltante) : [];
 
@@ -416,6 +420,10 @@ class ResumenTramite
 
         // Devolución: con la ronda cerrada, la sección reabierta se corrige; las demás siguen congeladas como en un envío.
         $observacion = $this->motivosReabiertos[isset(self::GENERALES[$clave]) ? "g:{$clave}" : "n:{$escuelaNivelId}:{$clave}"] ?? null;
+        if ($observacion !== null && $this->vistaRestringida && in_array($clave, PasosRevision::SOLO_DUENO, true)) {
+            // El responsable lee el motivo, pero el paso es del plantel: lo corrige el dueño (EscuelaNivelPolicy::editarPaso).
+            return new SeccionTramite($clave, $nombre, $descripcion, 'con_observaciones', null, null, 'Lo corrige el titular del trámite.', $posicion['paso'] ?? null, $posicion['total'] ?? null, $observacion, false);
+        }
         if ($observacion !== null && $href !== null) {
             return new SeccionTramite($clave, $nombre, $descripcion, 'con_observaciones', 'corregir', $href, null, $posicion['paso'] ?? null, $posicion['total'] ?? null, $observacion, true);
         }

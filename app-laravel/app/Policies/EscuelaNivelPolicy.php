@@ -59,9 +59,7 @@ class EscuelaNivelPolicy
             return true;
         }
 
-        $generalesOPlantel = [...PasosRevision::GENERALES, 'inmueble', 'infraestructura'];
-
-        return collect($pasos)->contains(fn (string $paso) => ($dueno || ! in_array($paso, $generalesOPlantel, true))
+        return collect($pasos)->contains(fn (string $paso) => ($dueno || ! in_array($paso, PasosRevision::SOLO_DUENO, true))
             && $this->editable->esEditable($escuelaId, $paso, $escuelaNivel->getKey()));
     }
 

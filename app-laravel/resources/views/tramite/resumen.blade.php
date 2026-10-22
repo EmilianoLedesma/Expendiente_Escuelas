@@ -6,17 +6,13 @@
 
         @php($siguiente = $resumen->siguiente())
         @if ($resumen->conObservaciones)
-            <x-ui.alert tipo="warning" titulo="Tu trámite tiene observaciones: corrige solo los pasos marcados y vuelve a enviar." class="mb-lg">
+            <x-ui.alert tipo="warning" :titulo="$resumen->puedeReenviar ? 'Tu trámite tiene observaciones: corrige solo los pasos marcados y vuelve a enviar.' : 'Tu trámite tiene observaciones. El titular del trámite corregirá y reenviará; abajo ves las que corresponden a tu nivel.'" class="mb-lg">
                 @if ($resumen->observaciones !== [])
                     <ul class="mt-xs list-disc space-y-xxs pl-lg">
                         @foreach ($resumen->observaciones as $observacion)
                             <li><span class="font-semibold">{{ $observacion['titulo'] }}@if ($observacion['nivel']) ({{ $observacion['nivel'] }})@endif:</span> {{ $observacion['motivo'] }}</li>
                         @endforeach
                     </ul>
-                @endif
-                @if ($resumen->puedeReenviar)
-                    {{-- Task 10 cablea el envío de las correcciones: aquí solo se reserva el lugar, deshabilitado. --}}
-                    <button type="button" disabled aria-disabled="true" data-reenviar class="mt-md inline-flex min-h-11 cursor-not-allowed items-center rounded-md border border-hairline px-md font-semibold text-muted">Reenviar correcciones</button>
                 @endif
             </x-ui.alert>
         @elseif ($resumen->enviado)

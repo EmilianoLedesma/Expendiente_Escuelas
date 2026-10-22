@@ -105,8 +105,8 @@ class ResumenTramiteDevolucionTest extends TestCase
     {
         [, $primaria, $secundaria] = $this->escuela();
         $this->devolverTramite($primaria->escuela, [
-            $primaria->id => ['inmueble' => 'Falta el croquis', 'plantel' => 'x'],
-            $secundaria->id => ['matricula' => 'Cifras inconsistentes'],
+            $primaria->id => ['matricula' => 'Cifras mal', 'plantel' => 'x'],
+            $secundaria->id => ['plan_estudios' => 'Cifras inconsistentes'],
         ]);
         $responsable = $this->responsableDe($primaria);
 
@@ -115,8 +115,66 @@ class ResumenTramiteDevolucionTest extends TestCase
         $this->assertTrue($dto->conObservaciones);
         $this->assertFalse($dto->puedeReenviar, 'solo el dueño reenvía');
         $this->assertCount(1, $dto->niveles);
-        $this->assertSame('con_observaciones', $this->secciones($dto, 0)['inmueble']->estado);
-        $this->assertSame(['inmueble'], array_column($dto->observaciones, 'paso'));
+        $matricula = $this->secciones($dto, 0)['matricula'];
+        $this->assertSame('con_observaciones', $matricula->estado);
+        $this->assertNotNull($matricula->href);
+        $this->assertTrue($matricula->editable);
+        $this->assertSame(['matricula'], array_column($dto->observaciones, 'paso'));
+    }
+
+    public function test_responsable_lee_el_motivo_de_inmueble_pero_no_puede_corregirlo(): void
+    {
+        [, $primaria, $secundaria] = $this->escuela();
+        $this->devolverTramite($primaria->escuela, [
+            $primaria->id => ['inmueble' => 'Falta el croquis', 'infraestructura' => 'Faltan aulas'],
+            $secundaria->id => ['matricula' => 'x'],
+        ]);
+        $responsable = $this->responsableDe($primaria);
+
+        $dto = app(ResumenTramite::class)->paraEscuela($primaria->escuela_id, $responsable->id);
+
+        foreach (['inmueble' => 'Falta el croquis', 'infraestructura' => 'Faltan aulas'] as $clave => $motivo) {
+            $s = $this->secciones($dto, 0)[$clave];
+            $this->assertSame('con_observaciones', $s->estado);
+            $this->assertSame($motivo, $s->observacion);
+            $this->assertNull($s->accion, $clave);
+            $this->assertNull($s->href, $clave);
+            $this->assertFalse($s->editable, $clave);
+            $this->assertStringContainsString('titular', (string) $s->motivoBloqueo);
+        }
+    }
+
+    public function test_el_dueno_si_corrige_inmueble(): void
+    {
+        [$dueno, $primaria, $secundaria] = $this->escuela();
+        $this->devolverTramite($primaria->escuela, [$primaria->id => ['inmueble' => 'Falta el croquis'], $secundaria->id => ['matricula' => 'x']]);
+
+        $s = $this->secciones(app(ResumenTramite::class)->paraEscuela($primaria->escuela_id, $dueno->user->id), 0)['inmueble'];
+
+        $this->assertTrue($s->editable);
+        $this->assertNotNull($s->href);
+    }
+
+    public function test_el_banner_del_dueno_no_trae_boton_de_reenvio_ni_el_del_responsable_dice_reenviar(): void
+    {
+        [$dueno, $primaria, $secundaria] = $this->escuela();
+        $this->devolverTramite($primaria->escuela, [$primaria->id => ['inmueble' => 'Falta el croquis'], $secundaria->id => ['matricula' => 'x']]);
+        $url = route('tramite.resumen', ['escuela' => $primaria->escuela_id]);
+
+        $this->actingAs($dueno->user)->get($url)->assertOk()
+            ->assertSee('corrige solo los pasos marcados y vuelve a enviar')->assertDontSee('Reenviar correcciones');
+
+        $this->actingAs($this->responsableDe($primaria))->get($url)->assertOk()
+            ->assertSee('El titular del trámite corregirá y reenviará')->assertDontSee('vuelve a enviar');
+    }
+
+    public function test_el_responsable_sin_observaciones_propias_no_ve_lista_vacia(): void
+    {
+        [, $primaria, $secundaria] = $this->escuela();
+        $this->devolverTramite($primaria->escuela, [$primaria->id => ['plantel' => 'x'], $secundaria->id => ['matricula' => 'y']]);
+
+        $this->actingAs($this->responsableDe($primaria))->get(route('tramite.resumen', ['escuela' => $primaria->escuela_id]))
+            ->assertOk()->assertSee('El titular del trámite corregirá')->assertDontSee('<ul class="mt-xs list-disc', false);
     }
 
     public function test_mis_tramites_muestra_con_observaciones_solo_en_ronda_cerrada(): void
