@@ -83,6 +83,15 @@ class EscuelaPolicy
         return $this->esDueno($user, $escuela);
     }
 
+    /**
+     * Reenviar correcciones tras una devolución: SOLO el dueño, como el envío (un responsable por nivel corrige
+     * su nivel pero no reenvía). La regla «ronda cerrada» vive en ReenviarCorrecciones, no aquí.
+     */
+    public function reenviar(User $user, Escuela $escuela): bool
+    {
+        return $this->esDueno($user, $escuela);
+    }
+
     private function esDueno(User $user, Escuela $escuela): bool
     {
         if ($user->solicitante === null) {
