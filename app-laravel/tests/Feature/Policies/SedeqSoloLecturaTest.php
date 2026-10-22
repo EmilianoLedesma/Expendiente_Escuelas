@@ -20,7 +20,7 @@ class SedeqSoloLecturaTest extends TestCase
     use ConTramitesEnRevision;
     use RefreshDatabase;
 
-    private const HABILIDADES_DE_ESCRITURA = '/^can:(update|updateInmueble|gestionarResponsables|delete),/';
+    private const HABILIDADES_DE_ESCRITURA = '/^can:(update|editarPaso|updateInmueble|gestionarResponsables|delete),/';
 
     private EscuelaNivel $nivel;
 

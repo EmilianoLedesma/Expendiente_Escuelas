@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Application\Escuelas\VerificarAccesoResponsable;
 use App\Application\Escuelas\VerificarPropietarioEscuelaNivel;
 use App\Application\Revision\AccesoSedeq;
+use App\Application\Revision\PasosRevision;
 use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use App\Models\User;
@@ -40,6 +41,28 @@ class EscuelaNivelPolicy
     {
         return ($this->esDueno($user, $escuelaNivel) || $this->esResponsable($user, $escuelaNivel))
             && $this->esEditable($escuelaNivel);
+    }
+
+    /**
+     * Escribir un paso del nivel. Todo en captura: como `update`. Tras una devolución, el dueño corrige
+     * cualquier paso reabierto; el responsable solo los suyos (no los generales ni de ámbito plantel,
+     * inmueble e infraestructura). Los pasos del nivel se reabren por nivel; los generales, para toda la escuela.
+     */
+    public function editarPaso(User $user, EscuelaNivel $escuelaNivel, string ...$pasos): bool
+    {
+        $dueno = $this->esDueno($user, $escuelaNivel);
+        if (! $dueno && ! $this->esResponsable($user, $escuelaNivel)) {
+            return false;
+        }
+        $escuelaId = (int) $escuelaNivel->escuela_id;
+        if ($this->editable->esEditable($escuelaId)) {
+            return true;
+        }
+
+        $generalesOPlantel = [...PasosRevision::GENERALES, 'inmueble', 'infraestructura'];
+
+        return collect($pasos)->contains(fn (string $paso) => ($dueno || ! in_array($paso, $generalesOPlantel, true))
+            && $this->editable->esEditable($escuelaId, $paso, $escuelaNivel->getKey()));
     }
 
     /** Datos del inmueble (3.1): son del plantel, compartido entre niveles; solo el dueño. */
