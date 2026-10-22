@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire\Sedeq;
 
 use App\Application\Revision\DecidirPaso;
 use App\Application\Revision\PasosRevision;
+use App\Application\Revision\ResultadosCambiados;
 use App\Application\Validaciones\DTO\FilaValidacion;
 use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Application\Validaciones\EjecutarValidacionFinal;
@@ -135,6 +136,54 @@ class RevisionNivelTest extends TestCase
         $this->mock(EjecutarValidacionFinal::class)->shouldReceive('evaluar')->andThrow(new \RuntimeException('motor roto'));
 
         $this->pagina()->call('abrir', 'documentos')->assertOk()->assertDontSee('Pistas del sistema')->assertSee('Documentos del plantel');
+    }
+
+    public function test_el_aviso_de_resultado_cambiado_sale_en_el_paso_aceptado_y_no_en_el_pendiente(): void
+    {
+        $this->mock(ResultadosCambiados::class)->shouldReceive('ejecutar')
+            ->andReturn(['documentos' => ['RFC: antes cumplía y ahora «No cumple».'], 'plantel' => ['Regla de plantel: antes cumplía y ahora «No cumple».']]);
+        // Solo «documentos» está aceptado; «plantel» sigue pendiente aunque el caso de uso lo devolviera.
+        DB::table('decisiones_revision')->insert(['escuela_nivel_id' => $this->nivel->id, 'paso_clave' => 'documentos', 'estado' => 'aceptado', 'decidido_por' => $this->revisor->id, 'decidido_at' => now()]);
+
+        $this->pagina()
+            ->call('abrir', 'documentos')
+            ->assertSee('Resultado cambiado desde que se aceptó')
+            ->assertSee('RFC: antes cumplía y ahora «No cumple».')
+            ->assertSeeHtml('data-resultado-cambiado-paso="documentos"')
+            ->assertDontSeeHtml('data-resultado-cambiado-paso="plantel"')
+            ->call('abrir', 'plantel')
+            ->assertDontSee('Resultado cambiado desde que se aceptó')
+            ->assertDontSee('Regla de plantel');
+    }
+
+    public function test_sin_resultados_cambiados_no_hay_aviso(): void
+    {
+        $this->mock(ResultadosCambiados::class)->shouldReceive('ejecutar')->andReturn([]);
+
+        $this->pagina()->call('abrir', 'documentos')->assertDontSee('Resultado cambiado');
+    }
+
+    public function test_los_resultados_cambiados_persistidos_son_arreglos_de_textos(): void
+    {
+        $this->mock(ResultadosCambiados::class)->shouldReceive('ejecutar')->andReturn(['documentos' => ['RFC cambió']]);
+
+        $this->assertSame(['documentos' => ['RFC cambió']], $this->pagina()->instance()->resultadosCambiados);
+    }
+
+    public function test_el_aviso_se_recalcula_tras_decidir(): void
+    {
+        $this->mock(ResultadosCambiados::class)->shouldReceive('ejecutar')->twice()->andReturn([], ['plantel' => ['Cambió']]);
+
+        $this->pagina()->call('abrir', 'plantel')->assertDontSee('Resultado cambiado desde que se aceptó')
+            ->call('aceptar')->assertSee('Resultado cambiado desde que se aceptó');
+    }
+
+    public function test_un_fallo_del_aviso_no_rompe_la_pagina(): void
+    {
+        $this->mock(EjecutarValidacionFinal::class)->shouldReceive('evaluar')->andThrow(new \RuntimeException('motor roto'));
+        DB::table('decisiones_revision')->insert(['escuela_nivel_id' => $this->nivel->id, 'paso_clave' => 'documentos', 'estado' => 'aceptado', 'decidido_por' => $this->revisor->id, 'decidido_at' => now()]);
+
+        $this->pagina()->call('abrir', 'documentos')->assertOk()->assertDontSee('Resultado cambiado desde que se aceptó');
     }
 
     public function test_la_pista_aparece_en_el_paso_y_no_bloquea_la_decision(): void
