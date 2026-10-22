@@ -262,7 +262,7 @@ class RegistrarDatosNivelTest extends TestCase
     public function test_datos_nivel_rechaza_con_paso_aceptado(): void
     {
         $escuelaNivel = $this->nivel();
-        $this->devolverTramite($escuelaNivel->escuela, [$escuelaNivel->id => ['plantel' => 'x']], [$escuelaNivel->id => ['documentos_nivel']]);
+        $this->devolverTramite($escuelaNivel->escuela, [$escuelaNivel->id => ['plantel' => 'Falta el domicilio del plantel']], [$escuelaNivel->id => ['documentos_nivel']]);
 
         $this->expectException(PrecondicionIncumplida::class);
 

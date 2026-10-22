@@ -1524,7 +1524,7 @@ class RegistrarDocumentoTest extends TestCase
         $this->devolverTramite($escuela, [
             $primaria->id => ['documentos_nivel' => 'Acervo ilegible'],
             $secundaria->id => ['plantel' => 'Falta calle'],
-        ]);
+        ], [$secundaria->id => ['documentos_nivel']]);
 
         app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $primaria->id);
         $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $primaria->id]);
@@ -1534,6 +1534,58 @@ class RegistrarDocumentoTest extends TestCase
             $this->fail('Se esperaba PrecondicionIncumplida.');
         } catch (PrecondicionIncumplida) {
             $this->assertDatabaseMissing('documentos_escuela_nivel', ['escuela_nivel_id' => $secundaria->id]);
+        }
+    }
+
+    public function test_documento_de_nivel_con_ambos_niveles_devueltos_escribe_solo_en_el_propio(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $primaria = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $secundaria = $this->elegirNivel($escuela->id, 'secundaria');
+        $this->completarPaso2($escuela->id);
+        $this->devolverTramite($escuela, [
+            $primaria->id => ['documentos_nivel' => 'Acervo ilegible'],
+            $secundaria->id => ['documentos_nivel' => 'Acervo incompleto'],
+        ]);
+
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $primaria->id);
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_secundaria', $this->pdf(), new DatosDocumento, $secundaria->id);
+
+        $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $primaria->id]);
+        $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $secundaria->id]);
+    }
+
+    public function test_documento_general_rechaza_si_solo_se_devolvio_documentos_nivel(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $this->devolverTramite($escuela, [$nivel->id => ['documentos_nivel' => 'Acervo ilegible']]);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuela->id, 'ine', $this->pdf(), new DatosDocumento);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseCount('documentos_escuela', 0);
+        }
+    }
+
+    public function test_documento_de_nivel_rechaza_si_solo_se_devolvio_documentos(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $this->devolverTramite($escuela, [$nivel->id => ['documentos' => 'Documentos ilegibles']]);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $nivel->id);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseCount('documentos_escuela_nivel', 0);
         }
     }
 }
