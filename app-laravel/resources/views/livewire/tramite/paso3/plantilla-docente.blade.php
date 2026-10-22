@@ -8,10 +8,22 @@
 
         <ol id="personas" class="space-y-lg">
             @foreach ($personas as $i => $persona)
+                @if ($i < $inicioPersonas || $i >= $finPersonas)
+                    @continue
+                @endif
                 @php($cargo = $cargos[(int) $persona['cargoPuestoId']] ?? null)
-                <li wire:key="persona-{{ $i }}" class="rounded-lg border border-hairline p-md sm:p-lg">
-                    <div class="flex items-center justify-between gap-sm">
-                        <h2 class="text-title-sm font-semibold text-ink">Persona {{ $i + 1 }}</h2>
+                <li wire:key="persona-{{ $i }}" class="rounded-lg border border-hairline">
+                    <div class="flex items-center gap-sm p-md sm:p-lg">
+                        <button
+                            type="button"
+                            wire:click="alternarPersona({{ $i }})"
+                            aria-controls="persona-panel-{{ $i }}"
+                            aria-expanded="{{ $personaAbierta === $i ? 'true' : 'false' }}"
+                            class="flex min-h-11 flex-1 items-center justify-between gap-sm text-left text-title-sm font-semibold text-ink"
+                        >
+                            <span>Persona {{ $i + 1 }}</span>
+                            <x-ui.icon nombre="chevron-down" class="size-5 shrink-0 transition-transform duration-200 {{ $personaAbierta === $i ? 'rotate-180' : '' }}" aria-hidden="true" />
+                        </button>
                         @if (count($personas) > 1)
                             <button type="button" wire:click="quitarPersona({{ $i }})" class="min-h-11 font-semibold text-primary">
                                 Quitar<span class="sr-only"> persona {{ $i + 1 }}</span>
@@ -19,7 +31,8 @@
                         @endif
                     </div>
 
-                    <div class="mt-md grid gap-md sm:grid-cols-2">
+                    @if ($personaAbierta === $i)
+                        <div id="persona-panel-{{ $i }}" class="grid gap-md border-t border-hairline px-md pb-md pt-md sm:grid-cols-2 sm:px-lg sm:pb-lg">
                         <x-ui.field id="personas.{{ $i }}.cargoPuestoId" label="Cargo o puesto" class="sm:col-span-2">
                             <x-ui.select wire:model.live="personas.{{ $i }}.cargoPuestoId">
                                 <option value="">Selecciona un cargo</option>
@@ -62,10 +75,33 @@
                         </x-ui.field>
                         <x-ui.field id="personas.{{ $i }}.estudios" label="Estudios"><x-ui.input maxlength="200" wire:model.blur="personas.{{ $i }}.estudios" /></x-ui.field>
                         <x-ui.field id="personas.{{ $i }}.cedulaODocumento" label="Cédula profesional o documento académico"><x-ui.input maxlength="100" wire:model.blur="personas.{{ $i }}.cedulaODocumento" /></x-ui.field>
-                    </div>
+                        </div>
+                    @endif
                 </li>
             @endforeach
         </ol>
+
+        @if ($totalPaginas > 1)
+            <nav aria-label="Paginación de personas" class="mt-lg flex items-center justify-between gap-md">
+                <button
+                    type="button"
+                    wire:click="paginaAnterior"
+                    @disabled($paginaPersonas === 1)
+                    class="min-h-11 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Anterior
+                </button>
+                <span class="text-sm text-muted">Página {{ $paginaPersonas }} de {{ $totalPaginas }}</span>
+                <button
+                    type="button"
+                    wire:click="paginaSiguiente"
+                    @disabled($paginaPersonas === $totalPaginas)
+                    class="min-h-11 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Siguiente
+                </button>
+            </nav>
+        @endif
 
         <x-ui.button-secondary type="button" wire:click="agregarPersona" class="mt-md">Agregar persona</x-ui.button-secondary>
 
