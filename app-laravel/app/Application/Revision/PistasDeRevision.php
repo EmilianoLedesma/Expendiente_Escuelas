@@ -4,6 +4,7 @@ namespace App\Application\Revision;
 
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Validaciones\DTO\FilaValidacion;
+use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Models\EscuelaNivel;
 use App\Models\User;
@@ -44,6 +45,17 @@ final class PistasDeRevision
             return [];
         }
 
+        return self::filasPorPaso($reporte, $escuelaNivelId);
+    }
+
+    /**
+     * Filas de un reporte por clave de paso, acotadas a la escuela y al nivel (las de otros niveles se ignoran).
+     * Lo comparten las pistas y el aviso de resultados cambiados (ResultadosCambiados).
+     *
+     * @return array<string, list<FilaValidacion>>
+     */
+    public static function filasPorPaso(ValidacionFinal $reporte, int $escuelaNivelId): array
+    {
         $pistas = ['documentos' => $reporte->filas];
 
         foreach ($reporte->niveles as $seccion) {
