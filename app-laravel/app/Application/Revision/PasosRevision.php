@@ -10,6 +10,9 @@ final class PasosRevision
     /** Los cuatro generales del trámite, antes de los pasos propios de cada nivel. */
     public const GENERALES = ['plantel', 'responsable', 'documentos', 'niveles'];
 
+    /** Pasos que solo corrige el dueño del trámite tras una devolución: los generales y los de ámbito plantel (inmueble, infraestructura). Lo usan EscuelaNivelPolicy y el hub. */
+    public const SOLO_DUENO = [...self::GENERALES, 'inmueble', 'infraestructura'];
+
     /** Orden de revisión de los pasos del nivel; mobiliario solo aplica a ResumenTramite::NIVEL_CON_MOBILIARIO. */
     private const DEL_NIVEL = ['documentos_nivel', 'inmueble', 'infraestructura', 'mobiliario', 'plan_estudios', 'plantilla_docente', 'matricula'];
 
