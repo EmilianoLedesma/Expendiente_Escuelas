@@ -368,6 +368,32 @@ class DecidirPasoTest extends TestCase
         Event::assertDispatchedTimes(RondaCerrada::class, 1);
     }
 
+    public function test_bloquea_la_escuela_despues_del_nivel(): void
+    {
+        $nivel = $this->nivelEnRevision();
+        $bloqueos = [];
+        DB::listen(function ($q) use (&$bloqueos) {
+            if (str_contains($q->sql, 'for update')) {
+                $bloqueos[] = str_contains($q->sql, '"escuela_niveles"') ? 'escuela_niveles' : (str_contains($q->sql, '"escuelas"') ? 'escuelas' : $q->sql);
+            }
+        });
+
+        $this->decidir($this->sup->id, $nivel, 'plantel');
+
+        $this->assertSame(['escuela_niveles', 'escuelas'], $bloqueos);
+    }
+
+    public function test_cierra_la_ronda_cuando_el_otro_nivel_ya_estaba_confirmado(): void
+    {
+        Event::fake([RondaCerrada::class]);
+        $a = $this->nivelEnRevision();
+        $this->nivelEn($a->escuela, 'secundaria', 'aprobado');
+
+        $this->devolver($a);
+
+        Event::assertDispatchedTimes(RondaCerrada::class, 1);
+    }
+
     public function test_rollback_de_la_decision_no_despacha_el_evento(): void
     {
         Event::fake([RondaCerrada::class]);
