@@ -77,19 +77,26 @@ class DevolucionPaso2CongeladoTest extends TestCase
         $this->assertTrue($this->enRevision($nivel));
     }
 
-    public function test_cambiar_el_tipo_de_persona_no_bloquea_los_pasos_del_nivel_ni_el_reenvio(): void
+    public function test_cambiar_el_responsable_descarta_el_formato_sin_bloquear_el_paso2_y_se_reenvia_tras_recargarlo(): void
     {
         [$escuela, $nivel] = $this->devuelto(['responsable' => 'Falta el gestor', 'plan_estudios' => 'Falta la referencia']);
 
+        // Otro nombre del titular: cambia lo que imprime el Formato (RegistrarResponsableLegal::huellaFormato), que se
+        // descarta. El tipo de persona solo cuenta como moral/no moral en la huella; por sí solo no lo descartaría.
         (new RegistrarResponsableLegal)->ejecutar($escuela->id, new DatosResponsableLegal(
-            tipoPersona: 'fisica_con_gestor', nombre: 'Juan Pérez Gómez', rfc: self::RFC_TITULAR, curp: self::CURP_TITULAR,
+            tipoPersona: 'fisica_con_gestor', nombre: 'Juan Pérez Gómez Ruiz', rfc: self::RFC_TITULAR, curp: self::CURP_TITULAR,
             gestorNombre: 'Carlos Gómez Mora', gestorCurp: self::CURP_GESTOR,
         ));
 
         $this->assertNull(app(EstadoPaso2::class)->etapaFaltante($escuela->id));
-        $this->corregirPlan($nivel);
-        // El Formato se descartó al cambiar el responsable: se vuelve a cargar (documentos_nivel reabierto).
+        $this->assertFalse(DB::table('documentos_escuela_nivel')->join('tipos_documentos', 'tipos_documentos.id', '=', 'documentos_escuela_nivel.tipo_documento_id')
+            ->where('escuela_nivel_id', $nivel->id)->where('tipos_documentos.clave', 'formato_solicitud')->exists(), 'El Formato debe haberse descartado.');
+        // Sin Formato el Paso 2.4 del nivel está incompleto: el Paso 3 manda a recargarlo (documentos_nivel reabierto).
+        Livewire::test(PlanEstudios::class, ['escuelaNivel' => $nivel])
+            ->assertRedirect(route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $nivel->id]));
+
         app(RegistrarDocumento::class)->ejecutar($escuela->id, 'formato_solicitud', UploadedFile::fake()->create('formato.pdf', 10, 'application/pdf'), new DatosDocumento, $nivel->id);
+        $this->corregirPlan($nivel);
         app(ReenviarCorrecciones::class)->ejecutar($escuela->id, (int) $escuela->solicitante->user->id);
 
         $this->assertTrue($this->enRevision($nivel));
