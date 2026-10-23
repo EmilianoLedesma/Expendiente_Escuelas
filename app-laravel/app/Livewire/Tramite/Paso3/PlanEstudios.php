@@ -68,8 +68,7 @@ class PlanEstudios extends Component
             return;
         }
 
-        $this->toastAlRedirigir('Plan de estudios guardado', 'Continúa con la plantilla docente.');
-        $this->redirectRoute('tramite.paso3-plantilla', ['escuelaNivel' => $this->escuelaNivel->id]);
+        $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-plantilla', 'Plan de estudios guardado', 'Continúa con la plantilla docente.');
     }
 
     public function render()

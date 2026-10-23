@@ -142,8 +142,7 @@ class PlantillaDocente extends Component
             return;
         }
 
-        $this->toastAlRedirigir('Plantilla docente guardada', 'Continúa con la matrícula.');
-        $this->redirectRoute('tramite.paso3-matricula', ['escuelaNivel' => $this->escuelaNivel->id]);
+        $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-matricula', 'Plantilla docente guardada', 'Continúa con la matrícula.');
     }
 
     public function render(PlantillaCapturada $plantillaCapturada)

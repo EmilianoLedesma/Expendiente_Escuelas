@@ -2,6 +2,7 @@
 
 namespace App\Application\EscuelaNiveles;
 
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ResponsablesNivel\InvitarResponsableNivel;
 use App\Application\Tramite\EstadoPaso2;
@@ -77,11 +78,16 @@ class RegistrarNivelesSeleccionados
 
         DB::transaction(function () use ($escuelaId, $agregar, $quitar, $confirmado, $estadoId) {
             // Orden de EliminarTramite (WS-7a): escuela_niveles antes que escuelas.
+            $filas = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->get(['id', 'nivel_educativo_id', 'estado_id']);
             /** @var Collection<int, int> $niveles escuela_nivel_id => nivel_educativo_id */
-            $niveles = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->pluck('nivel_educativo_id', 'id')->map(fn ($id) => (int) $id);
-            $this->tramiteEditable->asegurarEscuela($escuelaId);
+            $niveles = $filas->pluck('nivel_educativo_id', 'id')->map(fn ($id) => (int) $id);
+            $this->tramiteEditable->asegurarEscuela($escuelaId, 'niveles');
 
             $porQuitar = $niveles->filter(fn (int $nivelEducativoId) => in_array($nivelEducativoId, $quitar, true));
+            $estados = $filas->pluck('estado_id', 'id')->map(fn ($id) => (int) $id);
+            if (! TramiteEditable::todosEnCaptura($estados, TramiteEditable::idEnCaptura())) {
+                $this->validarReabierto($agregar, $porQuitar, $estados);
+            }
             $nuevos = array_diff($agregar, $niveles->values()->all());
 
             if ($niveles->count() - $porQuitar->count() + count($nuevos) === 0) {
@@ -101,6 +107,26 @@ class RegistrarNivelesSeleccionados
                 );
             }
         });
+    }
+
+    /**
+     * Con `niveles` reabierto por una devolución (trámite no totalmente en captura): solo se quitan
+     * niveles devueltos y no se agregan niveles nuevos.
+     *
+     * @param  list<int>  $agregar
+     * @param  Collection<int, int>  $porQuitar  escuela_nivel_id => nivel_educativo_id
+     * @param  Collection<int, int>  $estados  escuela_nivel_id => estado_id
+     */
+    private function validarReabierto(array $agregar, Collection $porQuitar, Collection $estados): void
+    {
+        if ($agregar !== []) {
+            throw new DatosInvalidos(['agregar' => 'Con el paso devuelto solo puedes quitar niveles; no se pueden agregar niveles nuevos.']);
+        }
+
+        $conObservaciones = (int) DB::table('estados_expediente')->where('clave', 'con_observaciones')->value('id');
+        if ($porQuitar->keys()->contains(fn (int $id) => $estados[$id] !== $conObservaciones)) {
+            throw new PrecondicionIncumplida(TramiteEditable::ENVIADO, 'Solo puedes quitar niveles que SEDEQ devolvió con observaciones.');
+        }
     }
 
     /**

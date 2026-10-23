@@ -208,10 +208,14 @@ class RegistrarDocumento
                 // WS-7a: después del bloqueo del nivel de arriba (orden escuela_niveles →
                 // escuelas). Los documentos del plantel se comparten: se rechazan mientras
                 // cualquier escuela del plantel esté enviada (spec §5.4).
+                // Devolución: el paso reabierto basta; los documentos generales (plantel y
+                // escuela) son el paso `documentos`, los del nivel `documentos_nivel` de ese nivel.
+                $nivelDelPaso = $tipo->ambito === 'escuela_nivel' ? (int) $ownerId : null;
+                $pasoClave = $nivelDelPaso === null ? 'documentos' : 'documentos_nivel';
                 if ($tipo->ambito === 'plantel') {
-                    $tramiteEditable->asegurarPlantel((int) $ownerId);
+                    $tramiteEditable->asegurarPlantel((int) $ownerId, $pasoClave, $escuelaId);
                 } else {
-                    $tramiteEditable->asegurarEscuela($escuelaId);
+                    $tramiteEditable->asegurarEscuela($escuelaId, $pasoClave, $nivelDelPaso);
                 }
 
                 $documento = $modelo->newQuery()->updateOrCreate(

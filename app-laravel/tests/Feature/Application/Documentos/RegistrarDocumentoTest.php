@@ -32,11 +32,13 @@ use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
 class RegistrarDocumentoTest extends TestCase
 {
     use CompletaPaso2;
+    use ConTramiteDevuelto;
     use RefreshDatabase;
 
     private function crearEscuela(string $tipoPersona = 'fisica'): Escuela
@@ -1472,5 +1474,118 @@ class RegistrarDocumentoTest extends TestCase
         $this->assertSame('2030-06-30', $this->filaDictamen()['fecha_vencimiento_documento']);
         $this->assertSame($ruta, DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->value('archivo_path'));
         $this->assertCount(1, Storage::disk('documentos')->allFiles());
+    }
+
+    public function test_documento_general_se_reemplaza_con_paso_reabierto(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $this->devolverTramite($escuela, [$nivel->id => ['documentos' => 'Documentos ilegibles']]);
+
+        // Ámbito escuela y ámbito plantel comparten el paso `documentos`.
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'ine', $this->pdf(), new DatosDocumento);
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'dictamen_uso_suelo', $this->pdf(), new DatosDocumento(fechaEmision: '2026-09-01'));
+
+        $this->assertDatabaseHas('documentos_escuela', ['escuela_id' => $escuela->id]);
+        $this->assertDatabaseHas('documentos_plantel', ['plantel_id' => $escuela->plantel_id]);
+    }
+
+    public function test_documento_general_rechaza_con_paso_aceptado(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $this->devolverTramite($escuela, [$nivel->id => ['plantel' => 'Falta calle']], [$nivel->id => ['documentos']]);
+
+        foreach (['ine', 'dictamen_uso_suelo'] as $clave) {
+            try {
+                app(RegistrarDocumento::class)->ejecutar($escuela->id, $clave, $this->pdf(), new DatosDocumento(fechaEmision: '2026-09-01'));
+                $this->fail('Se esperaba PrecondicionIncumplida.');
+            } catch (PrecondicionIncumplida) {
+                // esperado
+            }
+        }
+
+        $this->assertDatabaseCount('documentos_escuela', 0);
+        $this->assertDatabaseCount('documentos_plantel', 0);
+    }
+
+    public function test_documento_de_nivel_solo_en_el_nivel_devuelto(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $primaria = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $secundaria = $this->elegirNivel($escuela->id, 'secundaria');
+        $this->completarPaso2($escuela->id);
+        $this->devolverTramite($escuela, [
+            $primaria->id => ['documentos_nivel' => 'Acervo ilegible'],
+            $secundaria->id => ['plantel' => 'Falta calle'],
+        ], [$secundaria->id => ['documentos_nivel']]);
+
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $primaria->id);
+        $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $primaria->id]);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_secundaria', $this->pdf(), new DatosDocumento, $secundaria->id);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseMissing('documentos_escuela_nivel', ['escuela_nivel_id' => $secundaria->id]);
+        }
+    }
+
+    public function test_documento_de_nivel_con_ambos_niveles_devueltos_escribe_solo_en_el_propio(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $primaria = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $secundaria = $this->elegirNivel($escuela->id, 'secundaria');
+        $this->completarPaso2($escuela->id);
+        $this->devolverTramite($escuela, [
+            $primaria->id => ['documentos_nivel' => 'Acervo ilegible'],
+            $secundaria->id => ['documentos_nivel' => 'Acervo incompleto'],
+        ]);
+
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $primaria->id);
+        app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_secundaria', $this->pdf(), new DatosDocumento, $secundaria->id);
+
+        $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $primaria->id]);
+        $this->assertDatabaseHas('documentos_escuela_nivel', ['escuela_nivel_id' => $secundaria->id]);
+    }
+
+    public function test_documento_general_rechaza_si_solo_se_devolvio_documentos_nivel(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $this->devolverTramite($escuela, [$nivel->id => ['documentos_nivel' => 'Acervo ilegible']]);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuela->id, 'ine', $this->pdf(), new DatosDocumento);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseCount('documentos_escuela', 0);
+        }
+    }
+
+    public function test_documento_de_nivel_rechaza_si_solo_se_devolvio_documentos(): void
+    {
+        Storage::fake('documentos');
+        (new TiposDocumentosSeeder)->run();
+        $escuela = $this->crearEscuela();
+        $nivel = EscuelaNivel::where('escuela_id', $escuela->id)->firstOrFail();
+        $this->devolverTramite($escuela, [$nivel->id => ['documentos' => 'Documentos ilegibles']]);
+
+        try {
+            app(RegistrarDocumento::class)->ejecutar($escuela->id, 'acervo_bibliografico_primaria', $this->pdf(), new DatosDocumento, $nivel->id);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseCount('documentos_escuela_nivel', 0);
+        }
     }
 }

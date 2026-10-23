@@ -8,6 +8,7 @@ use App\Http\Controllers\Tramite\DescargarReporteValidacionController;
 use App\Http\Controllers\Tramite\EliminarTramiteController;
 use App\Http\Controllers\Tramite\FormatoSolicitudPdfController;
 use App\Http\Controllers\Tramite\MisTramitesController;
+use App\Http\Controllers\Tramite\ReenviarCorreccionesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
 use App\Livewire\Sedeq\ColaRevisor;
@@ -78,18 +79,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->missing(fn () => redirect()->route('tramite.index')->with('toast', ['tipo' => 'info', 'titulo' => 'El trámite ya no existe']))
         ->name('tramite.eliminar');
 
+    // Devolución: el dueño reenvía las correcciones de una ronda cerrada (ReenviarCorrecciones).
+    Route::post('/tramite/{escuela}/reenviar', ReenviarCorreccionesController::class)
+        ->whereNumber('escuela')
+        ->middleware('can:reenviar,escuela')
+        ->name('tramite.reenviar');
+
     // WS-7b-1 U1: teléfono y correo del plantel, editables hasta el envío (el domicilio no).
     Route::get('/tramite/{escuela}/plantel', DatosPlantel::class)
         ->whereNumber('escuela')
-        ->middleware('can:update,escuela')
+        ->middleware("can:editarPaso,escuela,'plantel'")
         ->name('tramite.plantel');
 
     Route::get('/tramite/paso2/{escuela}', Paso2Responsable::class)
-        ->middleware('can:update,escuela')
+        ->middleware("can:editarPaso,escuela,'responsable','niveles'")
         ->name('tramite.paso2');
 
     Route::get('/tramite/paso2/{escuela}/documentos', Paso2Documentos::class)
-        ->middleware('can:update,escuela')
+        ->middleware("can:editarPaso,escuela,'documentos'")
         ->name('tramite.paso2-documentos');
 
     Route::get('/tramite/paso2/{escuela}/documentos/{clave}/archivo', DescargarDocumentoController::class)
@@ -98,7 +105,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos', Paso24DocumentosNivel::class)
         ->whereNumber('escuelaNivel')
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'documentos_nivel'")
         ->name('tramite.paso2-nivel-documentos');
 
     Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos/formato-solicitud.pdf', FormatoSolicitudPdfController::class)
@@ -123,27 +130,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('tramite.validacion.reporte');
 
     Route::get('/tramite/paso3/{escuelaNivel}', DatosInmueble::class)
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'inmueble'")
         ->name('tramite.paso3-inmueble');
 
     Route::get('/tramite/paso3/{escuelaNivel}/infraestructura', InfraestructuraNivel::class)
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'infraestructura'")
         ->name('tramite.paso3-infraestructura');
 
     Route::get('/tramite/paso3/{escuelaNivel}/mobiliario', MobiliarioNivel::class)
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'mobiliario'")
         ->name('tramite.paso3-mobiliario');
 
     Route::get('/tramite/paso3/{escuelaNivel}/plan-estudios', PlanEstudios::class)
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'plan_estudios'")
         ->name('tramite.paso3-plan-estudios');
 
     Route::get('/tramite/paso3/{escuelaNivel}/plantilla', PlantillaDocente::class)
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'plantilla_docente'")
         ->name('tramite.paso3-plantilla');
 
     Route::get('/tramite/paso3/{escuelaNivel}/matricula', Matricula::class)
-        ->middleware('can:update,escuelaNivel')
+        ->middleware("can:editarPaso,escuelaNivel,'matricula'")
         ->name('tramite.paso3-matricula');
 
     // Ya no es una página: el hub muestra el estado de cada nivel (rediseño UI, D12). Se conserva el nombre de ruta.

@@ -101,8 +101,9 @@ class DatosInmueble extends Component
         $this->soloLectura = ! Gate::allows('updateInmueble', $escuelaNivel);
 
         if ($yaCapturados->ejecutar($this->plantelId())) {
-            // WS-7b-2: el dueño que ya completó este paso lo edita, precargado.
-            if (! $this->soloLectura && $estadoPaso3->completado($escuelaNivel->id, 'inmueble')) {
+            // WS-7b-2: el dueño que ya completó este paso lo edita, precargado. Con el paso reabierto por una
+            // devolución también: nunca se auto-completa ni se salta adelante.
+            if (! $this->soloLectura && ($estadoPaso3->completado($escuelaNivel->id, 'inmueble') || $this->enDevolucion($escuelaNivel))) {
                 $this->precargar();
 
                 return;
@@ -251,8 +252,7 @@ class DatosInmueble extends Component
             return;
         }
 
-        $this->toastAlRedirigir('Datos del inmueble guardados', 'Continúa con la infraestructura.');
-        $this->redirectRoute('tramite.paso3-infraestructura', ['escuelaNivel' => $this->escuelaNivel->id]);
+        $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-infraestructura', 'Datos del inmueble guardados', 'Continúa con la infraestructura.');
     }
 
     /** Terna de nombres de Paso 2.1 — solo lectura, solo contexto. */

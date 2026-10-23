@@ -6,6 +6,7 @@ use App\Application\Tramite\EstadoPaso2;
 use App\Application\Tramite\EstadoPaso24;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
+use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Tramite\Concerns\RedirigeAPaso2;
 use App\Models\EscuelaNivel;
 
@@ -52,5 +53,28 @@ trait CompuertaPaso3
         $this->redirectRoute($destino, ['escuelaNivel' => $escuelaNivel->id]);
 
         return true;
+    }
+
+    /** Devolución en curso: el trámite ya no está todo en captura; solo se escribe en los pasos reabiertos. */
+    protected function enDevolucion(EscuelaNivel $escuelaNivel): bool
+    {
+        return ! app(TramiteEditable::class)->esEditable((int) $escuelaNivel->escuela_id);
+    }
+
+    /**
+     * Tras guardar: en captura se avanza al siguiente sub-paso; durante una devolución se vuelve al hub, porque el
+     * siguiente puede no estar reabierto (su ruta respondería 403).
+     */
+    protected function redirigirTrasGuardar(EscuelaNivel $escuelaNivel, string $rutaSiguiente, string $titulo, string $descripcion): void
+    {
+        if ($this->enDevolucion($escuelaNivel)) {
+            $this->toastAlRedirigir($titulo, 'Revisa en el resumen qué falta corregir antes de reenviar.');
+            $this->redirectRoute('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]);
+
+            return;
+        }
+
+        $this->toastAlRedirigir($titulo, $descripcion);
+        $this->redirectRoute($rutaSiguiente, ['escuelaNivel' => $escuelaNivel->id]);
     }
 }
