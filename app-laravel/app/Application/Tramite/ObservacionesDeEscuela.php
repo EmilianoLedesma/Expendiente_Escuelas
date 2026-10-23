@@ -16,8 +16,11 @@ use Illuminate\Support\Facades\DB;
  */
 final class ObservacionesDeEscuela
 {
-    /** Motivo de `documentos_nivel` reabierto por un responsable reabierto: no lo escribió el revisor. */
-    public const MOTIVO_FORMATO = 'Si corriges los datos del responsable legal, vuelve a cargar el Formato de solicitud firmado de este nivel.';
+    /**
+     * Motivo de `documentos_nivel` reabierto por un responsable reabierto: no lo escribió el revisor. Declarativo, porque
+     * lo lee también el responsable del nivel, que no puede corregir el responsable legal.
+     */
+    public const MOTIVO_FORMATO = 'Se reabrió porque el responsable legal está en corrección: si cambian sus datos que imprime el Formato de solicitud firmado de este nivel, el Formato se descarta y hay que volver a cargarlo.';
 
     public function __construct(private readonly PasosReabiertos $pasosReabiertos) {}
 
