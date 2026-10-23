@@ -4,6 +4,8 @@ namespace Tests\Feature\Application\Revision;
 
 use App\Application\Revision\DecidirPaso;
 use App\Application\Revision\ResultadosCambiados;
+use App\Application\Validaciones\DTO\SeccionCapacidad;
+use App\Application\Validaciones\DTO\ValidacionFinal;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Models\AulaNivel;
 use App\Models\Escuela;
@@ -66,6 +68,18 @@ class ResultadosCambiadosTest extends TestCase
         $this->assertCount(1, $resultado['infraestructura']);
         $this->assertStringContainsString('Superficie de aulas', $resultado['infraestructura'][0]);
         $this->assertStringContainsString('No cumple', $resultado['infraestructura'][0]);
+    }
+
+    public function test_una_regla_sin_mensaje_no_deja_punto_colgando(): void
+    {
+        $this->aceptar('infraestructura');
+        AulaNivel::where('escuela_nivel_id', $this->nivel->id)->update(['superficie_m2' => 10]);
+        $real = app(EjecutarValidacionFinal::class)->evaluar($this->escuela->id, exigirCompleto: false);
+        $sinMensaje = fn (SeccionCapacidad $s) => SeccionCapacidad::desdeArreglo(['filas' => array_map(fn (array $f) => ['mensaje' => ''] + $f, $s->aArreglo()['filas'])] + $s->aArreglo());
+        $this->mock(EjecutarValidacionFinal::class)->shouldReceive('evaluar')
+            ->andReturn(new ValidacionFinal(null, now(), false, $real->filas, array_map($sinMensaje, $real->capacidad), $real->niveles));
+
+        $this->assertSame('Superficie de aulas: antes cumplía y ahora «No cumple».', $this->resultado()['infraestructura'][0]);
     }
 
     public function test_un_envio_hermano_que_cambia_la_capacidad_se_marca(): void

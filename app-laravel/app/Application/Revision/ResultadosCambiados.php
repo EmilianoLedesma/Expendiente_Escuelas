@@ -76,7 +76,7 @@ class ResultadosCambiados
             $previas = collect($antes[$paso] ?? [])->keyBy(fn (FilaValidacion $f) => $f->clave);
             foreach ($filas as $fila) {
                 if ($fila->estado !== 'cumple' && $previas->get($fila->clave)?->estado === 'cumple') {
-                    $cambios[$paso][] = sprintf('%s: antes cumplía y ahora «%s». %s', $fila->titulo, self::ESTADOS[$fila->estado] ?? $fila->estado, $fila->mensaje);
+                    $cambios[$paso][] = rtrim(sprintf('%s: antes cumplía y ahora «%s». %s', $fila->titulo, self::ESTADOS[$fila->estado] ?? $fila->estado, $fila->mensaje));
                 }
             }
         }
