@@ -11,10 +11,12 @@ use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Livewire\Sedeq\RevisionNivel;
 use App\Models\AsignacionRevision;
 use App\Models\EscuelaNivel;
+use App\Models\EvaluacionValidacion;
 use App\Models\User;
 use Database\Seeders\TiposDocumentosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\Concerns\ConTramitesEnRevision;
@@ -182,8 +184,13 @@ class RevisionNivelTest extends TestCase
     {
         $this->mock(EjecutarValidacionFinal::class)->shouldReceive('evaluar')->andThrow(new \RuntimeException('motor roto'));
         DB::table('decisiones_revision')->insert(['escuela_nivel_id' => $this->nivel->id, 'paso_clave' => 'documentos', 'estado' => 'aceptado', 'decidido_por' => $this->revisor->id, 'decidido_at' => now()]);
+        // Con una evaluación guardada ResultadosCambiados llega al motor (sin ella vuelve antes y no prueba nada).
+        EvaluacionValidacion::create(['escuela_id' => $this->nivel->escuela_id, 'archivo_path' => 'validaciones/x.pdf', 'lista_para_envio' => true,
+            'resultados' => ['documental' => [], 'capacidad' => [], 'niveles' => [], 'regla_envio' => EjecutarValidacionFinal::REGLA_ENVIO]]);
+        Exceptions::fake();
 
         $this->pagina()->call('abrir', 'documentos')->assertOk()->assertDontSee('Resultado cambiado desde que se aceptó');
+        Exceptions::assertReported(fn (\RuntimeException $e) => $e->getMessage() === 'motor roto');
     }
 
     public function test_la_pista_aparece_en_el_paso_y_no_bloquea_la_decision(): void

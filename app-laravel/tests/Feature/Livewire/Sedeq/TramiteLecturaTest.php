@@ -128,7 +128,12 @@ class TramiteLecturaTest extends TestCase
 
     public function test_sin_resultados_cambiados_la_vista_del_supervisor_no_muestra_aviso(): void
     {
-        $this->abrir($this->supervisor())->assertOk()->assertDontSee('Resultado cambiado desde que se aceptó');
+        // La página sí pregunta por cada nivel visible (dos); sin cambios no pinta el aviso.
+        $this->mock(ResultadosCambiados::class)->shouldReceive('ejecutar')->twice()->andReturn([]);
+
+        $this->abrir($this->supervisor())->assertOk()
+            ->assertDontSee('Resultado cambiado desde que se aceptó')
+            ->assertDontSee('data-resultado-cambiado=', false);
     }
 
     public function test_el_supervisor_ve_todos_los_niveles_que_no_estan_en_captura(): void
