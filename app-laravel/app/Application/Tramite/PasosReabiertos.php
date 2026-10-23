@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class PasosReabiertos
 {
+    private const RESPONSABLE = 'responsable';
+
+    private const DOCUMENTOS_NIVEL = 'documentos_nivel';
+
     public function rondaCerrada(int $escuelaId): bool
     {
         $claves = DB::table('escuela_niveles')
@@ -37,13 +41,48 @@ final class PasosReabiertos
         return false;
     }
 
-    /** @return list<array{paso: string, escuelaNivelId: int}> escuelaNivelId = el nivel que rechazó. */
+    /**
+     * Con `responsable` reabierto, `documentos_nivel` se deriva reabierto en cada nivel con_observaciones (sin fila de
+     * decisión): corregir el responsable descarta su Formato de solicitud firmado (RegistrarResponsableLegal) y el
+     * solicitante debe poder volver a cargarlo. Políticas, hub, casos de uso y reenvío leen esta misma lista.
+     *
+     * @return list<array{paso: string, escuelaNivelId: int}> escuelaNivelId = el nivel que rechazó (o el del Formato derivado).
+     */
     public function reabiertos(int $escuelaId): array
     {
         if (! $this->rondaCerrada($escuelaId)) {
             return [];
         }
 
+        $rechazados = $this->rechazados($escuelaId);
+        if (! in_array(self::RESPONSABLE, array_column($rechazados, 'paso'), true)) {
+            return $rechazados;
+        }
+
+        $derivados = [];
+        foreach ($this->nivelesConObservaciones($escuelaId) as $nivelId) {
+            if (! in_array(['paso' => self::DOCUMENTOS_NIVEL, 'escuelaNivelId' => $nivelId], $rechazados, true)) {
+                $derivados[] = ['paso' => self::DOCUMENTOS_NIVEL, 'escuelaNivelId' => $nivelId];
+            }
+        }
+
+        return [...$rechazados, ...$derivados];
+    }
+
+    /** @return list<int> */
+    private function nivelesConObservaciones(int $escuelaId): array
+    {
+        return DB::table('escuela_niveles')
+            ->join('estados_expediente', 'estados_expediente.id', '=', 'escuela_niveles.estado_id')
+            ->where('escuela_niveles.escuela_id', $escuelaId)
+            ->where('estados_expediente.clave', 'con_observaciones')
+            ->orderBy('escuela_niveles.id')
+            ->pluck('escuela_niveles.id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /** @return list<array{paso: string, escuelaNivelId: int}> */
+    private function rechazados(int $escuelaId): array
+    {
         return DB::table('decisiones_revision')
             ->join('escuela_niveles', 'escuela_niveles.id', '=', 'decisiones_revision.escuela_nivel_id')
             ->join('estados_expediente', 'estados_expediente.id', '=', 'escuela_niveles.estado_id')

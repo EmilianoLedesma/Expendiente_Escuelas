@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class ObservacionesDeEscuela
 {
+    /** Motivo de `documentos_nivel` reabierto por un responsable reabierto: no lo escribió el revisor. */
+    public const MOTIVO_FORMATO = 'Si corriges los datos del responsable legal, vuelve a cargar el Formato de solicitud firmado de este nivel.';
+
     public function __construct(private readonly PasosReabiertos $pasosReabiertos) {}
 
     /** @return list<array{paso: string, titulo: string, nivel: ?string, escuelaNivelId: ?int, motivo: string}> */
@@ -54,15 +57,21 @@ final class ObservacionesDeEscuela
             ->get(['decisiones_revision.escuela_nivel_id', 'decisiones_revision.paso_clave', 'decisiones_revision.motivo', 'niveles_educativos.nombre'])
             ->keyBy(fn ($f) => $f->escuela_nivel_id.'|'.$f->paso_clave);
 
+        $nombres = DB::table('escuela_niveles')
+            ->join('niveles_educativos', 'niveles_educativos.id', '=', 'escuela_niveles.nivel_educativo_id')
+            ->where('escuela_niveles.escuela_id', $escuelaId)
+            ->pluck('niveles_educativos.nombre', 'escuela_niveles.id');
+
         $salida = [];
         foreach ($reabiertos as $r) {
             $fila = $filas->get($r['escuelaNivelId'].'|'.$r['paso']);
             $salida[] = [
                 'paso' => $r['paso'],
                 'titulo' => PasosRevision::titulo($r['paso']),
-                'nivel' => $fila?->nombre,
+                'nivel' => $nombres->get($r['escuelaNivelId']),
                 'escuelaNivelId' => $r['escuelaNivelId'],
-                'motivo' => $fila === null ? '' : (string) $fila->motivo,
+                // Sin fila: documentos_nivel derivado de un responsable reabierto (PasosReabiertos::reabiertos).
+                'motivo' => $fila === null ? self::MOTIVO_FORMATO : (string) $fila->motivo,
             ];
         }
 
