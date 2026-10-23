@@ -42,9 +42,13 @@ class UltimaValidacionFinal
     }
 
     /**
-     * Id de la evaluación guardada al envío: la última creada hasta el primer paso a en_revision de la escuela
-     * (EnviarTramite la evalúa antes de escribir ese historial y la guarda en la misma transacción). Las líneas base de
-     * cada cierre de ronda (DecidirPaso) son posteriores. Sin ese historial (datos previos), la última.
+     * Id de la evaluación guardada al envío: la primera creada desde el primer paso a en_revision de la escuela
+     * (EnviarTramite escribe ese historial y después inserta la evaluación, con created_at = now(), en la misma
+     * transacción). Las de «validar de nuevo» son anteriores; las líneas base de cada cierre de ronda (DecidirPaso),
+     * posteriores. Sin ese historial (datos previos), la última.
+     *
+     * ponytail: ambas fechas se guardan al segundo; una evaluación previa guardada en el mismo segundo del envío se
+     * tomaría por la enviada. Si importa, guardar el id de la evaluación enviada (requiere columna: decisión de esquema).
      */
     public function idEnviada(int $escuelaId): ?int
     {
@@ -55,10 +59,10 @@ class UltimaValidacionFinal
             ->where('estados_expediente.clave', EnviarTramite::EN_REVISION)
             ->min('historial_estados_expediente.fecha');
 
-        $id = EvaluacionValidacion::where('escuela_id', $escuelaId)
-            // Al segundo: created_at (generadaEn) puede guardar microsegundos que la fecha del historial no.
-            ->when($envio !== null, fn ($q) => $q->whereRaw("date_trunc('second', created_at) <= date_trunc('second', ?::timestamp)", [$envio]))
-            ->max('id');
+        $evaluaciones = EvaluacionValidacion::where('escuela_id', $escuelaId);
+        $id = $envio === null
+            ? $evaluaciones->max('id')
+            : $evaluaciones->whereRaw("date_trunc('second', created_at) >= date_trunc('second', ?::timestamp)", [$envio])->min('id');
 
         return $id === null ? null : (int) $id;
     }
