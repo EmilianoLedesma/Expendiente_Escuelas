@@ -198,8 +198,7 @@ class InfraestructuraNivel extends Component
             return;
         }
 
-        $this->toastAlRedirigir('Infraestructura guardada', 'Continúa con el mobiliario.');
-        $this->redirectRoute('tramite.paso3-mobiliario', ['escuelaNivel' => $this->escuelaNivel->id]);
+        $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-mobiliario', 'Infraestructura guardada', 'Continúa con el mobiliario.');
     }
 
     public function guardarEdicion(EditarInfraestructuraCompartida $editarInfraestructura): void

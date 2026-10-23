@@ -63,19 +63,19 @@ class EscuelaNivelPolicy
             && $this->editable->esEditable($escuelaId, $paso, $escuelaNivel->getKey()));
     }
 
-    /** Datos del inmueble (3.1): son del plantel, compartido entre niveles; solo el dueño. */
+    /** Datos del inmueble (3.1): son del plantel, compartido entre niveles; solo el dueño, en captura o con `inmueble` reabierto en este nivel. */
     public function updateInmueble(User $user, EscuelaNivel $escuelaNivel): bool
     {
-        return $this->esDueno($user, $escuelaNivel) && $this->esEditable($escuelaNivel);
+        return $this->esDueno($user, $escuelaNivel) && $this->esEditablePaso($escuelaNivel, 'inmueble');
     }
 
     /**
      * Corregir o quitar espacios y sanitarios ya capturados del plantel (WS-7b-2): solo el dueño.
-     * Hoy equivale a updateInmueble; es habilidad propia para que la intención se lea y pueda divergir.
+     * En captura, o con `infraestructura` reabierto en este nivel tras una devolución.
      */
     public function editarCompartido(User $user, EscuelaNivel $escuelaNivel): bool
     {
-        return $this->esDueno($user, $escuelaNivel) && $this->esEditable($escuelaNivel);
+        return $this->esDueno($user, $escuelaNivel) && $this->esEditablePaso($escuelaNivel, 'infraestructura');
     }
 
     /** Invitar y revocar responsables de este nivel; un trámite enviado ya no toma ni pierde responsables. */
@@ -87,6 +87,11 @@ class EscuelaNivelPolicy
     private function esEditable(EscuelaNivel $escuelaNivel): bool
     {
         return $this->editable->esEditable((int) $escuelaNivel->escuela_id);
+    }
+
+    private function esEditablePaso(EscuelaNivel $escuelaNivel, string $paso): bool
+    {
+        return $this->editable->esEditable((int) $escuelaNivel->escuela_id, $paso, $escuelaNivel->getKey());
     }
 
     private function esDueno(User $user, EscuelaNivel $escuelaNivel): bool
