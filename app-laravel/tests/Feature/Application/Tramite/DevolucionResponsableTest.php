@@ -97,7 +97,11 @@ class DevolucionResponsableTest extends TestCase
             $this->assertCount(1, $formato);
             $this->assertSame($primaria->id, $formato[0]['escuelaNivelId']);
             $this->assertSame('Primaria', $formato[0]['nivel']);
-            $this->assertStringContainsString('Formato de solicitud firmado', $formato[0]['motivo']);
+            // Declarativo: el responsable del nivel no puede corregir el responsable legal, así que no se le pide.
+            $this->assertSame(
+                'Se reabrió porque el responsable legal está en corrección: si cambian sus datos que imprime el Formato de solicitud firmado de este nivel, el Formato se descarta y hay que volver a cargarlo.',
+                $formato[0]['motivo'],
+            );
         }
     }
 
