@@ -35,7 +35,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Desde 2026-10-20 también trae los metadatos de cada documento (MetadatosDocumentales), los datos de cada nivel
  * (turno, alumnado, matrícula, personal, avance de Paso 3) y el resultado de validación guardado al envío, acotado a
- * los niveles visibles y rotulado como tal. Todo es lectura: no evalúa reglas ni escribe.
+ * los niveles visibles y rotulado como tal. Esta consulta es solo lectura y no evalúa reglas ni escribe; el aviso de
+ * resultados cambiados (G6), que sí corre el motor en vivo, lo arma aparte ResultadosCambiados para la página.
  */
 final class ConsultarTramiteSedeq
 {
@@ -122,7 +123,7 @@ final class ConsultarTramiteSedeq
     }
 
     /**
-     * El resultado guardado con el envío (UltimaValidacionFinal, solo lectura), acotado a los niveles visibles. No se
+     * El resultado guardado con el envío (UltimaValidacionFinal::enviadaParaEscuela, no la línea base de una ronda), acotado a los niveles visibles. No se
      * vuelve a evaluar aquí: una evaluación calculada después no es la que se envió, y un GET no escribe.
      *
      * @param  list<int>  $nivelIds
@@ -134,7 +135,7 @@ final class ConsultarTramiteSedeq
             return null;
         }
 
-        $validacion = $this->ultimaValidacion->paraEscuela($escuelaId);
+        $validacion = $this->ultimaValidacion->enviadaParaEscuela($escuelaId);
         if ($validacion === null) {
             return null;
         }
