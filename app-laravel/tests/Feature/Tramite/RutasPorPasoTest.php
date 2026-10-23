@@ -8,7 +8,7 @@ use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
-/** Devolución: cada ruta que escribe se abre solo con su paso reabierto (403 si lo rechazado es otro paso). */
+/** Devolución: cada ruta que escribe se abre (200) solo con su paso reabierto (403 si lo rechazado es otro paso). */
 class RutasPorPasoTest extends TestCase
 {
     use CapturaExpedienteConsistente;
@@ -46,6 +46,14 @@ class RutasPorPasoTest extends TestCase
         $this->actingAs($dueno)->get($url)->assertForbidden();
 
         $this->devolverTramite($escuela, [$nivel->id => [$paso => 'x']]);
-        $this->assertNotSame(403, $this->actingAs($dueno)->get($url)->status());
+        $respuesta = $this->actingAs($dueno)->get($url);
+        if ($paso === 'mobiliario') {
+            // Mobiliario no aplica a primaria (PasosRevision::paraNivel no lo ofrece al revisor): se auto-completa y avanza.
+            $respuesta->assertRedirect(route('tramite.paso3-plan-estudios', ['escuelaNivel' => $nivel->id]));
+
+            return;
+        }
+        // La página se muestra (no un redirect a otra parte); el guardado real lo cubre CorregirPasoReabiertoTest.
+        $respuesta->assertOk();
     }
 }

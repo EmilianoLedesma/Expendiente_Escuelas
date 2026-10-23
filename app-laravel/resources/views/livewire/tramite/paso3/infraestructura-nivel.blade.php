@@ -1,7 +1,7 @@
 @php
     $nombresCategoria = ['administrativo' => 'Espacios administrativos', 'cubiculo' => 'Cubículos', 'recreativo_deportivo' => 'Actividades físicas y recreativas', 'especial' => 'Instalaciones especiales'];
     $yaCapturado = $espaciosCapturados
-        ->mapWithKeys(fn ($e) => [$e->tipoEspacio->nombre => ($e->cantidad ?? '—').' · '.($e->superficie_m2 ?? '—').' m²'])
+        ->toBase()->mapWithKeys(fn ($e) => [$e->tipoEspacio->nombre => ($e->cantidad ?? '—').' · '.($e->superficie_m2 ?? '—').' m²'])
         ->merge($sanitariosCapturados->mapWithKeys(fn ($s) => ['Sanitarios '.str_replace('_', ' ', $s->categoria) => ($s->cantidad_retretes ?? '—').' retretes · '.($s->cantidad_lavabos ?? '—').' lavabos']))
         ->all();
     $columnas = 'md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]';
