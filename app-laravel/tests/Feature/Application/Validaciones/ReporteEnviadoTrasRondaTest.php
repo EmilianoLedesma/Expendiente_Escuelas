@@ -28,7 +28,11 @@ class ReporteEnviadoTrasRondaTest extends TestCase
     {
         $escuela = $this->crearEscuelaConPlantel();
         $this->completarTramite($escuela);
+        // «Validar de nuevo» antes del envío: guarda otra evaluación que tampoco es la enviada.
+        $previa = app(EjecutarValidacionFinal::class)->ejecutar($escuela->id);
+        $this->travel(5)->minutes();
         $enviada = app(EnviarTramite::class)->ejecutar($escuela->id, (int) $escuela->solicitante->user->id);
+        $this->assertNotSame($previa->evaluacionId, $enviada->evaluacionId);
 
         // Cierre de ronda (DecidirPaso::cerrarRonda): evalúa sin exigir completo y guarda la línea base.
         $this->travel(2)->hours();
