@@ -59,8 +59,14 @@ class ReenviarCorrecciones
             $this->asegurarListo($escuelaId, $afectados->modelKeys());
 
             $enRevision = (int) DB::table('estados_expediente')->where('clave', EnviarTramite::EN_REVISION)->value('id');
+            $reabiertos = $this->pasosReabiertos->reabiertos($escuelaId);
             foreach ($afectados as $nivel) {
-                DB::table('decisiones_revision')->where('escuela_nivel_id', $nivel->id)->where('estado', DecidirPaso::RECHAZADO)->delete();
+                // Las rechazadas, y la decisión de un paso reabierto sin rechazo (documentos_nivel derivado de un
+                // responsable reabierto): su Formato pudo cambiar, el revisor vuelve a decidirlo.
+                $pasosDelNivel = array_column(array_filter($reabiertos, fn (array $r) => $r['escuelaNivelId'] === $nivel->id), 'paso');
+                DB::table('decisiones_revision')->where('escuela_nivel_id', $nivel->id)
+                    ->where(fn ($q) => $q->where('estado', DecidirPaso::RECHAZADO)->orWhereIn('paso_clave', $pasosDelNivel))
+                    ->delete();
                 $pasos = PasosRevision::paraNivel($nivel->nivelEducativo->clave);
                 ProgresoRevision::updateOrCreate(
                     ['escuela_nivel_id' => $nivel->id],
