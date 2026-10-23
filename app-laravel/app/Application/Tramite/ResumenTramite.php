@@ -84,6 +84,8 @@ class ResumenTramite
     /** Memo por instancia: "Mis trámites" arma un resumen por escuela con la misma instancia. */
     private ?int $enCapturaId = null;
 
+    private ?int $conObservacionesId = null;
+
     /** WS-7a: el trámite que se está resumiendo ya se envió; se fija al inicio de cada paraEscuela() y seccion() lo lee. */
     private bool $enviado = false;
 
@@ -170,7 +172,10 @@ class ResumenTramite
             enviado: $this->enviado,
             fechaEnvio: $this->enviado ? $this->fechaEnvio($escuela->escuelaNiveles->pluck('id')) : null,
             reporteEnviadoId: $reporte === null ? null : (int) $reporte,
-            conObservaciones: $rondaCerrada,
+            // Un responsable cuyos niveles no están devueltos (p. ej. todos aprobados) no tiene nada que corregir.
+            conObservaciones: $rondaCerrada && ($soloNivelIds === null || $escuelaNiveles->contains(
+                fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idConObservaciones()
+            )),
             puedeReenviar: $rondaCerrada && $soloNivelIds === null,
             observaciones: $observaciones,
         );
@@ -208,6 +213,11 @@ class ResumenTramite
         }
 
         return array_map(fn (array $m) => implode(' ', $m), $motivos);
+    }
+
+    private function idConObservaciones(): int
+    {
+        return $this->conObservacionesId ??= (int) DB::table('estados_expediente')->where('clave', 'con_observaciones')->value('id');
     }
 
     /** @param Collection<array-key, mixed> $escuelaNivelIds */

@@ -177,6 +177,16 @@ class ResumenTramiteDevolucionTest extends TestCase
             ->assertOk()->assertSee('El titular del trámite corregirá')->assertDontSee('<ul class="mt-xs list-disc', false);
     }
 
+    public function test_el_responsable_de_niveles_aprobados_no_ve_el_banner_de_observaciones(): void
+    {
+        [, $primaria, $secundaria] = $this->escuela();
+        $this->devolverTramite($primaria->escuela, [$primaria->id => ['matricula' => 'Cifras inconsistentes']]);
+        $secundaria->update(['estado_id' => \Illuminate\Support\Facades\DB::table('estados_expediente')->where('clave', 'aprobado')->value('id')]);
+
+        $this->actingAs($this->responsableDe($secundaria))->get(route('tramite.resumen', ['escuela' => $primaria->escuela_id]))
+            ->assertOk()->assertDontSee('Tu trámite tiene observaciones')->assertDontSee('Cifras inconsistentes');
+    }
+
     public function test_mis_tramites_muestra_con_observaciones_solo_en_ronda_cerrada(): void
     {
         [$dueno, $primaria, $secundaria] = $this->escuela();
