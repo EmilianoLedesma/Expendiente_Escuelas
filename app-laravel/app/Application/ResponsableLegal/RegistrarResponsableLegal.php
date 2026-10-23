@@ -16,6 +16,7 @@ use App\Models\PersonaMoral;
 use App\Models\ResponsableLegal as ResponsableLegalModel;
 use App\Models\TernaNombre;
 use App\Models\TipoDocumento;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -49,8 +50,8 @@ class RegistrarResponsableLegal
         DB::transaction(function () use ($escuelaId, $datos) {
             // WS-7a, orden escuela_niveles → escuelas. El bloqueo de los niveles también
             // serializa con la subida de un Formato (RegistrarDocumento bloquea el nivel).
-            $nivelIds = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->pluck('id')->all();
-            $this->tramiteEditable->asegurarEscuela($escuelaId);
+            $niveles = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->pluck('estado_id', 'id');
+            $this->tramiteEditable->asegurarEscuela($escuelaId, 'responsable');
 
             $responsable = ResponsableLegalModel::where('escuela_id', $escuelaId)->lockForUpdate()->first();
             $antes = $responsable === null ? null : $this->huellaFormato($responsable->id);
@@ -70,7 +71,7 @@ class RegistrarResponsableLegal
             $this->guardarSubtipos($responsable->id, $datos);
 
             if ($antes !== null && $antes !== $this->huellaFormato($responsable->id)) {
-                $this->descartarFormatos($nivelIds);
+                $this->descartarFormatos($this->nivelesConFormatoDescartable($niveles));
             }
         });
     }
@@ -165,6 +166,20 @@ class RegistrarResponsableLegal
                 'notario_numero', 'notario_ciudad', 'folio_registro_publico', 'fecha_inscripcion_rpp', 'nombre_representante_legal',
             ]),
         ];
+    }
+
+    /**
+     * Devolución: solo los niveles que el solicitante puede volver a cargar (en captura, o con_observaciones, donde
+     * PasosReabiertos reabre `documentos_nivel` junto con `responsable`). Un nivel aprobado o en revisión conserva su Formato.
+     *
+     * @param  Collection<int, mixed>  $niveles  estado_id por id de escuela_nivel
+     * @return list<int>
+     */
+    private function nivelesConFormatoDescartable(Collection $niveles): array
+    {
+        $descartables = DB::table('estados_expediente')->whereIn('clave', [TramiteEditable::EN_CAPTURA, 'con_observaciones'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return $niveles->filter(fn ($estadoId) => in_array((int) $estadoId, $descartables, true))->keys()->map(fn ($id) => (int) $id)->values()->all();
     }
 
     /** @param list<int> $nivelIds */

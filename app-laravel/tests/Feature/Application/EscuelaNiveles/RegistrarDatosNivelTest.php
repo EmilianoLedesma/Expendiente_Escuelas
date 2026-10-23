@@ -22,11 +22,13 @@ use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\Concerns\CompletaPaso2;
+use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
 class RegistrarDatosNivelTest extends TestCase
 {
     use CompletaPaso2;
+    use ConTramiteDevuelto;
     use RefreshDatabase;
 
     private function nivel(bool $conPaso2 = true): EscuelaNivel
@@ -245,5 +247,25 @@ class RegistrarDatosNivelTest extends TestCase
         }
 
         $this->assertNull($escuelaNivel->fresh()->turno);
+    }
+
+    public function test_datos_nivel_con_paso_reabierto(): void
+    {
+        $escuelaNivel = $this->nivel();
+        $this->devolverTramite($escuelaNivel->escuela, [$escuelaNivel->id => ['documentos_nivel' => 'Formato ilegible']]);
+
+        app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'vespertino', 'femenino');
+
+        $this->assertDatabaseHas('escuela_niveles', ['id' => $escuelaNivel->id, 'turno' => 'vespertino', 'tipo_alumnado' => 'femenino']);
+    }
+
+    public function test_datos_nivel_rechaza_con_paso_aceptado(): void
+    {
+        $escuelaNivel = $this->nivel();
+        $this->devolverTramite($escuelaNivel->escuela, [$escuelaNivel->id => ['plantel' => 'Falta el domicilio del plantel']], [$escuelaNivel->id => ['documentos_nivel']]);
+
+        $this->expectException(PrecondicionIncumplida::class);
+
+        app(RegistrarDatosNivel::class)->ejecutar($escuelaNivel->id, 'vespertino', 'femenino');
     }
 }

@@ -46,7 +46,9 @@ class RegistrarDatosInmueble
             // WS-7b-2: FOR UPDATE sobre todos los niveles del plantel, primero (orden escuela_niveles → escuelas);
             // reemplaza el FOR SHARE del nivel y serializa esta edición contra la de otro nivel y contra el envío.
             $this->registroBloqueado->bloquearNiveles($plantelId);
-            $this->tramiteEditable->asegurarPlantel($plantelId);
+            // `inmueble` es un paso del nivel aunque se escriba a ámbito plantel: pasa el nivel que lo rechazó.
+            $escuelaId = (int) EscuelaNivel::where('id', $escuelaNivelId)->value('escuela_id');
+            $this->tramiteEditable->asegurarPlantel($plantelId, 'inmueble', $escuelaId, $escuelaNivelId);
 
             $campos = [
                 'metros_totales' => $datos->metrosTotales,

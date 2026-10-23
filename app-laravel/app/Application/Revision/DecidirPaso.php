@@ -5,22 +5,30 @@ namespace App\Application\Revision;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Tramite\EnviarTramite;
+use App\Application\Tramite\PasosReabiertos;
+use App\Application\Validaciones\EjecutarValidacionFinal;
+use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\HistorialDecisionRevision;
 use App\Models\ProgresoRevision;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\DeadlockException;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * El revisor (o el supervisor) acepta o rechaza un paso de un nivel en revisión.
  * Deja la decisión vigente, una fila de historial y el progreso; cuando todos los
  * pasos del nivel están decididos mueve el nivel a aprobado (ninguno rechazado) o
  * a con_observaciones. Un paso se puede volver a decidir mientras el nivel siga en
- * en_revision o con_observaciones, y ese cambio también puede mover el estado.
+ * en_revision, y ese cambio también puede mover el estado. Un nivel con_observaciones
+ * está con el solicitante: no se decide hasta que reenvíe. Si la decisión deja la escuela
+ * con la ronda cerrada (ver PasosReabiertos::rondaCerrada), guarda una evaluación como
+ * línea base y despacha RondaCerrada tras el commit.
  *
- * Orden de bloqueo: solo escuela_niveles (la fila del nivel), como el resto del proyecto.
- * El estado y las decisiones se leen ya bajo ese bloqueo.
+ * Orden de bloqueo: escuela_niveles (la fila del nivel) y luego escuelas, como EnviarTramite.
+ * El estado y las decisiones se leen ya bajo esos bloqueos.
  */
 class DecidirPaso
 {
@@ -30,7 +38,11 @@ class DecidirPaso
 
     private const APROBADO = 'aprobado';
 
-    public function __construct(private readonly AccesoSedeq $acceso) {}
+    public function __construct(
+        private readonly AccesoSedeq $acceso,
+        private readonly PasosReabiertos $pasosReabiertos,
+        private readonly EjecutarValidacionFinal $validacionFinal,
+    ) {}
 
     /**
      * @throws AuthorizationException si el actor no puede ver el nivel (incluye niveles en captura).
@@ -50,9 +62,15 @@ class DecidirPaso
             }
             $estadoClave = (string) DB::table('estados_expediente')->where('id', $nivel->estado_id)->value('clave');
             $nivelClave = (string) DB::table('niveles_educativos')->where('id', $nivel->nivel_educativo_id)->value('clave');
-            if (! in_array($estadoClave, [EnviarTramite::EN_REVISION, 'con_observaciones'], true)) {
+            if ($estadoClave === 'con_observaciones') {
+                throw new PrecondicionIncumplida(EnviarTramite::EN_REVISION, 'El trámite está con el solicitante; no se puede decidir hasta que lo reenvíe.');
+            }
+            if ($estadoClave !== EnviarTramite::EN_REVISION) {
                 throw new PrecondicionIncumplida(EnviarTramite::EN_REVISION, 'Solo se pueden revisar trámites en revisión.');
             }
+            // Orden niveles -> escuelas (como EnviarTramite): serializa los cierres por escuela, así el segundo
+            // en decidir ya ve confirmado el estado del primero (READ COMMITTED).
+            Escuela::whereKey($nivel->escuela_id)->lockForUpdate()->firstOrFail();
 
             $pasos = PasosRevision::paraNivel($nivelClave);
             if (! in_array($pasoClave, $pasos, true)) {
@@ -87,11 +105,29 @@ class DecidirPaso
 
             if ($estados->count() === count($pasos)) {
                 $destino = $estados->contains(self::RECHAZADO) ? 'con_observaciones' : self::APROBADO;
-                if ($destino !== $estadoClave) {
-                    $this->cambiarEstado($escuelaNivelId, $destino, $actorId);
-                }
+                $this->cambiarEstado($escuelaNivelId, $destino, $actorId);
+            }
+
+            // Una decisión cierra la ronda sii rondaCerrada es true tras escribir el nuevo estado (el nivel venía en revisión).
+            if ($this->pasosReabiertos->rondaCerrada($nivel->escuela_id)) {
+                $this->cerrarRonda($nivel->escuela_id);
             }
         });
+    }
+
+    /** La línea base del G6 nunca bloquea ni revierte la decisión del revisor. */
+    private function cerrarRonda(int $escuelaId): void
+    {
+        try {
+            // Punto de guardado: un error de BD aquí no debe envenenar la transacción de la decisión.
+            DB::transaction(fn () => $this->validacionFinal->guardar($escuelaId, $this->validacionFinal->evaluar($escuelaId, exigirCompleto: false)));
+        } catch (DeadlockException $e) {
+            // Un deadlock aborta la transacción de PG: tragarlo convertiría el COMMIT en ROLLBACK silencioso.
+            throw $e;
+        } catch (Throwable $e) {
+            report($e);
+        }
+        DB::afterCommit(fn () => event(new RondaCerrada($escuelaId)));
     }
 
     private function cambiarEstado(int $escuelaNivelId, string $destino, int $actorId): void

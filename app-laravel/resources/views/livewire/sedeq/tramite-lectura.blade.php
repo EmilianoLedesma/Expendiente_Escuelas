@@ -42,6 +42,12 @@
         <x-ui.section :title="$nivel['nombre']">
             <x-ui.summary-list :filas="['Estado' => $nivel['estado'], 'Folio de expediente' => $nivel['folio'], ...$nivel['datos']]" />
 
+            @if (isset($cambiados[$nivel['escuelaNivelId']]))
+                <div class="mt-md">
+                    @include('livewire.sedeq.partials.resultado-cambiado', ['descripciones' => $cambiados[$nivel['escuelaNivelId']]])
+                </div>
+            @endif
+
             <h3 class="mt-md text-body-md font-semibold text-ink">Avance de la captura académica e infraestructura</h3>
             <ul class="mt-xs divide-y divide-hairline border-y border-hairline">
                 @foreach ($nivel['pasos'] as $paso)

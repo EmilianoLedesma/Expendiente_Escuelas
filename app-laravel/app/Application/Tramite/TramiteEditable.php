@@ -51,9 +51,16 @@ class TramiteEditable
         return $estadoIds->isNotEmpty() && ! $estadoIds->contains(fn ($estadoId) => (int) $estadoId === $enCapturaId);
     }
 
-    public function esEditable(int $escuelaId): bool
+    public function __construct(private readonly PasosReabiertos $reabiertos = new PasosReabiertos) {}
+
+    /**
+     * Sin $pasoClave: todo en captura. Con $pasoClave: además editable si ese paso está
+     * reabierto por una devolución ($escuelaNivelId solo importa en pasos del nivel).
+     */
+    public function esEditable(int $escuelaId, ?string $pasoClave = null, ?int $escuelaNivelId = null): bool
     {
-        return self::todosEnCaptura(EscuelaNivel::where('escuela_id', $escuelaId)->pluck('estado_id'), self::idEnCaptura());
+        return self::todosEnCaptura(EscuelaNivel::where('escuela_id', $escuelaId)->pluck('estado_id'), self::idEnCaptura())
+            || ($pasoClave !== null && $this->reabiertos->estaReabierto($escuelaId, $pasoClave, $escuelaNivelId));
     }
 
     /**
@@ -67,11 +74,11 @@ class TramiteEditable
      *
      * @throws PrecondicionIncumplida si el trámite ya no es editable.
      */
-    public function asegurarEscuela(int $escuelaId): void
+    public function asegurarEscuela(int $escuelaId, ?string $pasoClave = null, ?int $escuelaNivelId = null): void
     {
         Escuela::whereKey($escuelaId)->sharedLock()->value('id');
 
-        if (! $this->esEditable($escuelaId)) {
+        if (! $this->esEditable($escuelaId, $pasoClave, $escuelaNivelId)) {
             throw new PrecondicionIncumplida(self::ENVIADO, 'El trámite ya se envió a SEDEQ y no puede modificarse.');
         }
     }
@@ -81,11 +88,19 @@ class TramiteEditable
      * rechazan mientras cualquier escuela del plantel esté enviada (spec WS-7a §5.4, D8),
      * porque alimentan los datos y la capacidad del trámite enviado.
      *
+     * Con $pasoClave y $escuelaId, el paso reabierto en esa escuela permite la escritura
+     * aunque otra escuela del plantel esté enviada. Los pasos del nivel que se escriben a
+     * ámbito plantel (inmueble, infraestructura) exigen $escuelaNivelId, el nivel que los rechazó.
+     *
      * @throws PrecondicionIncumplida
      */
-    public function asegurarPlantel(int $plantelId): void
+    public function asegurarPlantel(int $plantelId, ?string $pasoClave = null, ?int $escuelaId = null, ?int $escuelaNivelId = null): void
     {
         $escuelas = Escuela::where('plantel_id', $plantelId)->orderBy('id')->sharedLock()->pluck('id');
+
+        if ($pasoClave !== null && $escuelaId !== null && $this->reabiertos->estaReabierto($escuelaId, $pasoClave, $escuelaNivelId)) {
+            return;
+        }
 
         if (! self::todosEnCaptura(EscuelaNivel::whereIn('escuela_id', $escuelas)->pluck('estado_id'), self::idEnCaptura())) {
             throw new PrecondicionIncumplida(self::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ: los datos compartidos del plantel (documentos, espacios, sanitarios y datos del inmueble) ya no pueden modificarse.');

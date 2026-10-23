@@ -47,7 +47,7 @@ class ActualizarContactoPlantel
 
         DB::transaction(function () use ($escuelaId, $telefono, $correoElectronico) {
             $plantelId = (int) Escuela::whereKey($escuelaId)->value('plantel_id');
-            $this->tramiteEditable->asegurarPlantel($plantelId);
+            $this->tramiteEditable->asegurarPlantel($plantelId, 'plantel', $escuelaId);
 
             Plantel::whereKey($plantelId)->update(['telefono' => $telefono, 'correo_electronico' => $correoElectronico]);
         });

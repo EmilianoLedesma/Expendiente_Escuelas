@@ -55,7 +55,7 @@ class RegistrarDatosNivel
             // Formato deben ver la misma fila que se actualiza.
             $escuelaNivel = EscuelaNivel::lockForUpdate()->findOrFail($escuelaNivelId);
             // WS-7a: después del bloqueo del nivel (orden escuela_niveles → escuelas).
-            $this->tramiteEditable->asegurarEscuela((int) $escuelaNivel->escuela_id);
+            $this->tramiteEditable->asegurarEscuela((int) $escuelaNivel->escuela_id, 'documentos_nivel', $escuelaNivel->id);
 
             $etapaFaltante = $this->estadoPaso2->etapaFaltante($escuelaNivel->escuela_id);
             if ($etapaFaltante !== null) {

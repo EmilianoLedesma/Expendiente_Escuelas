@@ -29,6 +29,13 @@ final class ResumenTramiteDTO
         public readonly ?DateTimeInterface $fechaEnvio = null,
         /** evaluaciones_validacion.id guardado al enviar (el último); null si no se ha enviado. */
         public readonly ?int $reporteEnviadoId = null,
+        /** La ronda de revisión está cerrada con pasos devueltos (PasosReabiertos::rondaCerrada); con la ronda abierta nada se filtra. */
+        public readonly bool $conObservaciones = false,
+        /** Solo el dueño y solo con la ronda cerrada ve «Reenviar correcciones» (la acción es de la Task 10). */
+        public readonly bool $puedeReenviar = false,
+        /** Motivos visibles para quien mira (ObservacionesDeEscuela); vacío con la ronda abierta.
+         * @var list<array{paso: string, titulo: string, nivel: ?string, escuelaNivelId: ?int, motivo: string}> */
+        public readonly array $observaciones = [],
     ) {}
 
     /** Número visible del trámite (id de la escuela a 4 dígitos). No es folio_expediente: ese es por nivel y lo asigna SEDEQ. */

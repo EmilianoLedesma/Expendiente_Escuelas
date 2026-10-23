@@ -8,6 +8,7 @@ use App\Application\Revision\ConsultarRevision;
 use App\Application\Revision\ContenidoPasoRevision;
 use App\Application\Revision\DecidirPaso;
 use App\Application\Revision\PistasDeRevision;
+use App\Application\Revision\ResultadosCambiados;
 use App\Application\Revision\RutaInicio;
 use App\Application\Validaciones\DTO\FilaValidacion;
 use App\Livewire\Concerns\NotificaToast;
@@ -19,6 +20,8 @@ use Livewire\Component;
 /**
  * Revisión de un nivel (opción A): pasos a la izquierda, el paso abierto a la derecha con su decisión.
  * El acceso lo imponen los casos de uso (AuthorizationException => 403); aquí solo se presenta.
+ *
+ * @property array<string, list<string>> $resultadosCambiados propiedad computada (resultadosCambiados())
  */
 #[Layout('layouts.tramite', ['title' => 'Revisión del trámite'])]
 class RevisionNivel extends Component
@@ -37,7 +40,8 @@ class RevisionNivel extends Component
     public function mount(int $escuelaNivel): void
     {
         $this->escuelaNivelId = $escuelaNivel;
-        $this->pasoAbierto = $this->revision()['pasos'][0]['clave'];
+        $pasos = $this->revision()['pasos'];
+        $this->pasoAbierto = (collect($pasos)->firstWhere('corregido', true) ?? $pasos[0])['clave'];
     }
 
     /** Solo se abre un paso que pertenezca al nivel; cualquier otra clave se ignora. */
@@ -79,6 +83,8 @@ class RevisionNivel extends Component
 
         $this->motivo = '';
         $this->resetErrorBag();
+        // El conjunto de pasos aceptados cambió: el aviso persistido ya no vale.
+        unset($this->resultadosCambiados);
         $this->toast($aviso);
     }
 
@@ -106,14 +112,29 @@ class RevisionNivel extends Component
         );
     }
 
+    /**
+     * Aviso G6 por paso aceptado (descripciones de las reglas que dejaron de cumplirse). Persiste como las pistas
+     * (un solo cálculo del motor por página) y es un arreglo de textos; decidir() lo invalida.
+     *
+     * @return array<string, list<string>>
+     */
+    #[Computed(persist: true)]
+    public function resultadosCambiados(): array
+    {
+        return app(ResultadosCambiados::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId);
+    }
+
     public function render()
     {
         $revision = $this->revision();
 
         return view('livewire.sedeq.revision-nivel', [
             'revision' => $revision,
+            // Los corregidos primero; el resto conserva su orden (sortBy es estable).
+            'lista' => collect($revision['pasos'])->sortBy(fn (array $p) => $p['corregido'] ? 0 : 1)->values()->all(),
             'paso' => collect($revision['pasos'])->firstWhere('clave', $this->pasoAbierto),
             'contenido' => app(ContenidoPasoRevision::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId, $this->pasoAbierto),
+            'cambiados' => $this->resultadosCambiados,
             'pistas' => array_map(FilaValidacion::desdeArreglo(...), $this->pistas[$this->pasoAbierto] ?? []),
             'volver' => RutaInicio::para(auth()->user()),
         ]);

@@ -99,8 +99,7 @@ class MobiliarioNivel extends Component
             return;
         }
 
-        $this->toastAlRedirigir('Mobiliario guardado', 'Continúa con el plan de estudios.');
-        $this->redirectRoute('tramite.paso3-plan-estudios', ['escuelaNivel' => $this->escuelaNivel->id]);
+        $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-plan-estudios', 'Mobiliario guardado', 'Continúa con el plan de estudios.');
     }
 
     /** mobiliario_nivel.cantidad_declarada es SMALLINT. */

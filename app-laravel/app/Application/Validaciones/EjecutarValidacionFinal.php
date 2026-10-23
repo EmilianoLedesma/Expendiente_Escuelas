@@ -66,13 +66,15 @@ class EjecutarValidacionFinal
     /**
      * Reads and evaluates, writes nothing; evaluacionId stays null until guardar().
      *
+     * `$exigirCompleto = false` salta SOLO la compuerta de completitud del hub: con la ronda de una devolución cerrada,
+     * las secciones reabiertas salen con_observaciones y `completo` es false aunque estén capturadas.
+     * ReenviarCorrecciones comprueba la completitud de los pasos reabiertos por su cuenta (ResumenTramite::sinCongelar).
+     *
      * @throws PrecondicionIncumplida if a section of the trámite is still missing.
      */
-    public function evaluar(int $escuelaId): ValidacionFinal
+    public function evaluar(int $escuelaId, bool $exigirCompleto = true): ValidacionFinal
     {
-        $resumen = $this->resumenTramite->paraEscuela($escuelaId);
-
-        if (! $resumen->completo) {
+        if ($exigirCompleto && ! $this->resumenTramite->paraEscuela($escuelaId)->completo) {
             throw new PrecondicionIncumplida(self::ETAPA, 'Completa todas las secciones del trámite antes de la validación final.');
         }
 

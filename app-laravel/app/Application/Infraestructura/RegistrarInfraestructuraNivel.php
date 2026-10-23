@@ -47,7 +47,9 @@ class RegistrarInfraestructuraNivel
         $this->verificarPrecondicion($escuelaNivel);
         $this->validar($plantelId, $escuelaNivel, $datos);
 
-        DB::transaction(function () use ($plantelId, $escuelaNivelId, $datos) {
+        $escuelaId = $escuelaNivel->escuela_id;
+
+        DB::transaction(function () use ($plantelId, $escuelaId, $escuelaNivelId, $datos) {
             // WS-7b-2: bloqueo de todos los niveles del plantel, primero. Orden
             // escuela_niveles → escuelas; las guardas del plantel y de
             // MarcarPasoCompletado bloquean escuelas después.
@@ -61,8 +63,8 @@ class RegistrarInfraestructuraNivel
                 ['numero_aulas' => $datos->numeroAulas, 'superficie_m2' => $datos->superficieAulasM2],
             );
 
-            $this->escribirEspacios($plantelId, $datos);
-            $this->escribirSanitarios($plantelId, $datos);
+            $this->escribirEspacios($plantelId, $escuelaId, $escuelaNivelId, $datos);
+            $this->escribirSanitarios($plantelId, $escuelaId, $escuelaNivelId, $datos);
 
             $this->marcarPasoCompletado->ejecutar($escuelaNivelId, 'infraestructura');
         });
@@ -81,7 +83,7 @@ class RegistrarInfraestructuraNivel
         }
     }
 
-    private function escribirEspacios(int $plantelId, DatosInfraestructuraNivel $datos): void
+    private function escribirEspacios(int $plantelId, int $escuelaId, int $escuelaNivelId, DatosInfraestructuraNivel $datos): void
     {
         $yaCapturados = $this->yaCapturada->tiposCapturados($plantelId);
 
@@ -95,7 +97,7 @@ class RegistrarInfraestructuraNivel
             }
 
             // WS-7a §5.4: los espacios son del plantel y alimentan la capacidad de cualquier trámite enviado en él.
-            $this->tramiteEditable->asegurarPlantel($plantelId);
+            $this->tramiteEditable->asegurarPlantel($plantelId, 'infraestructura', $escuelaId, $escuelaNivelId);
 
             $fila = InstalacionEspacio::create([
                 'plantel_id' => $plantelId,
@@ -127,7 +129,7 @@ class RegistrarInfraestructuraNivel
         }
     }
 
-    private function escribirSanitarios(int $plantelId, DatosInfraestructuraNivel $datos): void
+    private function escribirSanitarios(int $plantelId, int $escuelaId, int $escuelaNivelId, DatosInfraestructuraNivel $datos): void
     {
         $yaCapturadas = $this->yaCapturada->categoriasCapturadas($plantelId);
 
@@ -140,7 +142,7 @@ class RegistrarInfraestructuraNivel
                 continue;
             }
 
-            $this->tramiteEditable->asegurarPlantel($plantelId);
+            $this->tramiteEditable->asegurarPlantel($plantelId, 'infraestructura', $escuelaId, $escuelaNivelId);
 
             $fila = Sanitario::create([
                 'plantel_id' => $plantelId,
