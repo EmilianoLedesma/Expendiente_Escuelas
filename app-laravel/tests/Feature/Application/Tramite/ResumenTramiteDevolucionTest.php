@@ -9,6 +9,7 @@ use App\Models\EscuelaNivel;
 use App\Models\Solicitante;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\ConTramiteDevuelto;
 use Tests\TestCase;
 
@@ -181,7 +182,7 @@ class ResumenTramiteDevolucionTest extends TestCase
     {
         [, $primaria, $secundaria] = $this->escuela();
         $this->devolverTramite($primaria->escuela, [$primaria->id => ['matricula' => 'Cifras inconsistentes']]);
-        $secundaria->update(['estado_id' => \Illuminate\Support\Facades\DB::table('estados_expediente')->where('clave', 'aprobado')->value('id')]);
+        $secundaria->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'aprobado')->value('id')]);
 
         $this->actingAs($this->responsableDe($secundaria))->get(route('tramite.resumen', ['escuela' => $primaria->escuela_id]))
             ->assertOk()->assertDontSee('Tu trámite tiene observaciones')->assertDontSee('Cifras inconsistentes');

@@ -5,6 +5,7 @@ namespace Tests\Feature\Tramite;
 use App\Livewire\Tramite\Paso3\DatosInmueble;
 use App\Livewire\Tramite\Paso3\InfraestructuraNivel;
 use App\Livewire\Tramite\Paso3\PlanEstudios;
+use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,7 +25,7 @@ class CorregirPasoReabiertoTest extends TestCase
     use ConTramiteDevuelto;
     use RefreshDatabase;
 
-    /** @return array{0: \App\Models\Escuela, 1: EscuelaNivel} */
+    /** @return array{0: Escuela, 1: EscuelaNivel} */
     private function devuelto(string $paso): array
     {
         $escuela = $this->crearEscuelaConPlantel();
