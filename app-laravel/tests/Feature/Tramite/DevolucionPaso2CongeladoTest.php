@@ -4,6 +4,7 @@ namespace Tests\Feature\Tramite;
 
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
+use App\Application\Documentos\ValidarVigenciaDocumentos;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
 use App\Application\Tramite\EstadoPaso2;
@@ -45,7 +46,7 @@ class DevolucionPaso2CongeladoTest extends TestCase
     private function vencerVigencia(Escuela $escuela): void
     {
         $this->travelTo(now()->addYear()->startOfYear()->addMonth());
-        $this->assertNotSame([], app(\App\Application\Documentos\ValidarVigenciaDocumentos::class)->ejecutar($escuela->id), 'El fixture debe tener una vigencia vencida.');
+        $this->assertNotSame([], app(ValidarVigenciaDocumentos::class)->ejecutar($escuela->id), 'El fixture debe tener una vigencia vencida.');
     }
 
     private function corregirPlan(EscuelaNivel $nivel): void
