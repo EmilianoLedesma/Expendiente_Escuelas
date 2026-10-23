@@ -30,6 +30,7 @@ class EstadoPaso2
         private readonly DocumentosCompletos $documentosCompletos,
         private readonly ValidarVigenciaDocumentos $validarVigencia,
         private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
+        private readonly PasosReabiertos $pasosReabiertos = new PasosReabiertos,
     ) {}
 
     public function responsableCapturado(int $escuelaId): bool
@@ -83,11 +84,23 @@ class EstadoPaso2
             return self::NIVELES;
         }
 
-        if (! $this->documentosCompletos($escuelaId) || ! $this->documentosVigentes($escuelaId)) {
+        if ((! $this->documentosCompletos($escuelaId) || ! $this->documentosVigentes($escuelaId)) && ! $this->congeladoPorDevolucion($escuelaId)) {
             return self::DOCUMENTOS;
         }
 
         return null;
+    }
+
+    /**
+     * Devolución (ronda cerrada): los documentos generales se consideran satisfechos como al envío — una vigencia que
+     * vence o un cambio de tipo de persona no bloquea los pasos reabiertos ni el reenvío —, salvo que el paso
+     * `documentos` mismo esté reabierto. Lo leen todas las compuertas por esta clase (CompuertaPaso3, CompuertaSubPaso3,
+     * 2.4, los casos de uso del nivel y ResumenTramite::sinCongelar).
+     */
+    private function congeladoPorDevolucion(int $escuelaId): bool
+    {
+        return $this->pasosReabiertos->rondaCerrada($escuelaId)
+            && ! $this->pasosReabiertos->estaReabierto($escuelaId, self::DOCUMENTOS);
     }
 
     private function tipoPersona(int $escuelaId): ?string
