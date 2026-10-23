@@ -15,8 +15,8 @@ class ReporteValidacionGuardado
     }
 
     /**
-     * Ruta del reporte con que se envió el trámite: la última evaluación de una escuela ya enviada (tras el envío no se
-     * guardan más, EjecutarValidacionFinal::ejecutar exige un trámite editable). null si la escuela no está enviada (algún nivel en captura o sin niveles).
+     * Ruta del reporte con que se envió el trámite (UltimaValidacionFinal::idEnviada: las líneas base de cada cierre de
+     * ronda son posteriores y no cuentan). null si la escuela no está enviada (algún nivel en captura o sin niveles).
      */
     public function rutaEnviada(int $escuelaId): ?string
     {
@@ -24,6 +24,8 @@ class ReporteValidacionGuardado
             return null;
         }
 
-        return EvaluacionValidacion::where('escuela_id', $escuelaId)->latest('id')->value('archivo_path');
+        $id = app(UltimaValidacionFinal::class)->idEnviada($escuelaId);
+
+        return $id === null ? null : EvaluacionValidacion::whereKey($id)->value('archivo_path');
     }
 }

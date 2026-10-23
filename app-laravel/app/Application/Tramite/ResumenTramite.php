@@ -8,9 +8,9 @@ use App\Application\Revision\PasosRevision;
 use App\Application\Tramite\DTO\NivelDelTramite;
 use App\Application\Tramite\DTO\ResumenTramiteDTO;
 use App\Application\Tramite\DTO\SeccionTramite;
+use App\Application\Validaciones\UltimaValidacionFinal;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
-use App\Models\EvaluacionValidacion;
 use App\Models\NivelEducativo;
 use App\Models\Plantel;
 use App\Models\ResponsableNivel;
@@ -109,6 +109,7 @@ class ResumenTramite
         private readonly TipoPersonaDeEscuela $tipoPersonaDeEscuela,
         private readonly PasosReabiertos $pasosReabiertos,
         private readonly ObservacionesDeEscuela $observacionesDeEscuela,
+        private readonly UltimaValidacionFinal $ultimaValidacion,
     ) {}
 
     /**
@@ -152,7 +153,7 @@ class ResumenTramite
         /** @var Collection<int, TernaNombre> $ternasNombres */
         $ternasNombres = $escuela->ternasNombres;
 
-        $reporte = $this->enviado ? EvaluacionValidacion::where('escuela_id', $escuela->id)->latest('id')->value('id') : null;
+        $reporte = $this->enviado ? $this->ultimaValidacion->idEnviada($escuela->id) : null;
 
         return new ResumenTramiteDTO(
             escuelaId: $escuela->id,
