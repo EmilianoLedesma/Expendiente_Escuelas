@@ -2,7 +2,8 @@
      Todos los paneles siguen en el DOM, así que wire:model y los #ancla de x-ui.error-summary funcionan igual.
      Uso: <x-ui.stepper :pasos="['A','B']"> <x-ui.stepper-panel :indice="0" :total="2" titulo="A">…</x-ui.stepper-panel> … </x-ui.stepper> --}}
 {{-- $completos (opcional): lista paralela a $pasos de booleanos calculados en el servidor. Sin ella, la marca "con datos" sale de los campos del panel. --}}
-@props(['pasos', 'completos' => null, 'compacto' => false])
+{{-- $invalidos (opcional): lista paralela a $pasos de booleanos; el botón del paso inválido se marca en rojo con icono. --}}
+@props(['pasos', 'completos' => null, 'invalidos' => [], 'compacto' => false])
 
 <div
     {{ $attributes }}
@@ -49,14 +50,20 @@
         <nav x-ref="nav" data-stepper-nav aria-label="Pasos de la captura" class="mb-lg">
             <ol class="flex flex-wrap gap-xs">
                 @foreach ($pasos as $i => $etiqueta)
+                    @php($invalido = $invalidos[$i] ?? false)
                     <li>
                         <button
                             type="button"
                             data-paso-boton="{{ $i }}"
+                            @if ($invalido) data-paso-invalido @endif
                             @if ($compacto) title="{{ $etiqueta }}" @endif
                             x-on:click="ir({{ $i }})"
                             x-bind:aria-current="paso === {{ $i }} ? 'step' : false"
-                            x-bind:class="paso === {{ $i }} ? 'border-primary bg-primary text-on-primary' : 'border-hairline bg-canvas text-primary hover:bg-surface-soft'"
+                            @if ($invalido)
+                                x-bind:class="paso === {{ $i }} ? 'border-error-ink bg-error-ink text-on-primary' : 'border-2 border-error-ink bg-error-soft text-error-ink'"
+                            @else
+                                x-bind:class="paso === {{ $i }} ? 'border-primary bg-primary text-on-primary' : 'border-hairline bg-canvas text-primary hover:bg-surface-soft'"
+                            @endif
                             class="inline-flex min-h-11 items-center gap-xs rounded-md border px-md text-body-sm font-semibold transition-colors duration-150"
                         >
                             @if ($compacto)
@@ -66,7 +73,10 @@
                             @else
                                 <span>{{ $i + 1 }}. {{ $etiqueta }}</span>
                             @endif
-                            @if ($completos === null)
+                            @if ($invalido)
+                                <x-ui.icon nombre="exclamation-circle" class="h-4 w-4" />
+                                <span class="sr-only">(documento inválido)</span>
+                            @elseif ($completos === null)
                                 <span x-show="hechos[{{ $i }}]" x-cloak>
                                     <x-ui.icon nombre="check" class="h-4 w-4" />
                                     <span class="sr-only">(con datos)</span>

@@ -659,8 +659,15 @@ class Paso2DocumentosTest extends TestCase
 
         $this->get(route('tramite.paso2-documentos', ['escuela' => $escuela->id]))->assertOk();
 
-        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->assertHasErrors('vigencia');
+        $claves = array_values(app(DocumentosCompletos::class)->clavesAplicables('fisica'));
+        $indiceDictamen = array_search('dictamen_uso_suelo', $claves, true);
+
+        $html = Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
+            ->assertHasErrors('vigencia')
+            ->html();
+
+        $this->assertSame(1, substr_count($html, 'data-paso-invalido'));
+        $this->assertMatchesRegularExpression('/data-paso-boton="'.$indiceDictamen.'"[^>]*data-paso-invalido/s', $html);
     }
 
     /** WS-7b-1: con todo completo y vigente la checklist se abre para revisar o reemplazar (hub, aviso D2). */
