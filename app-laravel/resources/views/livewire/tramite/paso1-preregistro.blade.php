@@ -37,7 +37,7 @@
                         <x-ui.input maxlength="20" wire:model.blur="numeroExt" />
                     </x-ui.field>
                     <x-ui.field id="numeroInt" label="Número interior" optional>
-                        <x-ui.input maxlength="20" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" wire:model.blur="numeroInt" />
+                        <x-ui.input maxlength="3" wire:model.blur="numeroInt" />
                     </x-ui.field>
                     <x-ui.field id="colonia" label="Colonia">
                         <x-ui.input maxlength="150" wire:model.blur="colonia" />
