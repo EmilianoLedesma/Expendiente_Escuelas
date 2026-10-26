@@ -502,7 +502,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
-            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -549,7 +548,6 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
-            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
         $this->assertDatabaseHas('documentos_plantel', ['fecha_emision' => now()->toDateString()]);
@@ -1132,7 +1130,6 @@ class Paso2DocumentosTest extends TestCase
         $component->set('dictamenForm.autoridadExpide', 'Dirección de Desarrollo Urbano')
             ->set('dictamenForm.folioDictamen', 'DUS-2026-001')
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica')
-            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
 
@@ -1483,38 +1480,23 @@ class Paso2DocumentosTest extends TestCase
             ->set('dictamenForm.giroAutorizado', 'Escuela de educación básica');
     }
 
-    public function test_dictamen_con_fecha_expresa_guarda_vencimiento_y_condicionantes_sin_fecha_calculada(): void
+    public function test_dictamen_guarda_el_vencimiento_calculado_a_un_anio_de_la_emision_y_las_condicionantes(): void
     {
         $this->componenteListoParaDictamen()
-            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
-            ->set('dictamenForm.fechaVencimientoDocumento', now()->addYear()->toDateString())
             ->set('dictamenForm.condicionantes', 'Máximo 200 alumnos por turno.')
             ->call('guardarDictamen')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('dictamenes_uso_suelo', [
             'tipo_vigencia' => 'fecha_expresa',
-            'fecha_vencimiento_documento' => now()->addYear()->toDateString(),
+            'fecha_vencimiento_documento' => now()->subDays(90)->addYear()->toDateString(),
             'condicionantes' => 'Máximo 200 alumnos por turno.',
             'giro_autorizado' => 'Escuela de educación básica',
         ]);
         $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
     }
 
-    public function test_dictamen_sin_fecha_expresa_no_inventa_una_fecha_aunque_se_emitio_hace_90_dias(): void
-    {
-        $this->componenteListoParaDictamen()
-            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
-            ->call('guardarDictamen')
-            ->assertHasNoErrors();
-
-        $fila = (array) DB::table('dictamenes_uso_suelo')->first();
-        $this->assertSame('sin_fecha_expresa', $fila['tipo_vigencia']);
-        $this->assertNull($fila['fecha_vencimiento_documento']);
-        $this->assertNull(DB::table('documentos_plantel')->value('fecha_vigencia'));
-    }
-
-    public function test_dictamen_muestra_los_campos_de_vigencia_declarada_y_la_ayuda(): void
+    public function test_dictamen_muestra_los_campos_y_la_ayuda_sin_pedir_vencimiento(): void
     {
         $escuela = $this->crearEscuelaConResponsable();
         $this->actingAs($escuela->solicitante->user);
@@ -1522,24 +1504,10 @@ class Paso2DocumentosTest extends TestCase
         Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
             ->assertSee('Uso o giro autorizado según el dictamen')
             ->assertSee('Capture el uso autorizado tal como aparece en el documento emitido por la autoridad municipal.')
-            ->assertSee('Sí, el documento indica una fecha de vencimiento')
-            ->assertSee('No, el documento no indica fecha de vencimiento')
-            ->assertSee('Registre solo lo que dice el documento')
+            ->assertDontSeeHtml('dictamenForm.tipoVigencia')
+            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"')
             ->assertSeeHtml('id="dictamenForm.condicionantes"')
-            ->assertSee('Condicionantes')
-            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
-    }
-
-    public function test_dictamen_muestra_la_fecha_de_vencimiento_solo_si_el_documento_la_indica(): void
-    {
-        $escuela = $this->crearEscuelaConResponsable();
-        $this->actingAs($escuela->solicitante->user);
-
-        Livewire::test(Paso2Documentos::class, ['escuela' => $escuela])
-            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
-            ->assertSeeHtml('id="dictamenForm.fechaVencimientoDocumento"')
-            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
-            ->assertDontSeeHtml('id="dictamenForm.fechaVencimientoDocumento"');
+            ->assertSee('Condicionantes');
     }
 
     // --- Ubicación de la notaría: selectores alimentados por el catálogo geográfico ---

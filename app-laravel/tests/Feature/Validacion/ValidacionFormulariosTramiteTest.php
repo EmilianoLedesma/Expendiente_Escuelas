@@ -291,7 +291,6 @@ class ValidacionFormulariosTramiteTest extends TestCase
                 'dictamenForm.autoridadExpide',
                 'dictamenForm.folioDictamen',
                 'dictamenForm.giroAutorizado',
-                'dictamenForm.tipoVigencia',
             ]);
     }
 
@@ -303,29 +302,6 @@ class ValidacionFormulariosTramiteTest extends TestCase
             ->set('dictamenForm.giroAutorizado', '  ')
             ->call('guardarDictamen')
             ->assertHasErrors(['dictamenForm.autoridadExpide', 'dictamenForm.folioDictamen', 'dictamenForm.giroAutorizado']);
-    }
-
-    public function test_paso2_documentos_dictamen_exige_la_fecha_de_vencimiento_solo_si_el_documento_la_indica(): void
-    {
-        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
-            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
-            ->call('guardarDictamen')
-            ->assertHasErrors(['dictamenForm.fechaVencimientoDocumento']);
-
-        $prueba->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa')
-            ->call('guardarDictamen')
-            ->assertHasNoErrors(['dictamenForm.fechaVencimientoDocumento']);
-    }
-
-    public function test_paso2_documentos_dictamen_rechaza_un_vencimiento_anterior_a_la_emision(): void
-    {
-        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
-            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
-            ->set('dictamenForm.fechaEmision', '2026-09-01')
-            ->set('dictamenForm.fechaVencimientoDocumento', '2026-08-01')
-            ->assertHasErrors(['dictamenForm.fechaVencimientoDocumento']);
-
-        $this->assertSame('La fecha de vencimiento no puede ser anterior a la fecha de emisión.', $this->primerError($prueba, 'dictamenForm.fechaVencimientoDocumento'));
     }
 
     public function test_paso2_documentos_dictamen_condicionantes_son_opcionales_y_se_normalizan(): void
@@ -340,18 +316,29 @@ class ValidacionFormulariosTramiteTest extends TestCase
             ->assertHasErrors(['dictamenForm.condicionantes']);
     }
 
-    public function test_paso2_documentos_dictamen_el_payload_descarta_la_fecha_si_no_hay_fecha_expresa(): void
+    public function test_paso2_documentos_dictamen_el_vencimiento_es_un_anio_exacto_despues_de_la_emision(): void
     {
         $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()])
-            ->set('dictamenForm.tipoVigencia', 'fecha_expresa')
-            ->set('dictamenForm.fechaVencimientoDocumento', '2030-06-30')
-            ->set('dictamenForm.tipoVigencia', 'sin_fecha_expresa');
+            ->set('dictamenForm.fechaEmision', '2026-03-15');
 
         $datos = $prueba->instance()->dictamenForm->datosParaDocumento();
 
-        $this->assertSame('sin_fecha_expresa', $datos['tipoVigencia']);
-        $this->assertNull($datos['fechaVencimientoDocumento']);
+        $this->assertSame('fecha_expresa', $datos['tipoVigencia']);
+        $this->assertSame('2027-03-15', $datos['fechaVencimientoDocumento']);
         $this->assertNull($datos['condicionantes']);
+
+        $prueba->set('dictamenForm.fechaEmision', '2024-02-29');
+        $this->assertSame('2025-02-28', $prueba->instance()->dictamenForm->datosParaDocumento()['fechaVencimientoDocumento']);
+    }
+
+    public function test_paso2_documentos_dictamen_sin_fecha_de_emision_valida_no_calcula_vencimiento(): void
+    {
+        $prueba = Livewire::test(Paso2Documentos::class, ['escuela' => $this->escuelaConResponsable()]);
+
+        $this->assertNull($prueba->instance()->dictamenForm->datosParaDocumento()['fechaVencimientoDocumento']);
+
+        $prueba->set('dictamenForm.fechaEmision', '15/03/2026');
+        $this->assertNull($prueba->instance()->dictamenForm->datosParaDocumento()['fechaVencimientoDocumento']);
     }
 
     public function test_paso2_documentos_la_ubicacion_de_la_notaria_es_opcional(): void
