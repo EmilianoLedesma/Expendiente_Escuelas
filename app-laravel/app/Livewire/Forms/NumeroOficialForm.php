@@ -48,7 +48,7 @@ class NumeroOficialForm extends Form
         return [
             'calle' => ReglasCaptura::texto(requerido: true, max: 150),
             'numeroExt' => ReglasCaptura::texto(max: 20),
-            'numeroInterior' => ReglasCaptura::texto(max: 20),
+            'numeroInterior' => ReglasCaptura::texto(max: 3),
             'colonia' => ReglasCaptura::texto(requerido: true, max: 150),
             'entidadFederativaId' => ['required', 'integer', Rule::exists('entidades_federativas', 'id')],
             'municipioId' => [

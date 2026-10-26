@@ -421,7 +421,7 @@ class RegistrarDocumento
                 'colonia' => [$datos->domicilioColonia, 150, null],
                 'municipio' => [$datos->domicilioMunicipio, 150, null],
                 'codigoPostal' => [$datos->domicilioCodigoPostal, 10, Formatos::esCodigoPostal(...)],
-                'numeroInterior' => [$datos->domicilioNumeroInt, 20, null],
+                'numeroInterior' => [$datos->domicilioNumeroInt, 3, null],
                 'autoridadEmisora' => [$datos->autoridadEmisora, 200, null],
                 'folioCertificado' => [$datos->folioDocumento, 50, null],
                 'claveCatastral' => [$datos->claveCatastral, 40, null],

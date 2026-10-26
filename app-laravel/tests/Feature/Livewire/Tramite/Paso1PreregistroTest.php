@@ -92,6 +92,17 @@ class Paso1PreregistroTest extends TestCase
             ->assertHasErrors(['calle', 'colonia', 'municipio', 'codigoPostal']);
     }
 
+    public function test_el_numero_interior_acepta_letras(): void
+    {
+        $this->actingAs(Solicitante::factory()->create()->user);
+
+        Livewire::test(Paso1Preregistro::class)
+            ->set('numeroInt', 'A-3')
+            ->assertHasNoErrors('numeroInt')
+            ->set('numeroInt', 'A-30')
+            ->assertHasErrors('numeroInt');
+    }
+
     public function test_bifurcacion_existente_sin_plantel_id_no_llama_al_caso_de_uso(): void
     {
         $solicitante = Solicitante::factory()->create();

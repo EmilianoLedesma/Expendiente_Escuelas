@@ -69,7 +69,7 @@ class Paso1Preregistro extends Component
             'plantelId' => ['required_if:bifurcacion,existente', 'nullable', 'integer', 'exists:planteles,id'],
             'calle' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
             'numeroExt' => ReglasCaptura::texto(max: 20),
-            'numeroInt' => [...ReglasCaptura::texto(max: 20), 'regex:/^\d+$/'],
+            'numeroInt' => ReglasCaptura::texto(max: 3),
             'colonia' => ReglasCaptura::texto(requerido: $siEsNuevo, max: 150),
             'localidad' => ReglasCaptura::texto(max: 150),
             ...$this->reglasMunicipio($siEsNuevo),
@@ -105,7 +105,6 @@ class Paso1Preregistro extends Component
     {
         return [
             'plantelId.exists' => (new PlantelNoDisponible)->getMessage(),
-            'numeroInt.regex' => 'El número interior solo puede contener dígitos.',
             'municipioId.required_if' => 'Selecciona el municipio.',
             'municipioId.in' => 'Selecciona un municipio de Querétaro de la lista.',
         ];

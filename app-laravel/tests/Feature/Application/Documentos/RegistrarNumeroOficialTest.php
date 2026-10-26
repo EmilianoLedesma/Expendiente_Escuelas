@@ -119,7 +119,7 @@ class RegistrarNumeroOficialTest extends TestCase
             'autoridad demasiado larga' => [['autoridadEmisora' => str_repeat('x', 201)], 'numeroOficialForm.autoridadEmisora'],
             'folio demasiado largo' => [['folioDocumento' => str_repeat('F', 51)], 'numeroOficialForm.folioCertificado'],
             'folio en blanco' => [['folioDocumento' => '  '], 'numeroOficialForm.folioCertificado'],
-            'número interior demasiado largo' => [['domicilioNumeroInt' => str_repeat('1', 21)], 'numeroOficialForm.numeroInterior'],
+            'número interior demasiado largo' => [['domicilioNumeroInt' => str_repeat('1', 4)], 'numeroOficialForm.numeroInterior'],
             'clave catastral demasiado larga' => [['claveCatastral' => str_repeat('9', 41)], 'numeroOficialForm.claveCatastral'],
             'código postal inválido' => [['domicilioCodigoPostal' => '7600'], 'numeroOficialForm.codigoPostal'],
         ];

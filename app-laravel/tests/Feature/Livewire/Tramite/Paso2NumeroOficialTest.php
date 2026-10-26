@@ -137,7 +137,7 @@ class Paso2NumeroOficialTest extends TestCase
         $componente->set('numeroOficialForm.codigoPostal', '76000')
             ->set('numeroOficialForm.autoridadEmisora', str_repeat('x', 201))
             ->set('numeroOficialForm.folioCertificado', str_repeat('F', 51))
-            ->set('numeroOficialForm.numeroInterior', str_repeat('1', 21))
+            ->set('numeroOficialForm.numeroInterior', str_repeat('1', 4))
             ->set('numeroOficialForm.claveCatastral', str_repeat('9', 41))
             ->call('guardarNumeroOficial')
             ->assertHasErrors(['numeroOficialForm.autoridadEmisora', 'numeroOficialForm.folioCertificado', 'numeroOficialForm.numeroInterior', 'numeroOficialForm.claveCatastral']);
