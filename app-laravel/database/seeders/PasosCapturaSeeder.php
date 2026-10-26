@@ -3,16 +3,17 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class PasosCapturaSeeder extends Seeder
 {
+    use InsertaFaltantes;
+
     /**
      * Los seis sub-pasos del Paso 3 (PRD §5), en el orden fijo del wizard.
      */
     public function run(): void
     {
-        DB::table('pasos_captura')->insertOrIgnore([
+        $this->insertarFaltantes('pasos_captura', [
             ['clave' => 'inmueble', 'nombre' => 'Datos del inmueble', 'orden' => 1],
             ['clave' => 'infraestructura', 'nombre' => 'Infraestructura del nivel', 'orden' => 2],
             ['clave' => 'mobiliario', 'nombre' => 'Mobiliario', 'orden' => 3],
