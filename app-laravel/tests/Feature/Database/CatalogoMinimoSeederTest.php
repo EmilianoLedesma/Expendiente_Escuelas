@@ -4,6 +4,7 @@ namespace Tests\Feature\Database;
 
 use Database\Seeders\CatalogoMinimoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CatalogoMinimoSeederTest extends TestCase
@@ -52,6 +53,16 @@ class CatalogoMinimoSeederTest extends TestCase
         $this->assertDatabaseCount('tipos_material_biblioteca', 9);
         $this->assertDatabaseHas('tipos_material_biblioteca', ['clave' => 'libros']);
         $this->assertDatabaseHas('tipos_material_biblioteca', ['clave' => 'otro']);
+    }
+
+    public function test_resembrar_no_consume_valores_de_la_secuencia(): void
+    {
+        (new CatalogoMinimoSeeder)->run();
+        $antes = DB::selectOne('select last_value from tipos_material_biblioteca_id_seq')->last_value;
+
+        (new CatalogoMinimoSeeder)->run();
+
+        $this->assertSame($antes, DB::selectOne('select last_value from tipos_material_biblioteca_id_seq')->last_value);
     }
 
     public function test_it_is_idempotent_when_run_twice(): void

@@ -3,16 +3,17 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class CatalogoMinimoSeeder extends Seeder
 {
+    use InsertaFaltantes;
+
     /**
      * Seeds mínimos de catálogo — ddl_sistema_incorporacion_v3.sql lines 563-596.
      */
     public function run(): void
     {
-        DB::table('niveles_educativos')->insertOrIgnore([
+        $this->insertarFaltantes('niveles_educativos', [
             ['clave' => 'inicial', 'nombre' => 'Educación Inicial', 'orden' => 1],
             ['clave' => 'preescolar', 'nombre' => 'Preescolar', 'orden' => 2],
             ['clave' => 'primaria', 'nombre' => 'Primaria', 'orden' => 3],
@@ -22,7 +23,7 @@ class CatalogoMinimoSeeder extends Seeder
             ['clave' => 'posgrado', 'nombre' => 'Posgrado', 'orden' => 7],
         ]);
 
-        DB::table('estados_expediente')->insertOrIgnore([
+        $this->insertarFaltantes('estados_expediente', [
             ['clave' => 'preregistro', 'nombre' => 'Preregistro', 'orden' => 1],
             ['clave' => 'en_captura', 'nombre' => 'En captura', 'orden' => 2],
             ['clave' => 'en_revision', 'nombre' => 'En revisión', 'orden' => 3],
@@ -31,7 +32,7 @@ class CatalogoMinimoSeeder extends Seeder
             ['clave' => 'rechazado', 'nombre' => 'Rechazado', 'orden' => 6],
         ]);
 
-        DB::table('salas')->insertOrIgnore([
+        $this->insertarFaltantes('salas', [
             ['clave' => 'lactantes_a', 'nombre' => 'Lactantes A', 'edad_min_meses' => 1, 'edad_max_meses' => 6, 'orden' => 1],
             ['clave' => 'lactantes_b', 'nombre' => 'Lactantes B', 'edad_min_meses' => 7, 'edad_max_meses' => 12, 'orden' => 2],
             ['clave' => 'lactantes_c', 'nombre' => 'Lactantes C', 'edad_min_meses' => 13, 'edad_max_meses' => 18, 'orden' => 3],
@@ -39,7 +40,7 @@ class CatalogoMinimoSeeder extends Seeder
             ['clave' => 'maternal_b', 'nombre' => 'Maternal B', 'edad_min_meses' => 25, 'edad_max_meses' => 35, 'orden' => 5],
         ]);
 
-        DB::table('tipos_material_biblioteca')->insertOrIgnore([
+        $this->insertarFaltantes('tipos_material_biblioteca', [
             ['clave' => 'libros', 'nombre' => 'Libros'],
             ['clave' => 'periodicos', 'nombre' => 'Periódicos'],
             ['clave' => 'revistas_especializadas', 'nombre' => 'Revistas especializadas'],
