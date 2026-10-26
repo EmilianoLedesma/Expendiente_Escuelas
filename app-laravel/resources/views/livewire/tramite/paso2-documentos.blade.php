@@ -84,7 +84,7 @@
                     @endif
                     <x-ui.field id="numeroOficialForm.calle" label="Calle" hint="Tal como aparece en el certificado."><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.calle" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.numeroExt" label="Número exterior" hint="Si el certificado dice «S/N», escríbalo así." optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroExt" /></x-ui.field>
-                    <x-ui.field id="numeroOficialForm.numeroInterior" label="Número interior" hint="Solo si el certificado lo trae (por ejemplo, «A-3»)." optional><x-ui.input maxlength="20" wire:model.blur="numeroOficialForm.numeroInterior" /></x-ui.field>
+                    <x-ui.field id="numeroOficialForm.numeroInterior" label="Número interior" hint="Solo si el certificado lo trae (por ejemplo, «A-3»)." optional><x-ui.input maxlength="3" wire:model.blur="numeroOficialForm.numeroInterior" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.colonia" label="Colonia"><x-ui.input maxlength="150" wire:model.blur="numeroOficialForm.colonia" /></x-ui.field>
                     <x-ui.field id="numeroOficialForm.entidadFederativaId" label="Entidad federativa" hint="Tal como aparece en el certificado.">
                         <x-ui.select wire:model.live="numeroOficialForm.entidadFederativaId">
@@ -192,17 +192,8 @@
                     <x-ui.field id="dictamenForm.folioDictamen" label="Folio del dictamen"><x-ui.input maxlength="50" wire:model.blur="dictamenForm.folioDictamen" /></x-ui.field>
                     <x-ui.field id="dictamenForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="dictamenForm.fechaEmision" /></x-ui.field>
                     <x-ui.field id="dictamenForm.giroAutorizado" label="Uso o giro autorizado según el dictamen" hint="Capture el uso autorizado tal como aparece en el documento emitido por la autoridad municipal."><x-ui.input maxlength="200" wire:model.blur="dictamenForm.giroAutorizado" /></x-ui.field>
-                    <x-ui.radio-group
-                        id="dictamenForm.tipoVigencia"
-                        legend="¿El documento indica una fecha de vencimiento?"
-                        wire:model.live="dictamenForm.tipoVigencia"
-                        :opciones="['fecha_expresa' => 'Sí, el documento indica una fecha de vencimiento', 'sin_fecha_expresa' => 'No, el documento no indica fecha de vencimiento']"
-                    />
-                    <p class="text-body-sm text-muted">Registre solo lo que dice el documento. SEDEQ revisa su vigencia.</p>
-                    @if ($dictamenForm->tipoVigencia === 'fecha_expresa')
-                        <x-ui.field id="dictamenForm.fechaVencimientoDocumento" label="Fecha de vencimiento" hint="Tal como aparece en el dictamen."><x-ui.input type="date" wire:model.blur="dictamenForm.fechaVencimientoDocumento" /></x-ui.field>
-                    @endif
-                    <x-ui.field id="dictamenForm.condicionantes" label="Condicionantes" hint="Restricciones que aparezcan en el documento: actividades permitidas, superficie, estacionamiento, etc." optional><x-ui.textarea wire:model.blur="dictamenForm.condicionantes" maxlength="1000" /></x-ui.field>
+                    <p class="text-body-sm text-muted">La vigencia del dictamen se calcula como un año a partir de la fecha de emisión. SEDEQ revisa su vigencia.</p>
+                    <x-ui.field id="dictamenForm.condicionantes" label="Condicionantes" hint="Restricciones que aparezcan en el documento: actividades permitidas, superficie, estacionamiento, etc."><x-ui.textarea wire:model.blur="dictamenForm.condicionantes" maxlength="1000" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'visto_bueno_proteccion_civil')
                 <x-tramite.documento-row wire:key="doc-{{ $clave }}" :clave="$fila['clave']" :titulo="$fila['titulo']" :escuela-id="$fila['escuelaId']" :capturado="$fila['capturado']" :editable="$fila['editable']" :vencido="$fila['vencido']" accion="guardarProteccionCivil">
