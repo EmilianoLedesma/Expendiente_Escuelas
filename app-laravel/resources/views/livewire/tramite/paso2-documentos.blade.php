@@ -39,9 +39,10 @@
         $clavesAplicables = array_values($clavesAplicables);
         $etiquetasPasos = array_map(fn ($c) => $titulos[$c] ?? $nombres[$c] ?? $c, $clavesAplicables);
         $completosPasos = array_map(fn ($c) => $capturados->has($c), $clavesAplicables);
+        $invalidosPasos = array_map(fn ($c) => isset($vencidos[$c]), $clavesAplicables);
     @endphp
 
-    <x-ui.stepper :pasos="$etiquetasPasos" :completos="$completosPasos" compacto class="mt-lg">
+    <x-ui.stepper :pasos="$etiquetasPasos" :completos="$completosPasos" :invalidos="$invalidosPasos" compacto class="mt-lg">
     @foreach ($clavesAplicables as $indicePaso => $claveDelPaso)
     <x-ui.stepper-panel :indice="$indicePaso" :total="count($clavesAplicables)" :titulo="$etiquetasPasos[$indicePaso]">
     <ul class="divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
