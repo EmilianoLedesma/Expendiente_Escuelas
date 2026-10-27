@@ -60,6 +60,8 @@ class ConsultarAnexoInstalaciones
                 'distanciaValor' => $s->distancia_valor,
                 'distanciaUnidad' => $s->distancia_unidad,
             ])->all(),
+            metrosPredio: $plantel->metros_totales,
+            metrosConstruidos: $plantel->metros_construidos,
             areaCivicaM2: $plantel->area_civica_m2,
             tieneAstaBandera: $plantel->tiene_asta_bandera,
             secciones: $this->secciones($escuelaNivel->nivel_educativo_id, $captura),

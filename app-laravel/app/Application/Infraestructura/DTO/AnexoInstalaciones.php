@@ -23,6 +23,8 @@ final readonly class AnexoInstalaciones
         public array $datosGenerales,
         public array $estudiosActuales,
         public array $serviciosCercanos,
+        public ?string $metrosPredio,
+        public ?string $metrosConstruidos,
         public ?string $areaCivicaM2,
         public ?bool $tieneAstaBandera,
         public array $secciones,
