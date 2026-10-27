@@ -103,7 +103,11 @@ class RegistrarInfraestructuraNivelTest extends TestCase
                 'campoFutbol' => null,
                 'materialesBiblioteca' => [],
             ],
-            [
+        ];
+
+        if (! $esInicial) {
+            // D8: campo_futbol no aplica a Inicial.
+            $espacios[] = [
                 'tipoEspacioId' => $this->idTipo('campo_futbol'),
                 'cantidad' => 1,
                 'superficieM2' => 800.0,
@@ -113,10 +117,7 @@ class RegistrarInfraestructuraNivelTest extends TestCase
                 'destinadoA' => null,
                 'campoFutbol' => ['tipoSuperficie' => 'pasto sintético', 'formato' => '7'],
                 'materialesBiblioteca' => [],
-            ],
-        ];
-
-        if (! $esInicial) {
+            ];
             $espacios[] = [
                 'tipoEspacioId' => $this->idTipo('biblioteca'),
                 'cantidad' => 1,

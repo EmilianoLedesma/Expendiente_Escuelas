@@ -80,15 +80,6 @@ class ConsultarAnexoInstalacionesTest extends TestCase
         return null;
     }
 
-    /** Simula la matriz corregida de Inicial (T4/D8): sin cubículo, cancha ni campo de fútbol. */
-    private function matrizInicialCorregida(): void
-    {
-        DB::table('niveles_tipos_espacios')
-            ->where('nivel_educativo_id', NivelEducativo::where('clave', 'inicial')->value('id'))
-            ->whereIn('tipo_espacio_id', DB::table('tipos_espacios')->whereIn('clave', ['cubiculo', 'cancha_usos_multiples', 'campo_futbol'])->pluck('id'))
-            ->delete();
-    }
-
     public function test_plantel_vacio_imprime_todo_en_blanco(): void
     {
         $anexo = $this->consultar($this->nivel('primaria'));
@@ -188,7 +179,6 @@ class ConsultarAnexoInstalacionesTest extends TestCase
 
     public function test_inicial_completo_con_sus_filas_propias_y_sin_cubiculos(): void
     {
-        $this->matrizInicialCorregida();
         $nivel = $this->nivel('inicial');
         $this->espacio('filtro_recepcion', ['cantidad' => 1, 'superficie_m2' => 6]);
         $this->sanitario('alumnado_maternal', ['cantidad_retretes' => 3, 'cantidad_lavabos' => 3], bacinicas: 4);
@@ -229,7 +219,6 @@ class ConsultarAnexoInstalacionesTest extends TestCase
 
     public function test_fila_capturada_en_tipo_que_ya_no_aplica_se_imprime_en_otros(): void
     {
-        $this->matrizInicialCorregida();
         $nivel = $this->nivel('inicial');
         $this->espacio('cubiculo', ['cantidad' => 1, 'destinado_a' => 'Orientación educativa']);
         $campo = $this->espacio('campo_futbol', ['cantidad' => 1, 'superficie_m2' => 500]);
