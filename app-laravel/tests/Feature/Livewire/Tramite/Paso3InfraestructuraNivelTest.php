@@ -133,6 +133,21 @@ class Paso3InfraestructuraNivelTest extends TestCase
         );
     }
 
+    /** Un panel con más de 3 espacios se pagina de 3 en 3 (Alpine); uno corto no muestra navegación. */
+    public function test_los_paneles_largos_se_paginan_de_tres_en_tres(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+
+        $html = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $primaria->id]))
+            ->getContent();
+
+        // Primaria: administrativo 7 → 3 páginas; recreativo 8 → 3; especial 9 → 3; cubículo 1 → sin navegación.
+        $this->assertSame(3, substr_count($html, 'Página 1 de 3'));
+        $this->assertSame(3, substr_count($html, 'aria-label="Paginación de espacios"'));
+        $this->assertStringContainsString('x-show="pagina === 2"', $html);
+    }
+
     public function test_paneles_en_el_orden_del_anexo_para_inicial_sin_cubiculos(): void
     {
         $inicial = $this->escuelaNivel('inicial');
