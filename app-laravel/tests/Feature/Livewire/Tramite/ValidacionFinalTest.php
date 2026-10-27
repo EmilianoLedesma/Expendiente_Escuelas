@@ -99,6 +99,17 @@ class ValidacionFinalTest extends TestCase
             ->assertSee('Credencial de elector (INE): PEREZ GOMEZ JUAN CARLOS — no coincide');
     }
 
+    public function test_el_boton_validar_de_nuevo_queda_fijo_al_pie(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $this->actingAs($escuela->solicitante->user);
+
+        Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
+            ->assertSeeHtml('data-barra-validar')
+            ->assertSeeHtml('sticky bottom-0');
+    }
+
     public function test_validar_de_nuevo_guarda_otra_evaluacion(): void
     {
         $escuela = $this->crearEscuelaConPlantel();

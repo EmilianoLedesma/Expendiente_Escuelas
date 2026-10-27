@@ -118,7 +118,8 @@
             </section>
         @endforeach
 
-        <div class="mt-lg flex flex-wrap items-center gap-md">
+        {{-- Fija al pie del viewport mientras se revisa la lista; se asienta en su lugar al llegar al final. --}}
+        <div data-barra-validar class="sticky bottom-0 z-10 mt-lg flex flex-wrap items-center gap-md border-t border-hairline bg-canvas py-sm">
             <x-ui.button-primary type="button" wire:click="validarDeNuevo">Validar de nuevo</x-ui.button-primary>
             <a href="{{ route('tramite.validacion.reporte', ['escuela' => $escuela->id, 'evaluacion' => $validacion->evaluacionId]) }}" target="_blank" class="inline-flex min-h-11 items-center gap-xxs font-semibold text-primary">
                 <x-ui.icon nombre="arrow-down-tray" class="h-5 w-5" />
