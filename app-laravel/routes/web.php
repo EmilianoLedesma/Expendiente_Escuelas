@@ -1,6 +1,7 @@
 <?php
 
 use App\Application\Revision\RutaInicio;
+use App\Http\Controllers\Tramite\AnexoInstalacionesPdfController;
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
 use App\Http\Controllers\Tramite\DescargarDocumentoNivelController;
 use App\Http\Controllers\Tramite\DescargarReporteEnviadoController;
@@ -136,6 +137,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/paso3/{escuelaNivel}/infraestructura', InfraestructuraNivel::class)
         ->middleware("can:editarPaso,escuelaNivel,'infraestructura'")
         ->name('tramite.paso3-infraestructura');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/infraestructura/anexo-instalaciones.pdf', AnexoInstalacionesPdfController::class)
+        ->whereNumber('escuelaNivel')
+        ->middleware('can:descargarAnexo,escuelaNivel')
+        ->name('tramite.paso3.infraestructura.anexo-instalaciones');
 
     Route::get('/tramite/paso3/{escuelaNivel}/mobiliario', MobiliarioNivel::class)
         ->middleware("can:editarPaso,escuelaNivel,'mobiliario'")

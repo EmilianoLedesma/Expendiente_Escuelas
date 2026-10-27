@@ -37,6 +37,12 @@ class EscuelaNivelPolicy
             || $this->accesoSedeq->puedeVerNivel($user, $escuelaNivel->getKey());
     }
 
+    /** Descargar el Anexo 2 Instalaciones (solo lectura, D3/D4): dueño o responsable de ESTE nivel, aun con el trámite enviado. */
+    public function descargarAnexo(User $user, EscuelaNivel $escuelaNivel): bool
+    {
+        return $this->esDueno($user, $escuelaNivel) || $this->esResponsable($user, $escuelaNivel);
+    }
+
     public function update(User $user, EscuelaNivel $escuelaNivel): bool
     {
         return ($this->esDueno($user, $escuelaNivel) || $this->esResponsable($user, $escuelaNivel))
