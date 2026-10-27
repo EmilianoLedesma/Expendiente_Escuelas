@@ -89,3 +89,21 @@ anterior de esta sección, que sí decía eso — era falsa.)
 **Impacto:** la matriz ahora agrega Inicial a tres espacios que ya eran
 explícitos para el resto de Básica. La pregunta principal de este documento
 (obligatoriedad) sigue abierta.
+
+---
+
+## Actualización — 2026-10-27 (decisión D8 del dueño, 2026-10-22)
+
+`cubiculo`, `cancha_usos_multiples` y `campo_futbol` dejan de aplicar a **Inicial**
+(COMPENDIO 204 y 212); siguen aplicando a Preescolar, Primaria y Secundaria. Estas
+tres filas inferidas quedan **resueltas para Inicial** por decisión del dueño. Se
+aplicó en `TiposEspaciosSeeder` (`APLICABILIDAD_EXPLICITA`) y, para bases ya
+sembradas, con la migración de datos
+`2026_10_27_000000_retirar_espacios_no_aplicables_de_inicial` (borra solo esos 3
+mapeos de `niveles_tipos_espacios`; reversible). Las filas ya capturadas
+(`instalaciones_espacios`) no se tocan y siguen contando en la suma por categoría
+`recreativo_deportivo` del motor de capacidad. El área cívica se sigue capturando en
+todos los niveles; solo se oculta en el PDF de Inicial.
+
+Este archivo **no se renombra**: el resto de la matriz (filas inferidas de
+Preescolar/Primaria/Secundaria y la obligatoriedad) sigue pendiente de SEDEQ.

@@ -35,6 +35,10 @@ class TiposEspaciosSeeder extends Seeder
         'cocina' => ['inicial', 'preescolar', 'primaria', 'secundaria'],
         'comedor' => ['inicial', 'preescolar', 'primaria', 'secundaria'],
         'sala_artes' => ['preescolar', 'primaria', 'secundaria'],
+        // D8 (dueño, 2026-10-22; COMPENDIO 204 y 212): Inicial no ofrece cubículo, cancha ni campo de fútbol.
+        'cubiculo' => ['preescolar', 'primaria', 'secundaria'],
+        'cancha_usos_multiples' => ['preescolar', 'primaria', 'secundaria'],
+        'campo_futbol' => ['preescolar', 'primaria', 'secundaria'],
     ];
 
     private const NIVELES_BASICA = ['inicial', 'preescolar', 'primaria', 'secundaria'];
