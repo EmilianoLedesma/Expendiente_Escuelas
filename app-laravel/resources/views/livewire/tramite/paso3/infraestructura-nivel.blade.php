@@ -73,6 +73,7 @@
                         <x-ui.alert tipo="warning" class="mt-sm">Otro nivel ya capturó: solo puedes completar campos vacíos</x-ui.alert>
                     @endif
 
+                    <x-ui.paginado :total="$espaciosCapturados->count() + $sanitariosCapturados->count()">
                     @foreach ($espaciosCapturados as $capturado)
                         @php
                             $tipo = $capturado->tipoEspacio;
@@ -80,7 +81,7 @@
                             $original = $guardado['espacios'][$tipo->id] ?? [];
                             $etiquetaDestinado = $tipo->categoria === 'recreativo_deportivo' ? 'Equipamiento y características' : 'Destinado a';
                         @endphp
-                        <div wire:key="edicion-tipo-{{ $tipo->id }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                        <div wire:key="edicion-tipo-{{ $tipo->id }}" data-pag="{{ intdiv($loop->index, 3) }}" x-show="pagina === {{ intdiv($loop->index, 3) }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
                             <div class="grid grid-cols-1 gap-sm md:items-start {{ $columnas }}">
                                 <p id="{{ $base }}.tipoEspacioId" tabindex="-1" class="text-body-md font-semibold text-ink">{{ $tipo->nombre }}</p>
                                 @foreach (['cantidad' => ['Cantidad', 'numeric', null], 'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'], 'capacidadPromedio' => ['Capacidad', 'numeric', null]] as $campo => [$texto, $modo, $paso])
@@ -162,7 +163,7 @@
                             $original = $guardado['sanitarios'][$categoria] ?? [];
                             $nombre = str_replace('_', ' ', $categoria);
                         @endphp
-                        <div wire:key="edicion-sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                        <div wire:key="edicion-sanitario-{{ $categoria }}" data-pag="{{ intdiv($espaciosCapturados->count() + $loop->index, 3) }}" x-show="pagina === {{ intdiv($espaciosCapturados->count() + $loop->index, 3) }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
                             <p id="{{ $base }}.categoria" tabindex="-1" class="text-body-md font-semibold text-ink">Sanitarios {{ $nombre }}</p>
                             <div class="mt-sm grid grid-cols-2 gap-sm md:grid-cols-4">
                                 @foreach (array_filter([
@@ -187,6 +188,7 @@
                             </div>
                         </div>
                     @endforeach
+                    </x-ui.paginado>
 
                     {{-- type="button": este formulario vive dentro del de «por capturar» (no se anidan forms). --}}
                     <div class="mt-md">
@@ -240,8 +242,9 @@
                     <span>Espacio</span><span>Cantidad</span><span>Superficie (m²)</span><span>Capacidad</span>
                 </div>
 
+                <x-ui.paginado :total="count($porCategoria[$clave])">
                 @foreach ($porCategoria[$clave] as $tipo)
-                    <div wire:key="tipo-{{ $tipo->id }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                    <div wire:key="tipo-{{ $tipo->id }}" data-pag="{{ intdiv($loop->index, 3) }}" x-show="pagina === {{ intdiv($loop->index, 3) }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
                         <div class="grid grid-cols-1 gap-sm md:items-start {{ $columnas }}">
                             <p class="text-body-md font-semibold text-ink">{{ $tipo->nombre }}</p>
                             @foreach (['cantidad' => ['Cantidad', 'numeric', null], 'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'], 'capacidadPromedio' => ['Capacidad', 'numeric', null]] as $campo => [$texto, $modo, $paso])
@@ -312,6 +315,7 @@
                         @endif
                     </div>
                 @endforeach
+                </x-ui.paginado>
             </x-ui.section>
             @endif
 
