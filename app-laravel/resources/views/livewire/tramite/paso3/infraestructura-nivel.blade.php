@@ -198,7 +198,6 @@
             @php $indice++; @endphp
         @endif
 
-
         {{-- $indice++ fuera del atributo (3f96acf): los índices de panel deben quedar consecutivos. --}}
         @foreach ($secuencia as $clave)
             <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" :titulo="$titulosPanel[$clave] ?? $clave">

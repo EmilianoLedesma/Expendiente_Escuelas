@@ -20,6 +20,7 @@ use App\Models\User;
  * la asignación en VerificarAccesoResponsable, sin reimplementar comparaciones.
  * Las habilidades que escriben exigen además que el trámite de la
  * escuela padre siga editable (WS-7a, TramiteEditable): tras el envío, 403.
+ * `descargarAnexo` (PDF solo lectura) admite al dueño o al responsable de ESTE nivel, excluye a SEDEQ y no exige trámite editable.
  */
 class EscuelaNivelPolicy
 {

@@ -69,6 +69,8 @@
         table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
         th, td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; text-align: left; }
         th { background: #e6e6e6; }
+        tr { page-break-inside: avoid; }
+        td { word-wrap: break-word; }
         table.libre td { border: none; padding: 2px 0; }
         .c { text-align: center; }
     </style>
@@ -91,13 +93,16 @@
         <tr><th colspan="2">DIMENSIONES (M²)</th></tr>
         <tr><td>Predio: {!! $u($m2($anexo->metrosPredio) ?: null, '__________') !!}</td><td>Construido: {!! $u($m2($anexo->metrosConstruidos) ?: null, '__________') !!}</td></tr>
     </table>
-    <table>
-        <tr><th colspan="2">ÁREA CÍVICA</th></tr>
-        <tr>
-            <td>Superficie (m²): {!! $u($m2($anexo->areaCivicaM2) ?: null, '__________') !!}</td>
-            <td>Asta bandera {{ $siNo($anexo->tieneAstaBandera) }}</td>
-        </tr>
-    </table>
+    {{-- D8: el área cívica se captura en todos los niveles pero no se imprime en el Anexo de Inicial. --}}
+    @unless ($nivelClave === 'inicial')
+        <table>
+            <tr><th colspan="2">ÁREA CÍVICA</th></tr>
+            <tr>
+                <td>Superficie (m²): {!! $u($m2($anexo->areaCivicaM2) ?: null, '__________') !!}</td>
+                <td>Asta bandera {{ $siNo($anexo->tieneAstaBandera) }}</td>
+            </tr>
+        </table>
+    @endunless
 
     <table>
         <tr><th colspan="4">TIPO DE ESTUDIOS QUE IMPARTE EN EL LOCAL ACTUALMENTE (marque con una X)</th></tr>
@@ -211,7 +216,11 @@
                 <tr>
                     <td>{{ $l['nombre'] }}</td>
                     <td>{{ $siNo(true) }}</td>
-                    <td>{{ $l['destinadoA'] }} @if ($l['superficieM2'] !== null) {!! $m2($l['superficieM2']) !!}@endif</td>
+                    <td>
+                        {{ $l['destinadoA'] }}
+                        @if ($l['superficieM2'] !== null) {!! $m2($l['superficieM2']) !!}@endif
+                        @if ($l['campoFutbol']) {{ trim(($l['campoFutbol']['tipoSuperficie'] ?? '').' '.($l['campoFutbol']['formato'] ?? '')) }}@endif
+                    </td>
                 </tr>
             @endforeach
         </table>

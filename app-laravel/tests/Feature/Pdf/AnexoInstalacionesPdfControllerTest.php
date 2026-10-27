@@ -4,6 +4,7 @@ namespace Tests\Feature\Pdf;
 
 use App\Http\Controllers\Tramite\AnexoInstalacionesPdfController;
 use App\Models\EscuelaNivel;
+use App\Models\ResponsableNivel;
 use App\Models\Solicitante;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,15 @@ class AnexoInstalacionesPdfControllerTest extends TestCase
         $this->actingAs($dueno->user)->get($this->url($nivel))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_un_responsable_revocado_recibe_403(): void
+    {
+        $nivel = $this->nivelDe(Solicitante::factory()->create());
+        $responsable = $this->responsableDe($nivel);
+        ResponsableNivel::where('escuela_nivel_id', $nivel->id)->delete();
+
+        $this->actingAs($responsable)->get($this->url($nivel))->assertForbidden();
     }
 
     public function test_un_id_no_numerico_da_404(): void
