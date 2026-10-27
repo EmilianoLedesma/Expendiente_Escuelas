@@ -1,5 +1,4 @@
 @php
-    $nombresCategoria = ['administrativo' => 'Espacios administrativos', 'cubiculo' => 'Cubículos', 'recreativo_deportivo' => 'Actividades físicas y recreativas', 'especial' => 'Instalaciones especiales'];
     $yaCapturado = $espaciosCapturados
         ->toBase()->mapWithKeys(fn ($e) => [$e->tipoEspacio->nombre => ($e->cantidad ?? '—').' · '.($e->superficie_m2 ?? '—').' m²'])
         ->merge($sanitariosCapturados->mapWithKeys(fn ($s) => ['Sanitarios '.str_replace('_', ' ', $s->categoria) => ($s->cantidad_retretes ?? '—').' retretes · '.($s->cantidad_lavabos ?? '—').' lavabos']))
@@ -7,19 +6,36 @@
     $columnas = 'md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]';
     $etiqueta = 'block text-body-sm font-semibold text-ink';
 
-    // Un sub-paso por bloque, en el orden en que se renderizan los paneles de abajo.
-    $etiquetasCategoria = ['administrativo' => 'Administrativos', 'cubiculo' => 'Cubículos', 'recreativo_deportivo' => 'Actividades físicas', 'especial' => 'Instalaciones especiales'];
+    // Orden del Anexo 2 por nivel (no alfabético). Un sub-paso por bloque, en el orden en que se renderizan los paneles de abajo.
+    $esInicial = $escuelaNivel->nivelEducativo->clave === 'inicial';
+    $titulosPanel = [
+        'administrativo' => 'Espacios administrativos',
+        'aulas' => 'Aulas del nivel',
+        'cubiculo' => 'Cubículos',
+        'sanitarios' => 'Sanitarios',
+        'recreativo_deportivo' => $esInicial ? 'Áreas recreativas' : 'Actividades físicas y recreativas',
+        'especial' => 'Instalaciones especiales',
+    ];
+    $etiquetasPaso = ['administrativo' => 'Administrativos', 'aulas' => 'Aulas del nivel', 'cubiculo' => 'Cubículos', 'sanitarios' => 'Sanitarios', 'recreativo_deportivo' => $esInicial ? 'Áreas recreativas' : 'Actividades físicas', 'especial' => 'Instalaciones especiales'];
+    $ordenNivel = $esInicial
+        ? ['administrativo', 'aulas', 'sanitarios', 'recreativo_deportivo', 'especial']
+        : ['administrativo', 'aulas', 'cubiculo', 'sanitarios', 'recreativo_deportivo', 'especial'];
+    $porCategoria = $tipos->groupBy('categoria');
+    $secuencia = array_values(array_filter(
+        array_merge($ordenNivel, $porCategoria->keys()->diff($ordenNivel)->all()),
+        fn ($clave) => match ($clave) {
+            'aulas' => true,
+            'sanitarios' => count($categorias) > 0,
+            default => $porCategoria->has($clave),
+        },
+    ));
     $pasos = [];
     if ($yaCapturado !== []) {
         $pasos[] = 'Ya registrada';
     }
-    foreach ($tipos->groupBy('categoria') as $categoria => $_) {
-        $pasos[] = $etiquetasCategoria[$categoria] ?? $categoria;
+    foreach ($secuencia as $clave) {
+        $pasos[] = $etiquetasPaso[$clave] ?? $clave;
     }
-    if (count($categorias) > 0) {
-        $pasos[] = 'Sanitarios';
-    }
-    $pasos[] = 'Aulas del nivel';
     $totalPasos = count($pasos);
     $indice = 0;
 @endphp
@@ -28,6 +44,13 @@
     <x-ui.page-header :eyebrow="$encabezado" title="Infraestructura">
         <x-slot:intro>Declara los espacios del plantel y las aulas del nivel que se pretende incorporar.</x-slot:intro>
     </x-ui.page-header>
+
+    @can('descargarAnexo', $escuelaNivel)
+        <a href="{{ route('tramite.paso3.infraestructura.anexo-instalaciones', ['escuelaNivel' => $escuelaNivel->id]) }}" target="_blank" class="mb-md inline-flex min-h-11 items-center gap-xxs font-semibold text-primary">
+            <x-ui.icon nombre="arrow-down-tray" class="h-5 w-5" />
+            Descargar Anexo
+        </a>
+    @endcan
 
     <form novalidate wire:submit="guardar">
         <x-ui.error-summary />
@@ -55,6 +78,7 @@
                             $tipo = $capturado->tipoEspacio;
                             $base = "edicionEspacios.{$tipo->id}";
                             $original = $guardado['espacios'][$tipo->id] ?? [];
+                            $etiquetaDestinado = $tipo->categoria === 'recreativo_deportivo' ? 'Equipamiento y características' : 'Destinado a';
                         @endphp
                         <div wire:key="edicion-tipo-{{ $tipo->id }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
                             <div class="grid grid-cols-1 gap-sm md:items-start {{ $columnas }}">
@@ -69,7 +93,7 @@
 
                             <div class="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
                                 <div>
-                                    <label for="{{ $base }}.destinadoA" class="{{ $etiqueta }}">Destinado a<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
+                                    <label for="{{ $base }}.destinadoA" class="{{ $etiqueta }}">{{ $etiquetaDestinado }}<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
                                     @if ($tipo->clave === 'bodega')
                                         <x-ui.select id="{{ $base }}.destinadoA" :disabled="$fijo($original['destinadoA'] ?? null)" wire:model.blur="{{ $base }}.destinadoA">
                                             <option value="">Selecciona…</option>
@@ -174,14 +198,50 @@
             @php $indice++; @endphp
         @endif
 
-        @foreach ($tipos->groupBy('categoria') as $categoria => $tiposCategoria)
-            <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" :titulo="$nombresCategoria[$categoria] ?? $categoria">
-            <x-ui.section :title="$nombresCategoria[$categoria] ?? $categoria">
+
+        {{-- $indice++ fuera del atributo (3f96acf): los índices de panel deben quedar consecutivos. --}}
+        @foreach ($secuencia as $clave)
+            <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" :titulo="$titulosPanel[$clave] ?? $clave">
+            @if ($clave === 'sanitarios')
+            <x-ui.section title="Sanitarios">
+                @foreach ($categorias as $categoria)
+                    <div wire:key="sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
+                        <p class="text-body-md font-semibold text-ink">{{ ucfirst(str_replace('_', ' ', $categoria)) }}</p>
+                        <div class="mt-sm grid grid-cols-2 gap-sm md:grid-cols-4">
+                            @foreach (array_filter([
+                                'cantidadRetretes' => ['Retretes', 'numeric', null],
+                                'cantidadMingitorios' => ['Mingitorios', 'numeric', null],
+                                'cantidadLavabos' => ['Lavabos', 'numeric', null],
+                                'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'],
+                                'cantidadBacinicas' => $categoria === 'alumnado_maternal' ? ['Bacinicas', 'numeric', null] : null,
+                            ]) as $campo => [$texto, $modo, $paso])
+                                <div>
+                                    <label for="sanitarios.{{ $categoria }}.{{ $campo }}" class="{{ $etiqueta }}">{{ $texto }}<span class="sr-only"> — {{ str_replace('_', ' ', $categoria) }}</span></label>
+                                    <x-ui.input id="sanitarios.{{ $categoria }}.{{ $campo }}" type="number" inputmode="{{ $modo }}" min="0" :step="$paso" wire:model.blur="sanitarios.{{ $categoria }}.{{ $campo }}" />
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </x-ui.section>
+            @elseif ($clave === 'aulas')
+        <x-ui.section title="Aulas del nivel">
+            <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                <x-ui.field id="numeroAulas" label="Número de aulas">
+                    <x-ui.input type="number" inputmode="numeric" min="1" wire:model.blur="numeroAulas" />
+                </x-ui.field>
+                <x-ui.field id="superficieAulasM2" label="Superficie total (m²)">
+                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="superficieAulasM2" />
+                </x-ui.field>
+            </div>
+        </x-ui.section>
+            @else
+            <x-ui.section :title="$titulosPanel[$clave] ?? $clave">
                 <div class="hidden gap-sm text-body-sm font-semibold text-muted md:grid {{ $columnas }}" aria-hidden="true">
                     <span>Espacio</span><span>Cantidad</span><span>Superficie (m²)</span><span>Capacidad</span>
                 </div>
 
-                @foreach ($tiposCategoria as $tipo)
+                @foreach ($porCategoria[$clave] as $tipo)
                     <div wire:key="tipo-{{ $tipo->id }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
                         <div class="grid grid-cols-1 gap-sm md:items-start {{ $columnas }}">
                             <p class="text-body-md font-semibold text-ink">{{ $tipo->nombre }}</p>
@@ -195,7 +255,7 @@
 
                         <div class="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
                             <div>
-                                <label for="espacios.{{ $tipo->id }}.destinadoA" class="{{ $etiqueta }}">Destinado a<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
+                                <label for="espacios.{{ $tipo->id }}.destinadoA" class="{{ $etiqueta }}">{{ $tipo->categoria === 'recreativo_deportivo' ? 'Equipamiento y características' : 'Destinado a' }}<span class="sr-only"> — {{ $tipo->nombre }}</span> <span class="font-normal text-muted">(opcional)</span></label>
                                 @if ($tipo->clave === 'bodega')
                                     <x-ui.select id="espacios.{{ $tipo->id }}.destinadoA" wire:model.blur="espacios.{{ $tipo->id }}.destinadoA">
                                         <option value="">Selecciona…</option>
@@ -254,51 +314,14 @@
                     </div>
                 @endforeach
             </x-ui.section>
+            @endif
+
+            @if ($loop->last)
+                <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
+            @endif
             </x-ui.stepper-panel>
             @php $indice++; @endphp
         @endforeach
-
-        @if (count($categorias) > 0)
-            <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" titulo="Sanitarios">
-            <x-ui.section title="Sanitarios">
-                @foreach ($categorias as $categoria)
-                    <div wire:key="sanitario-{{ $categoria }}" class="rounded-md border border-hairline p-md md:rounded-none md:border-0 md:border-t md:px-0">
-                        <p class="text-body-md font-semibold text-ink">{{ ucfirst(str_replace('_', ' ', $categoria)) }}</p>
-                        <div class="mt-sm grid grid-cols-2 gap-sm md:grid-cols-4">
-                            @foreach (array_filter([
-                                'cantidadRetretes' => ['Retretes', 'numeric', null],
-                                'cantidadMingitorios' => ['Mingitorios', 'numeric', null],
-                                'cantidadLavabos' => ['Lavabos', 'numeric', null],
-                                'superficieM2' => ['Superficie (m²)', 'decimal', '0.01'],
-                                'cantidadBacinicas' => $categoria === 'alumnado_maternal' ? ['Bacinicas', 'numeric', null] : null,
-                            ]) as $campo => [$texto, $modo, $paso])
-                                <div>
-                                    <label for="sanitarios.{{ $categoria }}.{{ $campo }}" class="{{ $etiqueta }}">{{ $texto }}<span class="sr-only"> — {{ str_replace('_', ' ', $categoria) }}</span></label>
-                                    <x-ui.input id="sanitarios.{{ $categoria }}.{{ $campo }}" type="number" inputmode="{{ $modo }}" min="0" :step="$paso" wire:model.blur="sanitarios.{{ $categoria }}.{{ $campo }}" />
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endforeach
-            </x-ui.section>
-            </x-ui.stepper-panel>
-            @php $indice++; @endphp
-        @endif
-
-        <x-ui.stepper-panel :indice="$indice" :total="$totalPasos" titulo="Aulas del nivel">
-        <x-ui.section title="Aulas del nivel">
-            <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
-                <x-ui.field id="numeroAulas" label="Número de aulas">
-                    <x-ui.input type="number" inputmode="numeric" min="1" wire:model.blur="numeroAulas" />
-                </x-ui.field>
-                <x-ui.field id="superficieAulasM2" label="Superficie total (m²)">
-                    <x-ui.input type="number" inputmode="decimal" step="0.01" min="0" unit="m²" wire:model.blur="superficieAulasM2" />
-                </x-ui.field>
-            </div>
-        </x-ui.section>
-
-        <x-ui.action-bar accion="guardar" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])" />
-        </x-ui.stepper-panel>
         </x-ui.stepper>
     </form>
 </div>

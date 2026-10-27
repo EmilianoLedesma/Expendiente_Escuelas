@@ -21,6 +21,7 @@ use Database\Seeders\PasosCapturaSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Tests\Concerns\CompletaPaso2;
 use Tests\Concerns\CompletaPaso24;
@@ -105,8 +106,102 @@ class Paso3InfraestructuraNivelTest extends TestCase
         $inicioUltimo = strpos($html, 'data-paso="'.$ultimo.'"');
         $this->assertSame(1, substr_count($html, 'Guardar y continuar'));
         $this->assertGreaterThan($inicioUltimo, strpos($html, 'Guardar y continuar'));
-        // El último panel es "Aulas del nivel" (obligatorio, lleva Guardar).
-        $this->assertGreaterThan($inicioUltimo, strpos($html, 'Número de aulas'));
+        // Aulas ya no es el último panel (sigue el orden del Anexo 2): Guardar va en el último, Aulas antes.
+        $this->assertLessThan($inicioUltimo, strpos($html, 'Número de aulas'));
+    }
+
+    /** @return list<string> títulos de los paneles del stepper, en orden de aparición. */
+    private function titulosDePaneles(string $html): array
+    {
+        preg_match_all('/<div role="group" aria-label="([^"]+)" data-paso="(\d+)"/', $html, $m);
+        $this->assertSame(range(0, count($m[2]) - 1), array_map('intval', $m[2]), 'Índices consecutivos.');
+
+        return array_map('html_entity_decode', $m[1]);
+    }
+
+    public function test_paneles_en_el_orden_del_anexo_para_un_nivel_generico(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+
+        $html = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $primaria->id]))
+            ->getContent();
+
+        $this->assertSame(
+            ['Espacios administrativos', 'Aulas del nivel', 'Cubículos', 'Sanitarios', 'Actividades físicas y recreativas', 'Instalaciones especiales'],
+            $this->titulosDePaneles($html),
+        );
+    }
+
+    public function test_paneles_en_el_orden_del_anexo_para_inicial_sin_cubiculos(): void
+    {
+        $inicial = $this->escuelaNivel('inicial');
+
+        $html = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $inicial->id]))
+            ->getContent();
+
+        $this->assertSame(
+            ['Espacios administrativos', 'Aulas del nivel', 'Sanitarios', 'Áreas recreativas', 'Instalaciones especiales'],
+            $this->titulosDePaneles($html),
+        );
+    }
+
+    public function test_destinado_a_de_recreativo_dice_equipamiento_y_los_demas_conservan_destinado_a(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $canchaId = $this->idTipo('cancha_usos_multiples');
+        $direccionId = $this->idTipo('direccion');
+
+        $html = $this->actingAs($this->solicitante->user)
+            ->get(route('tramite.paso3-infraestructura', ['escuelaNivel' => $primaria->id]))
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/<label for="espacios\.'.$canchaId.'\.destinadoA"[^>]*>\s*Equipamiento y características/', $html);
+        $this->assertMatchesRegularExpression('/<label for="espacios\.'.$direccionId.'\.destinadoA"[^>]*>\s*Destinado a/', $html);
+    }
+
+    public function test_lo_ya_capturado_editable_usa_la_misma_etiqueta_de_equipamiento(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $canchaId = $this->idTipo('cancha_usos_multiples');
+        $direccionId = $this->idTipo('direccion');
+        DB::table('instalaciones_espacios')->insert([
+            ['plantel_id' => $this->plantel->id, 'tipo_espacio_id' => $canchaId, 'cantidad' => 1],
+            ['plantel_id' => $this->plantel->id, 'tipo_espacio_id' => $direccionId, 'cantidad' => 1],
+        ]);
+
+        $html = Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->html();
+
+        $this->assertMatchesRegularExpression('/<label for="edicionEspacios\.'.$canchaId.'\.destinadoA"[^>]*>\s*Equipamiento y características/', $html);
+        $this->assertMatchesRegularExpression('/<label for="edicionEspacios\.'.$direccionId.'\.destinadoA"[^>]*>\s*Destinado a/', $html);
+    }
+
+    public function test_dueno_y_responsable_ven_el_enlace_para_descargar_el_anexo(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        $href = route('tramite.paso3.infraestructura.anexo-instalaciones', ['escuelaNivel' => $primaria->id]);
+        $delegado = User::factory()->create();
+        ResponsableNivel::create(['user_id' => $delegado->id, 'escuela_nivel_id' => $primaria->id, 'invitado_por_solicitante_id' => $this->solicitante->id]);
+
+        foreach ([$this->solicitante->user, $delegado] as $usuario) {
+            Livewire::actingAs($usuario)
+                ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+                ->assertSeeHtml('href="'.$href.'"')
+                ->assertSee('Descargar Anexo');
+        }
+    }
+
+    public function test_sin_la_habilidad_descargar_anexo_no_se_ofrece_el_enlace(): void
+    {
+        $primaria = $this->escuelaNivel('primaria');
+        Gate::before(fn ($user, $ability) => $ability === 'descargarAnexo' ? false : null);
+
+        Livewire::actingAs($this->solicitante->user)
+            ->test(InfraestructuraNivel::class, ['escuelaNivel' => $primaria])
+            ->assertDontSee('Descargar Anexo');
     }
 
     public function test_inicial_ve_filtro_recepcion_y_no_biblioteca(): void
