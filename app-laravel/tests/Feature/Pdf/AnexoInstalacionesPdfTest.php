@@ -12,6 +12,7 @@ use App\Models\Solicitante;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -45,21 +46,17 @@ class AnexoInstalacionesPdfTest extends TestCase
         ]);
     }
 
-    private function espacio(string $clave, array $campos = []): void
+    private function espacio(string $clave, array $campos = []): int
     {
-        DB::table('instalaciones_espacios')->insert($campos + [
+        return DB::table('instalaciones_espacios')->insertGetId($campos + [
             'plantel_id' => $this->plantel->id,
             'tipo_espacio_id' => (int) DB::table('tipos_espacios')->where('clave', $clave)->value('id'),
         ]);
     }
 
-    /** Simula la matriz corregida de Inicial (T4/D8): sin cubículo. */
-    private function inicialSinCubiculo(): void
+    private function generar(EscuelaNivel $nivel): Response
     {
-        DB::table('niveles_tipos_espacios')
-            ->where('nivel_educativo_id', NivelEducativo::where('clave', 'inicial')->value('id'))
-            ->whereIn('tipo_espacio_id', DB::table('tipos_espacios')->where('clave', 'cubiculo')->pluck('id'))
-            ->delete();
+        return app(AnexoInstalacionesPdf::class)->generar($nivel, app(ConsultarAnexoInstalaciones::class)->ejecutar($nivel));
     }
 
     private function html(EscuelaNivel $nivel): string
@@ -67,6 +64,7 @@ class AnexoInstalacionesPdfTest extends TestCase
         return view('pdf.anexo2-instalaciones', [
             'anexo' => app(ConsultarAnexoInstalaciones::class)->ejecutar($nivel),
             'nivelNombre' => $nivel->nivelEducativo->nombre,
+            'nivelClave' => $nivel->nivelEducativo->clave,
             'escuela' => $nivel->escuela,
         ])->render();
     }
@@ -79,7 +77,7 @@ class AnexoInstalacionesPdfTest extends TestCase
 
     public function test_genera_bytes_pdf_validos(): void
     {
-        $respuesta = app(AnexoInstalacionesPdf::class)->generar($this->nivel('primaria'));
+        $respuesta = $this->generar($this->nivel('primaria'));
 
         $this->assertSame('application/pdf', $respuesta->headers->get('content-type'));
         $this->assertStringStartsWith('%PDF', $respuesta->getContent());
@@ -105,7 +103,6 @@ class AnexoInstalacionesPdfTest extends TestCase
 
     public function test_inicial_sin_cubiculos_y_con_sus_filas_propias(): void
     {
-        $this->inicialSinCubiculo();
         $this->espacio('filtro_recepcion', ['superficie_m2' => 4]);
         $id = DB::table('sanitarios')->insertGetId(['plantel_id' => $this->plantel->id, 'categoria' => 'alumnado_maternal']);
         DB::table('sanitarios_bacinicas')->insert(['sanitario_id' => $id, 'cantidad_bacinicas' => 6]);
@@ -125,7 +122,6 @@ class AnexoInstalacionesPdfTest extends TestCase
 
     public function test_cubiculo_legado_en_inicial_va_en_otros(): void
     {
-        $this->inicialSinCubiculo();
         $this->espacio('cubiculo', ['cantidad' => 1, 'destinado_a' => 'Algo']);
 
         $texto = $this->texto($this->nivel('inicial'));
@@ -192,5 +188,73 @@ class AnexoInstalacionesPdfTest extends TestCase
 
         $this->assertStringContainsString('Alumnado masculino 3', $texto);
         $this->assertStringContainsString('SI ( ) NO ( X ) SI ( X ) NO ( )', $texto);
+    }
+
+    public function test_area_civica_se_oculta_en_inicial_aunque_este_capturada(): void
+    {
+        $this->plantel->update(['area_civica_m2' => 44, 'tiene_asta_bandera' => true]);
+
+        $this->assertStringNotContainsString('ÁREA CÍVICA', $this->texto($this->nivel('inicial')));
+    }
+
+    public function test_area_civica_se_imprime_en_un_nivel_generico(): void
+    {
+        $this->plantel->update(['area_civica_m2' => 44]);
+
+        $texto = $this->texto($this->nivel('primaria'));
+
+        $this->assertStringContainsString('ÁREA CÍVICA', $texto);
+        $this->assertStringContainsString('44', $texto);
+    }
+
+    public function test_otros_imprime_superficie_y_formato_del_campo_de_futbol_legado(): void
+    {
+        $campo = $this->espacio('campo_futbol', ['cantidad' => 1, 'superficie_m2' => 500]);
+        DB::table('campos_futbol')->insert(['instalacion_espacio_id' => $campo, 'tipo_superficie' => 'pasto sintetico', 'formato' => 'futbol 7']);
+
+        $texto = $this->texto($this->nivel('inicial'));
+
+        $this->assertStringContainsString('pasto sintetico futbol 7', $texto);
+    }
+
+    public function test_imprime_predio_y_construido(): void
+    {
+        $this->plantel->update(['metros_totales' => 1200, 'metros_construidos' => 800]);
+
+        $texto = $this->texto($this->nivel('primaria'));
+
+        $this->assertStringContainsString('Predio: 1200', $texto);
+        $this->assertStringContainsString('Construido: 800', $texto);
+    }
+
+    public function test_escapa_html_en_calle_y_destinado_a(): void
+    {
+        $this->plantel->update(['calle' => '<script>alert(1)</script>']);
+        $this->espacio('arenero', ['cantidad' => 1, 'destinado_a' => '<script>x()</script>']);
+
+        $html = $this->html($this->nivel('primaria'));
+
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
+        $this->assertStringContainsString('&lt;script&gt;x()&lt;/script&gt;', $html);
+    }
+
+    public function test_nunca_dice_obligatorio(): void
+    {
+        $this->assertStringNotContainsStringIgnoringCase('obligatorio', $this->html($this->nivel('primaria')));
+    }
+
+    public function test_el_pie_registra_pagina_n_de_m_en_el_pdf(): void
+    {
+        $bytes = $this->generar($this->nivel('primaria'))->getContent();
+
+        // dompdf comprime los streams de contenido; el pie se escribe una vez por pagina (con bytes nulos entre letras).
+        $contenido = '';
+        preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $bytes, $streams);
+        foreach ($streams[1] as $flujo) {
+            $contenido .= str_replace("\0", '', (string) @gzuncompress($flujo));
+        }
+
+        $this->assertMatchesRegularExpression('/P.{1,3}gina 1 de \d+/s', preg_replace('/\s/', ' ', $contenido));
     }
 }

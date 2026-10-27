@@ -1,6 +1,6 @@
 # Anexo 2 Instalaciones: reporte de la sesion
 
-Fecha: 2026-10-27. Rama `worktree-anexo-instalaciones` (base master `d187441`, HEAD de codigo `3e83a6e`).
+Fecha: 2026-10-27. Rama `worktree-anexo-instalaciones` (base master `d187441`; T0-T5 hasta `3e83a6e`, mas la ola de correcciones finales, seccion 9).
 Plan: `docs/superpowers/plans/2026-10-22-anexo2-instalaciones.md`. Ledger SDD: `.superpowers/sdd/2026-10-22-anexo2-instalaciones/progress.md` (local, gitignored). Reporte previo de T0: `docs/reports/2026-10-27-anexo-instalaciones-t0.md`.
 
 ## 1. Que se construyo
@@ -12,7 +12,7 @@ Commits `d187441..3e83a6e` (18 archivos, 1513 inserciones, 64 borrados segun `gi
 | T0 verificaciones | `17d18bf` | Nota de solo lectura de codigo (consumidores de cubiculo/cancha/campo, biblioteca virtual, catalogo de materiales, diferencias de master vs plan). Ver el reporte T0. |
 | T1 modelo de lectura | `5163991` | `app/Application/Infraestructura/ConsultarAnexoInstalaciones.php` y DTO `DTO/AnexoInstalaciones.php`. Sin cambio de plantilla por nivel: los tipos aplicables salen de `niveles_tipos_espacios`, las categorias de sanitarios de `CategoriasSanitariosPorNivel`. Cada tipo aplicable tiene linea (en blanco si no hay captura); lo capturado que ya no aplica se imprime en `otros`. |
 | T2 PDF generico unico | `50cc9b3` | `app/Infrastructure/Pdf/AnexoInstalacionesPdf.php` y `resources/views/pdf/anexo2-instalaciones.blade.php` (dompdf, mismo patron que el Formato de Solicitud). Pie "Pagina N de M". |
-| T3 ruta y politica | `cbcaa88` | `GET /tramite/paso3/{escuelaNivel}/infraestructura/anexo-instalaciones.pdf`, nombre `tramite.paso3.infraestructura.anexo-instalaciones`, controlador invocable `AnexoInstalacionesPdfController`, habilidad `EscuelaNivelPolicy::descargarAnexo` (dueno o responsable de ese nivel). |
+| T3 ruta y politica | `cbcaa88` | `GET /tramite/paso3/{escuelaNivel}/infraestructura/anexo-instalaciones.pdf`, nombre `tramite.paso3.infraestructura.anexo-instalaciones`, controlador invocable `AnexoInstalacionesPdfController`, habilidad `EscuelaNivelPolicy::descargarAnexo` (dueno o responsable de ese nivel; el docblock de la politica ya lo documenta). |
 | T4 matriz de Inicial | `a48243d` | `TiposEspaciosSeeder` mapea cubiculo, cancha_usos_multiples y campo_futbol solo a preescolar/primaria/secundaria; migracion de datos `2026_10_27_000000_retirar_espacios_no_aplicables_de_inicial` (DELETE acotado sobre `niveles_tipos_espacios`, idempotente, `down()` reinserta con `insertOrIgnore`). Nota fechada en `PENDIENTE-matriz-espacios-por-nivel.md` (sin renombrar). |
 | T5 pagina de Infraestructura | `3e83a6e` | `infraestructura-nivel.blade.php`: orden de paneles del Anexo 2 por nivel, etiqueta "Equipamiento y caracteristicas" en recreativo, enlace "Descargar Anexo" bajo `@can('descargarAnexo')`. Componente PHP sin tocar. |
 
@@ -23,11 +23,11 @@ Orden de paneles (T5): generico = Espacios administrativos, Aulas del nivel, Cub
 - D1: un solo tipo `cubiculo` de texto libre (`destinado_a`); el PDF mapea las filas a las lineas del docx ("orientacion" y "padres" en lineas fijas, el resto en linea extra) (T2).
 - D2: se reutiliza `destinado_a`, etiquetado "Equipamiento y caracteristicas" para la categoria recreativo, en captura y en el bloque editable de "Lo ya capturado" (T5), y como encabezado en el PDF (T2). Sin cambio de esquema, sin ADR.
 - D3: descarga solo para dueno y responsable de ese nivel (T3). SEDEQ recibe 403.
-- D4: disponible en cualquier momento como borrador con blancos, tambien tras el envio (T3, prueba con `en_revision`: 200).
+- D4: disponible como borrador con blancos; la URL del PDF sigue respondiendo al dueno y al responsable tambien tras el envio (T3, prueba con `en_revision`: 200). El enlace "Descargar Anexo" vive solo en la pagina de Infraestructura, que es editable hasta el envio (`editarPaso`); tras el envio no hay enlace en pantalla (R6, no se agrego a ResumenTramite).
 - D5: se conservan los campos de captura; SI/NO solo sale de datos guardados, un renglon sin captura imprime "SI ( ) NO ( )" (T2).
 - D6: no existe formulario de Inicial; una sola plantilla generica. Para Inicial se imprimen como lineas extra los renglones capturados propios (filtro/recepcion, alumnado maternal, personal, bacinicas) y no hay cubiculos. No hay blade `inicial` ni cambio de plantilla (ruling R1).
 - D7: las aulas por sala NO se capturan; se mantiene el agregado `aulas_nivel` (numero y superficie). Abierto en `docs/decisions/PENDIENTE-aulas-inicial-por-aula.md`.
-- D8: correcciones de la matriz de Inicial aplicadas como datos (T4). El area civica no se oculta en captura (Paso 3.1 sigue igual); los datos de Inicial ya capturados se conservan.
+- D8: correcciones de la matriz de Inicial aplicadas como datos (T4). El area civica se sigue capturando en todos los niveles (Paso 3.1 sigue igual) pero NO se imprime en el PDF de Inicial (la plantilla recibe `nivelClave` y envuelve la tabla en `@unless inicial`); los datos de Inicial ya capturados se conservan.
 
 ## 3. Auditoria de datos en dev (solo SELECT)
 
@@ -84,3 +84,14 @@ Autorizada por el dueno el 2026-10-27 (ruling R2 enmendado); transaccion READ ON
 4. En un nivel Inicial nuevo (BD de pruebas con la migracion aplicada): no hay Cubiculos ni cancha/campo en "Por capturar"; los renglones propios de Inicial salen como extras en el PDF.
 5. En una BD de copia con filas legadas de cubiculo/cancha/campo en Inicial: siguen visibles en "Lo ya capturado" y salen en "Otras instalaciones capturadas" del PDF.
 6. Solo con visto bueno del dueno: correr la migracion en dev y repetir los SELECT de la auditoria para confirmar que las filas capturadas no cambian.
+
+## 9. Ola de correcciones finales (revision final, R6 y R7)
+
+- Area civica oculta en el PDF de Inicial (R7); sigue capturandose y se imprime en los demas niveles.
+- Capas (ADR-001): el controlador corre `ConsultarAnexoInstalaciones` y pasa el DTO a `AnexoInstalacionesPdf::generar(EscuelaNivel, AnexoInstalaciones)`. La clase de Infrastructure ya no invoca el caso de uso; solo conserva el import del DTO (que vive en Application) para tiparlo.
+- "Otras instalaciones capturadas" imprime tambien superficie y formato de un campo de futbol legado.
+- CSS del PDF: `tr { page-break-inside: avoid; }` y `td { word-wrap: break-word; }`. La tabla de sanitarios puede seguir partiendose entre paginas (dompdf no la mantiene junta de forma simple); no se uso `table-layout: fixed` porque las columnas no son fijas.
+- Docblock de `EscuelaNivelPolicy` con `descargarAnexo`; `orderBy('categoria')` redundante eliminado; doble linea en blanco quitada de `infraestructura-nivel.blade.php`; comentario sobre por que el script de pie corre tras el render.
+- `docs/guia-recorrido-app.md`: el enlace solo aparece en la pagina de Infraestructura mientras es editable; la URL sigue respondiendo tras el envio (R6).
+- Pruebas nuevas: area civica oculta en Inicial y presente en generico, campo de futbol legado en "Otros", Predio/Construido, escape de `<script>` en calle y `destinado_a`, ausencia de "obligatorio", pie "Pagina N de M" verificado descomprimiendo los streams del PDF generado, responsable revocado recibe 403. Se elimino el helper `inicialSinCubiculo()` (el seeder ya no mapea cubiculo a Inicial).
+- Diferidos que quedan: M5 (administrativos alfabeticos, no en el orden del docx), M6 (estilo mixto de escape), remapeo de clave `cubiculo`/`cubiculos`, prueba del enlace en tramite enviado (no requerido: no hay enlace tras el envio).

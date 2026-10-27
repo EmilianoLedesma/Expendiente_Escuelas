@@ -88,7 +88,7 @@ class ConsultarAnexoInstalaciones
         $materiales = $this->catalogos->materialesBibliotecaDisponibles();
 
         $porSeccion = [];
-        $tipos = TipoEspacio::whereIn('id', [...$aplicables, ...array_keys($captura['espacios'])])->orderBy('categoria')->orderBy('nombre')->get();
+        $tipos = TipoEspacio::whereIn('id', [...$aplicables, ...array_keys($captura['espacios'])])->orderBy('nombre')->get();
         foreach ($tipos as $tipo) {
             $fila = $captura['espacios'][$tipo->id] ?? null;
             $aplica = in_array($tipo->id, $aplicables, true);
