@@ -128,10 +128,86 @@ class UsuariosListaTest extends TestCase
 
     public function test_una_precondicion_incumplida_es_notificacion_no_500(): void
     {
-        $this->lista()->callAction(TestAction::make('archivar')->table($this->admin), ['motivo' => 'x'])
-            ->assertNotified(Notification::make()->danger()->title('No puedes archivar tu propia cuenta.'));
+        // Una cuenta de SEDEQ archivada no se puede purgar: la acción lanza PrecondicionIncumplida.
+        $sup = User::factory()->create()->assignRole(RolesSedeq::SUPERVISOR);
+        app(ArchivarCuenta::class)->ejecutar($sup->id, $this->admin->id, 'Baja');
 
-        $this->assertNull($this->admin->refresh()->archivado_at);
+        $this->lista()->callAction(TestAction::make('purgar')->table($sup), ['motivo' => 'x', 'confirmacion' => 'PURGAR'])
+            ->assertNotified();
+
+        $this->assertNotNull(User::find($sup->id));
+    }
+
+    public function test_archivar_oculto_en_la_fila_propia_y_restaurar_oculto_en_activa(): void
+    {
+        $u = $this->solicitante();
+
+        $this->lista()
+            ->assertActionHidden(TestAction::make('archivar')->table($this->admin))
+            ->assertActionVisible(TestAction::make('archivar')->table($u))
+            ->assertActionHidden(TestAction::make('restaurar')->table($u));
+    }
+
+    public function test_archivar_exige_motivo(): void
+    {
+        $u = $this->solicitante();
+
+        $this->lista()->callAction(TestAction::make('archivar')->table($u), ['motivo' => ''])
+            ->assertHasActionErrors(['motivo' => 'required']);
+
+        $this->assertNull($u->refresh()->archivado_at);
+    }
+
+    public function test_el_modal_de_purga_advierte_que_no_queda_dato_personal(): void
+    {
+        $u = $this->archivada();
+
+        $this->lista()->mountAction(TestAction::make('purgar')->table($u))
+            ->assertMountedActionModalSee('Borrado definitivo e irreversible')
+            ->assertMountedActionModalSee('datos personales');
+    }
+
+    private function claveDeGrupo(string $key): array
+    {
+        $grupo = $this->lista()->instance()->getTable()->getGroup('plantel_principal_id');
+
+        return $grupo->scopeQueryByKey(UsuarioResource::getEloquentQuery(), $key)->pluck('users.id')->all();
+    }
+
+    public function test_scope_de_grupo_por_clave_de_plantel_y_clave_vacia(): void
+    {
+        $p1 = $this->plantel('Uno');
+        $p2 = $this->plantel('Dos');
+        $a = $this->solicitante();
+        $b = $this->solicitante();
+        $this->escuelaDe($a, $p1);
+        $this->escuelaDe($b, $p2);
+
+        $this->assertSame([$a->id], $this->claveDeGrupo((string) $p1->id));
+        $this->assertSame([$b->id], $this->claveDeGrupo((string) $p2->id));
+        $this->assertSame([$this->admin->id], $this->claveDeGrupo(''));
+    }
+
+    public function test_staff_cae_en_el_grupo_sin_plantel_y_no_en_uno_de_plantel(): void
+    {
+        $p = $this->plantel('Hidalgo');
+        $a = $this->solicitante();
+        $this->escuelaDe($a, $p);
+
+        $this->assertNotContains($this->admin->id, $this->claveDeGrupo((string) $p->id));
+        $this->assertContains($this->admin->id, $this->claveDeGrupo(''));
+        $this->assertNotContains($a->id, $this->claveDeGrupo(''));
+    }
+
+    public function test_filtro_de_plantel_encuentra_por_escuela_archivada(): void
+    {
+        $p = $this->plantel('Solo archivada');
+        $a = $this->solicitante();
+        $b = $this->solicitante();
+        $this->escuelaDe($a, $p)->forceFill(['archivado_at' => now()])->save();
+
+        $this->lista()->filterTable('plantel', $p->id)
+            ->assertCanSeeTableRecords([$a])->assertCanNotSeeTableRecords([$b]);
     }
 
     public function test_agrupa_solicitantes_por_plantel_y_staff_en_sin_plantel(): void
