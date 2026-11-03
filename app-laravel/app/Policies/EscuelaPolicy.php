@@ -74,9 +74,9 @@ class EscuelaPolicy
     }
 
     /**
-     * Eliminar el trámite: SOLO el dueño, habilidad propia para que abrir
-     * `view` a SEDEQ (o `update` a quien sea) nunca otorgue borrar. La regla
-     * "todos los niveles en captura" vive en EliminarTramite, no aquí.
+     * Archivar el trámite (ruta histórica tramite.eliminar): SOLO el dueño, habilidad
+     * propia para que abrir `view` a SEDEQ (o `update` a quien sea) nunca otorgue
+     * archivar. La regla "todos los niveles en captura" vive en ArchivarTramite, no aquí.
      */
     public function delete(User $user, Escuela $escuela): bool
     {

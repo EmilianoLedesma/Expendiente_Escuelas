@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Tramite;
 
+use App\Application\Archivo\ArchivarTramite;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
@@ -21,7 +22,6 @@ use App\Application\Mobiliario\RegistrarMobiliarioNivel;
 use App\Application\Preregistro\ActualizarContactoPlantel;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
-use App\Application\Tramite\EliminarTramite;
 use App\Application\Tramite\TramiteEditable;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Livewire\Tramite\Paso2Documentos;
@@ -177,7 +177,7 @@ class GuardaTramiteEnviadoTest extends TestCase
         $this->assertStringContainsString('from "escuelas"', $bloqueos[0]);
     }
 
-    public function test_eliminar_bloquea_los_niveles_antes_que_la_escuela(): void
+    public function test_archivar_bloquea_los_niveles_antes_que_la_escuela(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
         $this->completarTramite($escuela);
@@ -188,7 +188,7 @@ class GuardaTramiteEnviadoTest extends TestCase
             }
         });
 
-        app(EliminarTramite::class)->ejecutar($escuela->id);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
 
         $this->assertStringContainsString('from "escuela_niveles"', $bloqueos[0]);
         $this->assertStringContainsString('from "escuelas"', $bloqueos[1]);
@@ -215,7 +215,7 @@ class GuardaTramiteEnviadoTest extends TestCase
     /**
      * Lock order (Order note 3): the nivel is locked before the first write or the
      * escuela guard, so a writer never holds child rows / the escuela while waiting
-     * for a nivel that EliminarTramite or EnviarTramite already holds.
+     * for a nivel that ArchivarTramite or EnviarTramite already holds.
      */
     #[DataProvider('escriturasDelNivel')]
     public function test_cada_escritura_del_nivel_bloquea_el_nivel_antes_de_escribir(Closure $escribir, ?Closure $preparar = null): void
@@ -238,7 +238,8 @@ class GuardaTramiteEnviadoTest extends TestCase
 
         $primera = fn (Closure $cumple): ?int => array_key_first(array_filter($sql, $cumple));
         $bloqueoNivel = $primera(fn (string $s) => str_contains($s, 'from "escuela_niveles"') && preg_match('/for (share|update)$/', $s) === 1);
-        $primeraEscritura = $primera(fn (string $s) => preg_match('/^(insert|update|delete)\b/', $s) === 1 || (str_contains($s, 'from "escuelas"') && str_ends_with($s, 'for share')));
+        // Guarda de la escuela = FROM "escuelas" de la consulta exterior; la subconsulta del scope de archivo dentro del bloqueo del nivel no cuenta.
+        $primeraEscritura = $primera(fn (string $s) => preg_match('/^(insert|update|delete)\b/', $s) === 1 || (preg_match('/^select [^(]*from "escuelas"/', $s) === 1 && str_ends_with($s, 'for share')));
 
         $this->assertNotNull($bloqueoNivel, 'El nivel nunca se bloqueó.');
         $this->assertNotNull($primeraEscritura);

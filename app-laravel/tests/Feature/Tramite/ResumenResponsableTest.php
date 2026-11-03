@@ -56,7 +56,7 @@ class ResumenResponsableTest extends TestCase
             ->assertDontSee('Secundaria')
             ->assertDontSee('Información general')
             ->assertDontSee('Datos generales')
-            ->assertDontSee('Eliminar trámite')
+            ->assertDontSee('Archivar trámite')
             ->assertDontSee(route('tramite.paso2', ['escuela' => $nivelA->escuela_id]), false)
             ->assertDontSee(route('tramite.validacion', ['escuela' => $nivelA->escuela_id]), false);
     }
@@ -70,6 +70,6 @@ class ResumenResponsableTest extends TestCase
             ->get(route('tramite.resumen', ['escuela' => $nivel->escuela_id]))
             ->assertOk()
             ->assertSee('Información general')
-            ->assertSee('Eliminar');
+            ->assertSee('Archivar trámite');
     }
 }

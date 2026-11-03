@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
  * bloqueo el de AsignarTramite: fila users del revisor, luego escuela_niveles
  * por id. Es una excepción deliberada al orden del proyecto
  * (InvitarResponsableNivel y RevocarResponsableNivel bloquean niveles y luego
- * users; EnviarTramite y EliminarTramite nunca bloquean users), segura en la
+ * users; EnviarTramite y ArchivarTramite nunca bloquean users; ArchivarCuenta
+ * sigue este orden), segura en la
  * práctica porque las cuentas SEDEQ y las de solicitantes son distintas; un
  * deadlock que Postgres detecte aborta una transacción sin corromper datos.
  */

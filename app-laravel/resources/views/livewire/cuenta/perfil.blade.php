@@ -32,21 +32,21 @@
     </x-ui.section>
 
     @if ($puedeEliminar)
-        <x-ui.section title="Eliminar cuenta">
-            <p class="max-w-xl text-body-md">Se borra tu cuenta y, si eres quien inició los trámites, también los trámites y sus archivos. Solo es posible mientras ningún trámite se haya enviado a SEDEQ. Esta acción no se puede deshacer.</p>
+        <x-ui.section title="Archivar cuenta">
+            <p class="max-w-xl text-body-md">Se archiva tu cuenta y, si eres quien inició los trámites, también tus trámites. Ya no podrás iniciar sesión; tus datos y archivos se conservan y solo SEDEQ puede restaurarlos. Solo es posible mientras ningún trámite se haya enviado a SEDEQ.</p>
             @error('cuenta')
                 <x-ui.alert tipo="error">{{ $message }}</x-ui.alert>
             @enderror
-            {{-- Tras mantener presionado hay 5 s para deshacer; la cuenta se borra solo si el tiempo se agota. --}}
+            {{-- Tras mantener presionado hay 5 s para deshacer; la cuenta se archiva solo si el tiempo se agota. --}}
             <div x-data="{ etapa: 'reposo' }">
                 <template x-if="etapa === 'reposo'">
                     <x-ui.hold-button accion="etapa = 'deshacer'">
                         <x-ui.icon nombre="trash" class="h-5 w-5" />
-                        Mantén presionado para eliminar
+                        Mantén presionado para archivar
                     </x-ui.hold-button>
                 </template>
                 <template x-if="etapa === 'deshacer'">
-                    <x-ui.undo-notice mensaje="Se eliminará tu cuenta" expira="etapa = 'reposo'; $wire.eliminarCuenta()" deshacer="etapa = 'reposo'" />
+                    <x-ui.undo-notice mensaje="Se archivará tu cuenta" expira="etapa = 'reposo'; $wire.archivarCuenta()" deshacer="etapa = 'reposo'" />
                 </template>
             </div>
         </x-ui.section>

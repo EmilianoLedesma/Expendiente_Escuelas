@@ -344,7 +344,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
             $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')]);
             $this->fail('Se esperaba InvalidArgumentException.');
         } catch (InvalidArgumentException $e) {
-            $this->assertStringContainsString('Eliminar trámite', $e->getMessage());
+            $this->assertStringContainsString('Archivar trámite', $e->getMessage());
         }
 
         $this->assertDatabaseCount('escuela_niveles', 1);
@@ -363,7 +363,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
     }
 
     /**
-     * Orden de bloqueo (spec U3, como EliminarTramite): niveles FOR UPDATE → escuela FOR SHARE
+     * Orden de bloqueo (spec U3, orden de TramiteEditable): niveles FOR UPDATE → escuela FOR SHARE
      * → documentos del nivel FOR UPDATE → borrado. Un RegistrarDocumento concurrente bloquea el
      * nivel primero, así que no puede dejar un archivo huérfano ni cruzar bloqueos (40P01).
      */
