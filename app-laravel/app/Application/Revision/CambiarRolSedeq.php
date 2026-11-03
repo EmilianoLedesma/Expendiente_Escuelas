@@ -5,16 +5,17 @@ namespace App\Application\Revision;
 use App\Application\Archivo\RegistrarAccion;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Models\ResponsableNivel;
 use App\Models\Revisor;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 /**
- * El admin cambia el rol de SEDEQ de una cuenta (o lo quita con null). Solo toca
- * los roles de RolesSedeq::TODOS. Salir de revisor equivale a revocarlo (revocado_at
+ * El admin cambia el rol de SEDEQ de una cuenta (o lo quita con null). Rechaza
+ * cuentas con roles ajenos a SEDEQ o acceso de responsable. Salir de revisor equivale a revocarlo (revocado_at
  * y asignaciones de vuelta a la cola); volver a serlo limpia revocado_at.
- * Se rechaza: cambiarse a uno mismo, cuentas archivadas o de solicitante, el
+ * Se rechaza: cambiarse a uno mismo, cuentas archivadas, de solicitante o responsable, el
  * mismo rol y bajar al último admin activo. Bloqueo: filas users (actor y
  * objetivo) por id, como ArchivarCuenta.
  */
@@ -46,6 +47,10 @@ class CambiarRolSedeq
             }
             if ($usuario->solicitante()->exists()) {
                 throw new PrecondicionIncumplida('cuenta', 'Una cuenta de solicitante no puede tener rol de SEDEQ.');
+            }
+            // Como InvitarRevisor: nunca se apila un rol de SEDEQ sobre una cuenta de responsable u otro rol ajeno.
+            if ($usuario->getRoleNames()->diff(RolesSedeq::TODOS)->isNotEmpty() || ResponsableNivel::where('user_id', $userId)->exists()) {
+                throw new PrecondicionIncumplida('cuenta', 'Una cuenta de responsable de nivel no puede tener rol de SEDEQ.');
             }
 
             $actuales = $usuario->getRoleNames()->intersect(RolesSedeq::TODOS)->values()->all();

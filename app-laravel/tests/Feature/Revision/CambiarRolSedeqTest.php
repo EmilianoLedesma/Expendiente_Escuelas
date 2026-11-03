@@ -97,17 +97,15 @@ class CambiarRolSedeqTest extends TestCase
         $this->assertSame(1, Revisor::where('user_id', $sup->id)->count());
     }
 
-    public function test_null_quita_el_rol_de_sedeq_y_deja_los_demas(): void
+    public function test_null_quita_el_rol_de_sedeq(): void
     {
         $admin = $this->admin();
         $rev = $this->revisor();
-        $rev->assignRole(Role::findOrCreate('otro', 'web'));
 
         $this->cambiar($admin, $rev, null);
 
         $rev = $rev->fresh();
         $this->assertFalse($rev->hasAnyRole(RolesSedeq::TODOS));
-        $this->assertTrue($rev->hasRole('otro'));
         $this->assertNotNull(Revisor::findOrFail($rev->id)->revocado_at);
         $detalle = json_decode(DB::table('bitacora_acciones')->where('accion', RegistrarAccion::CAMBIAR_ROL)->value('detalle'), true);
         $this->assertSame('revisor', $detalle['de']);
@@ -144,6 +142,28 @@ class CambiarRolSedeqTest extends TestCase
         $this->refusePrecondicion($admin, $archivado, RolesSedeq::SUPERVISOR, 'cuenta');
         $this->refusePrecondicion($admin, $solicitante, RolesSedeq::REVISOR, 'cuenta');
         $this->assertFalse($solicitante->fresh()->hasAnyRole(RolesSedeq::TODOS));
+    }
+
+    public function test_rechaza_una_cuenta_con_rol_ajeno_a_sedeq(): void
+    {
+        $admin = $this->admin();
+        $resp = $this->responsableDe($this->nivelEnRevision());
+
+        $this->refusePrecondicion($admin, $resp, RolesSedeq::ADMIN, 'cuenta');
+        $this->assertFalse($resp->fresh()->hasAnyRole(RolesSedeq::TODOS));
+
+        $otro = User::factory()->create()->assignRole(Role::findOrCreate('otro', 'web'));
+        $this->refusePrecondicion($admin, $otro, RolesSedeq::REVISOR, 'cuenta');
+    }
+
+    public function test_rechaza_una_cuenta_con_acceso_de_responsable_aunque_no_tenga_rol(): void
+    {
+        $admin = $this->admin();
+        $resp = $this->responsableDe($this->nivelEnRevision());
+        $resp->syncRoles([]);
+
+        $this->refusePrecondicion($admin, $resp, RolesSedeq::SUPERVISOR, 'cuenta');
+        $this->assertFalse($resp->fresh()->hasAnyRole(RolesSedeq::TODOS));
     }
 
     public function test_rol_desconocido_es_dato_invalido(): void
