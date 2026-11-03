@@ -62,12 +62,12 @@ class PurgarCuenta
                 && User::where('archivado_lote', $usuario->archivado_lote)->whereKeyNot($userId)->exists()) {
                 throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o purga esa cuenta.');
             }
-            $this->exigirPurgable($usuario);
+            $this->exigirNoProtegida($usuario);
 
             // Sin lote no hay cascada: ojo, where('archivado_lote', null) sería IS NULL y arrastraría a otras cuentas.
             $responsables = $usuario->archivado_lote === null ? new Collection : User::where('archivado_lote', $usuario->archivado_lote)
                 ->whereNotNull('archivado_at')->whereKeyNot($userId)->orderBy('id')->lockForUpdate()->get();
-            $responsables->each(fn (User $r) => $this->exigirPurgable($r));
+            $responsables->each(fn (User $r) => $this->exigirNoProtegida($r));
 
             $tramites = 0;
             $solicitante = Solicitante::where('user_id', $userId)->lockForUpdate()->first();
@@ -81,6 +81,13 @@ class PurgarCuenta
                     $this->purgarTramite->purgar($actorId, $escuela->id, $motivo);
                     $tramites++;
                 }
+            }
+
+            // Después de purgar los trámites: EnviarTramite/ReenviarCorrecciones escriben el users.id del
+            // solicitante en historial_estados_expediente y esa cascada ya lo borró. Lo que quede es historial
+            // ajeno; el rechazo revierte toda la transacción (los archivos se borran solo tras el commit).
+            foreach ([$usuario, ...$responsables] as $cuenta) {
+                $this->exigirSinHistorial($cuenta);
             }
 
             // Los accesos de los niveles purgados ya se fueron por cascade: cualquier acceso restante es en
@@ -105,11 +112,16 @@ class PurgarCuenta
     }
 
     /** @throws PrecondicionIncumplida */
-    private function exigirPurgable(User $usuario): void
+    private function exigirNoProtegida(User $usuario): void
     {
         if (RolesSedeq::cuentaProtegida($usuario)) {
             throw new PrecondicionIncumplida('cuenta', 'Las cuentas de SEDEQ no se purgan.');
         }
+    }
+
+    /** @throws PrecondicionIncumplida */
+    private function exigirSinHistorial(User $usuario): void
+    {
         foreach (self::HISTORIAL as $tabla => $columnas) {
             if (DB::table($tabla)->whereAny($columnas, '=', $usuario->id)->exists()) {
                 throw new PrecondicionIncumplida('cuenta', 'La cuenta está en el historial de revisión y no se puede purgar.');
