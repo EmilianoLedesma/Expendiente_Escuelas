@@ -3,7 +3,7 @@
     $usuario = auth()->user();
     $opciones = [['Mi perfil', route('profile'), request()->routeIs('profile')]];
 
-    if ($usuario->hasRole('sedeq')) {
+    if ($usuario->hasRole(\App\Application\Revision\RolesSedeq::ADMIN)) {
         $opciones[] = ['Panel de administración', url('/admin'), false];
     } elseif ($usuario->hasRole('supervisor')) {
         $opciones[] = ['Revisores', route('sedeq.revisores'), request()->routeIs('sedeq.revisores')];

@@ -88,7 +88,7 @@ class InvitarResponsableNivelTest extends TestCase
         $otroSolicitante = Solicitante::factory()->create();
         (new RolesSeeder)->run();
         $sedeq = User::factory()->create();
-        $sedeq->assignRole('sedeq');
+        $sedeq->assignRole('admin');
         $this->invitar($dueno, $nivel->id, 'ya@example.test');
 
         $this->assertArrayHasKey('correo', $this->errores(fn () => $this->invitar($dueno, $nivel->id, $otroSolicitante->user->email)));

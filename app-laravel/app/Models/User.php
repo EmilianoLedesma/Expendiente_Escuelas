@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Application\Revision\RolesSedeq;
 use App\Notifications\RestablecerContrasena;
 use App\Notifications\VerificarCorreo;
 use Database\Factories\UserFactory;
@@ -49,7 +50,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->hasRole('sedeq');
+        return $this->hasRole(RolesSedeq::ADMIN);
     }
 
     public function sendPasswordResetNotification($token): void
