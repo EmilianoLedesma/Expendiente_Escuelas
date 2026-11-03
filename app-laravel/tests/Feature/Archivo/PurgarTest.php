@@ -10,6 +10,7 @@ use App\Application\Archivo\PurgarTramite;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\RolesSedeq;
+use App\Application\Tramite\EnviarTramite;
 use App\Models\DocumentoEscuela;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
@@ -239,6 +240,27 @@ class PurgarTest extends TestCase
         $this->assertNotNull($this->escuela($nivel->escuela_id));
         $this->assertSame(1, ResponsableNivel::where('escuela_nivel_id', $nivel->id)->count());
         $this->assertSame(0, $this->purgas());
+    }
+
+    /** EnviarTramite escribe el users.id del solicitante en historial_estados_expediente; la cascada lo borra, no debe impedir la purga. */
+    public function test_purga_a_un_solicitante_que_envio_un_tramite(): void
+    {
+        Storage::fake('documentos');
+        $admin = $this->admin();
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $usuario = $escuela->solicitante->user;
+        app(EnviarTramite::class)->ejecutar($escuela->id, $usuario->id);
+        $this->assertTrue(DB::table('historial_estados_expediente')->where('usuario_sedeq_id', $usuario->id)->exists());
+        app(ArchivarCuenta::class)->ejecutar($usuario->id, $admin->id, 'Baja');
+
+        app(PurgarCuenta::class)->ejecutar($admin->id, $usuario->id, 'motivo', Purga::CONFIRMACION);
+
+        $this->assertNull(User::find($usuario->id));
+        $this->assertNull(Solicitante::find($escuela->solicitante_id));
+        foreach (self::TABLAS_DEL_TRAMITE as $tabla) {
+            $this->assertSame(0, DB::table($tabla)->count(), "{$tabla} debió vaciarse");
+        }
     }
 
     /** El responsable arrastrado comparte el lote del solicitante: purgarlo solo se rechaza en vez de chocar con la FK del solicitante. */
