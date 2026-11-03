@@ -14,7 +14,8 @@ final class ListarNivelesDelResponsable
         $enCaptura = TramiteEditable::idEnCaptura();
 
         return ResponsableNivel::with(['escuelaNivel.escuela.plantel', 'escuelaNivel.nivelEducativo'])
-            ->where('user_id', $userId)->orderBy('id')->get()
+            // whereHas aplica el scope de archivo: el acceso a un nivel archivado no se lista.
+            ->where('user_id', $userId)->whereHas('escuelaNivel')->orderBy('id')->get()
             ->map(fn (ResponsableNivel $a) => [
                 'escuelaId' => $a->escuelaNivel->escuela_id,
                 'escuelaNivelId' => $a->escuelaNivel->id,

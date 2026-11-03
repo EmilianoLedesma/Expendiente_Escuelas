@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CuentaActiva;
 use App\Http\Middleware\ExigeRol;
 use App\Http\Middleware\ExigeSolicitante;
 use Illuminate\Foundation\Application;
@@ -14,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->appendToGroup('web', CuentaActiva::class);
         $middleware->alias(['solicitante' => ExigeSolicitante::class, 'rol' => ExigeRol::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

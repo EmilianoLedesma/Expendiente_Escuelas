@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Log;
  * del nivel no la tiene) antes de llegar aquí.
  *
  * Orden de bloqueo (TramiteEditable): primero los escuela_niveles, luego la
- * escuela, el mismo que EliminarTramite y que las guardas de escritura.
+ * escuela, el mismo que ArchivarTramite y que las guardas de escritura.
  */
 class EnviarTramite
 {

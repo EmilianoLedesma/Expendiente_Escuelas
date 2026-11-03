@@ -20,9 +20,9 @@ class PanelAccessTest extends TestCase
 
     public function test_un_usuario_con_rol_sedeq_puede_entrar_al_panel(): void
     {
-        Role::create(['name' => 'sedeq', 'guard_name' => 'web']);
+        Role::create(['name' => 'admin', 'guard_name' => 'web']);
         $user = User::factory()->create();
-        $user->assignRole('sedeq');
+        $user->assignRole('admin');
 
         $this->actingAs($user)->get('/admin')->assertOk();
     }
@@ -30,9 +30,9 @@ class PanelAccessTest extends TestCase
     /** WS-1.6: la verificación de correo aplica al trámite, no al panel (no usa ->emailVerification()). */
     public function test_un_usuario_sedeq_sin_correo_verificado_puede_entrar_al_panel(): void
     {
-        Role::create(['name' => 'sedeq', 'guard_name' => 'web']);
+        Role::create(['name' => 'admin', 'guard_name' => 'web']);
         $user = User::factory()->unverified()->create();
-        $user->assignRole('sedeq');
+        $user->assignRole('admin');
 
         $this->actingAs($user)->get('/admin')->assertOk();
     }

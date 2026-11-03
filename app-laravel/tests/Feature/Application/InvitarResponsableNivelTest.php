@@ -88,12 +88,28 @@ class InvitarResponsableNivelTest extends TestCase
         $otroSolicitante = Solicitante::factory()->create();
         (new RolesSeeder)->run();
         $sedeq = User::factory()->create();
-        $sedeq->assignRole('sedeq');
+        $sedeq->assignRole('admin');
         $this->invitar($dueno, $nivel->id, 'ya@example.test');
 
         $this->assertArrayHasKey('correo', $this->errores(fn () => $this->invitar($dueno, $nivel->id, $otroSolicitante->user->email)));
         $this->assertArrayHasKey('correo', $this->errores(fn () => $this->invitar($dueno, $nivel->id, $sedeq->email)));
         $this->assertArrayHasKey('correo', $this->errores(fn () => $this->invitar($dueno, $nivel->id, 'YA@example.test')));
+    }
+
+    public function test_rechaza_el_correo_de_un_responsable_archivado_sin_acceso_ni_aviso(): void
+    {
+        Notification::fake();
+        $dueno = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($dueno);
+        $archivado = $this->responsableDe($this->nivelDe(Solicitante::factory()->create()));
+        $archivado->forceFill(['archivado_at' => now()])->save();
+        $accesos = ResponsableNivel::count();
+
+        $errores = $this->errores(fn () => $this->invitar($dueno, $nivel->id, $archivado->email));
+
+        $this->assertSame(['correo' => 'Este correo ya pertenece a otra cuenta del sistema.'], $errores);
+        $this->assertSame($accesos, ResponsableNivel::count());
+        Notification::assertNothingSent();
     }
 
     public function test_si_el_aviso_falla_la_invitacion_queda_guardada(): void

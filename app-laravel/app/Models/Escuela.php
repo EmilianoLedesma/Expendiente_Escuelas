@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\EscuelaNoArchivada;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,9 +15,20 @@ use Illuminate\Support\Carbon;
  * @property int $solicitante_id
  * @property string|null $nombre_aprobado
  * @property Carbon $created_at
+ * @property Carbon|null $archivado_at
+ * @property int|null $archivado_por
+ * @property string|null $archivado_motivo
+ * @property string|null $archivado_lote
  */
 class Escuela extends Model
 {
+    protected $casts = ['archivado_at' => 'datetime'];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new EscuelaNoArchivada);
+    }
+
     protected $fillable = [
         'plantel_id',
         'solicitante_id',

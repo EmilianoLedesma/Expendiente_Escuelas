@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
  * bloqueo el de AsignarTramite: fila users del revisor, luego escuela_niveles
  * por id. Es una excepción deliberada al orden del proyecto
  * (InvitarResponsableNivel y RevocarResponsableNivel bloquean niveles y luego
- * users; EnviarTramite y EliminarTramite nunca bloquean users), segura en la
+ * users; EnviarTramite y ArchivarTramite nunca bloquean users; ArchivarCuenta
+ * sigue este orden), segura en la
  * práctica porque las cuentas SEDEQ y las de solicitantes son distintas; un
  * deadlock que Postgres detecte aborta una transacción sin corromper datos.
  */
@@ -34,10 +35,27 @@ class DesasignarTramite
             User::whereKey($revisorId)->lockForUpdate()->value('id');
 
             $ids = DB::table('asignaciones_revision')->where('revisor_id', $revisorId)->pluck('escuela_nivel_id')->map(fn ($id) => (int) $id)->all();
-            EscuelaNivel::whereIn('id', $ids)->orderBy('id')->lockForUpdate()->pluck('id');
 
-            return $this->quitar($actorId, $ids, 'desasignar_revocacion', $revisorId);
+            return $this->liberar($actorId, $ids, 'desasignar_revocacion', $revisorId);
         });
+    }
+
+    /**
+     * Quita las asignaciones de esos niveles (solo las de $soloDeRevisor si se da)
+     * y registra cada una con $accion. Sin chequeo de rol: lo hace el llamador
+     * (archivado por admin, revocación por supervisor). Bloquea escuela_niveles
+     * por id; si el llamador bloquea users, que sea antes (ver docblock de clase).
+     *
+     * @param  list<int>  $escuelaNivelIds
+     * @return int cuántas se quitaron
+     */
+    public function liberar(int $actorId, array $escuelaNivelIds, string $accion, ?int $soloDeRevisor = null): int
+    {
+        if ($escuelaNivelIds === []) {
+            return 0;
+        }
+
+        return DB::transaction(fn () => $this->quitar($actorId, $escuelaNivelIds, $accion, $soloDeRevisor));
     }
 
     /**
@@ -45,11 +63,9 @@ class DesasignarTramite
      *
      * @param  list<int>  $escuelaNivelIds
      */
-    private function quitar(int $actorId, array $escuelaNivelIds, string $accion, ?int $soloDeRevisor = null): int
+    private function quitar(int $actorId, array $escuelaNivelIds, string $accion, ?int $soloDeRevisor): int
     {
-        if ($escuelaNivelIds === []) {
-            return 0;
-        }
+        EscuelaNivel::whereIn('id', $escuelaNivelIds)->orderBy('id')->lockForUpdate()->pluck('id');
 
         $marcas = implode(',', array_fill(0, count($escuelaNivelIds), '?'));
         $sql = "DELETE FROM asignaciones_revision WHERE escuela_nivel_id IN ({$marcas})";

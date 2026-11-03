@@ -44,7 +44,7 @@ class TramiteEnviadoPolicyTest extends TestCase
         $this->assertFalse($dueno->can('update', $nivel->fresh()));
         $this->assertTrue($dueno->can('view', $escuela));
         $this->assertTrue($dueno->can('view', $nivel->fresh()));
-        $this->assertTrue($dueno->can('delete', $escuela), 'delete sigue siendo de la policy; EliminarTramite rechaza lo enviado.');
+        $this->assertTrue($dueno->can('delete', $escuela), 'delete sigue siendo de la policy; ArchivarTramite rechaza lo enviado.');
     }
 
     public function test_tras_el_envio_el_responsable_pierde_update_y_el_dueno_inmueble_y_responsables(): void

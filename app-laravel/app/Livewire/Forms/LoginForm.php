@@ -4,8 +4,11 @@ namespace App\Livewire\Forms;
 
 use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
+use App\Http\Middleware\CuentaActiva;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -32,6 +35,12 @@ class LoginForm extends Form
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
+
+        $archivado = User::where('email', $this->email)->whereNotNull('archivado_at')->first();
+
+        if ($archivado && Hash::check($this->password, $archivado->password)) {
+            throw ValidationException::withMessages(['form.email' => CuentaActiva::MENSAJE]);
+        }
 
         if (! Auth::attempt($this->only(['email', 'password']), $this->remember)) {
             RateLimiter::hit($this->throttleKey());

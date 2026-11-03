@@ -1,5 +1,5 @@
 {{-- Botón destructivo que se confirma manteniéndolo presionado (puntero, Enter o Espacio). Soltar, salir del botón o perder el foco cancela.
-     `accion` es la expresión Alpine/Livewire que corre al completarse (p. ej. $wire.eliminarCuenta()). Sin movimiento si el usuario lo reduce. --}}
+     `accion` es la expresión Alpine/Livewire que corre al completarse (p. ej. $wire.archivarCuenta()). Sin movimiento si el usuario lo reduce. --}}
 @props(['accion', 'duracion' => 1600])
 
 <button type="button"

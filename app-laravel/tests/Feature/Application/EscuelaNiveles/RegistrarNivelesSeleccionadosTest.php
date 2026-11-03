@@ -302,6 +302,23 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         $this->assertSame([$primaria->id], ResponsableNivel::where('user_id', $responsable->id)->pluck('escuela_nivel_id')->map(fn ($id) => (int) $id)->all());
     }
 
+    /** Archivo: solo la purga borra cuentas; quitar el nivel quita el acceso pero conserva la cuenta archivada. */
+    public function test_quitar_el_nivel_conserva_la_cuenta_archivada_del_responsable(): void
+    {
+        $escuela = $this->crearEscuela();
+        $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar'), $this->id('primaria')]);
+        [$preescolar] = EscuelaNivel::where('escuela_id', $escuela->id)->orderBy('nivel_educativo_id')->get()->all();
+        $responsable = $this->responsableDe($preescolar);
+        $marca = ['archivado_at' => now()->startOfSecond(), 'archivado_por' => $responsable->id, 'archivado_lote' => '22222222-2222-2222-2222-222222222222'];
+        DB::table('users')->where('id', $responsable->id)->update($marca);
+        $confirmado = app(ResumenEliminacionNivel::class)->ejecutar($escuela->id, [(int) $preescolar->nivel_educativo_id]);
+
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [(int) $preescolar->nivel_educativo_id], confirmado: $confirmado);
+
+        $this->assertDatabaseCount('responsables_nivel', 0);
+        $this->assertDatabaseHas('users', ['id' => $responsable->id, 'email' => $responsable->email, 'archivado_lote' => $marca['archivado_lote'], 'archivado_por' => $responsable->id]);
+    }
+
     public function test_conteos_confirmados_viejos_se_rechazan_sin_borrar(): void
     {
         $escuela = $this->crearEscuela();
@@ -344,7 +361,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
             $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')]);
             $this->fail('Se esperaba InvalidArgumentException.');
         } catch (InvalidArgumentException $e) {
-            $this->assertStringContainsString('Eliminar trámite', $e->getMessage());
+            $this->assertStringContainsString('Archivar trámite', $e->getMessage());
         }
 
         $this->assertDatabaseCount('escuela_niveles', 1);
@@ -363,7 +380,7 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
     }
 
     /**
-     * Orden de bloqueo (spec U3, como EliminarTramite): niveles FOR UPDATE → escuela FOR SHARE
+     * Orden de bloqueo (spec U3, orden de TramiteEditable): niveles FOR UPDATE → escuela FOR SHARE
      * → documentos del nivel FOR UPDATE → borrado. Un RegistrarDocumento concurrente bloquea el
      * nivel primero, así que no puede dejar un archivo huérfano ni cruzar bloqueos (40P01).
      */

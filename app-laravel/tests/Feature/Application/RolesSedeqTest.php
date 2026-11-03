@@ -28,17 +28,18 @@ class RolesSedeqTest extends TestCase
 
     public function test_todos_contiene_exactamente_los_tres_nombres(): void
     {
-        $this->assertEqualsCanonicalizing(['sedeq', 'supervisor', 'revisor'], RolesSedeq::TODOS);
+        $this->assertEqualsCanonicalizing([RolesSedeq::ADMIN, 'supervisor', 'revisor'], RolesSedeq::TODOS);
+        $this->assertSame('admin', RolesSedeq::ADMIN);
     }
 
     public function test_es_sedeq_operativo_solo_supervisor_o_revisor(): void
     {
-        foreach (['sedeq', 'supervisor', 'revisor'] as $r) {
+        foreach (['admin', 'supervisor', 'revisor'] as $r) {
             Role::findOrCreate($r, 'web');
         }
         $this->assertTrue(RolesSedeq::esSedeqOperativo(User::factory()->create()->assignRole('supervisor')));
         $this->assertTrue(RolesSedeq::esSedeqOperativo(User::factory()->create()->assignRole('revisor')));
-        $this->assertFalse(RolesSedeq::esSedeqOperativo(User::factory()->create()->assignRole('sedeq')));
+        $this->assertFalse(RolesSedeq::esSedeqOperativo(User::factory()->create()->assignRole('admin')));
         $this->assertFalse(RolesSedeq::esSedeqOperativo(User::factory()->create()));
     }
 }
