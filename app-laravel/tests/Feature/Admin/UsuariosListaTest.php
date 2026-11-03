@@ -164,7 +164,18 @@ class UsuariosListaTest extends TestCase
 
         $this->lista()->mountAction(TestAction::make('purgar')->table($u))
             ->assertMountedActionModalSee('Borrado definitivo e irreversible')
-            ->assertMountedActionModalSee('datos personales');
+            ->assertMountedActionModalSee('el motivo se conserva en la bitácora')
+            ->assertMountedActionModalSee('No escribas datos personales (nombres, correos, CURP) en el motivo')
+            ->assertMountedActionModalSee('identificadores y el motivo');
+    }
+
+    public function test_el_modal_de_archivar_advierte_sobre_datos_personales_en_el_motivo(): void
+    {
+        $u = $this->solicitante();
+
+        $this->lista()->mountAction(TestAction::make('archivar')->table($u))
+            ->assertMountedActionModalSee('No escribas datos personales (nombres, correos, CURP) en el motivo')
+            ->assertMountedActionModalSee('el motivo se conserva en la bitácora');
     }
 
     private function claveDeGrupo(string $key): array

@@ -118,7 +118,9 @@ class TramitesArchivadosTest extends TestCase
 
         $this->lista()->mountAction(TestAction::make('purgar')->table($e))
             ->assertMountedActionModalSee('Borrado definitivo e irreversible')
-            ->assertMountedActionModalSee('datos personales');
+            ->assertMountedActionModalSee('el motivo se conserva en la bitácora')
+            ->assertMountedActionModalSee('No escribas datos personales (nombres, correos, CURP) en el motivo')
+            ->assertMountedActionModalSee('identificadores y el motivo');
     }
 
     public function test_purga_refusada_por_la_accion_notifica(): void

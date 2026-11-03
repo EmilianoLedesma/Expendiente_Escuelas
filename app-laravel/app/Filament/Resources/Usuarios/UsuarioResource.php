@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class UsuarioResource extends Resource
 {
+    public const AVISO_MOTIVO = 'No escribas datos personales (nombres, correos, CURP) en el motivo: el motivo se conserva en la bitácora.';
+
     protected static ?string $model = User::class;
 
     protected static ?string $modelLabel = 'usuario';
@@ -153,7 +155,7 @@ class UsuarioResource extends Resource
                         'Rol actualizado.')),
                 Action::make('archivar')->label('Archivar')->color('warning')
                     ->visible(fn (User $r) => $r->archivado_at === null && $r->id !== auth()->id())
-                    ->schema([Textarea::make('motivo')->label('Motivo')->required()])
+                    ->schema([Textarea::make('motivo')->label('Motivo')->required()->helperText(self::AVISO_MOTIVO)])
                     ->action(fn (User $r, array $data) => self::intentar(
                         fn () => app(ArchivarCuenta::class)->ejecutar($r->id, (int) auth()->id(), $data['motivo']),
                         'Cuenta archivada.')),
@@ -164,9 +166,9 @@ class UsuarioResource extends Resource
                         'Cuenta restaurada.')),
                 Action::make('purgar')->label('Purgar')->color('danger')
                     ->visible(fn (User $r) => $r->archivado_at !== null)
-                    ->modalDescription('Borrado definitivo e irreversible: se eliminan la cuenta y sus datos personales. Solo queda el registro de auditoría con identificadores.')
+                    ->modalDescription('Borrado definitivo e irreversible: se eliminan la cuenta y sus datos personales. En la bitácora de auditoría se conservan los identificadores y el motivo.')
                     ->schema([
-                        Textarea::make('motivo')->label('Motivo')->required(),
+                        Textarea::make('motivo')->label('Motivo')->required()->helperText(self::AVISO_MOTIVO),
                         TextInput::make('confirmacion')->label('Escribe PURGAR para confirmar')->required(),
                     ])
                     ->action(fn (User $r, array $data) => self::intentar(

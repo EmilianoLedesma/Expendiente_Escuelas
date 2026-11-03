@@ -7,6 +7,7 @@ use App\Application\Archivo\RestaurarTramite;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Filament\Resources\TramitesArchivados\Pages\ListTramitesArchivados;
+use App\Filament\Resources\Usuarios\UsuarioResource;
 use App\Models\Escuela;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\User;
@@ -80,9 +81,9 @@ class TramiteArchivadoResource extends Resource
                         fn () => app(RestaurarTramite::class)->ejecutar((int) auth()->id(), $r->id),
                         'Trámite restaurado.')),
                 Action::make('purgar')->label('Purgar')->color('danger')
-                    ->modalDescription('Borrado definitivo e irreversible: se eliminan el trámite, sus documentos y reportes, y los datos personales que contienen. Solo queda el registro de auditoría con identificadores.')
+                    ->modalDescription('Borrado definitivo e irreversible: se eliminan el trámite, sus documentos y reportes, y los datos personales que contienen. En la bitácora de auditoría se conservan los identificadores y el motivo.')
                     ->schema([
-                        Textarea::make('motivo')->label('Motivo')->required(),
+                        Textarea::make('motivo')->label('Motivo')->required()->helperText(UsuarioResource::AVISO_MOTIVO),
                         TextInput::make('confirmacion')->label('Escribe PURGAR para confirmar')->required(),
                     ])
                     ->action(fn (Escuela $r, array $data) => self::intentar(
