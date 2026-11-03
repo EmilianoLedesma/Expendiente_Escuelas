@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Tramite;
 
+use App\Application\Archivo\ArchivarTramite;
 use App\Models\Solicitante;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +28,20 @@ class MisNivelesResponsableTest extends TestCase
             ->assertDontSee('Secundaria')
             ->assertDontSee('Iniciar nuevo trámite')
             ->assertSee('href="'.route('tramite.resumen', ['escuela' => $nivel->escuela_id]).'"', false);
+    }
+
+    public function test_un_nivel_de_un_tramite_archivado_no_aparece_ni_rompe_la_pagina(): void
+    {
+        $archivado = $this->nivelDe(Solicitante::factory()->create(), 'primaria');
+        $activo = $this->nivelDe(Solicitante::factory()->create(), 'secundaria');
+        $responsable = $this->responsableDe($archivado, $activo);
+        app(ArchivarTramite::class)->ejecutar($archivado->escuela_id, $archivado->escuela->solicitante->user_id);
+
+        $this->actingAs($responsable)
+            ->get(route('tramite.index'))
+            ->assertOk()
+            ->assertSee('Secundaria')
+            ->assertDontSee('Primaria');
     }
 
     public function test_el_responsable_no_entra_a_crear_tramites(): void
