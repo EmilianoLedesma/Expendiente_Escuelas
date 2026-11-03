@@ -7,12 +7,15 @@ use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\CrearCuentaSedeq;
 use App\Application\Revision\RolesSedeq;
+use App\Models\Solicitante;
 use App\Models\User;
 use App\Notifications\RestablecerContrasena;
 use Database\Seeders\RolesSeeder;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use RuntimeException;
 use Tests\TestCase;
 
 class CrearCuentaSedeqTest extends TestCase
@@ -52,22 +55,57 @@ class CrearCuentaSedeqTest extends TestCase
             $fila = DB::table('bitacora_acciones')->where('accion', RegistrarAccion::CREAR_CUENTA_SEDEQ)->where('objeto_id', $u->id)->first();
             $this->assertSame($admin->id, (int) $fila->actor_id);
             $this->assertSame('user', $fila->objeto_tipo);
+            $this->assertSame(['rol' => $rol], json_decode((string) $fila->detalle, true));
+            $this->assertStringNotContainsString('Ana', (string) $fila->detalle);
             $this->assertStringNotContainsString('example.com', (string) $fila->detalle);
         }
     }
 
-    public function test_rechaza_actor_no_admin(): void
+    public function test_rechaza_actor_no_admin_antes_de_validar(): void
     {
         (new RolesSeeder)->run();
-        $sup = User::factory()->create()->assignRole(RolesSedeq::SUPERVISOR);
+        $actores = [
+            User::factory()->create()->assignRole(RolesSedeq::SUPERVISOR),
+            User::factory()->create()->assignRole(RolesSedeq::REVISOR),
+            Solicitante::factory()->create()->user,
+        ];
 
-        try {
-            $this->crear($sup, 'Ana', 'ana@example.com', RolesSedeq::ADMIN);
-            $this->fail('Se esperaba PrecondicionIncumplida.');
-        } catch (PrecondicionIncumplida $e) {
-            $this->assertSame('rol', $e->etapaFaltante);
+        foreach ($actores as $actor) {
+            foreach ([['Ana', 'ana@example.com'], ['', 'no-es-correo']] as [$nombre, $correo]) {
+                try {
+                    $this->crear($actor, $nombre, $correo, RolesSedeq::ADMIN);
+                    $this->fail('Se esperaba PrecondicionIncumplida.');
+                } catch (PrecondicionIncumplida $e) {
+                    $this->assertSame('rol', $e->etapaFaltante);
+                }
+            }
         }
         $this->assertDatabaseMissing('users', ['email' => 'ana@example.com']);
+        $this->sinBitacora();
+    }
+
+    public function test_un_aviso_fallido_no_deshace_la_cuenta(): void
+    {
+        $admin = $this->admin();
+        $this->mock(Dispatcher::class, fn ($m) => $m->shouldReceive('send')->andThrow(new RuntimeException('smtp caido')));
+
+        $u = $this->crear($admin, 'Ana', 'ana@example.com', RolesSedeq::SUPERVISOR);
+
+        $this->assertTrue($u->fresh()->hasRole(RolesSedeq::SUPERVISOR));
+        $this->assertSame(1, DB::table('bitacora_acciones')->where('accion', RegistrarAccion::CREAR_CUENTA_SEDEQ)->where('objeto_id', $u->id)->count());
+    }
+
+    public function test_rechaza_correo_existente_con_otra_capitalizacion_guardada(): void
+    {
+        $admin = $this->admin();
+        DB::table('users')->where('id', User::factory()->create(['email' => 'x@example.com'])->id)->update(['email' => 'Mixto@Example.com']);
+
+        try {
+            $this->crear($admin, 'Ana', 'mixto@example.com', RolesSedeq::SUPERVISOR);
+            $this->fail('Se esperaba DatosInvalidos.');
+        } catch (DatosInvalidos $e) {
+            $this->assertArrayHasKey('correo', $e->errores);
+        }
         $this->sinBitacora();
     }
 
