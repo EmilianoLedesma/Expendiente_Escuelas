@@ -97,6 +97,8 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Misma zona que app.timezone: los DEFAULT now() del esquema y lo que escribe Laravel comparten reloj.
+            'timezone' => 'America/Mexico_City',
         ],
 
         'sqlsrv' => [
