@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  * escuelas si alguna vez se tocan. Bloquear users ANTES que escuela_niveles es
  * una excepción deliberada al orden del proyecto: InvitarResponsableNivel y
  * RevocarResponsableNivel bloquean niveles y luego users, y EnviarTramite y
- * EliminarTramite nunca bloquean users. En la práctica no se cruzan, porque las
+ * ArchivarTramite nunca bloquean users (ArchivarCuenta sigue este mismo orden). En la práctica no se cruzan, porque las
  * cuentas SEDEQ y las de solicitantes son distintas; si alguna vez se cruzaran,
  * Postgres detecta el deadlock y aborta una de las dos transacciones sin
  * corromper datos. El rol y el estado en_revision se comprueban ya bajo bloqueo.
@@ -54,7 +54,7 @@ class AsignarTramite
             RolesSedeq::exigir(User::findOrFail($actorId), RolesSedeq::SUPERVISOR);
 
             $revisor = User::whereKey($revisorId)->lockForUpdate()->first();
-            if ($revisor === null || ! $revisor->hasRole(RolesSedeq::REVISOR)) {
+            if ($revisor === null || $revisor->archivado_at !== null || ! $revisor->hasRole(RolesSedeq::REVISOR)) {
                 throw new PrecondicionIncumplida(RolesSedeq::REVISOR, 'El usuario elegido no es un revisor activo.');
             }
 

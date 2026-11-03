@@ -252,7 +252,7 @@ class EnvioTramiteTest extends TestCase
             ->assertDontSee('href="'.route('tramite.paso2-documentos', ['escuela' => $escuela->id]).'"', false)
             ->assertDontSee('href="'.route('tramite.paso2-nivel-documentos', ['escuelaNivel' => $nivel->id]).'"', false)
             ->assertDontSee('href="'.route('tramite.paso3-plantilla', ['escuelaNivel' => $nivel->id]).'"', false)
-            ->assertDontSee('Eliminar trámite');
+            ->assertDontSee('Archivar trámite');
     }
 
     /**

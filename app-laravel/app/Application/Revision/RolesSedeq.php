@@ -6,15 +6,17 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Models\Revisor;
 use App\Models\User;
 
-/** Roles de la parte SEDEQ del sistema (HUD de revisión). `sedeq` es el administrador de /admin y no opera trámites. */
+/** Roles de la parte SEDEQ del sistema (HUD de revisión). `admin` es el administrador de /admin y no opera trámites. */
 final class RolesSedeq
 {
+    public const ADMIN = 'admin';
+
     public const SUPERVISOR = 'supervisor';
 
     public const REVISOR = 'revisor';
 
     /** Cuentas que no pueden eliminarse a sí mismas. */
-    public const TODOS = ['sedeq', self::SUPERVISOR, self::REVISOR];
+    public const TODOS = [self::ADMIN, self::SUPERVISOR, self::REVISOR];
 
     /** Cuenta que no se borra sola: tiene un rol de SEDEQ o es un revisor ya revocado (su fila en `revisores` la protege). */
     public static function cuentaProtegida(User $usuario): bool

@@ -26,7 +26,7 @@ class InvitarRevisorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['sedeq', 'supervisor', 'revisor', 'responsable_nivel', 'solicitante'] as $rol) {
+        foreach (['admin', 'supervisor', 'revisor', 'responsable_nivel', 'solicitante'] as $rol) {
             Role::findOrCreate($rol, 'web');
         }
         $this->sup = User::factory()->create()->assignRole(RolesSedeq::SUPERVISOR);
@@ -70,7 +70,7 @@ class InvitarRevisorTest extends TestCase
         $cuentas = [
             Solicitante::factory()->create()->user,
             User::factory()->create()->assignRole('responsable_nivel'),
-            User::factory()->create()->assignRole('sedeq'),
+            User::factory()->create()->assignRole('admin'),
             $this->sup,
             $activo,
             User::factory()->create(),
@@ -101,7 +101,7 @@ class InvitarRevisorTest extends TestCase
 
     public function test_revisor_revocado_con_otro_rol_o_fila_de_solicitante_no_se_reinvita(): void
     {
-        $conRol = User::factory()->create()->assignRole('sedeq');
+        $conRol = User::factory()->create()->assignRole('admin');
         $conSolicitante = Solicitante::factory()->create()->user;
         foreach ([$conRol, $conSolicitante] as $u) {
             Revisor::create(['user_id' => $u->id, 'revocado_at' => now()]);

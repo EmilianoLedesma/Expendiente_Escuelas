@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * Única definición de "este trámite todavía se puede modificar" (WS-7a §5.1): todos
  * sus niveles siguen en captura, y sin niveles también (Paso 2.1/2.2, antes de
  * elegirlos). Enviado = al menos un nivel y ninguno en captura. Un estado mezclado
- * (la app no lo produce) no es editable: se falla cerrado. La usan EliminarTramite,
+ * (la app no lo produce) no es editable: se falla cerrado. La usan ArchivarTramite,
  * ResumenTramite, ResponsablesNivel, EscuelaPolicy/EscuelaNivelPolicy::update y las
  * guardas de escritura de los casos de uso.
  */
@@ -59,6 +59,11 @@ class TramiteEditable
      */
     public function esEditable(int $escuelaId, ?string $pasoClave = null, ?int $escuelaNivelId = null): bool
     {
+        // Archivado: el scope oculta la escuela y sus niveles; "sin niveles" no debe leerse como editable.
+        if (! Escuela::whereKey($escuelaId)->exists()) {
+            return false;
+        }
+
         return self::todosEnCaptura(EscuelaNivel::where('escuela_id', $escuelaId)->pluck('estado_id'), self::idEnCaptura())
             || ($pasoClave !== null && $this->reabiertos->estaReabierto($escuelaId, $pasoClave, $escuelaNivelId));
     }
@@ -70,13 +75,15 @@ class TramiteEditable
      * escuela: EnviarTramite toma FOR UPDATE sobre la misma fila, así que una escritura
      * no puede confirmarse dentro de un trámite que se está enviando (READ COMMITTED).
      * Orden de bloqueo en todo el proyecto: escuela_niveles antes que escuelas
-     * (EnviarTramite, EliminarTramite); invertirlo produce deadlocks (40P01).
+     * (EnviarTramite, ArchivarTramite); invertirlo produce deadlocks (40P01).
+     *
+     * Un trámite archivado (oculto por el scope) falla cerrado con la etapa 'archivo'.
      *
      * @throws PrecondicionIncumplida si el trámite ya no es editable.
      */
     public function asegurarEscuela(int $escuelaId, ?string $pasoClave = null, ?int $escuelaNivelId = null): void
     {
-        Escuela::whereKey($escuelaId)->sharedLock()->value('id');
+        Escuela::whereKey($escuelaId)->sharedLock()->value('id') ?? throw self::yaNoExiste();
 
         if (! $this->esEditable($escuelaId, $pasoClave, $escuelaNivelId)) {
             throw new PrecondicionIncumplida(self::ENVIADO, 'El trámite ya se envió a SEDEQ y no puede modificarse.');
@@ -98,6 +105,11 @@ class TramiteEditable
     {
         $escuelas = Escuela::where('plantel_id', $plantelId)->orderBy('id')->sharedLock()->pluck('id');
 
+        // La escuela que escribe debe seguir visible (no archivada) y en este plantel.
+        if ($escuelaId !== null && ! $escuelas->contains($escuelaId)) {
+            throw self::yaNoExiste();
+        }
+
         if ($pasoClave !== null && $escuelaId !== null && $this->reabiertos->estaReabierto($escuelaId, $pasoClave, $escuelaNivelId)) {
             return;
         }
@@ -105,5 +117,10 @@ class TramiteEditable
         if (! self::todosEnCaptura(EscuelaNivel::whereIn('escuela_id', $escuelas)->pluck('estado_id'), self::idEnCaptura())) {
             throw new PrecondicionIncumplida(self::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ: los datos compartidos del plantel (documentos, espacios, sanitarios y datos del inmueble) ya no pueden modificarse.');
         }
+    }
+
+    private static function yaNoExiste(): PrecondicionIncumplida
+    {
+        return new PrecondicionIncumplida('archivo', 'El trámite ya no existe.');
     }
 }

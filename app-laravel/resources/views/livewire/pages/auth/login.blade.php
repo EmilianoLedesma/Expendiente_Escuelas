@@ -31,6 +31,10 @@ new #[Layout('layouts.guest')] class extends Component
         <x-slot:intro>Accede a tu cuenta para continuar con tus trámites.</x-slot:intro>
     </x-ui.page-header>
 
+    @if (session('aviso_login'))
+        <x-ui.alert tipo="error" class="mb-md">{{ session('aviso_login') }}</x-ui.alert>
+    @endif
+
     <form novalidate wire:submit="login" class="space-y-md">
         <x-ui.error-summary />
 

@@ -19,7 +19,7 @@ use Spatie\Permission\Models\Role;
  * El dueño de un nivel en captura asigna a un responsable (spec 2026-10-07 §3).
  * Correo nuevo: cuenta con contraseña aleatoria + enlace para definirla.
  * Correo de un responsable existente: solo se le agrega el nivel. Cualquier
- * otro usuario (solicitante, SEDEQ) se rechaza. El aviso sale después del commit.
+ * otro usuario (solicitante, SEDEQ, cuenta archivada) se rechaza. El aviso sale después del commit.
  */
 class InvitarResponsableNivel
 {
@@ -54,7 +54,8 @@ class InvitarResponsableNivel
             $esNueva = false;
 
             if ($usuario !== null) {
-                if (! $usuario->hasRole(self::ROL) || $usuario->solicitante()->exists()) {
+                // Una cuenta archivada no recibe accesos; el mensaje genérico no revela que lo está.
+                if ($usuario->archivado_at !== null || ! $usuario->hasRole(self::ROL) || $usuario->solicitante()->exists()) {
                     throw new DatosInvalidos(['correo' => 'Este correo ya pertenece a otra cuenta del sistema.']);
                 }
                 if (ResponsableNivel::where('user_id', $usuario->id)->where('escuela_nivel_id', $nivel->id)->exists()) {

@@ -21,7 +21,7 @@ final class ResumenTramiteDTO
         public readonly bool $completo,
         public readonly ?string $nombre,
         public readonly DateTimeInterface $iniciadoEl,
-        /** Todos los niveles siguen en captura: el dueño puede eliminar el trámite (EliminarTramite). */
+        /** Todos los niveles siguen en captura: el dueño puede archivar el trámite (ArchivarTramite). */
         public readonly bool $puedeEliminar = false,
         /** WS-7a: se envió a SEDEQ (al menos un nivel y ninguno en captura); ninguna sección ofrece acción. Igual en la vista restringida del responsable. */
         public readonly bool $enviado = false,

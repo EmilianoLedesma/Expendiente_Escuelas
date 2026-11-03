@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Application\Tramite;
 
+use App\Application\Archivo\ArchivarTramite;
 use App\Application\Documentos\DTO\DatosDocumento;
 use App\Application\Documentos\RegistrarDocumento;
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\EscuelaNiveles\ResumenEliminacionNivel;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosEdicionInfraestructura;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
@@ -21,7 +23,6 @@ use App\Application\Mobiliario\RegistrarMobiliarioNivel;
 use App\Application\Preregistro\ActualizarContactoPlantel;
 use App\Application\ResponsableLegal\DTO\DatosResponsableLegal;
 use App\Application\ResponsableLegal\RegistrarResponsableLegal;
-use App\Application\Tramite\EliminarTramite;
 use App\Application\Tramite\TramiteEditable;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Livewire\Tramite\Paso2Documentos;
@@ -34,6 +35,8 @@ use App\Models\NivelEducativo;
 use Closure;
 use Database\Seeders\MobiliarioConceptosSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -126,6 +129,52 @@ class GuardaTramiteEnviadoTest extends TestCase
         }
     }
 
+    /**
+     * Archivado: el scope oculta sus niveles, pero un componente Livewire abierto antes del
+     * archivo sigue teniendo el modelo. La guarda falla cerrada en vez de ver "sin niveles".
+     */
+    #[DataProvider('escrituras')]
+    public function test_cada_escritura_rechaza_un_tramite_archivado(Closure $escribir): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $nivel = $this->completarTramite($escuela);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
+
+        // Algunas escrituras ya fallaban antes de la guarda (el modelo no se encuentra con scope,
+        // o el dueño ya no se resuelve); lo que importa es que ninguna escriba.
+        try {
+            $escribir($escuela, $nivel);
+            $this->fail('La escritura en un trámite archivado debió rechazarse.');
+        } catch (PrecondicionIncumplida|DatosInvalidos|ModelNotFoundException|AuthorizationException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
+    public function test_un_tramite_archivado_no_recibe_responsable_legal_ni_niveles(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
+        $responsable = DB::table('responsables_legales')->where('escuela_id', $escuela->id)->first();
+        $niveles = DB::table('escuela_niveles')->where('escuela_id', $escuela->id)->count();
+
+        foreach ([
+            'responsable' => fn () => app(RegistrarResponsableLegal::class)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez')),
+            'niveles' => fn () => app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, agregar: [(int) NivelEducativo::where('clave', 'secundaria')->value('id')]),
+        ] as $caso => $escribir) {
+            try {
+                $escribir();
+                $this->fail("Se esperaba PrecondicionIncumplida ({$caso}).");
+            } catch (PrecondicionIncumplida $e) {
+                $this->assertSame('archivo', $e->etapaFaltante, $caso);
+            }
+        }
+
+        $this->assertEquals($responsable, DB::table('responsables_legales')->where('escuela_id', $escuela->id)->first());
+        $this->assertSame($niveles, DB::table('escuela_niveles')->where('escuela_id', $escuela->id)->count());
+        $this->assertFalse(app(TramiteEditable::class)->esEditable($escuela->id));
+    }
+
     public function test_un_paso3_de_un_tramite_enviado_se_revierte_completo(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
@@ -177,7 +226,7 @@ class GuardaTramiteEnviadoTest extends TestCase
         $this->assertStringContainsString('from "escuelas"', $bloqueos[0]);
     }
 
-    public function test_eliminar_bloquea_los_niveles_antes_que_la_escuela(): void
+    public function test_archivar_bloquea_los_niveles_antes_que_la_escuela(): void
     {
         $escuela = $this->crearEscuelaConPlantel();
         $this->completarTramite($escuela);
@@ -188,7 +237,7 @@ class GuardaTramiteEnviadoTest extends TestCase
             }
         });
 
-        app(EliminarTramite::class)->ejecutar($escuela->id);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
 
         $this->assertStringContainsString('from "escuela_niveles"', $bloqueos[0]);
         $this->assertStringContainsString('from "escuelas"', $bloqueos[1]);
@@ -215,7 +264,7 @@ class GuardaTramiteEnviadoTest extends TestCase
     /**
      * Lock order (Order note 3): the nivel is locked before the first write or the
      * escuela guard, so a writer never holds child rows / the escuela while waiting
-     * for a nivel that EliminarTramite or EnviarTramite already holds.
+     * for a nivel that ArchivarTramite or EnviarTramite already holds.
      */
     #[DataProvider('escriturasDelNivel')]
     public function test_cada_escritura_del_nivel_bloquea_el_nivel_antes_de_escribir(Closure $escribir, ?Closure $preparar = null): void
@@ -238,7 +287,8 @@ class GuardaTramiteEnviadoTest extends TestCase
 
         $primera = fn (Closure $cumple): ?int => array_key_first(array_filter($sql, $cumple));
         $bloqueoNivel = $primera(fn (string $s) => str_contains($s, 'from "escuela_niveles"') && preg_match('/for (share|update)$/', $s) === 1);
-        $primeraEscritura = $primera(fn (string $s) => preg_match('/^(insert|update|delete)\b/', $s) === 1 || (str_contains($s, 'from "escuelas"') && str_ends_with($s, 'for share')));
+        // Guarda de la escuela = FROM "escuelas" de la consulta exterior; la subconsulta del scope de archivo dentro del bloqueo del nivel no cuenta.
+        $primeraEscritura = $primera(fn (string $s) => preg_match('/^(insert|update|delete)\b/', $s) === 1 || (preg_match('/^select [^(]*from "escuelas"/', $s) === 1 && str_ends_with($s, 'for share')));
 
         $this->assertNotNull($bloqueoNivel, 'El nivel nunca se bloqueó.');
         $this->assertNotNull($primeraEscritura);

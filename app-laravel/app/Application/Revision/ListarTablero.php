@@ -39,6 +39,7 @@ final class ListarTablero
             ->leftJoin('prioridades_revision as pr', 'pr.escuela_nivel_id', '=', 'en.id')
             ->leftJoin('progreso_revision as p', 'p.escuela_nivel_id', '=', 'en.id')
             ->where('en.estado_id', $enRevision)
+            ->whereNull('e.archivado_at')
             ->when($revisorId !== null, fn ($q) => $q->where('a.revisor_id', $revisorId))
             ->selectRaw(
                 "en.id, e.id as escuela_id, ne.nombre as nivel, u.id as revisor_id, u.name as revisor_nombre,
@@ -78,6 +79,7 @@ final class ListarTablero
             ->leftJoin('escuela_niveles as en', fn ($j) => $j->on('en.id', '=', 'a.escuela_nivel_id')->where('en.estado_id', EstadoRevision::idEnRevision()))
             ->leftJoin('progreso_revision as p', 'p.escuela_nivel_id', '=', 'en.id')
             ->where('r.name', RolesSedeq::REVISOR)
+            ->whereNull('u.archivado_at')
             ->groupBy('u.id', 'u.name')
             ->orderBy('u.name')->orderBy('u.id')
             ->selectRaw('u.id, u.name, COUNT(en.id) as asignados, COALESCE(SUM(p.secciones_revisadas), 0) as revisadas, COALESCE(SUM(p.secciones_total), 0) as total')
