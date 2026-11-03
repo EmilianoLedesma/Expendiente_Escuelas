@@ -21,6 +21,7 @@ class Solicitante extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<Escuela, $this> */
     public function escuelas(): HasMany
     {
         return $this->hasMany(Escuela::class);
