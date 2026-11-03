@@ -15,6 +15,7 @@ use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\Plantel;
+use App\Models\ResponsableNivel;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Scopes\NivelDeEscuelaNoArchivada;
 use App\Models\Solicitante;
@@ -208,6 +209,36 @@ class PurgarTest extends TestCase
                 $this->assertStringNotContainsString($dato, (string) $fila->motivo);
             }
         }
+    }
+
+    /** Un responsable del lote que después obtuvo acceso en otro solicitante no se borra en silencio: la purga entera se rechaza. */
+    public function test_un_responsable_del_lote_con_acceso_en_otro_solicitante_impide_la_purga(): void
+    {
+        $admin = $this->admin();
+        $solicitante = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($solicitante);
+        $responsable = $this->responsableDe($nivel);
+        app(ArchivarCuenta::class)->ejecutar($solicitante->user_id, $admin->id, 'Baja');
+        $otroNivel = $this->nivelDe(Solicitante::factory()->create());
+        $acceso = ResponsableNivel::create([
+            'user_id' => $responsable->id,
+            'escuela_nivel_id' => $otroNivel->id,
+            'invitado_por_solicitante_id' => $otroNivel->escuela->solicitante_id,
+        ]);
+
+        try {
+            app(PurgarCuenta::class)->ejecutar($admin->id, $solicitante->user_id, 'motivo', Purga::CONFIRMACION);
+            $this->fail('Debió rechazar la purga.');
+        } catch (PrecondicionIncumplida) {
+        }
+
+        $this->assertNotNull(ResponsableNivel::find($acceso->id));
+        $this->assertNotNull(User::find($responsable->id));
+        $this->assertNotNull(User::find($solicitante->user_id));
+        $this->assertNotNull(Solicitante::find($solicitante->id));
+        $this->assertNotNull($this->escuela($nivel->escuela_id));
+        $this->assertSame(1, ResponsableNivel::where('escuela_nivel_id', $nivel->id)->count());
+        $this->assertSame(0, $this->purgas());
     }
 
     /** Sin lote, nadie más se purga: otra cuenta archivada sin lote sigue en pie. */
