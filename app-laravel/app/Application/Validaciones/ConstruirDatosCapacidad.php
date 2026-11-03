@@ -100,6 +100,7 @@ class ConstruirDatosCapacidad
         $niveles = DB::table('escuela_niveles')
             ->join('escuelas', 'escuelas.id', '=', 'escuela_niveles.escuela_id')
             ->where('escuelas.plantel_id', $plantelId)
+            ->whereNull('escuelas.archivado_at') // DB::table crudo: el scope de archivo no aplica
             ->pluck('escuela_niveles.id');
 
         return (int) DB::table('matricula_grados')->whereIn('escuela_nivel_id', $niveles)->sum('cantidad_alumnos')

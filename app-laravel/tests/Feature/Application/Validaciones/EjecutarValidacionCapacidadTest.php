@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Application\Validaciones;
 
+use App\Application\Archivo\ArchivarTramite;
 use App\Application\Matricula\DTO\DatosMatricula;
 use App\Application\Matricula\RegistrarMatricula;
 use App\Application\Personal\DTO\DatosPersona;
@@ -10,6 +11,7 @@ use App\Application\Validaciones\ConstruirDatosCapacidad;
 use App\Application\Validaciones\EjecutarValidacionCapacidad;
 use App\Domain\Validaciones\Resultado\EstadoResultado;
 use App\Models\AulaNivel;
+use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\InstalacionEspacio;
 use App\Models\MobiliarioNivel;
@@ -121,6 +123,25 @@ class EjecutarValidacionCapacidadTest extends TestCase
 
         $this->assertSame(40, $datos->matriculaNivel);
         $this->assertSame(75, $datos->matriculaPlantel);
+    }
+
+    public function test_el_predio_no_suma_la_matricula_de_un_tramite_archivado_del_plantel(): void
+    {
+        $primaria = $this->nivel('primaria');
+        app(RegistrarMatricula::class)->ejecutar($primaria->id, new DatosMatricula(grupos: [['gradoId' => $this->gradoId($primaria, 1), 'grupo' => 'A', 'alumnos' => 40]]));
+        $otra = Escuela::create(['plantel_id' => $primaria->escuela->plantel_id, 'solicitante_id' => $primaria->escuela->solicitante_id]);
+        $secundaria = EscuelaNivel::create([
+            'escuela_id' => $otra->id,
+            'nivel_educativo_id' => DB::table('niveles_educativos')->where('clave', 'secundaria')->value('id'),
+            'estado_id' => $primaria->estado_id,
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        DB::table('matricula_grados')->insert(['escuela_nivel_id' => $secundaria->id, 'grado_id' => $this->gradoId($secundaria, 1), 'grupo' => 'A', 'cantidad_alumnos' => 35]);
+        $this->assertSame(75, app(ConstruirDatosCapacidad::class)->paraNivel($primaria->id)->matriculaPlantel);
+
+        app(ArchivarTramite::class)->ejecutar($otra->id, $otra->solicitante->user_id);
+
+        $this->assertSame(40, app(ConstruirDatosCapacidad::class)->paraNivel($primaria->id)->matriculaPlantel);
     }
 
     public function test_solo_cuenta_personal_completo(): void
