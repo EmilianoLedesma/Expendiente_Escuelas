@@ -13,8 +13,8 @@ use Illuminate\Support\Str;
 /**
  * Renders the final documental validation as a formatted PDF and stores it
  * on the private 'documentos' disk, one file per run (ADR-007 P6; retention
- * is still open, except that EliminarTramite purges a deleted trámite's
- * reports). Unique path per run, same convention as AlmacenDocumentosLocal.
+ * is still open; archiving a trámite keeps its reports, only the admin purge
+ * will remove them). Unique path per run, same convention as AlmacenDocumentosLocal.
  */
 class ReporteValidacionPdf
 {

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * Única definición de "este trámite todavía se puede modificar" (WS-7a §5.1): todos
  * sus niveles siguen en captura, y sin niveles también (Paso 2.1/2.2, antes de
  * elegirlos). Enviado = al menos un nivel y ninguno en captura. Un estado mezclado
- * (la app no lo produce) no es editable: se falla cerrado. La usan EliminarTramite,
+ * (la app no lo produce) no es editable: se falla cerrado. La usan ArchivarTramite,
  * ResumenTramite, ResponsablesNivel, EscuelaPolicy/EscuelaNivelPolicy::update y las
  * guardas de escritura de los casos de uso.
  */
@@ -70,7 +70,7 @@ class TramiteEditable
      * escuela: EnviarTramite toma FOR UPDATE sobre la misma fila, así que una escritura
      * no puede confirmarse dentro de un trámite que se está enviando (READ COMMITTED).
      * Orden de bloqueo en todo el proyecto: escuela_niveles antes que escuelas
-     * (EnviarTramite, EliminarTramite); invertirlo produce deadlocks (40P01).
+     * (EnviarTramite, ArchivarTramite); invertirlo produce deadlocks (40P01).
      *
      * @throws PrecondicionIncumplida si el trámite ya no es editable.
      */

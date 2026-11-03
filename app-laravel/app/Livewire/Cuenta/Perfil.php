@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Cuenta;
 
+use App\Application\Archivo\ArchivarCuenta;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\RolesSedeq;
-use App\Application\Tramite\EliminarCuenta;
 use App\Livewire\Actions\Logout;
 use App\Livewire\Concerns\NotificaToast;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-/** Presentación pura de "Mi perfil"; el borrado de cuenta vive en Application\Tramite\EliminarCuenta (ADR-014). */
+/** Presentación pura de "Mi perfil"; el archivo de cuenta vive en Application\Archivo\ArchivarCuenta (ADR-014). */
 #[Layout('layouts.tramite', ['cuenta' => true, 'title' => 'Mi perfil'])]
 class Perfil extends Component
 {
@@ -73,18 +73,19 @@ class Perfil extends Component
         return true;
     }
 
-    public function eliminarCuenta(Logout $cerrarSesion, EliminarCuenta $eliminarCuenta): void
+    public function archivarCuenta(Logout $cerrarSesion, ArchivarCuenta $archivarCuenta): void
     {
         try {
-            $eliminarCuenta->ejecutar(Auth::id());
+            $archivarCuenta->ejecutar((int) Auth::id(), (int) Auth::id());
         } catch (PrecondicionIncumplida $e) {
             $this->addError('cuenta', $e->getMessage());
-            $this->toast('No se pudo eliminar la cuenta', $e->getMessage(), 'error');
+            $this->toast('No se pudo archivar la cuenta', $e->getMessage(), 'error');
 
             return;
         }
 
         $cerrarSesion();
+        session()->flash('aviso_login', 'Tu cuenta se archivó. Para recuperarla, contacta a SEDEQ.');
         $this->redirectRoute('login');
     }
 

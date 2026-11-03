@@ -77,7 +77,7 @@ class RegistrarNivelesSeleccionados
         $estadoId = DB::table('estados_expediente')->where('clave', 'en_captura')->value('id');
 
         DB::transaction(function () use ($escuelaId, $agregar, $quitar, $confirmado, $estadoId) {
-            // Orden de EliminarTramite (WS-7a): escuela_niveles antes que escuelas.
+            // Orden del proyecto (WS-7a, TramiteEditable): escuela_niveles antes que escuelas.
             $filas = EscuelaNivel::where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->get(['id', 'nivel_educativo_id', 'estado_id']);
             /** @var Collection<int, int> $niveles escuela_nivel_id => nivel_educativo_id */
             $niveles = $filas->pluck('nivel_educativo_id', 'id')->map(fn ($id) => (int) $id);
@@ -91,7 +91,7 @@ class RegistrarNivelesSeleccionados
             $nuevos = array_diff($agregar, $niveles->values()->all());
 
             if ($niveles->count() - $porQuitar->count() + count($nuevos) === 0) {
-                throw new InvalidArgumentException('El trámite debe conservar al menos un nivel educativo. Para descartarlo completo usa «Eliminar trámite».');
+                throw new InvalidArgumentException('El trámite debe conservar al menos un nivel educativo. Para descartarlo completo usa «Archivar trámite».');
             }
 
             if ($porQuitar->isNotEmpty()) {
@@ -162,7 +162,7 @@ class RegistrarNivelesSeleccionados
             }
         }
 
-        // Igual que EliminarTramite: los archivos se borran solo si el borrado se confirma;
+        // Igual que RegistrarDocumento: los archivos se borran solo si el borrado se confirma;
         // un fallo de disco se reporta, nunca revierte.
         DB::afterCommit(function () use ($rutas) {
             foreach ($rutas as $ruta) {
