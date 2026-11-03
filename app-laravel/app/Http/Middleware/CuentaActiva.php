@@ -18,7 +18,7 @@ class CuentaActiva
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->with('status', self::MENSAJE);
+            return redirect()->route('login')->with('aviso_login', self::MENSAJE);
         }
 
         return $next($request);

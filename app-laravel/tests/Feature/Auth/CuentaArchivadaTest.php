@@ -56,9 +56,19 @@ class CuentaArchivadaTest extends TestCase
 
         $this->get(route('tramite.index'))
             ->assertRedirect(route('login'))
-            ->assertSessionHas('status', self::MENSAJE);
+            ->assertSessionHas('aviso_login', self::MENSAJE);
 
         $this->assertGuest();
+    }
+
+    public function test_el_usuario_ve_el_mensaje_tras_el_cierre_forzado(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->forceFill(['archivado_at' => now()])->save();
+
+        $this->followingRedirects()->get(route('tramite.index'))
+            ->assertSee(self::MENSAJE);
     }
 
     public function test_sesion_abierta_del_panel_admin_se_cierra(): void
