@@ -133,7 +133,7 @@ class UsuarioResource extends Resource
             ])
             ->recordActions([
                 Action::make('archivar')->label('Archivar')->color('warning')
-                    ->visible(fn (User $r) => $r->archivado_at === null)
+                    ->visible(fn (User $r) => $r->archivado_at === null && $r->id !== auth()->id())
                     ->schema([Textarea::make('motivo')->label('Motivo')->required()])
                     ->action(fn (User $r, array $data) => self::intentar(
                         fn () => app(ArchivarCuenta::class)->ejecutar($r->id, (int) auth()->id(), $data['motivo']),
