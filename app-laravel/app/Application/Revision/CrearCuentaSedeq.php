@@ -29,6 +29,12 @@ class CrearCuentaSedeq
     /** @throws DatosInvalidos|PrecondicionIncumplida */
     public function ejecutar(int $actorId, string $nombre, string $correo, string $rol): User
     {
+        // Permiso primero: un no-admin nunca recibe feedback de campos. Se reconfirma bajo bloqueo en la transacción.
+        $actorPrevio = User::find($actorId);
+        if ($actorPrevio === null || ! $actorPrevio->hasRole(RolesSedeq::ADMIN)) {
+            throw new PrecondicionIncumplida('rol', 'No tienes permiso para esta acción.');
+        }
+
         $nombre = trim($nombre);
         $correo = mb_strtolower(trim($correo));
 
@@ -56,7 +62,7 @@ class CrearCuentaSedeq
                 ?? throw new PrecondicionIncumplida('rol', 'No tienes permiso para esta acción.');
             RolesSedeq::exigir($actor, RolesSedeq::ADMIN);
 
-            if (User::where('email', $correo)->exists()) {
+            if (User::whereRaw('lower(email) = ?', [$correo])->exists()) {
                 throw new DatosInvalidos(['correo' => self::OCUPADO]);
             }
             try {
