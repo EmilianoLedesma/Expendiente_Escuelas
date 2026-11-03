@@ -22,6 +22,7 @@ use Spatie\Permission\Traits\HasRoles;
 /**
  * @property Carbon|null $archivado_at
  * @property string|null $archivado_lote
+ * @property int|null $plantel_principal_id calculado solo en UsuarioResource (subconsulta)
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -44,6 +45,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         ];
     }
 
+    /** @return HasOne<Solicitante, $this> */
     public function solicitante(): HasOne
     {
         return $this->hasOne(Solicitante::class);
