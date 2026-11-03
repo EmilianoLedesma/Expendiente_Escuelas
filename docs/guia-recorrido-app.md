@@ -165,6 +165,24 @@ Muestra plantel, responsable legal, documentos y los niveles visibles con su est
 ### Cuenta
 Ambos roles usan `/profile` (nombre y contraseña). **No pueden eliminar su cuenta** (tampoco `admin`). No pueden abrir `/admin`.
 
+### Consola de admin (`/admin`)
+Solo el rol `admin` entra al panel; supervisor, revisor y solicitante reciben 403. No se ha visto en un navegador; lo descrito sale del código y de las pruebas automáticas.
+
+- **Usuarios** (`/admin/usuarios`): todas las cuentas, incluidas las archivadas. Busca por nombre o correo y filtra por rol, estado (activo o archivado) y plantel. La tabla se agrupa por plantel (con la dirección "calle numero_ext, colonia, municipio"); las cuentas sin trámite van en **"Sin plantel"**. Un solicitante con trámites en varios planteles aparece una sola vez, bajo el de menor id, y la columna **"Planteles"** los lista todos.
+  - **Archivar:** pide motivo obligatorio. No aparece en tu propia fila.
+  - **Restaurar:** solo en cuentas archivadas.
+  - **Purgar:** solo en cuentas archivadas. Exige escribir `PURGAR` y un motivo; la ventana avisa que el motivo no debe llevar datos personales.
+  - **Cambiar rol:** admin, supervisor, revisor o sin rol de SEDEQ. No aparece en cuentas archivadas ni en la tuya.
+  - **Crear cuenta de SEDEQ** (botón de la lista): nombre, correo y rol admin o supervisor. La persona recibe un enlace para fijar su contraseña.
+- **Trámites archivados** (`/admin/tramites-archivados`): solo escuelas archivadas, con nombre aprobado, dirección del plantel, solicitante, fecha, quién archivó y motivo. Acciones **Restaurar** y **Purgar** (mismas reglas que arriba).
+
+Las reglas viven en `app/Application/Revision/` (`CambiarRolSedeq`, `CrearCuentaSedeq`); la pantalla solo las llama y muestra cada rechazo como notificación roja.
+
+- **Cambiar rol:** rechaza cambiar tu propio rol, una cuenta archivada, un solicitante, un responsable de nivel o cuenta con rol ajeno a SEDEQ, un rol desconocido, el mismo rol que ya tiene y quitar admin al último admin activo. Cada cuenta tiene a lo sumo un rol de SEDEQ; una cuenta con roles que no son de SEDEQ se rechaza. Si un revisor deja de serlo, sus trámites asignados regresan a la cola y su registro de revisor queda con `revocado_at`; si pasa a revisor, se crea o se limpia su registro de revisor. Queda en la bitácora como `cambiar_rol`, con el rol anterior, el nuevo y las asignaciones liberadas (ids y conteos).
+- **Crear cuenta de SEDEQ:** solo admin, con rol admin o supervisor. El correo es único sin distinguir mayúsculas, también contra cuentas archivadas. Queda en la bitácora como `crear_cuenta_sedeq`, solo con el rol.
+
+Los comandos `sedeq:crear-admin` y `sedeq:crear-supervisor` siguen sirviendo para crear al primer administrador o supervisor.
+
 ---
 
 ## 4. Qué sigue bloqueado y qué lo desbloquea
@@ -187,7 +205,7 @@ Ambos roles usan `/profile` (nombre y contraseña). **No pueden eliminar su cuen
 - **Rediseño de la interfaz** (fuera de la remediación, integrado el 2026-09-25 en `8d1a6bb`): Mis trámites, Resumen del trámite con recorrido lateral, formularios accesibles y pantallas de acceso renovadas. Sin cambios de reglas ni de datos. Pendiente: la revisión manual de accesibilidad (teclado, 375 px, Lighthouse) que dispensaste para la integración, y la función de eliminar trámite, que quedó como archivo (ver "Archivar trámite y cuenta" más abajo).
 
 ### Archivar trámite y cuenta (2026-11-03, ADR-021)
-Ya no se borra nada desde la pantalla: el solicitante **archiva** su trámite (solo mientras todos sus niveles estén en captura) o su cuenta (ningún trámite enviado; las cuentas de SEDEQ no se archivan solas). Lo archivado se oculta, la cuenta archivada no puede iniciar sesión (sus sesiones abiertas se cierran) y su correo sigue reservado. Solo el `admin` puede restaurar (restaurar una cuenta devuelve únicamente lo que su archivo arrastró) o purgar, que es el único borrado definitivo (confirmación escrita `PURGAR`, motivo y auditoría). Aún no hay pantalla de admin para restaurar o purgar: son casos de uso listos para un proyecto posterior.
+Ya no se borra nada desde la pantalla: el solicitante **archiva** su trámite (solo mientras todos sus niveles estén en captura) o su cuenta (ningún trámite enviado; las cuentas de SEDEQ no se archivan solas). Lo archivado se oculta, la cuenta archivada no puede iniciar sesión (sus sesiones abiertas se cierran) y su correo sigue reservado. Solo el `admin` puede restaurar (restaurar una cuenta devuelve únicamente lo que su archivo arrastró) o purgar, que es el único borrado definitivo (confirmación escrita `PURGAR`, motivo y auditoría). La pantalla de admin para restaurar y purgar existe desde el proyecto 2 (ver "Consola de admin" en la sección 3).
 
 ### No está en ningún bloque de esta remediación
 - **Paso 3.5 Plantilla docente** y **Paso 3.6 Matrícula:** siguen siendo esqueletos; faltan definiciones de SEDEQ. Los catálogos de cargos y perfiles que usarán ya están completos tras WS-3.
