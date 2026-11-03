@@ -19,6 +19,8 @@ class RegistrarAccion
 
     public const PURGAR_CUENTA = 'purgar_cuenta';
 
+    public const CAMBIAR_ROL = 'cambiar_rol';
+
     /** @param array<string, mixed> $detalle */
     public function ejecutar(int $actorId, string $accion, string $objetoTipo, int $objetoId, ?string $motivo = null, array $detalle = []): void
     {
