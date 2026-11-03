@@ -97,7 +97,7 @@ class TramitesArchivadosTest extends TestCase
     {
         $e = $this->archivada();
 
-        $this->lista()->callAction(TestAction::make('purgar')->table($e), ['motivo' => 'Baja', 'confirmacion' => 'PURGAR']);
+        $this->lista()->callAction(TestAction::make('purgar')->table($e), ['motivo' => 'Baja', 'confirmacion' => 'ELIMINAR']);
 
         $this->assertNull($this->sinScope($e->id));
     }
@@ -107,7 +107,7 @@ class TramitesArchivadosTest extends TestCase
         $e = $this->archivada();
 
         $this->lista()->callAction(TestAction::make('purgar')->table($e), ['motivo' => 'Baja', 'confirmacion' => 'purgar'])
-            ->assertNotified(Notification::make()->danger()->title('Escribe PURGAR para confirmar la purga.'));
+            ->assertNotified(Notification::make()->danger()->title('Escribe ELIMINAR para confirmar la eliminación.'));
 
         $this->assertNotNull($this->sinScope($e->id));
     }
@@ -129,7 +129,7 @@ class TramitesArchivadosTest extends TestCase
         // Admin degradado a mitad de sesión: la acción de Application lo rechaza.
         $this->admin->removeRole(RolesSedeq::ADMIN);
 
-        $this->lista()->callAction(TestAction::make('purgar')->table($e), ['motivo' => 'Baja', 'confirmacion' => 'PURGAR'])
+        $this->lista()->callAction(TestAction::make('purgar')->table($e), ['motivo' => 'Baja', 'confirmacion' => 'ELIMINAR'])
             ->assertNotified(Notification::make()->danger()->title('No tienes permiso para esta acción.'));
 
         $this->assertNotNull($this->sinScope($e->id));

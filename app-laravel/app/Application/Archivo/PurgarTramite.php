@@ -79,7 +79,7 @@ class PurgarTramite
         // Los archivos se borran solo si el borrado de filas se confirma; un fallo de disco
         // se reporta, nunca revierte. El log lleva solo ids.
         DB::afterCommit(function () use ($escuelaId, $documentos, $reportes) {
-            Log::info('Trámite purgado', ['escuela_id' => $escuelaId, 'purgado_en' => now()->toIso8601String()]);
+            Log::info('Trámite eliminado', ['escuela_id' => $escuelaId, 'purgado_en' => now()->toIso8601String()]);
 
             foreach ($documentos as $ruta) {
                 rescue(fn () => $this->almacen->eliminar($ruta), report: true);

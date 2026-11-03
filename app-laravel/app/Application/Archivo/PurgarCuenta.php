@@ -60,7 +60,7 @@ class PurgarCuenta
             // Un responsable arrastrado comparte el lote de su solicitante: el lote incluiría la cuenta del dueño.
             if ($usuario->archivado_lote !== null && ! Solicitante::where('user_id', $userId)->exists()
                 && User::where('archivado_lote', $usuario->archivado_lote)->whereKeyNot($userId)->exists()) {
-                throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o purga esa cuenta.');
+                throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o elimina esa cuenta.');
             }
             $this->exigirNoProtegida($usuario);
 
