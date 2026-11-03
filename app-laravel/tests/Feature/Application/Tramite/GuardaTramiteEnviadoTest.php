@@ -9,6 +9,7 @@ use App\Application\EscuelaNiveles\MarcarPasoCompletado;
 use App\Application\EscuelaNiveles\RegistrarDatosNivel;
 use App\Application\EscuelaNiveles\RegistrarNivelesSeleccionados;
 use App\Application\EscuelaNiveles\ResumenEliminacionNivel;
+use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Infraestructura\DTO\DatosEdicionInfraestructura;
 use App\Application\Infraestructura\DTO\DatosInfraestructuraNivel;
@@ -32,6 +33,8 @@ use App\Models\EscuelaNivel;
 use App\Models\EvaluacionValidacion;
 use App\Models\NivelEducativo;
 use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Database\Seeders\MobiliarioConceptosSeeder;
 use Database\Seeders\TiposEspaciosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -124,6 +127,52 @@ class GuardaTramiteEnviadoTest extends TestCase
         } catch (PrecondicionIncumplida $e) {
             $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
         }
+    }
+
+    /**
+     * Archivado: el scope oculta sus niveles, pero un componente Livewire abierto antes del
+     * archivo sigue teniendo el modelo. La guarda falla cerrada en vez de ver "sin niveles".
+     */
+    #[DataProvider('escrituras')]
+    public function test_cada_escritura_rechaza_un_tramite_archivado(Closure $escribir): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $nivel = $this->completarTramite($escuela);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
+
+        // Algunas escrituras ya fallaban antes de la guarda (el modelo no se encuentra con scope,
+        // o el dueño ya no se resuelve); lo que importa es que ninguna escriba.
+        try {
+            $escribir($escuela, $nivel);
+            $this->fail('La escritura en un trámite archivado debió rechazarse.');
+        } catch (PrecondicionIncumplida|DatosInvalidos|ModelNotFoundException|AuthorizationException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
+    public function test_un_tramite_archivado_no_recibe_responsable_legal_ni_niveles(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
+        $responsable = DB::table('responsables_legales')->where('escuela_id', $escuela->id)->first();
+        $niveles = DB::table('escuela_niveles')->where('escuela_id', $escuela->id)->count();
+
+        foreach ([
+            'responsable' => fn () => app(RegistrarResponsableLegal::class)->ejecutar($escuela->id, new DatosResponsableLegal(tipoPersona: 'fisica', nombre: 'Juana Pérez')),
+            'niveles' => fn () => app(RegistrarNivelesSeleccionados::class)->ejecutar($escuela->id, agregar: [(int) NivelEducativo::where('clave', 'secundaria')->value('id')]),
+        ] as $caso => $escribir) {
+            try {
+                $escribir();
+                $this->fail("Se esperaba PrecondicionIncumplida ({$caso}).");
+            } catch (PrecondicionIncumplida $e) {
+                $this->assertSame('archivo', $e->etapaFaltante, $caso);
+            }
+        }
+
+        $this->assertEquals($responsable, DB::table('responsables_legales')->where('escuela_id', $escuela->id)->first());
+        $this->assertSame($niveles, DB::table('escuela_niveles')->where('escuela_id', $escuela->id)->count());
+        $this->assertFalse(app(TramiteEditable::class)->esEditable($escuela->id));
     }
 
     public function test_un_paso3_de_un_tramite_enviado_se_revierte_completo(): void
