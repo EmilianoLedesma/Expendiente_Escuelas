@@ -34,7 +34,7 @@ Diferidos menores, según las revisiones de tarea:
 
 - **Tarea 1:** la comprobación de rol desconocido corre antes que la de admin; `CambiarRolSedeq` no rechaza a un actor archivado; falta prueba de revisor a admin que libere asignaciones.
 - **Tarea 2:** la detección de correo duplicado depende de `lower(email)`.
-- **Tarea 3:** una consulta por cada título de grupo de plantel.
+- **Tarea 3:** el título del grupo de plantel sale de los datos ya cargados (sin consulta por registro).
 - **Tarea 5:** una purga concurrente muestra un error de Filament en lugar de una notificación.
 
 Fuera de este proyecto:

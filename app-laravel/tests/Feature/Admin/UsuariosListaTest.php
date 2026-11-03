@@ -14,6 +14,7 @@ use Database\Seeders\RolesSeeder;
 use Filament\Actions\Testing\TestAction;
 use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -251,6 +252,19 @@ class UsuariosListaTest extends TestCase
         $this->lista()->assertCanSeeTableRecords([$u])
             ->assertSee('Bajo 12, Centro, Querétaro')->assertSee('Alto 12, Centro, Querétaro');
         $this->assertSame(1, UsuarioResource::getEloquentQuery()->where('users.id', $u->id)->count());
+    }
+
+    public function test_el_titulo_del_grupo_no_consulta_el_plantel_por_registro(): void
+    {
+        foreach (['Uno', 'Dos', 'Tres'] as $calle) {
+            $this->escuelaDe($this->solicitante(), $this->plantel($calle));
+        }
+
+        DB::enableQueryLog();
+        $this->lista()->assertSee('Uno 12, Centro, Querétaro')->assertSee('Tres 12, Centro, Querétaro');
+        $porId = collect(DB::getQueryLog())->filter(fn ($q) => str_contains($q['query'], 'from "planteles" where "planteles"."id" = ?'));
+
+        $this->assertCount(0, $porId);
     }
 
     public function test_filtra_por_plantel(): void

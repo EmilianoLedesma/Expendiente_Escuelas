@@ -114,8 +114,9 @@ class UsuarioResource extends Resource
             ->groups([
                 Group::make('plantel_principal_id')
                     ->label('Plantel')
+                    // Usa el plantel ya cargado (with solicitante.escuelas.plantel): cero consultas por registro.
                     ->getTitleFromRecordUsing(fn (User $r) => self::etiquetaPlantel(
-                        $r->plantel_principal_id ? Plantel::find($r->plantel_principal_id) : null))
+                        $r->solicitante?->escuelas->firstWhere('plantel_id', $r->plantel_principal_id)?->plantel))
                     ->getKeyFromRecordUsing(fn (User $r) => (string) ($r->plantel_principal_id ?? ''))
                     ->scopeQueryByKeyUsing(fn (Builder $query, ?string $key) => filled($key)
                         ? $query->whereRaw('('.self::plantelPrincipal()->toSql().') = ?', [...self::plantelPrincipal()->getBindings(), $key])
