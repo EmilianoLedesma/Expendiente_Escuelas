@@ -39,7 +39,7 @@ class HudSedeqHttpRoundTripTest extends TestCase
     {
         $sup = $this->supervisor();
         $rev = $this->revisor();
-        $sedeq = User::factory()->create()->assignRole('sedeq');
+        $sedeq = User::factory()->create()->assignRole('admin');
 
         $this->actingAs($rev)->get('/sedeq')->assertForbidden();
         $this->actingAs($sup)->get('/sedeq/cola')->assertForbidden();
@@ -53,7 +53,7 @@ class HudSedeqHttpRoundTripTest extends TestCase
     public function test_solo_el_supervisor_abre_revisores_y_la_pagina_lleva_el_menu_lateral(): void
     {
         $rev = $this->revisor();
-        $sedeq = User::factory()->create()->assignRole('sedeq');
+        $sedeq = User::factory()->create()->assignRole('admin');
 
         $this->actingAs($rev)->get('/sedeq/revisores')->assertForbidden();
         $this->actingAs($sedeq)->get('/sedeq/revisores')->assertForbidden();

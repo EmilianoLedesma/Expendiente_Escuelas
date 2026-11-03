@@ -41,9 +41,9 @@ class AuthenticationTest extends TestCase
 
     public function test_sedeq_users_are_redirected_to_the_admin_panel_after_login(): void
     {
-        Role::create(['name' => 'sedeq', 'guard_name' => 'web']);
+        Role::create(['name' => 'admin', 'guard_name' => 'web']);
         $user = User::factory()->create();
-        $user->assignRole('sedeq');
+        $user->assignRole('admin');
 
         $component = Volt::test('pages.auth.login')
             ->set('form.email', $user->email)
@@ -122,9 +122,9 @@ class AuthenticationTest extends TestCase
 
     public function test_dashboard_redirects_sedeq_users_to_the_admin_panel(): void
     {
-        Role::create(['name' => 'sedeq', 'guard_name' => 'web']);
+        Role::create(['name' => 'admin', 'guard_name' => 'web']);
         $user = User::factory()->unverified()->create();
-        $user->assignRole('sedeq');
+        $user->assignRole('admin');
 
         $this->actingAs($user)->get('/dashboard')->assertRedirect('/admin');
     }

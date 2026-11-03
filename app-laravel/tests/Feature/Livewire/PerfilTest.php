@@ -39,7 +39,7 @@ class PerfilTest extends TestCase
     private function admin(): User
     {
         $usuario = User::factory()->create(['password' => 'secreto-viejo']);
-        $usuario->assignRole(Role::findOrCreate('sedeq'));
+        $usuario->assignRole(Role::findOrCreate('admin'));
 
         return $usuario;
     }

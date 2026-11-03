@@ -28,7 +28,7 @@ class RutaInicioTest extends TestCase
     public static function casos(): array
     {
         return [
-            'sedeq' => ['sedeq', '/admin'],
+            'admin' => ['admin', '/admin'],
             'supervisor' => ['supervisor', '/sedeq'],
             'revisor' => ['revisor', '/sedeq/cola'],
             'solicitante' => [null, '/tramite'],

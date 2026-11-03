@@ -128,7 +128,7 @@ class DecidirPasoTest extends TestCase
     public function test_admin_sedeq_sin_rol_operativo_es_rechazado(): void
     {
         $nivel = $this->nivelEnRevision();
-        $admin = User::factory()->create()->assignRole('sedeq');
+        $admin = User::factory()->create()->assignRole('admin');
 
         try {
             $this->decidir($admin->id, $nivel, 'plantel');
