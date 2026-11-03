@@ -41,7 +41,7 @@ class RestaurarCuenta
             $solicitanteId = Solicitante::where('user_id', $userId)->value('id');
             // Un responsable arrastrado comparte el lote de su solicitante: restaurarlo solo reactivaría esa cuenta.
             if ($lote !== null && $solicitanteId === null && User::where('archivado_lote', $lote)->whereKeyNot($userId)->exists()) {
-                throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o purga esa cuenta.');
+                throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o elimina esa cuenta.');
             }
 
             $limpiar = ['archivado_at' => null, 'archivado_por' => null, 'archivado_motivo' => null, 'archivado_lote' => null];

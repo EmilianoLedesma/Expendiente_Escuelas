@@ -80,15 +80,15 @@ class TramiteArchivadoResource extends Resource
                     ->action(fn (Escuela $r) => self::intentar(
                         fn () => app(RestaurarTramite::class)->ejecutar((int) auth()->id(), $r->id),
                         'Trámite restaurado.')),
-                Action::make('purgar')->label('Purgar')->color('danger')
+                Action::make('purgar')->label('Eliminar')->color('danger')
                     ->modalDescription('Borrado definitivo e irreversible: se eliminan el trámite, sus documentos y reportes, y los datos personales que contienen. En la bitácora de auditoría se conservan los identificadores y el motivo.')
                     ->schema([
                         Textarea::make('motivo')->label('Motivo')->required()->helperText(UsuarioResource::AVISO_MOTIVO),
-                        TextInput::make('confirmacion')->label('Escribe PURGAR para confirmar')->required(),
+                        TextInput::make('confirmacion')->label('Escribe ELIMINAR para confirmar')->required(),
                     ])
                     ->action(fn (Escuela $r, array $data) => self::intentar(
                         fn () => app(PurgarTramite::class)->ejecutar((int) auth()->id(), $r->id, $data['motivo'], $data['confirmacion']),
-                        'Trámite purgado.')),
+                        'Trámite eliminado.')),
             ]);
     }
 

@@ -112,7 +112,7 @@ class UsuariosListaTest extends TestCase
     {
         $u = $this->archivada();
 
-        $this->lista()->callAction(TestAction::make('purgar')->table($u), ['motivo' => 'Baja', 'confirmacion' => 'PURGAR']);
+        $this->lista()->callAction(TestAction::make('purgar')->table($u), ['motivo' => 'Baja', 'confirmacion' => 'ELIMINAR']);
 
         $this->assertNull(User::find($u->id));
     }
@@ -122,7 +122,7 @@ class UsuariosListaTest extends TestCase
         $u = $this->archivada();
 
         $this->lista()->callAction(TestAction::make('purgar')->table($u), ['motivo' => 'Baja', 'confirmacion' => 'purgar'])
-            ->assertNotified(Notification::make()->danger()->title('Escribe PURGAR para confirmar la purga.'));
+            ->assertNotified(Notification::make()->danger()->title('Escribe ELIMINAR para confirmar la eliminación.'));
 
         $this->assertNotNull(User::find($u->id));
     }
@@ -133,7 +133,7 @@ class UsuariosListaTest extends TestCase
         $sup = User::factory()->create()->assignRole(RolesSedeq::SUPERVISOR);
         app(ArchivarCuenta::class)->ejecutar($sup->id, $this->admin->id, 'Baja');
 
-        $this->lista()->callAction(TestAction::make('purgar')->table($sup), ['motivo' => 'x', 'confirmacion' => 'PURGAR'])
+        $this->lista()->callAction(TestAction::make('purgar')->table($sup), ['motivo' => 'x', 'confirmacion' => 'ELIMINAR'])
             ->assertNotified();
 
         $this->assertNotNull(User::find($sup->id));

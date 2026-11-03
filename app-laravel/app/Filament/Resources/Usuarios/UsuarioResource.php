@@ -165,16 +165,16 @@ class UsuarioResource extends Resource
                     ->action(fn (User $r) => self::intentar(
                         fn () => app(RestaurarCuenta::class)->ejecutar((int) auth()->id(), $r->id),
                         'Cuenta restaurada.')),
-                Action::make('purgar')->label('Purgar')->color('danger')
+                Action::make('purgar')->label('Eliminar')->color('danger')
                     ->visible(fn (User $r) => $r->archivado_at !== null)
                     ->modalDescription('Borrado definitivo e irreversible: se eliminan la cuenta y sus datos personales. En la bitácora de auditoría se conservan los identificadores y el motivo.')
                     ->schema([
                         Textarea::make('motivo')->label('Motivo')->required()->helperText(self::AVISO_MOTIVO),
-                        TextInput::make('confirmacion')->label('Escribe PURGAR para confirmar')->required(),
+                        TextInput::make('confirmacion')->label('Escribe ELIMINAR para confirmar')->required(),
                     ])
                     ->action(fn (User $r, array $data) => self::intentar(
                         fn () => app(PurgarCuenta::class)->ejecutar((int) auth()->id(), $r->id, $data['motivo'], $data['confirmacion']),
-                        'Cuenta purgada.')),
+                        'Cuenta eliminada.')),
             ]);
     }
 
