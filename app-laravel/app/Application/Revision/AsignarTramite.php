@@ -54,7 +54,7 @@ class AsignarTramite
             RolesSedeq::exigir(User::findOrFail($actorId), RolesSedeq::SUPERVISOR);
 
             $revisor = User::whereKey($revisorId)->lockForUpdate()->first();
-            if ($revisor === null || ! $revisor->hasRole(RolesSedeq::REVISOR)) {
+            if ($revisor === null || $revisor->archivado_at !== null || ! $revisor->hasRole(RolesSedeq::REVISOR)) {
                 throw new PrecondicionIncumplida(RolesSedeq::REVISOR, 'El usuario elegido no es un revisor activo.');
             }
 
