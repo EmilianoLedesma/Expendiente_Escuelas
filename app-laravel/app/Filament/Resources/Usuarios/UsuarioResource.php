@@ -7,7 +7,9 @@ use App\Application\Archivo\PurgarCuenta;
 use App\Application\Archivo\RestaurarCuenta;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\Revision\CambiarRolSedeq;
 use App\Application\Revision\RolesSedeq;
+use App\Filament\Resources\Usuarios\Pages\CrearUsuario;
 use App\Filament\Resources\Usuarios\Pages\ListUsuarios;
 use App\Models\Escuela;
 use App\Models\Plantel;
@@ -16,10 +18,12 @@ use App\Models\Solicitante;
 use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
@@ -36,9 +40,14 @@ class UsuarioResource extends Resource
 
     protected static ?string $slug = 'usuarios';
 
-    public static function canCreate(): bool
+    public static function form(Schema $schema): Schema
     {
-        return false;
+        return $schema->components([
+            TextInput::make('nombre')->label('Nombre')->required()->maxLength(255),
+            TextInput::make('correo')->label('Correo')->email()->required()->maxLength(255),
+            Select::make('rol')->label('Rol')->required()
+                ->options([RolesSedeq::ADMIN => 'admin', RolesSedeq::SUPERVISOR => 'supervisor']),
+        ]);
     }
 
     /** Subconsulta: plantel de menor id entre las escuelas del solicitante, archivadas incluidas. */
@@ -132,6 +141,16 @@ class UsuarioResource extends Resource
                         )) : $query),
             ])
             ->recordActions([
+                Action::make('cambiar_rol')->label('Cambiar rol')
+                    ->visible(fn (User $r) => $r->archivado_at === null && $r->id !== auth()->id())
+                    ->schema([
+                        Select::make('rol')->label('Rol de SEDEQ')->required()
+                            ->options(array_combine(RolesSedeq::TODOS, RolesSedeq::TODOS) + ['ninguno' => 'Sin rol de SEDEQ']),
+                    ])
+                    ->action(fn (User $r, array $data) => self::intentar(
+                        fn () => app(CambiarRolSedeq::class)->ejecutar(
+                            (int) auth()->id(), $r->id, $data['rol'] === 'ninguno' ? null : $data['rol']),
+                        'Rol actualizado.')),
                 Action::make('archivar')->label('Archivar')->color('warning')
                     ->visible(fn (User $r) => $r->archivado_at === null && $r->id !== auth()->id())
                     ->schema([Textarea::make('motivo')->label('Motivo')->required()])
@@ -158,6 +177,9 @@ class UsuarioResource extends Resource
 
     public static function getPages(): array
     {
-        return ['index' => ListUsuarios::route('/')];
+        return [
+            'index' => ListUsuarios::route('/'),
+            'create' => CrearUsuario::route('/create'),
+        ];
     }
 }
