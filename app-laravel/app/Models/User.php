@@ -21,6 +21,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property Carbon|null $archivado_at
+ * @property string|null $archivado_lote
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
