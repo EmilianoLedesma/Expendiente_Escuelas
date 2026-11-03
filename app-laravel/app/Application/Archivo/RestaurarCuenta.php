@@ -38,6 +38,11 @@ class RestaurarCuenta
             if ($usuario->archivado_at === null) {
                 throw new PrecondicionIncumplida('archivo', 'La cuenta no está archivada.');
             }
+            $solicitanteId = Solicitante::where('user_id', $userId)->value('id');
+            // Un responsable arrastrado comparte el lote de su solicitante: restaurarlo solo reactivaría esa cuenta.
+            if ($lote !== null && $solicitanteId === null && User::where('archivado_lote', $lote)->whereKeyNot($userId)->exists()) {
+                throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o purga esa cuenta.');
+            }
 
             $limpiar = ['archivado_at' => null, 'archivado_por' => null, 'archivado_motivo' => null, 'archivado_lote' => null];
             $usuario->forceFill($limpiar)->save();
@@ -46,8 +51,9 @@ class RestaurarCuenta
             $responsables = 0;
             if ($lote !== null) {
                 $responsables = User::where('archivado_lote', $lote)->update($limpiar);
-
-                $solicitanteId = Solicitante::where('user_id', $userId)->value('id');
+            }
+            // Sin solicitante no hay trámites: where('solicitante_id', null) sería IS NULL.
+            if ($lote !== null && $solicitanteId !== null) {
                 $escuelaIds = Escuela::withoutGlobalScope(EscuelaNoArchivada::class)
                     ->where('solicitante_id', $solicitanteId)->where('archivado_lote', $lote)->orderBy('id')->pluck('id');
                 foreach ($escuelaIds as $escuelaId) {

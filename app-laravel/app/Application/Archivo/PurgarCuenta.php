@@ -57,6 +57,11 @@ class PurgarCuenta
             if ($usuario->archivado_at === null) {
                 throw new PrecondicionIncumplida('archivo', 'Solo se puede purgar una cuenta archivada.');
             }
+            // Un responsable arrastrado comparte el lote de su solicitante: el lote incluiría la cuenta del dueño.
+            if ($usuario->archivado_lote !== null && ! Solicitante::where('user_id', $userId)->exists()
+                && User::where('archivado_lote', $usuario->archivado_lote)->whereKeyNot($userId)->exists()) {
+                throw new PrecondicionIncumplida('archivo', 'Esta cuenta se archivó junto con la de su solicitante: restaura o purga esa cuenta.');
+            }
             $this->exigirPurgable($usuario);
 
             // Sin lote no hay cascada: ojo, where('archivado_lote', null) sería IS NULL y arrastraría a otras cuentas.

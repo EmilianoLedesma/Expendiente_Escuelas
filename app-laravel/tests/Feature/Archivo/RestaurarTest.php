@@ -119,6 +119,29 @@ class RestaurarTest extends TestCase
         $this->assertSame('Aparte', $this->escuela($suelto->escuela_id)->archivado_motivo);
     }
 
+    /** El responsable arrastrado comparte el lote del solicitante: restaurarlo solo no debe reactivar la cuenta del dueño. */
+    public function test_no_restaura_por_separado_a_un_responsable_archivado_en_cascada(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($solicitante);
+        $responsable = $this->responsableDe($nivel);
+        $admin = $this->admin();
+        app(ArchivarCuenta::class)->ejecutar($solicitante->user_id, $admin->id, 'Baja');
+        $this->assertNotNull($responsable->fresh()->archivado_at);
+
+        try {
+            app(RestaurarCuenta::class)->ejecutar($admin->id, $responsable->id);
+            $this->fail('Debió rechazar.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame('archivo', $e->etapaFaltante);
+        }
+
+        $this->assertNotNull($responsable->fresh()->archivado_at);
+        $this->assertNotNull($solicitante->user->fresh()->archivado_at);
+        $this->assertNotNull($this->escuela($nivel->escuela_id)->archivado_at);
+        $this->assertSame(0, DB::table('bitacora_acciones')->whereIn('accion', ['restaurar_cuenta', 'restaurar_tramite'])->count());
+    }
+
     public function test_la_auditoria_no_lleva_nombre_ni_correo(): void
     {
         $solicitante = Solicitante::factory()->create();

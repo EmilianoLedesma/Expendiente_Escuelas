@@ -241,6 +241,29 @@ class PurgarTest extends TestCase
         $this->assertSame(0, $this->purgas());
     }
 
+    /** El responsable arrastrado comparte el lote del solicitante: purgarlo solo se rechaza en vez de chocar con la FK del solicitante. */
+    public function test_no_purga_por_separado_a_un_responsable_archivado_en_cascada(): void
+    {
+        $admin = $this->admin();
+        $solicitante = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($solicitante);
+        $responsable = $this->responsableDe($nivel);
+        app(ArchivarCuenta::class)->ejecutar($solicitante->user_id, $admin->id, 'Baja');
+
+        try {
+            app(PurgarCuenta::class)->ejecutar($admin->id, $responsable->id, 'motivo', Purga::CONFIRMACION);
+            $this->fail('Debió rechazar la purga.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame('archivo', $e->etapaFaltante);
+        }
+
+        $this->assertNotNull(User::find($responsable->id));
+        $this->assertNotNull(User::find($solicitante->user_id));
+        $this->assertNotNull(Solicitante::find($solicitante->id));
+        $this->assertNotNull($this->escuela($nivel->escuela_id));
+        $this->assertSame(0, $this->purgas());
+    }
+
     /** Sin lote, nadie más se purga: otra cuenta archivada sin lote sigue en pie. */
     public function test_una_cuenta_archivada_sin_lote_solo_se_purga_a_si_misma(): void
     {
