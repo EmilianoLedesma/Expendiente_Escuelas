@@ -6,6 +6,7 @@ use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\RolesSedeq;
 use App\Models\Escuela;
+use App\Models\ResponsableNivel;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Solicitante;
 use App\Models\User;
@@ -75,6 +76,12 @@ class PurgarCuenta
                     $this->purgarTramite->purgar($actorId, $escuela->id, $motivo);
                     $tramites++;
                 }
+            }
+
+            // Los accesos de los niveles purgados ya se fueron por cascade: cualquier acceso restante es en
+            // otro solicitante (p. ej. reinvitado tras archivarse) y borrarlo sería en silencio. Se rechaza todo.
+            if (ResponsableNivel::whereIn('user_id', $responsables->modelKeys())->exists()) {
+                throw new PrecondicionIncumplida('cuenta', 'Un responsable de esta cuenta tiene acceso en otro trámite; no se puede purgar.');
             }
 
             $ids = [...$responsables->modelKeys(), $userId];
