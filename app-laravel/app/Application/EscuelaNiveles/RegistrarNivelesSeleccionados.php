@@ -156,7 +156,8 @@ class RegistrarNivelesSeleccionados
 
         foreach ($usuarios as $usuario) {
             // Solo cuentas de responsable invitado (guarda de InvitarResponsableNivel): un solicitante conserva la suya.
-            if ($usuario->hasRole(InvitarResponsableNivel::ROL) && ! $usuario->solicitante()->exists()
+            // Una cuenta archivada solo se borra con la purga del admin (su correo queda reservado).
+            if ($usuario->archivado_at === null && $usuario->hasRole(InvitarResponsableNivel::ROL) && ! $usuario->solicitante()->exists()
                 && ! ResponsableNivel::where('user_id', $usuario->id)->exists()) {
                 $usuario->delete();
             }

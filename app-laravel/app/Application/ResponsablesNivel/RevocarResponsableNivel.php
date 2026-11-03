@@ -49,7 +49,8 @@ class RevocarResponsableNivel
             $usuario = User::whereKey($acceso->user_id)->lockForUpdate()->first();
             $acceso->delete();
 
-            if (! ResponsableNivel::where('user_id', $usuario->id)->exists()) {
+            // Una cuenta archivada solo se borra con la purga del admin (su correo queda reservado).
+            if ($usuario->archivado_at === null && ! ResponsableNivel::where('user_id', $usuario->id)->exists()) {
                 $usuario->delete();
             }
         });

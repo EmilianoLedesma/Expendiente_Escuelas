@@ -32,6 +32,22 @@ class RevocarResponsableNivelTest extends TestCase
         $this->assertDatabaseHas('escuela_niveles', ['id' => $nivel->id]);
     }
 
+    /** Archivo: solo la purga borra cuentas; revocar quita el acceso pero conserva la cuenta archivada. */
+    public function test_ultimo_acceso_de_un_responsable_archivado_conserva_la_cuenta(): void
+    {
+        $dueno = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($dueno);
+        $usuario = $this->responsableDe($nivel);
+        $acceso = ResponsableNivel::where('user_id', $usuario->id)->firstOrFail();
+        $lote = '33333333-3333-3333-3333-333333333333';
+        DB::table('users')->where('id', $usuario->id)->update(['archivado_at' => now(), 'archivado_por' => $usuario->id, 'archivado_lote' => $lote]);
+
+        app(RevocarResponsableNivel::class)->ejecutar($dueno->id, $acceso->id);
+
+        $this->assertFalse(ResponsableNivel::whereKey($acceso->id)->exists());
+        $this->assertDatabaseHas('users', ['id' => $usuario->id, 'email' => $usuario->email, 'archivado_lote' => $lote, 'archivado_por' => $usuario->id]);
+    }
+
     public function test_con_otro_nivel_conserva_la_cuenta_y_el_nivel_viejo_da_403(): void
     {
         $dueno = Solicitante::factory()->create();
