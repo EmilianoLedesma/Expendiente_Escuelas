@@ -2,7 +2,6 @@
 
 namespace App\Application\Auditoria;
 
-use App\Application\Archivo\RegistrarAccion;
 use App\Application\Revision\PasosRevision;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -16,11 +15,6 @@ use Illuminate\Support\Facades\DB;
  */
 class ConsultarHistorialTramite
 {
-    private const ACCIONES = [
-        RegistrarAccion::ARCHIVAR_TRAMITE => 'Archivó el trámite',
-        RegistrarAccion::RESTAURAR_TRAMITE => 'Restauró el trámite',
-    ];
-
     private const ASIGNACIONES = [
         'asignar' => 'Asignó a',
         'reasignar' => 'Reasignó a',
@@ -53,7 +47,7 @@ class ConsultarHistorialTramite
             ->leftJoin('users', 'users.id', '=', 'bitacora_acciones.actor_id')
             ->where('objeto_tipo', 'escuela')->where('objeto_id', $escuelaId)->orderBy('bitacora_acciones.id')
             ->get(['bitacora_acciones.accion', 'bitacora_acciones.motivo', 'bitacora_acciones.created_at', 'users.name'])
-            ->map(fn ($f) => $this->evento($f->created_at, $f->name, self::ACCIONES[$f->accion] ?? $f->accion, null, $f->motivo, 'accion'));
+            ->map(fn ($f) => $this->evento($f->created_at, $f->name, EtiquetasBitacora::accion($f->accion), null, $f->motivo, 'accion'));
     }
 
     /**
