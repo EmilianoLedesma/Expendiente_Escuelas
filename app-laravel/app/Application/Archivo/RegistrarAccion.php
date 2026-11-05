@@ -23,6 +23,14 @@ class RegistrarAccion
 
     public const RESTAURAR_PLANTEL = 'restaurar_plantel';
 
+    public const PROCESAR_COLA = 'procesar_cola';
+
+    public const REINTENTAR_FALLIDOS = 'reintentar_fallidos';
+
+    public const DESCARTAR_FALLIDOS = 'descartar_fallidos';
+
+    public const CORREO_PRUEBA = 'correo_prueba';
+
     public const CAMBIAR_ROL = 'cambiar_rol';
 
     public const CREAR_CUENTA_SEDEQ = 'crear_cuenta_sedeq';
