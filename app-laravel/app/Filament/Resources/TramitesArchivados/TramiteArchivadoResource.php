@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TramitesArchivados;
 
+use App\Application\Archivo\ArchivarTramite;
 use App\Application\Archivo\PurgarTramite;
 use App\Application\Archivo\RestaurarTramite;
 use App\Application\Excepciones\DatosInvalidos;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -25,11 +27,13 @@ class TramiteArchivadoResource extends Resource
 {
     protected static ?string $model = Escuela::class;
 
-    protected static ?string $modelLabel = 'trámite archivado';
+    protected static ?string $modelLabel = 'trámite';
 
-    protected static ?string $pluralModelLabel = 'trámites archivados';
+    protected static ?string $pluralModelLabel = 'trámites';
 
-    protected static ?string $slug = 'tramites-archivados';
+    protected static ?string $navigationLabel = 'Trámites';
+
+    protected static ?string $slug = 'tramites';
 
     public static function canCreate(): bool
     {
@@ -40,7 +44,6 @@ class TramiteArchivadoResource extends Resource
     {
         return parent::getEloquentQuery()
             ->withoutGlobalScope(EscuelaNoArchivada::class)
-            ->whereNotNull('escuelas.archivado_at')
             ->addSelect(['escuelas.*', 'archivado_por_nombre' => User::select('name')->whereColumn('users.id', 'escuelas.archivado_por')])
             ->with(['plantel', 'solicitante.user']);
     }
@@ -66,21 +69,41 @@ class TramiteArchivadoResource extends Resource
     {
         return $table
             ->defaultSort('archivado_at', 'desc')
+            ->filters([
+                TernaryFilter::make('archivado')->label('Estado')->placeholder('Todos')
+                    ->trueLabel('Archivados')->falseLabel('Activos')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('escuelas.archivado_at'),
+                        false: fn (Builder $query) => $query->whereNull('escuelas.archivado_at'),
+                        blank: fn (Builder $query) => $query,
+                    ),
+            ])
             ->columns([
                 TextColumn::make('nombre_aprobado')->label('Escuela')->placeholder('Sin nombre aprobado')
                     ->description(fn (Escuela $r) => $r->plantel
                         ? "{$r->plantel->calle} {$r->plantel->numero_ext}, {$r->plantel->colonia}, {$r->plantel->municipio}" : null),
                 TextColumn::make('solicitante.user.name')->label('Solicitante'),
+                TextColumn::make('estado')->label('Estado')->badge()
+                    ->state(fn (Escuela $r) => $r->archivado_at ? 'Archivado' : 'Activo')
+                    ->color(fn (string $state) => $state === 'Archivado' ? 'gray' : 'success'),
                 TextColumn::make('archivado_at')->label('Archivado')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('archivado_por_nombre')->label('Archivado por'),
                 TextColumn::make('archivado_motivo')->label('Motivo')->wrap(),
             ])
             ->recordActions([
+                Action::make('archivar')->label('Archivar')->color('warning')
+                    ->visible(fn (Escuela $r) => $r->archivado_at === null)
+                    ->schema([Textarea::make('motivo')->label('Motivo')->required()->helperText(UsuarioResource::AVISO_MOTIVO)])
+                    ->action(fn (Escuela $r, array $data) => self::intentar(
+                        fn () => app(ArchivarTramite::class)->ejecutar($r->id, (int) auth()->id(), $data['motivo']),
+                        'Trámite archivado.')),
                 Action::make('restaurar')->label('Restaurar')->requiresConfirmation()
+                    ->visible(fn (Escuela $r) => $r->archivado_at !== null)
                     ->action(fn (Escuela $r) => self::intentar(
                         fn () => app(RestaurarTramite::class)->ejecutar((int) auth()->id(), $r->id),
                         'Trámite restaurado.')),
                 Action::make('purgar')->label('Eliminar')->color('danger')
+                    ->visible(fn (Escuela $r) => $r->archivado_at !== null)
                     ->modalDescription('Borrado definitivo e irreversible: se eliminan el trámite, sus documentos y reportes, y los datos personales que contienen. En la bitácora de auditoría se conservan los identificadores y el motivo.')
                     ->schema([
                         Textarea::make('motivo')->label('Motivo')->required()->helperText(UsuarioResource::AVISO_MOTIVO),
