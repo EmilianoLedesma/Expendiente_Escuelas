@@ -65,4 +65,14 @@ class ConsultarSaludSistemaTest extends TestCase
         $this->assertSame('aviso', $estados['Cola de correos']);
         $this->assertSame('aviso', $estados['Correo']);
     }
+
+    public function test_los_chequeos_con_problema_traen_que_hacer_y_los_ok_no(): void
+    {
+        DB::table('failed_jobs')->insert(['uuid' => 'u-1', 'connection' => 'database', 'queue' => 'default', 'payload' => '{}', 'exception' => 'x']);
+
+        $por = array_column(app(ConsultarSaludSistema::class)->ejecutar(), 'siguiente', 'nombre');
+
+        $this->assertNotNull($por['Cola de correos']);
+        $this->assertNull($por['Base de datos']);
+    }
 }
