@@ -10,6 +10,7 @@ use App\Models\Escuela;
 use App\Models\Plantel;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Solicitante;
+use App\Models\TernaNombre;
 use App\Models\User;
 use Database\Seeders\RolesSeeder;
 use Filament\Actions\Testing\TestAction;
@@ -70,6 +71,16 @@ class TramitesArchivadosTest extends TestCase
             ->assertSee($this->admin->name);
     }
 
+    public function test_sin_nombre_aprobado_muestra_el_primer_nombre_de_la_terna(): void
+    {
+        $e = $this->escuela();
+        $e->update(['nombre_aprobado' => null]);
+        TernaNombre::create(['escuela_id' => $e->id, 'numero_propuesta' => 2, 'nombre_propuesto' => 'Colegio Segundo']);
+        TernaNombre::create(['escuela_id' => $e->id, 'numero_propuesta' => 1, 'nombre_propuesto' => 'Colegio Primero']);
+
+        $this->lista()->assertSee('Colegio Primero')->assertDontSee('Colegio Segundo')->assertDontSee('Sin nombre aprobado');
+    }
+
     public function test_filtro_estado_separa_archivados_y_activos(): void
     {
         $activa = $this->escuela();
@@ -105,14 +116,15 @@ class TramitesArchivadosTest extends TestCase
         $this->assertNull(Escuela::find($e->id));
     }
 
-    public function test_archivar_sin_motivo_es_error_de_formulario_y_conserva(): void
+    public function test_archivar_sin_motivo_funciona(): void
     {
         $e = $this->escuela();
 
-        $this->lista()->callAction(TestAction::make('archivar')->table($e), ['motivo' => ' '])
-            ->assertHasActionErrors(['motivo']);
+        $this->lista()->callAction(TestAction::make('archivar')->table($e), ['motivo' => null])
+            ->assertHasNoActionErrors();
 
-        $this->assertNotNull(Escuela::find($e->id));
+        $this->assertNull(Escuela::find($e->id));
+        $this->assertNull($this->sinScope($e->id)->archivado_motivo);
     }
 
     public function test_restaurar_devuelve_la_escuela_y_sale_de_archivados(): void

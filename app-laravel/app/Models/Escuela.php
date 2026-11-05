@@ -56,6 +56,7 @@ class Escuela extends Model
         return $this->hasOne(ResponsableLegal::class);
     }
 
+    /** @return HasMany<TernaNombre, $this> */
     public function ternasNombres(): HasMany
     {
         return $this->hasMany(TernaNombre::class);

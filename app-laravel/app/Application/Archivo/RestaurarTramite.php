@@ -22,9 +22,10 @@ class RestaurarTramite
     public function __construct(private readonly RegistrarAccion $registrar) {}
 
     /** @throws PrecondicionIncumplida */
-    public function ejecutar(int $actorId, int $escuelaId): void
+    /** $avisar: correo al dueño; la cascada de RestaurarCuenta no lo pide. */
+    public function ejecutar(int $actorId, int $escuelaId, bool $avisar = false): void
     {
-        DB::transaction(function () use ($actorId, $escuelaId) {
+        DB::transaction(function () use ($actorId, $escuelaId, $avisar) {
             RolesSedeq::exigir(User::findOrFail($actorId), RolesSedeq::ADMIN);
 
             // Orden de bloqueo del proyecto: escuela_niveles antes que escuelas.
@@ -48,6 +49,9 @@ class RestaurarTramite
             ])->save();
 
             $this->registrar->ejecutar($actorId, RegistrarAccion::RESTAURAR_TRAMITE, 'escuela', $escuelaId);
+            if ($avisar) {
+                DB::afterCommit(fn () => event(new TramiteReabiertoPorAdmin($escuelaId)));
+            }
         });
     }
 }

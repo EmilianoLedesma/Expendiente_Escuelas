@@ -12,9 +12,11 @@ use App\Models\Escuela;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Solicitante;
 use App\Models\User;
+use App\Notifications\TramiteReabierto;
 use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Tests\Concerns\ConTramitesEnRevision;
 use Tests\TestCase;
 
@@ -51,6 +53,40 @@ class RestaurarTest extends TestCase
         $this->assertNull($fila->archivado_motivo);
         $this->assertNull($fila->archivado_lote);
         $this->assertSame(1, DB::table('bitacora_acciones')->where('accion', 'restaurar_tramite')->where('objeto_id', $nivel->escuela_id)->count());
+    }
+
+    public function test_reabrir_avisa_al_dueno_con_enlace_y_sin_datos_internos(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($solicitante);
+        $admin = $this->admin();
+        app(ArchivarTramite::class)->ejecutar($nivel->escuela_id, $admin->id, 'Motivo interno');
+        Notification::fake();
+
+        app(RestaurarTramite::class)->ejecutar($admin->id, $nivel->escuela_id, true);
+
+        Notification::assertSentTo($solicitante->user, TramiteReabierto::class, function (TramiteReabierto $n) use ($solicitante, $nivel) {
+            $texto = (string) $n->toMail($solicitante->user)->render();
+
+            return str_contains($texto, route('tramite.resumen', ['escuela' => $nivel->escuela_id]))
+                && ! str_contains($texto, 'Motivo interno');
+        });
+        Notification::assertSentTimes(TramiteReabierto::class, 1);
+    }
+
+    public function test_restaurar_sin_pedir_aviso_o_en_cascada_de_cuenta_no_envia_correo(): void
+    {
+        $solicitante = Solicitante::factory()->create();
+        $nivel = $this->nivelDe($solicitante);
+        $admin = $this->admin();
+        app(ArchivarTramite::class)->ejecutar($nivel->escuela_id, $admin->id);
+        Notification::fake();
+        app(RestaurarTramite::class)->ejecutar($admin->id, $nivel->escuela_id);
+
+        app(ArchivarCuenta::class)->ejecutar($solicitante->user_id, $admin->id, 'Baja');
+        app(RestaurarCuenta::class)->ejecutar($admin->id, $solicitante->user_id);
+
+        Notification::assertNothingSent();
     }
 
     public function test_no_restaura_un_tramite_no_archivado(): void
