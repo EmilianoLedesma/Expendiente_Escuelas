@@ -174,7 +174,7 @@ Solo el rol `admin` entra al panel; supervisor, revisor y solicitante reciben 40
   - **Eliminar:** solo en cuentas archivadas. Exige escribir `ELIMINAR` y un motivo; la ventana avisa que el motivo no debe llevar datos personales.
   - **Cambiar rol:** admin, supervisor, revisor o sin rol de SEDEQ. No aparece en cuentas archivadas ni en la tuya.
   - **Crear cuenta de SEDEQ** (botón de la lista): nombre, correo y rol admin o supervisor. La persona recibe un enlace para fijar su contraseña.
-- **Trámites archivados** (`/admin/tramites-archivados`): solo escuelas archivadas, con nombre aprobado, dirección del plantel, solicitante, fecha, quién archivó y motivo. Acciones **Restaurar** y **Eliminar** (mismas reglas que arriba).
+- **Trámites** (`/admin/tramites`): todas las escuelas (activas y archivadas) por defecto, con filtro Estado (Todos, Archivados, Activos); columnas de nombre aprobado, dirección del plantel, solicitante, estado, fecha, quién archivó y motivo. Acciones: **Archivar** (activas, con motivo), **Restaurar** y **Eliminar** (solo archivadas, mismas reglas que arriba).
 
 Las reglas viven en `app/Application/Revision/` (`CambiarRolSedeq`, `CrearCuentaSedeq`); la pantalla solo las llama y muestra cada rechazo como notificación roja.
 
