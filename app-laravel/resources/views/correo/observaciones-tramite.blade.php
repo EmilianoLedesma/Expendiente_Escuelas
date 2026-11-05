@@ -1,7 +1,7 @@
 <x-mail::message>
 # Hola, {{ $nombre }}
 
-SEDEQ revisó el trámite de incorporación y encontró observaciones que debes atender antes de reenviarlo.
+Se revisó el trámite de incorporación y se encontraron observaciones que debes atender antes de reenviarlo.
 
 <x-mail::panel>
 @foreach ($pasos as $paso)

@@ -18,6 +18,6 @@ class EliminarTramiteController
             return redirect()->route('tramite.index')->with('toast', ['tipo' => 'error', 'titulo' => 'No se pudo archivar el trámite', 'descripcion' => $e->getMessage()]);
         }
 
-        return redirect()->route('tramite.index')->with('toast', ['tipo' => 'success', 'titulo' => 'Trámite archivado', 'descripcion' => 'Ya no aparece en tus trámites. Para recuperarlo, contacta a SEDEQ.']);
+        return redirect()->route('tramite.index')->with('toast', ['tipo' => 'success', 'titulo' => 'Trámite archivado', 'descripcion' => 'Ya no aparece en tus trámites. Para recuperarlo, contacta a un administrador.']);
     }
 }

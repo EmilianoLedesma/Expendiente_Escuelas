@@ -85,7 +85,7 @@ class Perfil extends Component
         }
 
         $cerrarSesion();
-        session()->flash('aviso_login', 'Tu cuenta se archivó. Para recuperarla, contacta a SEDEQ.');
+        session()->flash('aviso_login', 'Tu cuenta se archivó. Para recuperarla, contacta a un administrador.');
         $this->redirectRoute('login');
     }
 

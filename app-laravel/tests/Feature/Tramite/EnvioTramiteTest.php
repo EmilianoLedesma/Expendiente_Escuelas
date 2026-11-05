@@ -49,12 +49,12 @@ class EnvioTramiteTest extends TestCase
         $this->actingAs($escuela->solicitante->user);
 
         Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
-            ->assertSee('Enviar a SEDEQ')
+            ->assertSee('Enviar a revisión')
             ->assertSee('<dialog', false)
             ->assertSee('class="modal', false)
             ->assertSee('.showModal()', false)
             ->assertSee('Una vez enviado, el trámite ya no podrá modificarse.')
-            ->assertSee('Sí, enviar a SEDEQ')
+            ->assertSee('Sí, enviar a revisión')
             ->assertSee('wire:click="enviar"', false)
             ->assertSee('wire:loading.attr="disabled"', false)
             ->assertDontSee('El envío a SEDEQ se habilitará en una próxima versión.');
@@ -70,7 +70,7 @@ class EnvioTramiteTest extends TestCase
         Livewire::test(ValidacionFinal::class, ['escuela' => $escuela])
             ->assertSee('Corrige lo que bloquea el envío para poder enviar:')
             ->assertSee('Capacidad instalada · Primaria: Superficie de aulas')
-            ->assertDontSee('Sí, enviar a SEDEQ')
+            ->assertDontSee('Sí, enviar a revisión')
             ->assertDontSee('wire:click="enviar"', false);
     }
 
@@ -86,7 +86,7 @@ class EnvioTramiteTest extends TestCase
             ->assertRedirect(route('tramite.resumen', ['escuela' => $escuela->id]));
 
         $this->assertSame('en_revision', $this->estadoDe($nivel));
-        $this->assertSame('Trámite enviado a SEDEQ', session('toast.titulo'));
+        $this->assertSame('Trámite enviado a revisión', session('toast.titulo'));
     }
 
     public function test_si_el_envio_se_rechaza_el_motivo_va_al_resumen_de_errores(): void
@@ -244,7 +244,7 @@ class EnvioTramiteTest extends TestCase
 
         $this->actingAs($usuario)->get(route('tramite.resumen', ['escuela' => $escuela->id]))
             ->assertOk()
-            ->assertSee('Enviado el '.now()->format('d/m/Y').' — en revisión por SEDEQ')
+            ->assertSee('Enviado el '.now()->format('d/m/Y').' — en revisión')
             ->assertSee('Descargar el reporte de validación enviado')
             ->assertSee(route('tramite.validacion.reporte', ['escuela' => $escuela->id, 'evaluacion' => $validacion->evaluacionId]), false)
             ->assertDontSee('Ir a la validación final')
@@ -274,7 +274,7 @@ class EnvioTramiteTest extends TestCase
         $this->actingAs($responsable)->get($reporte)->assertForbidden();
         $this->actingAs($responsable)->get(route('tramite.resumen', ['escuela' => $escuela->id]))
             ->assertOk()
-            ->assertSee('Enviado el '.now()->format('d/m/Y').' — en revisión por SEDEQ')
+            ->assertSee('Enviado el '.now()->format('d/m/Y').' — en revisión')
             ->assertDontSee('Descargar el reporte de validación enviado')
             ->assertDontSee($reporte, false)
             ->assertDontSee('href="'.route('tramite.paso3-plantilla', ['escuelaNivel' => $nivel->id]).'"', false);
@@ -301,7 +301,7 @@ class EnvioTramiteTest extends TestCase
             ->assertDontSee('Completa primero');
         $this->actingAs($usuario)->get(route('tramite.index'))
             ->assertOk()
-            ->assertSee('En revisión por SEDEQ')
+            ->assertSee('En revisión')
             ->assertSee('Ver trámite')
             ->assertDontSee('Continuar<span', false);
     }
@@ -314,8 +314,9 @@ class EnvioTramiteTest extends TestCase
 
         $this->actingAs($escuela->solicitante->user)->get(route('tramite.index'))
             ->assertOk()
-            ->assertSee('En revisión por SEDEQ')
-            ->assertDontSee('Captura inicial completa');
+            ->assertSee('En revisión')
+            ->assertDontSee('Captura inicial completa')
+            ->assertDontSee('por SEDEQ');
     }
 
     public function test_mis_niveles_del_responsable_muestra_en_revision(): void
@@ -325,13 +326,13 @@ class EnvioTramiteTest extends TestCase
         $responsable = $this->responsableDe($nivel);
 
         $this->assertFalse(app(ListarNivelesDelResponsable::class)->ejecutar($responsable->id)[0]['enviado']);
-        $this->actingAs($responsable)->get(route('tramite.index'))->assertOk()->assertDontSee('En revisión por SEDEQ');
+        $this->actingAs($responsable)->get(route('tramite.index'))->assertOk()->assertDontSee('En revisión');
 
         app(EnviarTramite::class)->ejecutar($escuela->id, (int) $escuela->solicitante->user->id);
 
         $this->actingAs($responsable)->get(route('tramite.index'))
             ->assertOk()
             ->assertSee('Mis niveles asignados')
-            ->assertSee('En revisión por SEDEQ');
+            ->assertSee('En revisión');
     }
 }

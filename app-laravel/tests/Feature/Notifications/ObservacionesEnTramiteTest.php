@@ -10,6 +10,7 @@ use App\Models\ResponsableNivel;
 use App\Models\Solicitante;
 use App\Models\User;
 use App\Notifications\ObservacionesEnTramite;
+use App\Notifications\RevisionSinObservaciones;
 use Database\Seeders\PasosCapturaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -140,11 +141,39 @@ class ObservacionesEnTramiteTest extends TestCase
         $html = (string) $correo->render();
 
         $this->assertSame('Tu trámite tiene observaciones', $correo->subject);
+        $this->assertStringContainsString('Se revisó el trámite', $html);
+        $this->assertStringNotContainsString('SEDEQ revisó', $html);
         $this->assertStringContainsString('Falta el croquis', $html);
         $this->assertStringContainsString('Teléfono inválido', $html);
         $this->assertStringContainsString('Datos del inmueble', $html);
         $this->assertStringContainsString('Primaria', $html);
         $this->assertStringContainsString(route('tramite.resumen', ['escuela' => $primaria->escuela_id]), $html);
+    }
+
+    public function test_aprobar_todos_los_niveles_avisa_revision_sin_observaciones(): void
+    {
+        Notification::fake();
+        [$dueno, $primaria, $secundaria] = $this->escuela();
+        $sup = $this->supervisor();
+
+        foreach (PasosRevision::paraNivel('primaria') as $paso) {
+            app(DecidirPaso::class)->ejecutar($sup->id, $primaria->id, $paso, 'aceptado');
+        }
+        Notification::assertNothingSent(); // falta el otro nivel
+
+        foreach (PasosRevision::paraNivel('secundaria') as $paso) {
+            app(DecidirPaso::class)->ejecutar($sup->id, $secundaria->id, $paso, 'aceptado');
+        }
+
+        Notification::assertSentTo($dueno->user, RevisionSinObservaciones::class, function (RevisionSinObservaciones $n) use ($dueno, $primaria) {
+            $html = (string) $n->toMail($dueno->user)->render();
+
+            return str_contains($html, 'sin observaciones')
+                && str_contains($html, route('tramite.resumen', ['escuela' => $primaria->escuela_id]))
+                && ! str_contains($html, 'SEDEQ');
+        });
+        Notification::assertSentTimes(RevisionSinObservaciones::class, 1);
+        Notification::assertNotSentTo($dueno->user, ObservacionesEnTramite::class);
     }
 
     public function test_una_decision_real_que_cierra_la_ronda_notifica(): void
@@ -163,5 +192,6 @@ class ObservacionesEnTramiteTest extends TestCase
         app(DecidirPaso::class)->ejecutar($sup->id, $nivel->id, $pasos[0], 'rechazado', 'Motivo real');
 
         $this->assertSame(['Motivo real'], array_column($this->pasosEnviados($dueno->user), 'motivo'));
+        Notification::assertNotSentTo($dueno->user, RevisionSinObservaciones::class);
     }
 }

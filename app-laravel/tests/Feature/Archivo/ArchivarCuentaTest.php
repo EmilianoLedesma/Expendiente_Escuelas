@@ -114,7 +114,7 @@ class ArchivarCuentaTest extends TestCase
             app(ArchivarCuenta::class)->ejecutar($solicitante->user_id, $solicitante->user_id);
             $this->fail('Debió rechazar el archivo.');
         } catch (PrecondicionIncumplida $e) {
-            $this->assertSame('No puedes archivar tu cuenta: ya enviaste un trámite a SEDEQ.', $e->getMessage());
+            $this->assertSame('No puedes archivar tu cuenta: ya enviaste un trámite a revisión.', $e->getMessage());
         }
 
         $this->assertNull($solicitante->user->fresh()->archivado_at);

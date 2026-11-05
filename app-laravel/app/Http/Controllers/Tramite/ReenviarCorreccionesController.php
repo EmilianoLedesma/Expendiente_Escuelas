@@ -20,6 +20,6 @@ class ReenviarCorreccionesController
             return $hub->with('toast', ['tipo' => 'error', 'titulo' => 'No se pudieron reenviar las correcciones', 'descripcion' => $e->getMessage()]);
         }
 
-        return $hub->with('toast', ['tipo' => 'success', 'titulo' => 'Correcciones reenviadas', 'descripcion' => 'SEDEQ revisará de nuevo los pasos que corregiste.']);
+        return $hub->with('toast', ['tipo' => 'success', 'titulo' => 'Correcciones reenviadas', 'descripcion' => 'Se revisarán de nuevo los pasos que corregiste.']);
     }
 }

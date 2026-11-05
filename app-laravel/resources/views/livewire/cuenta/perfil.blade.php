@@ -33,7 +33,7 @@
 
     @if ($puedeEliminar)
         <x-ui.section title="Archivar cuenta">
-            <p class="max-w-xl text-body-md">Se archiva tu cuenta y, si eres quien inició los trámites, también tus trámites. Ya no podrás iniciar sesión; tus datos y archivos se conservan y solo SEDEQ puede restaurarlos. Solo es posible mientras ningún trámite se haya enviado a SEDEQ.</p>
+            <p class="max-w-xl text-body-md">Se archiva tu cuenta y, si eres quien inició los trámites, también tus trámites. Ya no podrás iniciar sesión; tus datos y archivos se conservan y solo un administrador puede restaurarlos. Solo es posible mientras ningún trámite se haya enviado a revisión.</p>
             @error('cuenta')
                 <x-ui.alert tipo="error">{{ $message }}</x-ui.alert>
             @enderror

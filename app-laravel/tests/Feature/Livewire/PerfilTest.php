@@ -219,7 +219,7 @@ class PerfilTest extends TestCase
 
         $this->assertNotNull($usuario->fresh()->archivado_at, 'se archiva, no se borra');
         $this->assertGuest();
-        $this->get(route('login'))->assertSee('Tu cuenta se archivó. Para recuperarla, contacta a SEDEQ.');
+        $this->get(route('login'))->assertSee('Tu cuenta se archivó. Para recuperarla, contacta a un administrador.');
     }
 
     public function test_no_archiva_si_ya_envio_un_tramite(): void

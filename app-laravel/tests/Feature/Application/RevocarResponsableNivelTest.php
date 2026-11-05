@@ -93,7 +93,7 @@ class RevocarResponsableNivelTest extends TestCase
             $this->fail('Se esperaba PrecondicionIncumplida.');
         } catch (PrecondicionIncumplida $e) {
             $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
-            $this->assertSame('El trámite ya se envió a SEDEQ y no puede modificarse.', $e->getMessage());
+            $this->assertSame('El trámite ya se envió a revisión y no puede modificarse.', $e->getMessage());
         }
 
         $this->assertTrue(ResponsableNivel::whereKey($acceso->id)->exists());

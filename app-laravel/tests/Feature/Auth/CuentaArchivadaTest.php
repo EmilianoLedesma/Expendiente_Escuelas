@@ -12,7 +12,7 @@ class CuentaArchivadaTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const MENSAJE = 'Cuenta archivada, contacta a SEDEQ.';
+    private const MENSAJE = 'Cuenta archivada, contacta a un administrador.';
 
     private function archivado(): User
     {

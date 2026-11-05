@@ -79,7 +79,7 @@ class ReenviarCorreccionesRutaTest extends TestCase
 
         $this->actingAs($escuela->solicitante->user)->get($url)->assertOk()
             ->assertSee('Reenviar correcciones')
-            ->assertSee('¿Reenviar las correcciones a SEDEQ?')
+            ->assertSee('¿Reenviar las correcciones?')
             ->assertSeeHtml('aria-labelledby="reenviar-correcciones-titulo"');
         $this->assertMatchesRegularExpression($this->formularioDeReenvio($escuela), $this->get($url)->getContent());
 

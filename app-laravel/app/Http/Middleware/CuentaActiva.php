@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CuentaActiva
 {
-    public const MENSAJE = 'Cuenta archivada, contacta a SEDEQ.';
+    public const MENSAJE = 'Cuenta archivada, contacta a un administrador.';
 
     public function handle(Request $request, Closure $next): Response
     {

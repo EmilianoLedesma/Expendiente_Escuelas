@@ -67,6 +67,8 @@ class EnviarTramite
                 'usuario_id' => $userId,
             ]));
 
+            DB::afterCommit(fn () => event(new TramiteEnviado($escuelaId)));
+
             // ponytail: el PDF se escribe antes del COMMIT; solo un COMMIT fallido lo deja
             // huérfano (ninguna fila lo apunta). Limpiar validaciones/{escuela} si alguna vez aparece en los logs.
             return $this->validacionFinal->guardar($escuelaId, $evaluada);

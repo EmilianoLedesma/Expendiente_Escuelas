@@ -58,7 +58,7 @@ class ValidacionFinal extends Component
             return;
         }
 
-        $this->toastAlRedirigir('Trámite enviado a SEDEQ', 'Ya no puedes editar la información capturada.');
+        $this->toastAlRedirigir('Trámite enviado a revisión', 'Ya no puedes editar la información capturada.');
         $this->redirectRoute('tramite.resumen', ['escuela' => $this->escuela->id]);
     }
 

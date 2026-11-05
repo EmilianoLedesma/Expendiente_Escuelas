@@ -10,7 +10,7 @@
                     <p class="font-semibold text-ink">{{ $nivel['nivel'] }}</p>
                     <p class="break-words text-caption text-muted">{{ $nivel['etiqueta'] }}</p>
                     @if ($nivel['enviado'])
-                        <x-ui.status-tag estado="completado" texto="En revisión por SEDEQ" class="mt-xxs" />
+                        <x-ui.status-tag estado="completado" texto="En revisión" class="mt-xxs" />
                     @endif
                 </div>
                 <x-ui.button-primary :href="route('tramite.resumen', ['escuela' => $nivel['escuelaId']])">

@@ -86,7 +86,7 @@ class TramiteEditable
         Escuela::whereKey($escuelaId)->sharedLock()->value('id') ?? throw self::yaNoExiste();
 
         if (! $this->esEditable($escuelaId, $pasoClave, $escuelaNivelId)) {
-            throw new PrecondicionIncumplida(self::ENVIADO, 'El trámite ya se envió a SEDEQ y no puede modificarse.');
+            throw new PrecondicionIncumplida(self::ENVIADO, 'El trámite ya se envió a revisión y no puede modificarse.');
         }
     }
 
@@ -115,7 +115,7 @@ class TramiteEditable
         }
 
         if (! self::todosEnCaptura(EscuelaNivel::whereIn('escuela_id', $escuelas)->pluck('estado_id'), self::idEnCaptura())) {
-            throw new PrecondicionIncumplida(self::ENVIADO, 'Un trámite de este plantel ya se envió a SEDEQ: los datos compartidos del plantel (documentos, espacios, sanitarios y datos del inmueble) ya no pueden modificarse.');
+            throw new PrecondicionIncumplida(self::ENVIADO, 'Un trámite de este plantel ya se envió a revisión: los datos compartidos del plantel (documentos, espacios, sanitarios y datos del inmueble) ya no pueden modificarse.');
         }
     }
 

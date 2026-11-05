@@ -18,7 +18,7 @@
         @if ($validacion->listaParaEnvio)
             <x-ui.alert tipo="success" titulo="Tu expediente no tiene errores que impidan enviarlo">
                 @if ($alertas !== [])
-                    Hay {{ count($alertas) }} {{ count($alertas) === 1 ? 'alerta' : 'alertas' }} que SEDEQ revisará; puedes corregirlas si lo necesitas.
+                    Hay {{ count($alertas) }} {{ count($alertas) === 1 ? 'alerta que se revisará' : 'alertas que se revisarán' }}; puedes corregirlas si lo necesitas.
                 @else
                     Todos los datos coinciden con tus documentos.
                 @endif
@@ -86,7 +86,7 @@
         @foreach ($validacion->capacidad as $seccion)
             <section class="mt-xl" data-escuela-nivel="{{ $seccion->escuelaNivelId }}">
                 <h2 class="text-title-md font-semibold text-ink">Capacidad instalada · {{ $seccion->nivel }}</h2>
-                <p class="mt-xxs text-body-sm text-muted">Superficie, personal y mobiliario contra la norma, según la matrícula que capturaste. Lo que no se cumple, o lo que falta capturar, bloquea el envío. «No verificable por el sistema» no bloquea: SEDEQ lo revisará.</p>
+                <p class="mt-xxs text-body-sm text-muted">Superficie, personal y mobiliario contra la norma, según la matrícula que capturaste. Lo que no se cumple, o lo que falta capturar, bloquea el envío. «No verificable por el sistema» no bloquea: se revisará después.</p>
                 <ol class="mt-md divide-y divide-hairline rounded-lg border border-hairline px-md sm:px-lg">
                     @foreach (['no_cumple', 'no_evaluable', 'no_verificable', 'cumple'] as $estado)
                         @foreach ($seccion->conEstado($estado) as $fila)
@@ -130,29 +130,29 @@
 
         {{-- WS-7a §6. Sin wire:ignore a propósito: si el envío se rechaza, el morph quita `open`, el diálogo se cierra y queda visible el resumen de errores. --}}
         <section id="envio" tabindex="-1" class="mt-xl border-t border-hairline pt-lg" aria-labelledby="envio-titulo">
-            <h2 id="envio-titulo" class="text-title-md font-semibold text-ink">Enviar a SEDEQ</h2>
+            <h2 id="envio-titulo" class="text-title-md font-semibold text-ink">Enviar a revisión</h2>
             @error('envio')
                 <p class="mt-xs text-body-sm font-semibold text-error-ink">{{ $message }}</p>
             @enderror
             @if ($validacion->listaParaEnvio)
                 <p class="mt-xxs text-body-sm text-muted">Al enviar revisamos todo de nuevo. Una vez enviado, el trámite ya no podrá modificarse.</p>
                 <x-ui.button-primary type="button" onclick="document.getElementById('enviar-tramite').showModal()" class="mt-md">
-                    Enviar a SEDEQ
+                    Enviar a revisión
                 </x-ui.button-primary>
                 <dialog id="enviar-tramite" aria-labelledby="enviar-tramite-titulo" onclick="if (event.target === this) this.close()" class="modal rounded-lg border border-hairline bg-canvas p-lg text-left text-body-md text-ink">
-                    <h2 id="enviar-tramite-titulo" class="text-title-md font-semibold text-ink">¿Enviar el trámite a SEDEQ?</h2>
+                    <h2 id="enviar-tramite-titulo" class="text-title-md font-semibold text-ink">¿Enviar el trámite a revisión?</h2>
                     <p class="mt-sm">Una vez enviado, el trámite ya no podrá modificarse.</p>
                     <div class="mt-lg flex flex-wrap justify-end gap-sm">
                         <button type="button" onclick="this.closest('dialog').close()" class="inline-flex min-h-11 items-center justify-center rounded-md border border-control bg-canvas px-lg text-body-md font-semibold text-ink transition duration-150 hover:border-ink hover:bg-surface-card active:bg-surface-soft">
                             Cancelar
                         </button>
                         <x-ui.button-primary type="button" wire:click="enviar" wire:loading.attr="disabled">
-                            Sí, enviar a SEDEQ
+                            Sí, enviar a revisión
                         </x-ui.button-primary>
                     </div>
                 </dialog>
             @else
-                <x-ui.button-primary type="button" :disabled="true" class="mt-md">Enviar a SEDEQ</x-ui.button-primary>
+                <x-ui.button-primary type="button" :disabled="true" class="mt-md">Enviar a revisión</x-ui.button-primary>
                 <p class="mt-xs text-body-sm text-muted">Corrige lo que bloquea el envío para poder enviar:</p>
                 <ul class="mt-xs list-disc space-y-xxs pl-lg text-body-sm text-ink">
                     @foreach ($motivos as $motivo)
