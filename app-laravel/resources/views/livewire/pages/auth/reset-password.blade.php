@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Auth\CerrarOtrasSesiones;
 use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
 use Illuminate\Auth\Events\PasswordReset;
@@ -52,6 +53,9 @@ new #[Layout('layouts.guest')] class extends Component
                     'password' => Hash::make($this->password),
                     'remember_token' => Str::random(60),
                 ])->save();
+
+                // Quien robó una sesión antes del restablecimiento ya no entra.
+                app(CerrarOtrasSesiones::class)->ejecutar($user->id);
 
                 event(new PasswordReset($user));
             }

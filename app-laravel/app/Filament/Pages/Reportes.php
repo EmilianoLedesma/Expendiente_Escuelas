@@ -3,12 +3,15 @@
 namespace App\Filament\Pages;
 
 use App\Application\Reportes\ConsultarReportes;
+use App\Filament\Concerns\SoloAdmin;
 use Filament\Pages\Page;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Reportes de solo lectura, una pestaña por sección y paginados; el CSV baja el detalle por registro. */
 class Reportes extends Page
 {
+    use SoloAdmin;
+
     protected static ?string $navigationLabel = 'Reportes';
 
     protected static ?int $navigationSort = 90;
@@ -66,6 +69,10 @@ class Reportes extends Page
 
     public function updatedPorPagina(): void
     {
+        // El valor llega del navegador: solo se aceptan los tamaños del selector.
+        if (! in_array($this->porPagina, [10, 25, 50], true)) {
+            $this->porPagina = 10;
+        }
         $this->pagina = 1;
     }
 

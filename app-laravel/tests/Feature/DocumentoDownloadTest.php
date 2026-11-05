@@ -65,7 +65,9 @@ class DocumentoDownloadTest extends TestCase
 
         $response = $this->descargar('ine');
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Content-Type', 'application/pdf');
         $this->assertSame('CONTENIDO-INE', $response->streamedContent());
     }
 

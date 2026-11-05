@@ -9,6 +9,7 @@ use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\CambiarRolSedeq;
 use App\Application\Revision\RolesSedeq;
+use App\Filament\Concerns\SoloAdmin;
 use App\Filament\Resources\Usuarios\Pages\CrearUsuario;
 use App\Filament\Resources\Usuarios\Pages\ListUsuarios;
 use App\Models\Escuela;
@@ -32,6 +33,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class UsuarioResource extends Resource
 {
+    use SoloAdmin;
+
     public const AVISO_MOTIVO = 'No escribas datos personales (nombres, correos, CURP) en el motivo: el motivo se conserva en la bitácora.';
 
     protected static ?string $model = User::class;

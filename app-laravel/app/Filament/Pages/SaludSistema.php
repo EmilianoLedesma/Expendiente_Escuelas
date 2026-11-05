@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Salud\ConsultarSaludSistema;
 use App\Application\Salud\OperarSistema;
+use App\Filament\Concerns\SoloAdmin;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -17,6 +18,7 @@ use Throwable;
 class SaludSistema extends Page implements HasActions
 {
     use InteractsWithActions;
+    use SoloAdmin;
 
     protected static ?string $navigationLabel = 'Estado del sistema';
 

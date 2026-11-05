@@ -59,6 +59,7 @@ class InfraestructuraNivel extends Component
     use CompuertaPaso3;
     use NotificaToast;
 
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     /** @var list<int> ids de tipos_espacios ya capturados por este plantel (cualquier nivel). */

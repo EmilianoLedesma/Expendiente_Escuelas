@@ -8,6 +8,7 @@ use App\Application\Archivo\RestaurarTramite;
 use App\Application\Auditoria\ConsultarHistorialTramite;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Filament\Concerns\SoloAdmin;
 use App\Filament\Resources\TramitesArchivados\Pages\ListTramitesArchivados;
 use App\Filament\Resources\Usuarios\UsuarioResource;
 use App\Models\Escuela;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TramiteArchivadoResource extends Resource
 {
+    use SoloAdmin;
+
     protected static ?string $model = Escuela::class;
 
     protected static ?string $modelLabel = 'trámite';

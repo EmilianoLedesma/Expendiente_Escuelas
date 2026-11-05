@@ -54,6 +54,7 @@ class DatosInmueble extends Component
     use CompuertaPaso3;
     use NotificaToast;
 
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     /** El responsable de un nivel no edita el inmueble: es del plantel, compartido. */
