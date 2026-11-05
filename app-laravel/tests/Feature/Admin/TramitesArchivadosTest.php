@@ -59,23 +59,68 @@ class TramitesArchivadosTest extends TestCase
         return $this->sinScope($e->id);
     }
 
-    public function test_lista_solo_archivados_y_muestra_motivo(): void
+    public function test_lista_todos_por_defecto_y_muestra_motivo(): void
     {
         $activa = $this->escuela();
         $arch = $this->archivada('Motivo visible');
 
-        $this->lista()->assertCanSeeTableRecords([$arch])->assertCanNotSeeTableRecords([$activa])
+        $this->lista()->assertCanSeeTableRecords([$arch, $activa])
             ->assertSee('Motivo visible')
             ->assertSee('Colegio Prueba')
             ->assertSee($this->admin->name);
     }
 
-    public function test_restaurar_devuelve_la_escuela_y_sale_de_la_lista(): void
+    public function test_filtro_estado_separa_archivados_y_activos(): void
+    {
+        $activa = $this->escuela();
+        $arch = $this->archivada();
+
+        $this->lista()->filterTable('archivado', true)
+            ->assertCanSeeTableRecords([$arch])->assertCanNotSeeTableRecords([$activa]);
+        $this->lista()->filterTable('archivado', false)
+            ->assertCanSeeTableRecords([$activa])->assertCanNotSeeTableRecords([$arch]);
+    }
+
+    public function test_acciones_visibles_segun_estado(): void
+    {
+        $activa = $this->escuela();
+        $arch = $this->archivada();
+
+        $this->lista()
+            ->assertActionVisible(TestAction::make('archivar')->table($activa))
+            ->assertActionHidden(TestAction::make('restaurar')->table($activa))
+            ->assertActionHidden(TestAction::make('purgar')->table($activa))
+            ->assertActionHidden(TestAction::make('archivar')->table($arch))
+            ->assertActionVisible(TestAction::make('restaurar')->table($arch))
+            ->assertActionVisible(TestAction::make('purgar')->table($arch));
+    }
+
+    public function test_archivar_activo_con_motivo(): void
+    {
+        $e = $this->escuela();
+
+        $this->lista()->callAction(TestAction::make('archivar')->table($e), ['motivo' => 'Duplicado']);
+
+        $this->assertNotNull($this->sinScope($e->id)->archivado_at);
+        $this->assertNull(Escuela::find($e->id));
+    }
+
+    public function test_archivar_sin_motivo_es_error_de_formulario_y_conserva(): void
+    {
+        $e = $this->escuela();
+
+        $this->lista()->callAction(TestAction::make('archivar')->table($e), ['motivo' => ' '])
+            ->assertHasActionErrors(['motivo']);
+
+        $this->assertNotNull(Escuela::find($e->id));
+    }
+
+    public function test_restaurar_devuelve_la_escuela_y_sale_de_archivados(): void
     {
         $e = $this->archivada();
 
         $this->lista()->callAction(TestAction::make('restaurar')->table($e))
-            ->assertCanNotSeeTableRecords([$e]);
+            ->filterTable('archivado', true)->assertCanNotSeeTableRecords([$e]);
 
         $this->assertNotNull(Escuela::find($e->id));
     }
@@ -137,7 +182,7 @@ class TramitesArchivadosTest extends TestCase
 
     public function test_supervisor_y_solicitante_reciben_403_y_admin_ve_el_indice(): void
     {
-        $url = '/admin/tramites-archivados';
+        $url = '/admin/tramites';
         $this->get($url)->assertOk();
         $this->actingAs(User::factory()->create()->assignRole(RolesSedeq::SUPERVISOR))->get($url)->assertForbidden();
         $sol = User::factory()->create();
