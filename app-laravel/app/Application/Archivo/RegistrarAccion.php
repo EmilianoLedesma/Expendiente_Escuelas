@@ -19,6 +19,10 @@ class RegistrarAccion
 
     public const PURGAR_CUENTA = 'purgar_cuenta';
 
+    public const ARCHIVAR_PLANTEL = 'archivar_plantel';
+
+    public const RESTAURAR_PLANTEL = 'restaurar_plantel';
+
     public const CAMBIAR_ROL = 'cambiar_rol';
 
     public const CREAR_CUENTA_SEDEQ = 'crear_cuenta_sedeq';
