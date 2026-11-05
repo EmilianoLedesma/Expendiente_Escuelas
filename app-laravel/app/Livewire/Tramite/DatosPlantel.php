@@ -13,6 +13,7 @@ use App\Livewire\Concerns\NotificaToast;
 use App\Models\Escuela;
 use App\Models\Plantel;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -24,6 +25,7 @@ class DatosPlantel extends Component
 {
     use NotificaToast;
 
+    #[Locked]
     public Escuela $escuela;
 
     #[Normalizar(Normalizacion::Telefono)]

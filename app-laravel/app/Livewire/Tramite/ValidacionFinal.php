@@ -10,6 +10,7 @@ use App\Application\Validaciones\UltimaValidacionFinal;
 use App\Livewire\Concerns\NotificaToast;
 use App\Models\Escuela;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -26,6 +27,7 @@ class ValidacionFinal extends Component
 {
     use NotificaToast;
 
+    #[Locked]
     public Escuela $escuela;
 
     /** A GET must not write: it validates only the first time (or over a pre-capacity row); later runs are the "validar de nuevo" action. */

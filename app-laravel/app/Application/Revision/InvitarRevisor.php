@@ -2,6 +2,7 @@
 
 namespace App\Application\Revision;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Models\Revisor;
@@ -32,7 +33,7 @@ class InvitarRevisor
 
         $validador = Validator::make(
             ['nombre' => $nombre, 'correo' => $correo],
-            ['nombre' => ['required', 'string', 'max:255'], 'correo' => ['required', 'email', 'max:255']],
+            ['nombre' => ReglasCaptura::nombreVisible(), 'correo' => ['required', 'email', 'max:255']],
             ['nombre.required' => 'Indica el nombre del revisor.', 'correo.required' => 'Indica el correo del revisor.', 'correo.email' => 'Escribe un correo válido.'],
         );
         if ($validador->fails()) {
@@ -50,7 +51,7 @@ class InvitarRevisor
                 // Solo un revisor revocado puede volver a invitarse.
                 // Tampoco si ya tiene otro rol o es solicitante: nunca se apila un rol sobre otra cuenta.
                 if (! Revisor::where('user_id', $usuario->id)->whereNotNull('revocado_at')->exists()
-                    || $usuario->getRoleNames()->isNotEmpty() || $usuario->solicitante()->exists()) {
+                    || $usuario->getRoleNames()->isNotEmpty() || $usuario->solicitante()->exists() || $usuario->archivado_at !== null) {
                     throw new DatosInvalidos(['correo' => self::OCUPADO]);
                 }
                 Revisor::whereKey($usuario->id)->update(['revocado_at' => null]);

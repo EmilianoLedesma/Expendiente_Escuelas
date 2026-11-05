@@ -16,6 +16,6 @@ class DescargarReporteValidacionController
 
         abort_if($ruta === null || ! $disco->exists($ruta), 404);
 
-        return $disco->response($ruta, 'reporte-validacion.pdf', ['Content-Type' => 'application/pdf']);
+        return $disco->response($ruta, 'reporte-validacion.pdf', ['Content-Type' => 'application/pdf', 'X-Content-Type-Options' => 'nosniff']);
     }
 }

@@ -28,6 +28,7 @@ use App\Models\TipoDocumento;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -56,6 +57,7 @@ class Paso2Documentos extends Component
     /** PDF de hasta 10 MB (el texto de cada fila de la checklist lo anuncia así). */
     private const REGLAS_ARCHIVO = ['required', 'file', 'mimes:pdf', 'max:10240'];
 
+    #[Locked]
     public Escuela $escuela;
 
     public array $archivos = [];

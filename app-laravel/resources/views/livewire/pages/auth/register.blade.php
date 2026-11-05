@@ -2,10 +2,13 @@
 
 use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
+use App\Application\Captura\ReglasCaptura;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -23,8 +26,15 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function register(): void
     {
+        // Registro abierto: tope por IP para que no sirva para crear cuentas y correos en masa.
+        $clave = 'registro:'.request()->ip();
+        if (RateLimiter::tooManyAttempts($clave, 10)) {
+            throw ValidationException::withMessages(['email' => 'Se hicieron demasiados registros desde este equipo. Intenta de nuevo más tarde.']);
+        }
+        RateLimiter::hit($clave, 3600);
+
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ReglasCaptura::nombreVisible(),
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
@@ -36,6 +46,7 @@ new #[Layout('layouts.guest')] class extends Component
         event(new Registered($user));
 
         Auth::login($user);
+        session()->regenerate();
 
         $this->redirect(route('tramite.index', absolute: false), navigate: true);
     }
