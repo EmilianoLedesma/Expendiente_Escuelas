@@ -51,7 +51,7 @@ class AvisosEnValidacionFinalTest extends TestCase
         $vigencia = app(ValidarVigenciaDocumentos::class);
         $this->assertSame([], $vigencia->ejecutar($escuela->id), 'no es una caducidad que obligue a volver a subir');
         $this->assertArrayHasKey('escritura_inmueble', $vigencia->avisos($escuela->id));
-        $this->assertStringContainsString('SEDEQ', $vigencia->avisos($escuela->id)['escritura_inmueble']);
+        $this->assertStringContainsString('Se revisará', $vigencia->avisos($escuela->id)['escritura_inmueble']);
     }
 
     public function test_un_contrato_vigente_o_de_vigencia_indeterminada_no_avisa(): void
