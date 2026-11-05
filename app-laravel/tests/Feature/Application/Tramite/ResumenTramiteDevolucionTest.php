@@ -194,12 +194,12 @@ class ResumenTramiteDevolucionTest extends TestCase
         $this->devolverTramite($primaria->escuela, [$primaria->id => ['inmueble' => 'Falta el croquis']]);
 
         $this->actingAs($dueno->user)->get(route('tramite.index'))
-            ->assertOk()->assertSee('En revisión por SEDEQ')->assertDontSee('Con observaciones');
+            ->assertOk()->assertSee('En revisión')->assertDontSee('Con observaciones');
 
         $this->devolverTramite($primaria->escuela, [$secundaria->id => ['matricula' => 'x']]);
 
         $this->actingAs($dueno->user)->get(route('tramite.index'))
-            ->assertOk()->assertSee('Con observaciones')->assertDontSee('En revisión por SEDEQ');
+            ->assertOk()->assertSee('Con observaciones')->assertDontSee('En revisión');
     }
 
     public function test_la_pagina_del_hub_muestra_el_banner_con_los_motivos_solo_en_ronda_cerrada(): void

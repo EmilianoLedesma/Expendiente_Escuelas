@@ -111,8 +111,22 @@ class DecidirPaso
             // Una decisión cierra la ronda sii rondaCerrada es true tras escribir el nuevo estado (el nivel venía en revisión).
             if ($this->pasosReabiertos->rondaCerrada($nivel->escuela_id)) {
                 $this->cerrarRonda($nivel->escuela_id);
+            } elseif ($this->todosAprobados($nivel->escuela_id)) {
+                $escuelaId = $nivel->escuela_id;
+                DB::afterCommit(fn () => event(new RevisionAprobada($escuelaId)));
             }
         });
+    }
+
+    /** Revisión terminada sin observaciones: todos los niveles aprobados (ninguno en revisión ni devuelto). */
+    private function todosAprobados(int $escuelaId): bool
+    {
+        $claves = DB::table('escuela_niveles')
+            ->join('estados_expediente', 'estados_expediente.id', '=', 'escuela_niveles.estado_id')
+            ->where('escuela_niveles.escuela_id', $escuelaId)
+            ->pluck('estados_expediente.clave');
+
+        return $claves->isNotEmpty() && $claves->every(fn ($clave) => $clave === self::APROBADO);
     }
 
     /** La línea base del G6 nunca bloquea ni revierte la decisión del revisor. */

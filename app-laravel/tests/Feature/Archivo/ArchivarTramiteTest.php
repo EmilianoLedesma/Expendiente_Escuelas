@@ -170,7 +170,7 @@ class ArchivarTramiteTest extends TestCase
         Notification::assertSentTo($dueno, TramiteCerrado::class, function (TramiteCerrado $n) use ($dueno) {
             $texto = (string) $n->toMail($dueno)->render();
 
-            return str_contains($texto, 'cerrado') && ! str_contains($texto, 'Motivo interno');
+            return str_contains($texto, 'cerrado') && str_contains($texto, 'crees que se trata de un error, comunícate con un administrador') && ! str_contains($texto, 'SEDEQ') && ! str_contains($texto, 'Motivo interno');
         });
         Notification::assertSentTimes(TramiteCerrado::class, 1);
     }
@@ -329,7 +329,7 @@ class ArchivarTramiteTest extends TestCase
                 ->assertSee('.showModal()', false)
                 ->assertSee($accion, false)
                 ->assertSee('name="_method" value="DELETE"', false)
-                ->assertSee('El trámite deja de aparecer en tus trámites. Sus datos y archivos se conservan; para recuperarlo, contacta a SEDEQ.')
+                ->assertSee('El trámite deja de aparecer en tus trámites. Sus datos y archivos se conservan; para recuperarlo, contacta a un administrador.')
                 ->assertSee('Sí, archivar trámite')
                 ->assertSee('Cancelar')
                 ->assertDontSee('Eliminar trámite');

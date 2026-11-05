@@ -116,7 +116,7 @@ class ValidarVigenciaDocumentos
             $vencimientoRegistro = $constancia?->constanciaSeguridadEstructural?->perito_registro_vencimiento;
             if ($vencimientoRegistro !== null && $constancia->fecha_emision !== null && $vencimientoRegistro < $constancia->fecha_emision) {
                 $fecha = date('d/m/Y', strtotime($vencimientoRegistro));
-                $avisos['constancia_seguridad_estructural'] = "Constancia de Seguridad Estructural: el registro del profesional indica vencimiento el {$fecha}, anterior a la emisión de la constancia. SEDEQ lo confirmará en la revisión.";
+                $avisos['constancia_seguridad_estructural'] = "Constancia de Seguridad Estructural: el registro del profesional indica vencimiento el {$fecha}, anterior a la emisión de la constancia. Se confirmará en la revisión.";
             }
         }
 
@@ -133,7 +133,7 @@ class ValidarVigenciaDocumentos
                 && $acreditacion->vigencia_indeterminada !== true && $acreditacion->vigencia_contrato !== null
                 && $acreditacion->vigencia_contrato < now()->toDateString()) {
                 $fecha = date('d/m/Y', strtotime($acreditacion->vigencia_contrato));
-                $avisos['escritura_inmueble'] = "Acreditación de la ocupación: el contrato indica vigencia hasta el {$fecha}, fecha ya pasada. SEDEQ revisará si sigue acreditando la ocupación.";
+                $avisos['escritura_inmueble'] = "Acreditación de la ocupación: el contrato indica vigencia hasta el {$fecha}, fecha ya pasada. Se revisará si sigue acreditando la ocupación.";
             }
         }
 
@@ -168,19 +168,19 @@ class ValidarVigenciaDocumentos
         $queretaro = $vb->jurisdiccion_emisora === 'municipio_queretaro';
 
         if ($vb->tipo_vigencia === 'no_capturada') {
-            $avisos[] = 'documento capturado con anterioridad a que se registraran su autoridad, riesgo y vencimiento; su vigencia no está determinada y SEDEQ la revisará.';
+            $avisos[] = 'documento capturado con anterioridad a que se registraran su autoridad, riesgo y vencimiento; su vigencia no está determinada y se revisará después.';
 
             return $avisos;
         }
 
         if ($vb->tipo_vigencia === 'sin_fecha_expresa' && $vb->fecha_vencimiento_normativo === null) {
             $avisos[] = $queretaro && $vb->tipo_instrumento === 'visto_bueno'
-                ? 'no se indicó el año del Visto Bueno, por lo que no se pudo determinar su vencimiento (31 de diciembre de su año de trámite, Reglamento de PC del Municipio de Querétaro, art. 46); SEDEQ lo revisará.'
-                : 'el documento no indica fecha de vencimiento y no se aplica una regla confirmada: su vencimiento no está determinado y SEDEQ lo revisará.';
+                ? 'no se indicó el año del Visto Bueno, por lo que no se pudo determinar su vencimiento (31 de diciembre de su año de trámite, Reglamento de PC del Municipio de Querétaro, art. 46); se revisará después.'
+                : 'el documento no indica fecha de vencimiento y no se aplica una regla confirmada: su vencimiento no está determinado y se revisará después.';
         }
 
         if ($queretaro && in_array($vb->clasificacion_riesgo, ['medio', 'bajo'], true)) {
-            $avisos[] = "el documento indica riesgo {$vb->clasificacion_riesgo}, pero el Reglamento de Protección Civil del Municipio de Querétaro (art. 48, fr. I, inciso m) clasifica los centros educativos como alto riesgo; SEDEQ lo revisará. Aplica solo a documentos del Municipio de Querétaro.";
+            $avisos[] = "el documento indica riesgo {$vb->clasificacion_riesgo}, pero el Reglamento de Protección Civil del Municipio de Querétaro (art. 48, fr. I, inciso m) clasifica los centros educativos como alto riesgo; se revisará después. Aplica solo a documentos del Municipio de Querétaro.";
         }
 
         return $avisos;

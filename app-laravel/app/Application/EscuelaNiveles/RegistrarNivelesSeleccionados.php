@@ -125,7 +125,7 @@ class RegistrarNivelesSeleccionados
 
         $conObservaciones = (int) DB::table('estados_expediente')->where('clave', 'con_observaciones')->value('id');
         if ($porQuitar->keys()->contains(fn (int $id) => $estados[$id] !== $conObservaciones)) {
-            throw new PrecondicionIncumplida(TramiteEditable::ENVIADO, 'Solo puedes quitar niveles que SEDEQ devolvió con observaciones.');
+            throw new PrecondicionIncumplida(TramiteEditable::ENVIADO, 'Solo puedes quitar niveles devueltos con observaciones.');
         }
     }
 

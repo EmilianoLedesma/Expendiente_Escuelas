@@ -186,7 +186,7 @@ class GuardaTramiteEnviadoTest extends TestCase
             app(RegistrarMatricula::class)->ejecutar($nivel->id, new DatosMatricula(grupos: [['gradoId' => $primero, 'grupo' => 'B', 'alumnos' => 99]]));
             $this->fail('Se esperaba PrecondicionIncumplida.');
         } catch (PrecondicionIncumplida $e) {
-            $this->assertSame('El trámite ya se envió a SEDEQ y no puede modificarse.', $e->getMessage());
+            $this->assertSame('El trámite ya se envió a revisión y no puede modificarse.', $e->getMessage());
         }
 
         // The delete-and-recreate ran before the guard; the rollback restored the fixture's 25 alumnos.
@@ -351,7 +351,7 @@ class GuardaTramiteEnviadoTest extends TestCase
             $this->fail('Se esperaba PrecondicionIncumplida.');
         } catch (PrecondicionIncumplida $e) {
             $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
-            $this->assertStringContainsString('Un trámite de este plantel ya se envió a SEDEQ', $e->getMessage());
+            $this->assertStringContainsString('Un trámite de este plantel ya se envió a revisión', $e->getMessage());
         }
 
         $this->assertSame($antes, DocumentoPlantel::where('plantel_id', $escuela->plantel_id)->where('tipo_documento_id', $tipo)->value('archivo_path'));
@@ -436,7 +436,7 @@ class GuardaTramiteEnviadoTest extends TestCase
             ->call('guardar')
             ->assertHasErrors('plantel')
             ->assertNoRedirect()
-            ->assertSee('Un trámite de este plantel ya se envió a SEDEQ');
+            ->assertSee('Un trámite de este plantel ya se envió a revisión');
     }
 
     public function test_la_pagina_de_documentos_muestra_el_error_del_plantel(): void
@@ -450,6 +450,6 @@ class GuardaTramiteEnviadoTest extends TestCase
             ->call('guardarDocumentoSimple', 'plano_inmueble')
             ->assertHasErrors('archivos.plano_inmueble')
             ->assertNoRedirect()
-            ->assertSee('Un trámite de este plantel ya se envió a SEDEQ');
+            ->assertSee('Un trámite de este plantel ya se envió a revisión');
     }
 }

@@ -79,9 +79,9 @@ class EvaluarAplicabilidadDocumentos
         if ($alcance === []) {
             return new ResultadoAplicabilidad(
                 Aplicabilidad::Obligatorio,
-                'SEDEQ no ha confirmado el alcance de la condición de domicilios diferentes; se conserva la obligatoriedad.',
+                'Aún no se ha confirmado el alcance de la condición de domicilios diferentes; se conserva la obligatoriedad.',
                 self::FUNDAMENTO,
-                'Pendiente de SEDEQ',
+                'Pendiente de confirmación',
             );
         }
 
@@ -92,11 +92,11 @@ class EvaluarAplicabilidadDocumentos
             ->all();
 
         if ($niveles === []) {
-            return new ResultadoAplicabilidad(Aplicabilidad::PendienteDeterminar, 'Aún no se eligen los niveles del plantel; no se puede saber si aplica la condición.', self::FUNDAMENTO, 'Pendiente de SEDEQ');
+            return new ResultadoAplicabilidad(Aplicabilidad::PendienteDeterminar, 'Aún no se eligen los niveles del plantel; no se puede saber si aplica la condición.', self::FUNDAMENTO, 'Pendiente de confirmación');
         }
 
         if (array_diff($niveles, $alcance) !== []) {
-            return new ResultadoAplicabilidad(Aplicabilidad::Obligatorio, 'Algún nivel del plantel está fuera del alcance en que SEDEQ confirmó la condición.', self::FUNDAMENTO, 'Pendiente de SEDEQ');
+            return new ResultadoAplicabilidad(Aplicabilidad::Obligatorio, 'Algún nivel del plantel está fuera del alcance en que se confirmó la condición.', self::FUNDAMENTO, 'Pendiente de confirmación');
         }
 
         $plantel = Escuela::findOrFail($escuelaId)->plantel;
@@ -117,7 +117,7 @@ class EvaluarAplicabilidadDocumentos
                 Aplicabilidad::PendienteDeterminar,
                 'La evidencia de coincidencia de domicilios no basta (se necesitan '.self::FUENTES_MINIMAS.' documentos municipales coincidentes y ninguno en duda; hoy se cuentan '.count($coinciden).'); se trata como exigible.',
                 self::FUNDAMENTO,
-                'Pendiente de SEDEQ',
+                'Pendiente de confirmación',
                 $coinciden,
             );
         }

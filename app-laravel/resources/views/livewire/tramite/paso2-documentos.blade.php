@@ -160,7 +160,7 @@
                         @endif
                         <x-ui.field id="acreditacionForm.fechaContrato" label="Fecha de celebración del contrato" hint="El día en que se firmó."><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaContrato" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.fechaInicioVigencia" label="Inicio de la vigencia" hint="Puede ser distinta de la fecha de celebración."><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInicioVigencia" /></x-ui.field>
-                        <x-ui.checkbox id="acreditacionForm.vigenciaIndeterminada" wire:model.live="acreditacionForm.vigenciaIndeterminada" descripcion="Se registra tal como consta en el contrato; SEDEQ determina si es aceptable.">El contrato no tiene fecha de terminación</x-ui.checkbox>
+                        <x-ui.checkbox id="acreditacionForm.vigenciaIndeterminada" wire:model.live="acreditacionForm.vigenciaIndeterminada" descripcion="Se registra tal como consta en el contrato; Después se determina si es aceptable.">El contrato no tiene fecha de terminación</x-ui.checkbox>
                         @if (! $acreditacionForm->vigenciaIndeterminada)
                             <x-ui.field id="acreditacionForm.vigenciaContrato" label="Fin de la vigencia"><x-ui.input type="date" wire:model.blur="acreditacionForm.vigenciaContrato" /></x-ui.field>
                         @endif
@@ -180,7 +180,7 @@
                         <x-ui.field id="acreditacionForm.otroFechaExpedicion" label="Fecha de expedición u otorgamiento"><x-ui.input type="date" wire:model.blur="acreditacionForm.otroFechaExpedicion" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.otroAutoridad" label="Autoridad o fedatario que lo emite"><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroAutoridad" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.otroDerecho" label="Derecho que acredita" hint="Por ejemplo: propiedad, posesión, usufructo, uso."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.otroDerecho" /></x-ui.field>
-                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado del inmueble" hint="La finalidad para la que el instrumento permite ocupar el inmueble. SEDEQ revisa si el instrumento es suficiente."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
+                        <x-ui.field id="acreditacionForm.usoAutorizado" label="Uso autorizado del inmueble" hint="La finalidad para la que el instrumento permite ocupar el inmueble. Después se revisa si el instrumento es suficiente."><x-ui.input maxlength="200" wire:model.blur="acreditacionForm.usoAutorizado" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.fechaInicioVigencia" label="Inicio de la vigencia" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.fechaInicioVigencia" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.vigenciaContrato" label="Fin de la vigencia" optional><x-ui.input type="date" wire:model.blur="acreditacionForm.vigenciaContrato" /></x-ui.field>
                         <x-ui.field id="acreditacionForm.folioRpp" label="Folio o antecedente registral" hint="Solo si el instrumento está inscrito en el Registro Público de la Propiedad." optional><x-ui.input maxlength="50" wire:model.blur="acreditacionForm.folioRpp" /></x-ui.field>
@@ -193,7 +193,7 @@
                     <x-ui.field id="dictamenForm.folioDictamen" label="Folio del dictamen"><x-ui.input maxlength="50" wire:model.blur="dictamenForm.folioDictamen" /></x-ui.field>
                     <x-ui.field id="dictamenForm.fechaEmision" label="Fecha de emisión"><x-ui.input type="date" wire:model.blur="dictamenForm.fechaEmision" /></x-ui.field>
                     <x-ui.field id="dictamenForm.giroAutorizado" label="Uso o giro autorizado según el dictamen" hint="Capture el uso autorizado tal como aparece en el documento emitido por la autoridad municipal."><x-ui.input maxlength="200" wire:model.blur="dictamenForm.giroAutorizado" /></x-ui.field>
-                    <p class="text-body-sm text-muted">La vigencia del dictamen se calcula como un año a partir de la fecha de emisión. SEDEQ revisa su vigencia.</p>
+                    <p class="text-body-sm text-muted">La vigencia del dictamen se calcula como un año a partir de la fecha de emisión. Después se revisa su vigencia.</p>
                     <x-ui.field id="dictamenForm.condicionantes" label="Condicionantes" hint="Restricciones que aparezcan en el documento: actividades permitidas, superficie, estacionamiento, etc."><x-ui.textarea wire:model.blur="dictamenForm.condicionantes" maxlength="1000" /></x-ui.field>
                 </x-tramite.documento-row>
             @elseif ($clave === 'visto_bueno_proteccion_civil')
@@ -206,7 +206,7 @@
                             </p>
                         </x-slot:extra>
                     @endisset
-                    <p class="text-body-sm text-muted">Capture lo que dice el documento. El sistema no valora si es suficiente; SEDEQ lo revisa.</p>
+                    <p class="text-body-sm text-muted">Capture lo que dice el documento. El sistema no valora si es suficiente; se revisa después.</p>
 
                     <h3 class="text-body-md font-semibold text-ink">Identificación del documento</h3>
                     <x-ui.field id="proteccionCivilForm.tipoInstrumento" label="Tipo de documento">
@@ -278,7 +278,7 @@
                         wire:model.live="constanciaForm.tipoVigencia"
                         :opciones="['fecha_expresa' => 'Sí, el documento indica una fecha de vencimiento', 'sin_fecha_expresa' => 'No, el documento no indica fecha de vencimiento']"
                     />
-                    <p class="text-body-sm text-muted">Registre solo lo que dice el documento. SEDEQ revisa su vigencia.</p>
+                    <p class="text-body-sm text-muted">Registre solo lo que dice el documento. Después se revisa su vigencia.</p>
                     @if ($constanciaForm->tipoVigencia === 'fecha_expresa')
                         <x-ui.field id="constanciaForm.vigenciaConstancia" label="Fecha de vencimiento" hint="Tal como aparece en la constancia."><x-ui.input type="date" wire:model.blur="constanciaForm.vigenciaConstancia" /></x-ui.field>
                     @endif

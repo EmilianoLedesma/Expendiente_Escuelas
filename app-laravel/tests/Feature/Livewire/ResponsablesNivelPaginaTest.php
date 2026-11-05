@@ -127,7 +127,7 @@ class ResponsablesNivelPaginaTest extends TestCase
         Livewire::actingAs($dueno->user)->test(ResponsablesNivel::class)
             ->call('revocar', $acceso->id)
             ->assertHasErrors('revocar')
-            ->assertSee('El trámite ya se envió a SEDEQ y no puede modificarse.')
+            ->assertSee('El trámite ya se envió a revisión y no puede modificarse.')
             ->assertDispatched('toast', tipo: 'error', titulo: 'No se pudo revocar')
             ->assertNotDispatched('toast', tipo: 'success');
 

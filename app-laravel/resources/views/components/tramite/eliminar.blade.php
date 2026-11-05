@@ -11,7 +11,7 @@
 
     <dialog id="{{ $titulo }}" aria-labelledby="{{ $titulo }}-titulo" onclick="if (event.target === this) this.close()" class="modal rounded-lg border border-error-ink bg-canvas p-lg text-left text-body-md text-ink">
         <h2 id="{{ $titulo }}-titulo" class="text-title-md font-semibold text-error-ink">Ya no podrás abrir ni editar este trámite.</h2>
-        <p class="mt-sm">El trámite deja de aparecer en tus trámites. Sus datos y archivos se conservan; para recuperarlo, contacta a SEDEQ.</p>
+        <p class="mt-sm">El trámite deja de aparecer en tus trámites. Sus datos y archivos se conservan; para recuperarlo, contacta a un administrador.</p>
         <form method="POST" action="{{ route('tramite.eliminar', ['escuela' => $tramite->escuelaId]) }}" class="mt-lg flex flex-wrap justify-end gap-sm">
             @csrf
             @method('DELETE')

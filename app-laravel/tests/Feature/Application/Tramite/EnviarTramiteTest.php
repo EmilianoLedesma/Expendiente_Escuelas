@@ -11,11 +11,13 @@ use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\EvaluacionValidacion;
 use App\Models\NivelEducativo;
+use App\Notifications\TramiteEnRevision;
 use Database\Seeders\CatalogoMinimoSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\Concerns\ConNivelParaResponsables;
@@ -262,6 +264,23 @@ class EnviarTramiteTest extends TestCase
 
         $this->rechaza(fn () => app(EnviarTramite::class)->ejecutar($escuela->id, $this->usuario($escuela)), EjecutarValidacionFinal::ETAPA, 'Completa todas las secciones');
         $this->assertSame(0, DB::table('historial_estados_expediente')->count());
+    }
+
+    public function test_avisa_al_dueno_que_el_tramite_va_a_revision(): void
+    {
+        Notification::fake();
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+        $dueno = $escuela->solicitante->user;
+
+        app(EnviarTramite::class)->ejecutar($escuela->id, $this->usuario($escuela));
+
+        Notification::assertSentTo($dueno, TramiteEnRevision::class, function (TramiteEnRevision $n) use ($dueno, $escuela) {
+            $html = (string) $n->toMail($dueno)->render();
+
+            return str_contains($html, route('tramite.resumen', ['escuela' => $escuela->id])) && ! str_contains($html, 'SEDEQ');
+        });
+        Notification::assertSentTimes(TramiteEnRevision::class, 1);
     }
 
     public function test_registra_el_envio_en_el_log_tras_el_commit(): void

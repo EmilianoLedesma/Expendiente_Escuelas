@@ -22,7 +22,7 @@ use Tests\TestCase;
 
 /**
  * Aplicabilidad del Certificado de Número Oficial (spec 2026-10-20 §5). La condición «solo cuando hay
- * domicilios diferentes» es Documentado, no contrastado y su alcance por nivel es Pendiente de SEDEQ:
+ * domicilios diferentes» es Documentado, no contrastado y su alcance por nivel es Pendiente de confirmación:
  * sin alcance configurado el certificado es obligatorio, y la ausencia de evidencia nunca lo vuelve opcional.
  */
 class EvaluarAplicabilidadDocumentosTest extends TestCase
@@ -102,8 +102,8 @@ class EvaluarAplicabilidadDocumentosTest extends TestCase
         $resultado = $this->evaluador([$this->coincidente(), $this->coincidente()])->para($escuela->id, self::CLAVE);
 
         $this->assertSame(Aplicabilidad::Obligatorio, $resultado->estado);
-        $this->assertStringContainsString('SEDEQ', $resultado->motivo);
-        $this->assertSame('Pendiente de SEDEQ', $resultado->certeza);
+        $this->assertStringContainsString('Aún no se ha confirmado', $resultado->motivo);
+        $this->assertSame('Pendiente de confirmación', $resultado->certeza);
     }
 
     public function test_la_politica_por_defecto_es_la_vacia(): void

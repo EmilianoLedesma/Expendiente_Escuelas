@@ -69,7 +69,7 @@ class ArchivarCuenta
                     if ($e->etapaFaltante !== TramiteEditable::EN_CAPTURA) {
                         throw $e;
                     }
-                    throw new PrecondicionIncumplida(TramiteEditable::EN_CAPTURA, 'No puedes archivar tu cuenta: ya enviaste un trámite a SEDEQ.');
+                    throw new PrecondicionIncumplida(TramiteEditable::EN_CAPTURA, 'No puedes archivar tu cuenta: ya enviaste un trámite a revisión.');
                 }
 
                 $responsables = $this->marcar(
