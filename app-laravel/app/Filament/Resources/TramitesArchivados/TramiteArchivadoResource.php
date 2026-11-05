@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TramitesArchivados;
 use App\Application\Archivo\ArchivarTramite;
 use App\Application\Archivo\PurgarTramite;
 use App\Application\Archivo\RestaurarTramite;
+use App\Application\Auditoria\ConsultarHistorialTramite;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Filament\Resources\TramitesArchivados\Pages\ListTramitesArchivados;
@@ -92,6 +93,12 @@ class TramiteArchivadoResource extends Resource
                 TextColumn::make('archivado_motivo')->label('Motivo')->wrap(),
             ])
             ->recordActions([
+                Action::make('historial')->label('Historial')->color('gray')
+                    ->slideOver()->modalHeading('Historial del trámite')
+                    ->modalSubmitAction(false)->modalCancelActionLabel('Cerrar')
+                    ->modalContent(fn (Escuela $r) => view('filament.historial-tramite', [
+                        'eventos' => app(ConsultarHistorialTramite::class)->ejecutar($r->id),
+                    ])),
                 Action::make('archivar')->label('Archivar')->color('warning')
                     ->visible(fn (Escuela $r) => $r->archivado_at === null)
                     ->schema([Textarea::make('motivo')->label('Motivo (opcional)')->helperText(UsuarioResource::AVISO_MOTIVO)])
