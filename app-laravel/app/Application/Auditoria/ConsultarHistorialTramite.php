@@ -53,7 +53,7 @@ class ConsultarHistorialTramite
             ->leftJoin('users', 'users.id', '=', 'bitacora_acciones.actor_id')
             ->where('objeto_tipo', 'escuela')->where('objeto_id', $escuelaId)->orderBy('bitacora_acciones.id')
             ->get(['bitacora_acciones.accion', 'bitacora_acciones.motivo', 'bitacora_acciones.created_at', 'users.name'])
-            ->map(fn ($f) => $this->evento($f->created_at, $f->name, self::ACCIONES[$f->accion] ?? $f->accion, null, $f->motivo));
+            ->map(fn ($f) => $this->evento($f->created_at, $f->name, self::ACCIONES[$f->accion] ?? $f->accion, null, $f->motivo, 'accion'));
     }
 
     /**
@@ -68,7 +68,7 @@ class ConsultarHistorialTramite
             ->leftJoin('users', 'users.id', '=', 'historial_estados_expediente.usuario_sedeq_id')
             ->whereIn('escuela_nivel_id', $ids)->orderBy('historial_estados_expediente.id')
             ->get(['estados_expediente.nombre as estado', 'historial_estados_expediente.comentario', 'historial_estados_expediente.fecha', 'historial_estados_expediente.escuela_nivel_id', 'users.name'])
-            ->map(fn ($f) => $this->evento($f->fecha, $f->name, 'Estado: '.$f->estado, $niveles[$f->escuela_nivel_id] ?? null, $f->comentario));
+            ->map(fn ($f) => $this->evento($f->fecha, $f->name, 'Estado: '.$f->estado, $niveles[$f->escuela_nivel_id] ?? null, $f->comentario, 'estado'));
     }
 
     /**
@@ -85,7 +85,7 @@ class ConsultarHistorialTramite
             ->map(fn ($f) => $this->evento(
                 $f->decidido_at, $f->name,
                 ($f->estado === 'aceptado' ? 'Aceptó' : 'Rechazó').' el paso '.PasosRevision::titulo($f->paso_clave),
-                $niveles[$f->escuela_nivel_id] ?? null, $f->motivo));
+                $niveles[$f->escuela_nivel_id] ?? null, $f->motivo, $f->estado));
     }
 
     /**
@@ -103,12 +103,12 @@ class ConsultarHistorialTramite
             ->map(fn ($f) => $this->evento(
                 $f->created_at, $f->actor,
                 trim((self::ASIGNACIONES[$f->accion] ?? $f->accion).' '.($f->revisor ?? '')),
-                $niveles[$f->escuela_nivel_id] ?? null, null));
+                $niveles[$f->escuela_nivel_id] ?? null, null, 'asignacion'));
     }
 
     /** @return array<string, mixed> */
-    private function evento(mixed $cuando, ?string $quien, string $que, ?string $nivel, ?string $detalle): array
+    private function evento(mixed $cuando, ?string $quien, string $que, ?string $nivel, ?string $detalle, string $tipo): array
     {
-        return ['cuando' => Carbon::parse($cuando), 'quien' => $quien, 'que' => $que, 'nivel' => $nivel, 'detalle' => $detalle];
+        return ['cuando' => Carbon::parse($cuando), 'quien' => $quien, 'que' => $que, 'nivel' => $nivel, 'detalle' => $detalle, 'tipo' => $tipo];
     }
 }

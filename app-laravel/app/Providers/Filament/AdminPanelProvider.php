@@ -29,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('Administración SEDEQ')
             ->colors([
                 'primary' => Color::Amber,
             ])
