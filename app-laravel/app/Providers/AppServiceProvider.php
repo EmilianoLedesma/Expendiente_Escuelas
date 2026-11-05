@@ -11,8 +11,10 @@ use App\Listeners\CrearSolicitanteAlRegistrarUsuario;
 use App\Livewire\Hooks\LimpiarYValidarAlCapturar;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
+use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -46,6 +48,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(Registered::class, CrearSolicitanteAlRegistrarUsuario::class);
+
+        // Los ids de ruta son números: uno con letras o desbordado es 404, no un error 500 de PostgreSQL.
+        Route::pattern('escuela', '[0-9]{1,18}');
+        Route::pattern('escuelaNivel', '[0-9]{1,18}');
+        Route::pattern('evaluacion', '[0-9]{1,18}');
+
+        // Los correos son Markdown y llevan nombres escritos por usuarios: con esto "[" y "<" de los
+        // valores interpolados se escapan y no se vuelven enlaces ni imágenes en un correo legítimo.
+        Markdown::withSecuredEncoding();
 
         // Lets `<x-layouts.tramite>` resolve resources/views/layouts/tramite.blade.php —
         // the same physical file Livewire's #[Layout('layouts.tramite')] resolves as a

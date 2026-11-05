@@ -46,6 +46,7 @@ class Paso2Responsable extends Component
     use NotificaToast;
     use ValidaEnConjunto;
 
+    #[Locked]
     public Escuela $escuela;
 
     /** Estado del servidor, no del cliente: un $set('fase') forjado saltaba a 'niveles' (WS-1.2). */

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Planteles;
 use App\Application\Archivo\ArchivarPlantel;
 use App\Application\Archivo\RestaurarPlantel;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Filament\Concerns\SoloAdmin;
 use App\Filament\Resources\Planteles\Pages\ListPlanteles;
 use App\Filament\Resources\Usuarios\UsuarioResource;
 use App\Models\Plantel;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\DB;
 /** Pantalla de solo lectura de planteles; el único cambio posible es archivar o restaurar. */
 class PlantelResource extends Resource
 {
+    use SoloAdmin;
+
     protected static ?string $model = Plantel::class;
 
     protected static ?string $modelLabel = 'plantel';

@@ -2,6 +2,7 @@
 
 namespace App\Application\ResponsablesNivel;
 
+use App\Application\Captura\ReglasCaptura;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
@@ -33,7 +34,7 @@ class InvitarResponsableNivel
 
         $validador = Validator::make(
             ['nombre' => $nombre, 'correo' => $correo],
-            ['nombre' => ['required', 'string', 'max:255'], 'correo' => ['required', 'email', 'max:255']],
+            ['nombre' => ReglasCaptura::nombreVisible(), 'correo' => ['required', 'email', 'max:255']],
             ['nombre.required' => 'Indica el nombre del responsable.', 'correo.required' => 'Indica el correo del responsable.', 'correo.email' => 'Escribe un correo válido.'],
         );
         if ($validador->fails()) {

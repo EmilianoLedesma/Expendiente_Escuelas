@@ -192,14 +192,14 @@ class TramitesArchivadosTest extends TestCase
             ->assertMountedActionModalSee('identificadores y el motivo');
     }
 
-    public function test_purga_refusada_por_la_accion_notifica(): void
+    public function test_un_admin_degradado_a_mitad_de_sesion_ya_no_abre_la_lista(): void
     {
         $e = $this->archivada();
-        // Admin degradado a mitad de sesión: la acción de Application lo rechaza.
+        // Admin degradado a mitad de sesión: el recurso se le cierra (SoloAdmin) y, aunque llegara a la acción,
+        // el caso de uso de Application también lo rechaza (PurgarTest).
         $this->admin->removeRole(RolesSedeq::ADMIN);
 
-        $this->lista()->callAction(TestAction::make('purgar')->table($e), ['motivo' => 'Baja', 'confirmacion' => 'ELIMINAR'])
-            ->assertNotified(Notification::make()->danger()->title('No tienes permiso para esta acción.'));
+        $this->get('/admin/tramites')->assertForbidden();
 
         $this->assertNotNull($this->sinScope($e->id));
     }
