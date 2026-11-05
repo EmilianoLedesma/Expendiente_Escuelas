@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Application\Archivo\ArchivarCuenta;
 use App\Application\Archivo\ArchivarTramite;
+use App\Application\Auditoria\ConsultarHistorialTramite;
 use App\Application\Revision\RolesSedeq;
 use App\Filament\Resources\TramitesArchivados\Pages\ListTramitesArchivados;
 use App\Models\Escuela;
@@ -125,6 +126,17 @@ class TramitesArchivadosTest extends TestCase
 
         $this->assertNull(Escuela::find($e->id));
         $this->assertNull($this->sinScope($e->id)->archivado_motivo);
+    }
+
+    public function test_historial_muestra_la_linea_de_tiempo_del_tramite(): void
+    {
+        $e = $this->archivada('Motivo del cierre');
+
+        $this->lista()->assertActionVisible(TestAction::make('historial')->table($e));
+        $html = view('filament.historial-tramite', ['eventos' => app(ConsultarHistorialTramite::class)->ejecutar($e->id)])->render();
+        $this->assertStringContainsString('Archivó el trámite', $html);
+        $this->assertStringContainsString('Motivo del cierre', $html);
+        $this->assertStringContainsString(e($this->admin->name), $html);
     }
 
     public function test_restaurar_devuelve_la_escuela_y_sale_de_archivados(): void
