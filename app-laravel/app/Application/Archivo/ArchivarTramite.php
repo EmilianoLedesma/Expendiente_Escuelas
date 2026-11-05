@@ -2,7 +2,6 @@
 
 namespace App\Application\Archivo;
 
-use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\DesasignarTramite;
 use App\Application\Revision\RolesSedeq;
@@ -19,7 +18,7 @@ use Illuminate\Support\Str;
  * Archiva un trámite (borrado lógico): marca la escuela, conserva filas y archivos,
  * libera sus asignaciones de revisión y deja fila de auditoría. El solicitante solo
  * puede mientras todos sus niveles sigan en captura (la propiedad la decide
- * EscuelaPolicy::delete antes de llegar aquí); el admin, en cualquier estado y con motivo.
+ * EscuelaPolicy::delete antes de llegar aquí); el admin, en cualquier estado y con motivo opcional (queda la traza fechada).
  * El borrado definitivo es solo la purga del admin.
  */
 class ArchivarTramite
@@ -29,15 +28,11 @@ class ArchivarTramite
         private readonly RegistrarAccion $registrar,
     ) {}
 
-    /** @throws PrecondicionIncumplida|DatosInvalidos */
+    /** @throws PrecondicionIncumplida */
     public function ejecutar(int $escuelaId, int $actorId, ?string $motivo = null, ?string $lote = null): void
     {
         DB::transaction(function () use ($escuelaId, $actorId, $motivo, $lote) {
             $esAdmin = User::findOrFail($actorId)->hasRole(RolesSedeq::ADMIN);
-            if ($esAdmin && trim((string) $motivo) === '') {
-                throw new DatosInvalidos(['motivo' => 'Escribe el motivo para archivar el trámite.']);
-            }
-
             // Orden de bloqueo del proyecto: escuela_niveles antes que escuelas.
             $niveles = EscuelaNivel::withoutGlobalScope(NivelDeEscuelaNoArchivada::class)
                 ->where('escuela_id', $escuelaId)->orderBy('id')->lockForUpdate()->pluck('estado_id', 'id');
@@ -50,6 +45,7 @@ class ArchivarTramite
                 throw new PrecondicionIncumplida(TramiteEditable::EN_CAPTURA, 'Solo se puede archivar un trámite mientras todos sus niveles estén en captura.');
             }
 
+            $avisar = $esAdmin && $lote === null; // en cascada de cuenta (lote dado) o si archiva el dueño no hay correo
             $lote ??= (string) Str::uuid();
             $escuela->forceFill([
                 'archivado_at' => now(),
@@ -60,6 +56,9 @@ class ArchivarTramite
 
             $this->desasignar->liberar($actorId, $niveles->keys()->map(fn ($id) => (int) $id)->values()->all(), 'desasignar_archivo');
             $this->registrar->ejecutar($actorId, RegistrarAccion::ARCHIVAR_TRAMITE, 'escuela', $escuelaId, $motivo, ['lote' => $lote]);
+            if ($avisar) {
+                DB::afterCommit(fn () => event(new TramiteCerradoPorAdmin($escuelaId)));
+            }
         });
     }
 }

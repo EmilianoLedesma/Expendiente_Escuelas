@@ -3,7 +3,6 @@
 namespace Tests\Feature\Archivo;
 
 use App\Application\Archivo\ArchivarTramite;
-use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\AsignarTramite;
 use App\Application\Revision\RolesSedeq;
@@ -15,9 +14,11 @@ use App\Models\Plantel;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Solicitante;
 use App\Models\User;
+use App\Notifications\TramiteCerrado;
 use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\Concerns\ConTramitesEnRevision;
@@ -158,21 +159,49 @@ class ArchivarTramiteTest extends TestCase
         $this->assertSame('Duplicado', DB::table('bitacora_acciones')->sole()->motivo);
     }
 
-    public function test_el_admin_sin_motivo_recibe_datos_invalidos(): void
+    public function test_el_admin_que_archiva_avisa_al_dueno_solo_con_el_estado(): void
+    {
+        Notification::fake();
+        $escuela = $this->borrador();
+        $dueno = $this->dueno($escuela);
+
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $this->admin()->id, 'Motivo interno');
+
+        Notification::assertSentTo($dueno, TramiteCerrado::class, function (TramiteCerrado $n) use ($dueno) {
+            $texto = (string) $n->toMail($dueno)->render();
+
+            return str_contains($texto, 'cerrado') && ! str_contains($texto, 'Motivo interno');
+        });
+        Notification::assertSentTimes(TramiteCerrado::class, 1);
+    }
+
+    public function test_no_avisa_cuando_archiva_el_dueno_ni_en_cascada_de_cuenta(): void
+    {
+        Notification::fake();
+        $propia = $this->borrador();
+        app(ArchivarTramite::class)->ejecutar($propia->id, $this->dueno($propia)->id);
+
+        $cascada = $this->borrador();
+        app(ArchivarTramite::class)->ejecutar($cascada->id, $this->admin()->id, null, '22222222-2222-2222-2222-222222222222');
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_el_admin_archiva_sin_motivo_y_queda_la_traza(): void
     {
         $nivel = $this->nivelEnRevision();
         $admin = $this->admin();
 
-        foreach ([null, '   '] as $motivo) {
-            try {
-                app(ArchivarTramite::class)->ejecutar($nivel->escuela_id, $admin->id, $motivo);
-                $this->fail('Debió lanzar DatosInvalidos.');
-            } catch (DatosInvalidos $e) {
-                $this->assertArrayHasKey('motivo', $e->errores);
-            }
-        }
+        app(ArchivarTramite::class)->ejecutar($nivel->escuela_id, $admin->id, null);
 
-        $this->assertNotNull(Escuela::find($nivel->escuela_id));
+        $fila = $this->archivada($nivel->escuela_id);
+        $this->assertNull($fila->archivado_motivo);
+        $this->assertSame($admin->id, $fila->archivado_por);
+        $this->assertNotNull($fila->archivado_at);
+        $log = DB::table('bitacora_acciones')->sole();
+        $this->assertNull($log->motivo);
+        $this->assertSame($admin->id, (int) $log->actor_id);
+        $this->assertNull(Escuela::find($nivel->escuela_id));
     }
 
     public function test_archivar_dos_veces_se_rechaza(): void

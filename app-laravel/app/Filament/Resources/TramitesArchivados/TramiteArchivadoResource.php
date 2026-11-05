@@ -45,7 +45,7 @@ class TramiteArchivadoResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScope(EscuelaNoArchivada::class)
             ->addSelect(['escuelas.*', 'archivado_por_nombre' => User::select('name')->whereColumn('users.id', 'escuelas.archivado_por')])
-            ->with(['plantel', 'solicitante.user']);
+            ->with(['plantel', 'solicitante.user', 'ternasNombres']);
     }
 
     /** Llama a la acción de Application y convierte sus errores en notificación. */
@@ -80,6 +80,7 @@ class TramiteArchivadoResource extends Resource
             ])
             ->columns([
                 TextColumn::make('nombre_aprobado')->label('Escuela')->placeholder('Sin nombre aprobado')
+                    ->state(fn (Escuela $r) => $r->nombre_aprobado ?? $r->ternasNombres->sortBy('numero_propuesta')->first()?->nombre_propuesto)
                     ->description(fn (Escuela $r) => $r->plantel
                         ? "{$r->plantel->calle} {$r->plantel->numero_ext}, {$r->plantel->colonia}, {$r->plantel->municipio}" : null),
                 TextColumn::make('solicitante.user.name')->label('Solicitante'),
@@ -93,14 +94,14 @@ class TramiteArchivadoResource extends Resource
             ->recordActions([
                 Action::make('archivar')->label('Archivar')->color('warning')
                     ->visible(fn (Escuela $r) => $r->archivado_at === null)
-                    ->schema([Textarea::make('motivo')->label('Motivo')->required()->helperText(UsuarioResource::AVISO_MOTIVO)])
+                    ->schema([Textarea::make('motivo')->label('Motivo (opcional)')->helperText(UsuarioResource::AVISO_MOTIVO)])
                     ->action(fn (Escuela $r, array $data) => self::intentar(
                         fn () => app(ArchivarTramite::class)->ejecutar($r->id, (int) auth()->id(), $data['motivo']),
                         'Trámite archivado.')),
                 Action::make('restaurar')->label('Restaurar')->requiresConfirmation()
                     ->visible(fn (Escuela $r) => $r->archivado_at !== null)
                     ->action(fn (Escuela $r) => self::intentar(
-                        fn () => app(RestaurarTramite::class)->ejecutar((int) auth()->id(), $r->id),
+                        fn () => app(RestaurarTramite::class)->ejecutar((int) auth()->id(), $r->id, true),
                         'Trámite restaurado.')),
                 Action::make('purgar')->label('Eliminar')->color('danger')
                     ->visible(fn (Escuela $r) => $r->archivado_at !== null)
