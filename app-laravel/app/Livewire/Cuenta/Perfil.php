@@ -3,11 +3,14 @@
 namespace App\Livewire\Cuenta;
 
 use App\Application\Archivo\ArchivarCuenta;
+use App\Application\Auth\CerrarOtrasSesiones;
+use App\Application\Captura\ReglasCaptura;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\RolesSedeq;
 use App\Livewire\Actions\Logout;
 use App\Livewire\Concerns\NotificaToast;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -35,7 +38,7 @@ class Perfil extends Component
     public function guardarNombre(): void
     {
         $datos = $this->validate(
-            ['nombre' => ['required', 'string', 'max:255']],
+            ['nombre' => ReglasCaptura::nombreVisible()],
             ['nombre.required' => 'Escribe tu nombre.', 'nombre.max' => 'El nombre no puede pasar de 255 caracteres.'],
         );
 
@@ -66,7 +69,9 @@ class Perfil extends Component
             $this->reset('contrasenaActual', 'contrasenaNueva', 'contrasenaNueva_confirmation');
         }
 
-        Auth::user()->update(['password' => $datos['contrasenaNueva']]);
+        Auth::user()->forceFill(['password' => $datos['contrasenaNueva'], 'remember_token' => Str::random(60)])->save();
+        // Los demás equipos con la cuenta abierta (o con "recordarme") dejan de entrar; este sigue.
+        app(CerrarOtrasSesiones::class)->ejecutar((int) Auth::id(), session()->getId());
 
         $this->toast('Contraseña actualizada', 'Úsala la próxima vez que inicies sesión.');
 

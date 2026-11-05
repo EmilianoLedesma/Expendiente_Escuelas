@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Bitacora;
 
 use App\Application\Auditoria\EtiquetasBitacora;
+use App\Filament\Concerns\SoloAdmin;
 use App\Filament\Resources\Bitacora\Pages\ListBitacora;
 use App\Models\BitacoraAccion;
 use App\Models\User;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
 /** Bitácora global de acciones del admin y del sistema. Solo lectura: la tabla es append-only. */
 class BitacoraResource extends Resource
 {
+    use SoloAdmin;
+
     protected static ?string $model = BitacoraAccion::class;
 
     protected static ?string $modelLabel = 'acción';

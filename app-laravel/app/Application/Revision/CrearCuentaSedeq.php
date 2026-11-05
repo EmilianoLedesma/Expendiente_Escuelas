@@ -3,6 +3,7 @@
 namespace App\Application\Revision;
 
 use App\Application\Archivo\RegistrarAccion;
+use App\Application\Captura\ReglasCaptura;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Models\User;
@@ -41,7 +42,7 @@ class CrearCuentaSedeq
         $validador = Validator::make(
             ['nombre' => $nombre, 'correo' => $correo, 'rol' => $rol],
             [
-                'nombre' => ['required', 'string', 'max:255'],
+                'nombre' => ReglasCaptura::nombreVisible(),
                 'correo' => ['required', 'email', 'max:255'],
                 'rol' => ['required', Rule::in([RolesSedeq::ADMIN, RolesSedeq::SUPERVISOR])],
             ],

@@ -114,6 +114,20 @@ final class ReglasCaptura
         )];
     }
 
+    /**
+     * Nombre de una cuenta: aparece en correos del sistema (formato Markdown), así que no admite
+     * [ ] ( ) < > con los que alguien podría armar un enlace en un correo legítimo.
+     *
+     * @return list<mixed>
+     */
+    public static function nombreVisible(int $max = 255): array
+    {
+        return [...self::base(true), 'string', "max:{$max}", self::formato(
+            fn (string $valor): bool => preg_match('/[\[\]()<>]/u', $valor) !== 1,
+            'El campo :attribute no puede contener [ ] ( ) < >.',
+        )];
+    }
+
     /** @return list<mixed> */
     public static function texto(bool|string $requerido = false, int $max = 200): array
     {

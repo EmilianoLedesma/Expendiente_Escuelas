@@ -67,13 +67,22 @@ class ConsultarReportes
     public function csv(array $seccion): string
     {
         $f = fopen('php://temp', 'r+');
-        fputcsv($f, $seccion['detalle']['columnas'], ',', '"', '\\');
+        fputcsv($f, array_map($this->sinFormula(...), $seccion['detalle']['columnas']), ',', '"', '\\');
         foreach ($seccion['detalle']['filas'] as $fila) {
-            fputcsv($f, $fila, ',', '"', '\\');
+            fputcsv($f, array_map($this->sinFormula(...), $fila), ',', '"', '\\');
         }
         rewind($f);
 
         return "\xEF\xBB\xBF".stream_get_contents($f);
+    }
+
+    /**
+     * El CSV se abre en Excel: una celda de texto que empieza con = + - @ (o tabulador/retorno)
+     * se evalúa como fórmula. La comilla inicial la deja como texto.
+     */
+    private function sinFormula(mixed $celda): mixed
+    {
+        return is_string($celda) && preg_match('/^[=+\-@\t\r]/', $celda) === 1 ? "'".$celda : $celda;
     }
 
     // --- Resúmenes de la pantalla ---

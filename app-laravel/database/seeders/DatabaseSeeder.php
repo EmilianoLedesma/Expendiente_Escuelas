@@ -18,12 +18,15 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        $testUser = User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Cuenta con contraseña conocida ("password"): solo para desarrollo y pruebas, nunca en producción.
+        if (app()->environment(['local', 'testing'])) {
+            $testUser = User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
 
-        Solicitante::factory()->create(['user_id' => $testUser->id]);
+            Solicitante::factory()->create(['user_id' => $testUser->id]);
+        }
 
         $this->call(RolesSeeder::class);
         $this->call(CatalogoMinimoSeeder::class);

@@ -15,6 +15,7 @@ use App\Models\MobiliarioNivel as MobiliarioNivelModel;
 use App\Models\Sala;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -34,6 +35,7 @@ class MobiliarioNivel extends Component
     use CompuertaPaso3;
     use NotificaToast;
 
+    #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     /** @var array<int, int|string|null> concepto_id => cantidad declarada */

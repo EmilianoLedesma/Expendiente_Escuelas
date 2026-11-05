@@ -17,6 +17,7 @@ class DescargarDocumentoController
 
         abort_if($ruta === null || ! $disco->exists($ruta), 404);
 
-        return $disco->response($ruta);
+        // Solo se guardan PDF: se sirve como PDF y sin que el navegador adivine otro tipo.
+        return $disco->response($ruta, null, ['Content-Type' => 'application/pdf', 'X-Content-Type-Options' => 'nosniff']);
     }
 }

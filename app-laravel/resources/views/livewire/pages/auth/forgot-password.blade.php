@@ -3,6 +3,7 @@
 use App\Application\Captura\Normalizacion;
 use App\Application\Captura\Normalizar;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -16,6 +17,15 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function sendPasswordResetLink(): bool
     {
+        // Tope por IP: el broker solo limita por correo, y esta pantalla no debe servir para inundar buzones.
+        $clave = 'recuperar:'.request()->ip();
+        if (RateLimiter::tooManyAttempts($clave, 5)) {
+            $this->addError('email', 'Hiciste demasiadas solicitudes. Espera un minuto e inténtalo de nuevo.');
+
+            return false;
+        }
+        RateLimiter::hit($clave, 60);
+
         $this->validate([
             'email' => ['required', 'string', 'email'],
         ]);

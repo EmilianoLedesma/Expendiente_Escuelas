@@ -46,19 +46,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Solo lectura: `view` admite a SEDEQ (AccesoSedeq) y ConsultarTramiteSedeq lo revalida.
     Route::get('/sedeq/tramite/{escuela}', TramiteLectura::class)
-        ->whereNumber('escuela')
         ->middleware(['rol:supervisor|revisor', 'can:view,escuela'])
         ->name('sedeq.tramite');
 
     // Reporte guardado al envío (2026-10-20): cubre todos los niveles, así que exige verlos todos (verReporteEnviado).
     Route::get('/sedeq/tramite/{escuela}/reporte.pdf', DescargarReporteEnviadoController::class)
-        ->whereNumber('escuela')
         ->middleware(['rol:supervisor|revisor', 'can:verReporteEnviado,escuela'])
         ->name('sedeq.tramite.reporte');
 
     // El acceso lo imponen los casos de uso de revisión (AuthorizationException => 403).
     Route::get('/sedeq/revision/{escuelaNivel}', RevisionNivel::class)
-        ->whereNumber('escuelaNivel')
         ->middleware('rol:supervisor|revisor')
         ->name('sedeq.revision');
 
@@ -69,26 +66,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/responsables', ResponsablesNivel::class)->middleware('solicitante')->name('tramite.responsables');
 
     Route::get('/tramite/{escuela}', ResumenTramiteController::class)
-        ->whereNumber('escuela')
         ->middleware('can:verResumen,escuela')
         ->name('tramite.resumen');
 
     // Un segundo envío (trámite ya borrado) vuelve a Mis trámites en vez de un 404.
     Route::delete('/tramite/{escuela}', EliminarTramiteController::class)
-        ->whereNumber('escuela')
         ->middleware('can:delete,escuela')
         ->missing(fn () => redirect()->route('tramite.index')->with('toast', ['tipo' => 'info', 'titulo' => 'El trámite ya no existe']))
         ->name('tramite.eliminar');
 
     // Devolución: el dueño reenvía las correcciones de una ronda cerrada (ReenviarCorrecciones).
     Route::post('/tramite/{escuela}/reenviar', ReenviarCorreccionesController::class)
-        ->whereNumber('escuela')
         ->middleware('can:reenviar,escuela')
         ->name('tramite.reenviar');
 
     // WS-7b-1 U1: teléfono y correo del plantel, editables hasta el envío (el domicilio no).
     Route::get('/tramite/{escuela}/plantel', DatosPlantel::class)
-        ->whereNumber('escuela')
         ->middleware("can:editarPaso,escuela,'plantel'")
         ->name('tramite.plantel');
 
@@ -105,28 +98,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('tramite.paso2-documentos.descargar');
 
     Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos', Paso24DocumentosNivel::class)
-        ->whereNumber('escuelaNivel')
         ->middleware("can:editarPaso,escuelaNivel,'documentos_nivel'")
         ->name('tramite.paso2-nivel-documentos');
 
     Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos/formato-solicitud.pdf', FormatoSolicitudPdfController::class)
-        ->whereNumber('escuelaNivel')
         ->middleware('can:view,escuelaNivel')
         ->name('tramite.paso2-nivel-documentos.formato-solicitud');
 
     Route::get('/tramite/paso2/nivel/{escuelaNivel}/documentos/{clave}/archivo', DescargarDocumentoNivelController::class)
-        ->whereNumber('escuelaNivel')
         ->middleware('can:view,escuelaNivel')
         ->name('tramite.paso2-nivel-documentos.descargar');
 
     // Último paso (ADR-007): validación documental final.
     Route::get('/tramite/{escuela}/validacion', ValidacionFinal::class)
-        ->whereNumber('escuela')
         ->middleware('can:update,escuela')
         ->name('tramite.validacion');
 
     Route::get('/tramite/{escuela}/validacion/{evaluacion}/reporte.pdf', DescargarReporteValidacionController::class)
-        ->whereNumber(['escuela', 'evaluacion'])
         ->middleware('can:verReporte,escuela')
         ->name('tramite.validacion.reporte');
 
@@ -139,7 +127,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('tramite.paso3-infraestructura');
 
     Route::get('/tramite/paso3/{escuelaNivel}/infraestructura/anexo-instalaciones.pdf', AnexoInstalacionesPdfController::class)
-        ->whereNumber('escuelaNivel')
         ->middleware('can:descargarAnexo,escuelaNivel')
         ->name('tramite.paso3.infraestructura.anexo-instalaciones');
 

@@ -42,6 +42,11 @@ final class ApiInfoMexico implements FuenteCatalogoGeografico
     /** @return list<array<string, mixed>> */
     private function lista(string $ruta): array
     {
+        // El catálogo se escribe en la base: solo se acepta de una fuente cifrada.
+        if (! str_starts_with($this->urlBase, 'https://')) {
+            throw new RuntimeException('La URL de la API geográfica debe ser https://.');
+        }
+
         $url = rtrim($this->urlBase, '/').$ruta;
 
         try {
