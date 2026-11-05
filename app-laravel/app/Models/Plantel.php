@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $longitud
  * @property string|null $area_civica_m2
  * @property bool|null $tiene_asta_bandera
+ * @property-read int|null $tramites_total conteo agregado por PlantelResource
+ * @property-read int|null $tramites_activos conteo agregado por PlantelResource
  */
 class Plantel extends Model
 {
