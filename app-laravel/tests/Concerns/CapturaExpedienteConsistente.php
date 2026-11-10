@@ -58,10 +58,10 @@ trait CapturaExpedienteConsistente
     }
 
     /** Responsable y, en el orden de 2026-10-20, el nivel primaria: lo mínimo para subir documentos generales. */
-    protected function registrarResponsable(Escuela $escuela, string $tipoPersona = 'fisica'): void
+    protected function registrarResponsable(Escuela $escuela, string $tipoPersona = 'fisica', string $nivelClave = 'primaria'): void
     {
         $this->registrarSoloResponsable($escuela, $tipoPersona);
-        $this->elegirNivel($escuela->id, 'primaria');
+        $this->elegirNivel($escuela->id, $nivelClave);
     }
 
     protected function registrarSoloResponsable(Escuela $escuela, string $tipoPersona = 'fisica'): void
@@ -129,17 +129,20 @@ trait CapturaExpedienteConsistente
      *
      * @param  array<string, DatosDocumento>  $reemplazos
      */
-    protected function completarTramite(Escuela $escuela, string $tipoPersona = 'fisica', array $reemplazos = []): EscuelaNivel
+    protected function completarTramite(Escuela $escuela, string $tipoPersona = 'fisica', array $reemplazos = [], string $nivelClave = 'primaria'): EscuelaNivel
     {
         (new CatalogoMinimoSeeder)->run();
         (new PasosCapturaSeeder)->run();
         (new GradosSeeder)->run();
         (new CargosPuestosSeeder)->run();
         (new AsignaturasSeeder)->run();
-        $this->registrarResponsable($escuela, $tipoPersona);
+        $this->registrarResponsable($escuela, $tipoPersona, $nivelClave);
         $this->subirTodosConDatos($escuela, $tipoPersona, $reemplazos);
 
-        $escuelaNivel = $this->elegirNivel($escuela->id, 'primaria');
+        $escuelaNivel = $this->elegirNivel($escuela->id, $nivelClave);
+        if ($nivelClave === 'media_superior') {
+            $this->sembrarCatalogoMediaSuperior($escuelaNivel->nivel_educativo_id);
+        }
 
         // WS-5b: Paso 3 stays locked until the level's Paso 2.4 is complete.
         $this->completarPaso24($escuelaNivel->id);
@@ -160,5 +163,14 @@ trait CapturaExpedienteConsistente
         app(RegistrarMatricula::class)->ejecutar($escuelaNivel->id, new DatosMatricula(grupos: [['gradoId' => $primero, 'grupo' => 'A', 'alumnos' => 25]]));
 
         return $escuelaNivel;
+    }
+
+    /** Los seeders no traen grados ni cargos de media superior: el mínimo para capturar su plantilla y matrícula. */
+    private function sembrarCatalogoMediaSuperior(int $nivelEducativoId): void
+    {
+        DB::table('grados')->insert(['nivel_educativo_id' => $nivelEducativoId, 'nombre' => 'Primer semestre', 'orden' => 1]);
+        foreach (['Director Técnico', 'Docente Titular de Grupo'] as $nombre) {
+            DB::table('cargos_puestos')->insert(['nivel_educativo_id' => $nivelEducativoId, 'nombre' => $nombre, 'requiere_asignatura' => false, 'requiere_sala' => false]);
+        }
     }
 }

@@ -3,20 +3,24 @@
 namespace Tests\Feature\Application\Tramite;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\ConsultarTramiteSedeq;
 use App\Application\Tramite\DTO\SeccionTramite;
+use App\Application\Tramite\EnviarTramite;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
 use App\Models\EscuelaNivel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use ReflectionMethod;
+use Tests\Concerns\CapturaExpedienteConsistente;
 use Tests\Concerns\PreparaPaso3;
 use Tests\TestCase;
 
 /** "Presentación del Proyecto Educativo": sub-paso 7 del catálogo, solo de media superior. */
 class ProyectoEducativoEnTramiteTest extends TestCase
 {
+    use CapturaExpedienteConsistente;
     use PreparaPaso3;
     use RefreshDatabase;
 
@@ -81,6 +85,33 @@ class ProyectoEducativoEnTramiteTest extends TestCase
 
         $this->assertNull($secciones->firstWhere('clave', 'proyecto_educativo'));
         $this->assertSame([10], $secciones->pluck('totalPasos')->filter()->unique()->values()->all());
+    }
+
+    public function test_tramite_de_media_superior_con_todo_lo_demas_no_se_puede_enviar(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela, 'fisica', [], 'media_superior');
+
+        $dto = app(ResumenTramite::class)->paraEscuela($escuela->id);
+        $seccion = collect($dto->niveles[0]->secciones)->firstWhere('clave', 'proyecto_educativo');
+
+        $this->assertSame('pendiente', $seccion->estado);
+        $this->assertSame(
+            ['proyecto_educativo'],
+            collect($dto->niveles[0]->secciones)->whereNotIn('estado', ['completado', 'no_aplica'])->pluck('clave')->values()->all(),
+        );
+        $this->assertFalse($dto->completo);
+
+        $this->expectException(PrecondicionIncumplida::class);
+        app(EnviarTramite::class)->ejecutar($escuela->id, $escuela->solicitante->user_id);
+    }
+
+    public function test_el_mismo_tramite_en_primaria_queda_completo(): void
+    {
+        $escuela = $this->crearEscuelaConPlantel();
+        $this->completarTramite($escuela);
+
+        $this->assertTrue(app(ResumenTramite::class)->paraEscuela($escuela->id)->completo);
     }
 
     public function test_sedeq_lista_el_paso_solo_en_media_superior(): void
