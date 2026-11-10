@@ -2,25 +2,43 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
+use App\Application\Tramite\ResumenTramite;
+use App\Livewire\Concerns\NotificaToast;
+use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
-/** Provisional: la tarea de las páginas lo reemplaza. Solo permite que la ruta exista. */
+/**
+ * Paso 3, sub-paso 7 (solo media superior): índice de las secciones de la
+ * Presentación del Proyecto Educativo. Solo presentación; el contenido de cada
+ * sección está por definir y el paso no se completa desde aquí.
+ */
 #[Layout('layouts.tramite')]
 class ProyectoEducativoIndice extends Component
 {
+    use CompuertaPaso3;
+    use NotificaToast;
+
     #[Locked]
     public EscuelaNivel $escuelaNivel;
 
     public function mount(EscuelaNivel $escuelaNivel): void
     {
         $this->escuelaNivel = $escuelaNivel;
+
+        abort_unless(SeccionesProyectoEducativo::aplicaA($escuelaNivel->nivelEducativo->clave), 404);
+
+        $this->redirigirSiNoAlcanzable($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
     }
 
-    public function render(): string
+    public function render()
     {
-        return '<div></div>';
+        return view('livewire.tramite.paso3.proyecto-educativo-indice', [
+            'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
+            'secciones' => SeccionesProyectoEducativo::todas(),
+        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
     }
 }

@@ -30,6 +30,8 @@ class Paso3RequierePaso2CompletoTest extends TestCase
         'tramite.paso3-plan-estudios',
         'tramite.paso3-plantilla',
         'tramite.paso3-matricula',
+        'tramite.paso3-proyecto-educativo',
+        'tramite.paso3-proyecto-educativo-seccion',
         'tramite.paso3-proximos-pasos',
     ];
 
@@ -41,7 +43,8 @@ class Paso3RequierePaso2CompletoTest extends TestCase
      */
     public static function rutasConCompuerta(): array
     {
-        $rutas = array_values(array_diff(self::RUTAS_PASO3, ['tramite.paso3-proximos-pasos']));
+        // Las del proyecto educativo solo existen para media superior (404 en otros niveles): las cubre Paso3ProyectoEducativoTest.
+        $rutas = array_values(array_diff(self::RUTAS_PASO3, ['tramite.paso3-proximos-pasos', 'tramite.paso3-proyecto-educativo', 'tramite.paso3-proyecto-educativo-seccion']));
 
         return array_combine($rutas, array_map(fn ($r) => [$r], $rutas));
     }

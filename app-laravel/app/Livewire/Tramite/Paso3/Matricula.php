@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Matricula\DTO\DatosMatricula;
 use App\Application\Matricula\MatriculaCapturada;
 use App\Application\Matricula\RegistrarMatricula;
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
@@ -92,6 +93,12 @@ class Matricula extends Component
             return;
         } catch (PrecondicionIncumplida) {
             $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'matricula');
+
+            return;
+        }
+
+        if (SeccionesProyectoEducativo::aplicaA($this->escuelaNivel->nivelEducativo->clave)) {
+            $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-proyecto-educativo', 'Matrícula guardada', 'Continúa con la Presentación del Proyecto Educativo.');
 
             return;
         }
