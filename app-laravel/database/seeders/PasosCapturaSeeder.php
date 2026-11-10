@@ -9,7 +9,8 @@ class PasosCapturaSeeder extends Seeder
     use InsertaFaltantes;
 
     /**
-     * Los seis sub-pasos del Paso 3 (PRD §5), en el orden fijo del wizard.
+     * Los siete sub-pasos del Paso 3 (PRD §5), en el orden fijo del wizard;
+     * el último solo para media superior.
      */
     public function run(): void
     {
@@ -20,6 +21,7 @@ class PasosCapturaSeeder extends Seeder
             ['clave' => 'plan_estudios', 'nombre' => 'Plan de estudios y modalidad', 'orden' => 4],
             ['clave' => 'plantilla_docente', 'nombre' => 'Plantilla docente', 'orden' => 5],
             ['clave' => 'matricula', 'nombre' => 'Matrícula', 'orden' => 6],
+            ['clave' => 'proyecto_educativo', 'nombre' => 'Presentación del Proyecto Educativo', 'orden' => 7],
         ]);
     }
 }
