@@ -2,12 +2,9 @@
     <x-ui.page-header :eyebrow="$encabezado" :title="$numero . '. ' . $nombre" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Presentación del Proyecto Educativo" />
 
     @if ($esPresentacion)
-        @php
-            // Escribe (442) 000-0000 mientras se teclea; el servidor guarda solo los dígitos.
-            $mascaraTelefono = "\$el.value = \$el.value.replace(/\\D/g, '').slice(0, 10).replace(/^(\\d{1,3})(\\d{0,3})(\\d{0,4})$/, (m, a, b, c) => (b ? '(' + a + ') ' + b : a) + (c ? '-' + c : ''))";
-        @endphp
 
-        <form novalidate wire:submit="guardar">
+        {{-- La máscara es solo ayuda: escribe (442) 000-0000 y empuja ese valor a Livewire; el servidor normaliza y valida. Con +52/52 o más de 10 dígitos no recorta: deja el texto y el servidor explica el error. --}}
+        <form novalidate wire:submit="guardar" x-data="{ mascara(v) { const d = v.replace(/\D/g, ''); if (/[^\d\s().-]/.test(v) || d.length > 10) return v; return d.replace(/^(\d{1,3})(\d{0,3})(\d{0,4})$/, (m, a, b, c) => (b ? '(' + a + ') ' + b : a) + (c ? '-' + c : '')); } }">
             <x-ui.error-summary />
 
             <x-ui.section title="Datos Generales">
@@ -31,10 +28,10 @@
                 </x-ui.field>
                 <div class="grid gap-md sm:grid-cols-2">
                     <x-ui.field id="telefono" label="Teléfono">
-                        <x-ui.input type="tel" inputmode="numeric" wire:model="telefono" x-on:input="{{ $mascaraTelefono }}" placeholder="(442) 000-0000" />
+                        <x-ui.input type="tel" inputmode="numeric" wire:model="telefono" x-on:input="$el.value = mascara($el.value); $wire.set('telefono', $el.value, false)" placeholder="(442) 000-0000" />
                     </x-ui.field>
                     <x-ui.field id="celular" label="Celular" optional>
-                        <x-ui.input type="tel" inputmode="numeric" wire:model="celular" x-on:input="{{ $mascaraTelefono }}" placeholder="(442) 000-0000" />
+                        <x-ui.input type="tel" inputmode="numeric" wire:model="celular" x-on:input="$el.value = mascara($el.value); $wire.set('celular', $el.value, false)" placeholder="(442) 000-0000" />
                     </x-ui.field>
                 </div>
                 <x-ui.field id="pagina_web" label="Página web" optional>

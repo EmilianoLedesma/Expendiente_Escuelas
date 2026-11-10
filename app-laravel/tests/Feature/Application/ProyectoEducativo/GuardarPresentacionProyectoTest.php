@@ -9,9 +9,11 @@ use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\TramiteEditable;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\PreparaPaso3;
 use Tests\TestCase;
 
@@ -154,6 +156,34 @@ class GuardarPresentacionProyectoTest extends TestCase
         $this->assertSame([], $this->errores($nivel->id, $this->datos(['telefono' => '4421234567', 'celular' => '(442) 000-0000'])));
     }
 
+    public function test_lada_52_solo_se_descarta_si_quedan_diez_digitos(): void
+    {
+        $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
+
+        $this->guardar($nivel->id, $this->datos(['telefono' => '+52 442 123 4567', 'celular' => '52 (442) 765-4321']));
+        $fila = DB::table('proyecto_educativo_presentacion')->first();
+        $this->assertSame('4421234567', $fila->telefono);
+        $this->assertSame('4427654321', $fila->celular);
+
+        $this->assertArrayHasKey('telefono', $this->errores($nivel->id, $this->datos(['telefono' => '+52 442 123 45'])));
+        $this->assertArrayHasKey('telefono', $this->errores($nivel->id, $this->datos(['telefono' => '+52 442 123 4567 8'])));
+    }
+
+    public function test_fechas_anteriores_a_1900_se_rechazan(): void
+    {
+        $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
+
+        $this->assertArrayHasKey('fecha_entrega', $this->errores($nivel->id, $this->datos(['fecha_entrega' => '1899-12-31'])));
+        $this->assertArrayHasKey('fecha_apertura', $this->errores($nivel->id, $this->datos(['fecha_apertura' => '0001-01-01'])));
+        $this->assertSame([], $this->errores($nivel->id, $this->datos(['fecha_entrega' => '1900-01-01', 'fecha_apertura' => '1900-01-01'])));
+    }
+
+    public function test_los_campos_del_dto_salen_del_constructor(): void
+    {
+        $this->assertSame(array_keys((new DatosPresentacionProyecto)->aArray()), DatosPresentacionProyecto::campos());
+        $this->assertCount(15, DatosPresentacionProyecto::campos());
+    }
+
     public function test_apertura_en_el_futuro_se_rechaza_y_hoy_se_acepta(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
@@ -205,8 +235,13 @@ class GuardarPresentacionProyectoTest extends TestCase
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
         $nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
 
-        $this->expectException(PrecondicionIncumplida::class);
-        $this->guardar($nivel->id, $this->datos());
+        try {
+            $this->guardar($nivel->id, $this->datos());
+            $this->fail('Debió rechazar el guardado.');
+        } catch (PrecondicionIncumplida $e) {
+            $this->assertSame(TramiteEditable::ENVIADO, $e->etapaFaltante);
+        }
+        $this->assertSame(0, DB::table('proyecto_educativo_presentacion')->count());
     }
 
     public function test_antes_de_matricula_rechaza_el_guardado(): void
@@ -217,11 +252,25 @@ class GuardarPresentacionProyectoTest extends TestCase
         $this->guardar($nivel->id, $this->datos());
     }
 
-    public function test_la_base_rechaza_enums_fuera_de_catalogo(): void
+    /** @return array<string, array{array<string, string>}> */
+    public static function filasInvalidas(): array
+    {
+        return [
+            'enum modalidad' => [['modalidad' => 'otra']],
+            'otro sin ciclo otro' => [['ciclo_escolar' => 'mensual', 'ciclo_escolar_otro' => 'x']],
+            'otro sin duracion otro' => [['duracion' => '2_anios', 'duracion_otro' => 'x']],
+            'telefono corto' => [['telefono' => '123']],
+            'celular con letras' => [['celular' => '44212345ab']],
+        ];
+    }
+
+    /** @param array<string, string> $fila */
+    #[DataProvider('filasInvalidas')]
+    public function test_la_base_rechaza_filas_incoherentes(array $fila): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
         $this->expectException(QueryException::class);
-        DB::table('proyecto_educativo_presentacion')->insert(['escuela_nivel_id' => $nivel->id, 'modalidad' => 'otra']);
+        DB::table('proyecto_educativo_presentacion')->insert(['escuela_nivel_id' => $nivel->id] + $fila);
     }
 }

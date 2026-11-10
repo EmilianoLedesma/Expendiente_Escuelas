@@ -30,9 +30,9 @@ final class ReglasPresentacionProyecto
         $req = $completa ? 'required' : 'nullable';
 
         $validador = Validator::make($datos, [
-            'fecha_entrega' => [$req, 'date_format:Y-m-d'],
+            'fecha_entrega' => [$req, 'date_format:Y-m-d', 'after_or_equal:1900-01-01'],
             'nombre_institucion' => [$req, 'string', 'max:255'],
-            'fecha_apertura' => [$req, 'date_format:Y-m-d', 'before_or_equal:today'],
+            'fecha_apertura' => [$req, 'date_format:Y-m-d', 'after_or_equal:1900-01-01', 'before_or_equal:today'],
             'domicilio_completo' => [$req, 'string', 'max:500'],
             'representante_legal' => [$req, 'string', 'max:255'],
             'correo' => [$req, 'email', 'max:255'],
@@ -59,6 +59,7 @@ final class ReglasPresentacionProyecto
             'url' => 'Captura una dirección válida que empiece con http:// o https://.',
             'in' => 'Elige una opción de la lista.',
             'date_format' => 'Captura una fecha válida.',
+            'after_or_equal' => 'La fecha no puede ser anterior a 1900.',
             'before_or_equal' => 'La fecha no puede ser posterior a hoy.',
         ]);
 

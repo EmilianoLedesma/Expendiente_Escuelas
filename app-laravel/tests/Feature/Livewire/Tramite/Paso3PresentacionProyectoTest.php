@@ -21,6 +21,11 @@ class Paso3PresentacionProyectoTest extends TestCase
 
     private const SLUG = 'presentacion-del-proyecto-academico';
 
+    public function test_el_slug_de_la_seccion_uno_sale_del_catalogo(): void
+    {
+        $this->assertSame(self::SLUG, SeccionesProyectoEducativo::presentacion());
+    }
+
     /** @return array<string, string> */
     private function completo(): array
     {
@@ -101,6 +106,15 @@ class Paso3PresentacionProyectoTest extends TestCase
         $this->assertNull($fila->celular);
     }
 
+    public function test_telefono_con_lada_52_se_guarda_normalizado(): void
+    {
+        $nivel = $this->nivel();
+
+        $this->componente($nivel)->set('telefono', '+52 442 123 4567')->call('guardar')->assertHasNoErrors()->assertSet('telefono', '(442) 123-4567');
+
+        $this->assertSame('4421234567', DB::table('proyecto_educativo_presentacion')->value('telefono'));
+    }
+
     public function test_borrador_incompleto_se_guarda_y_el_telefono_vuelve_formateado(): void
     {
         $nivel = $this->nivel();
@@ -130,7 +144,8 @@ class Paso3PresentacionProyectoTest extends TestCase
         $nivel = $this->nivel();
         $nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
 
-        $this->componente($nivel)->set($this->completo())->call('guardar')->assertDispatched('toast');
+        $this->componente($nivel)->set($this->completo())->call('guardar')
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'El trámite ya se envió a revisión y no puede modificarse.');
 
         $this->assertSame(0, DB::table('proyecto_educativo_presentacion')->count());
     }

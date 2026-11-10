@@ -53,8 +53,11 @@ class GuardarPresentacionProyecto
     {
         $campos = array_map(fn (?string $valor) => ($valor = trim((string) $valor)) === '' ? null : $valor, $datos->aArray());
 
+        // Única normalización de teléfonos (la máscara del navegador es solo ayuda): se quitan separadores (una letra sigue
+        // siendo error) y una lada +52/52 solo se descarta si lo que queda son exactamente 10 dígitos.
         foreach (['telefono', 'celular'] as $campo) {
-            $campos[$campo] = $campos[$campo] === null ? null : preg_replace('/[\s().-]/', '', $campos[$campo]); // solo separadores: una letra sigue siendo error
+            $limpio = $campos[$campo] === null ? null : preg_replace('/[\s().-]/', '', $campos[$campo]);
+            $campos[$campo] = $limpio !== null && preg_match('/^\+?52(\d{10})$/', $limpio, $m) ? $m[1] : $limpio;
         }
 
         // "Otro" solo aplica cuando se eligió otro; un texto residual de una elección anterior no se guarda.

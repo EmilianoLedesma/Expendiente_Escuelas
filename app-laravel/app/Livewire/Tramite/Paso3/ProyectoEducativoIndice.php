@@ -42,7 +42,7 @@ class ProyectoEducativoIndice extends Component
         return view('livewire.tramite.paso3.proyecto-educativo-indice', [
             'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
             'secciones' => SeccionesProyectoEducativo::todas(),
-            'completas' => [ProyectoEducativoSeccion::PRESENTACION => $presentacion->completa($this->escuelaNivel->id)],
+            'completas' => [SeccionesProyectoEducativo::presentacion() => $presentacion->completa($this->escuelaNivel->id)],
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
     }
 }

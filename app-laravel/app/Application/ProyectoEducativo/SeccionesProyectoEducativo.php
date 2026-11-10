@@ -56,6 +56,12 @@ final class SeccionesProyectoEducativo
         return $todas;
     }
 
+    /** Slug de la sección 1 (Presentación del Proyecto Académico), la única con formulario por ahora. */
+    public static function presentacion(): string
+    {
+        return array_key_first(self::todas());
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

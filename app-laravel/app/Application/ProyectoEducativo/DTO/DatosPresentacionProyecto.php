@@ -9,12 +9,6 @@ namespace App\Application\ProyectoEducativo\DTO;
  */
 final readonly class DatosPresentacionProyecto
 {
-    public const CAMPOS = [
-        'fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal',
-        'correo', 'telefono', 'celular', 'pagina_web', 'modalidad', 'ciclo_escolar', 'ciclo_escolar_otro',
-        'duracion', 'duracion_otro', 'sintesis_factibilidad',
-    ];
-
     public function __construct(
         public ?string $fecha_entrega = null,
         public ?string $nombre_institucion = null,
@@ -32,6 +26,12 @@ final readonly class DatosPresentacionProyecto
         public ?string $duracion_otro = null,
         public ?string $sintesis_factibilidad = null,
     ) {}
+
+    /** Nombres de los campos, tomados del constructor para que no puedan desfasarse. @return list<string> */
+    public static function campos(): array
+    {
+        return array_map(fn (\ReflectionParameter $p) => $p->getName(), (new \ReflectionClass(self::class))->getConstructor()->getParameters());
+    }
 
     /** @return array<string, string|null> */
     public function aArray(): array

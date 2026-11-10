@@ -14,14 +14,13 @@ class PresentacionProyectoCapturada
         $fila = ProyectoEducativoPresentacion::where('escuela_nivel_id', $escuelaNivelId)->first();
 
         return array_combine(
-            DatosPresentacionProyecto::CAMPOS,
-            array_map(fn (string $campo) => $fila?->getAttribute($campo), DatosPresentacionProyecto::CAMPOS),
+            DatosPresentacionProyecto::campos(),
+            array_map(fn (string $campo) => $fila?->getAttribute($campo), DatosPresentacionProyecto::campos()),
         );
     }
 
     public function completa(int $escuelaNivelId): bool
     {
-        return ReglasPresentacionProyecto::errores($this->datos($escuelaNivelId), completa: true) === []
-            && ProyectoEducativoPresentacion::where('escuela_nivel_id', $escuelaNivelId)->exists();
+        return ReglasPresentacionProyecto::errores($this->datos($escuelaNivelId), completa: true) === [];
     }
 }

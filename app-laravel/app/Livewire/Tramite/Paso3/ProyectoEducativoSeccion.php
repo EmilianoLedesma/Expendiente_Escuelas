@@ -29,8 +29,6 @@ class ProyectoEducativoSeccion extends Component
     use CompuertaPaso3;
     use NotificaToast;
 
-    public const PRESENTACION = 'presentacion-del-proyecto-academico';
-
     #[Locked]
     public EscuelaNivel $escuelaNivel;
 
@@ -91,7 +89,7 @@ class ProyectoEducativoSeccion extends Component
         $this->resetErrorBag();
 
         try {
-            $guardar->ejecutar($this->escuelaNivel->id, new DatosPresentacionProyecto(...$this->only(DatosPresentacionProyecto::CAMPOS)));
+            $guardar->ejecutar($this->escuelaNivel->id, new DatosPresentacionProyecto(...$this->only(DatosPresentacionProyecto::campos())));
         } catch (DatosInvalidos $e) {
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
@@ -115,7 +113,7 @@ class ProyectoEducativoSeccion extends Component
 
     private function esPresentacion(): bool
     {
-        return $this->seccion === self::PRESENTACION;
+        return $this->seccion === SeccionesProyectoEducativo::presentacion();
     }
 
     /** Vuelve a pintar lo guardado; los teléfonos se muestran como (442) 000-0000. */

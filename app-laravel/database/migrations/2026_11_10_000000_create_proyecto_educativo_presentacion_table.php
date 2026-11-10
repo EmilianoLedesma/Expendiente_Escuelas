@@ -24,14 +24,21 @@ return new class extends Migration
     telefono               VARCHAR(10) NULL,
     celular                VARCHAR(10) NULL,
     pagina_web             VARCHAR(255) NULL,
-    modalidad              VARCHAR(20) NULL CHECK (modalidad IN ('presencial', 'virtual', 'mixta')),
-    ciclo_escolar          VARCHAR(20) NULL CHECK (ciclo_escolar IN ('semestral', 'cuatrimestral', 'trimestral', 'bimestral', 'mensual', 'otro')),
+    modalidad              VARCHAR(20) NULL,
+    ciclo_escolar          VARCHAR(20) NULL,
     ciclo_escolar_otro     VARCHAR(100) NULL,
-    duracion               VARCHAR(20) NULL CHECK (duracion IN ('3_anios', '2_anios', 'otro')),
+    duracion               VARCHAR(20) NULL,
     duracion_otro          VARCHAR(100) NULL,
     sintesis_factibilidad  TEXT NULL,
     created_at             TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at             TIMESTAMP NOT NULL DEFAULT now()
+    updated_at             TIMESTAMP NOT NULL DEFAULT now(),
+    CONSTRAINT pe_presentacion_modalidad_valida CHECK (modalidad IN ('presencial', 'virtual', 'mixta')),
+    CONSTRAINT pe_presentacion_ciclo_valido CHECK (ciclo_escolar IN ('semestral', 'cuatrimestral', 'trimestral', 'bimestral', 'mensual', 'otro')),
+    CONSTRAINT pe_presentacion_duracion_valida CHECK (duracion IN ('3_anios', '2_anios', 'otro')),
+    CONSTRAINT pe_presentacion_ciclo_otro_coherente CHECK (ciclo_escolar_otro IS NULL OR ciclo_escolar = 'otro'),
+    CONSTRAINT pe_presentacion_duracion_otro_coherente CHECK (duracion_otro IS NULL OR duracion = 'otro'),
+    CONSTRAINT pe_presentacion_telefono_valido CHECK (telefono IS NULL OR telefono ~ '^[0-9]{10}$'),
+    CONSTRAINT pe_presentacion_celular_valido CHECK (celular IS NULL OR celular ~ '^[0-9]{10}$')
 );");
     }
 
