@@ -57,6 +57,12 @@ class EstadoPaso3
         return in_array($pasoClave, $this->completados($escuelaNivelId), true);
     }
 
+    /** Si el paso está en el catálogo de ese nivel (falso p. ej. si el seeder aún no corrió). */
+    public function tieneEnCatalogo(int $escuelaNivelId, string $clave): bool
+    {
+        return in_array($clave, $this->catalogo($escuelaNivelId), true);
+    }
+
     /** Catálogo de sub-pasos de ese nivel: el proyecto educativo solo existe donde aplica (media superior). @return list<string> */
     private function catalogo(int $escuelaNivelId): array
     {

@@ -46,6 +46,14 @@ class EstadoPaso3Test extends TestCase
         $this->completarPaso24($this->escuelaNivelId);
     }
 
+    public function test_tiene_en_catalogo_distingue_el_paso_que_no_aplica_al_nivel(): void
+    {
+        $estado = app(EstadoPaso3::class);
+
+        $this->assertTrue($estado->tieneEnCatalogo($this->escuelaNivelId, 'matricula'));
+        $this->assertFalse($estado->tieneEnCatalogo($this->escuelaNivelId, 'proyecto_educativo'));
+    }
+
     private function completar(string ...$claves): void
     {
         foreach ($claves as $clave) {

@@ -124,8 +124,8 @@ trait CapturaExpedienteConsistente
     /**
      * Every hub section done (ResumenTramite::completo), so the final
      * validation step is reachable: responsable, all documents with data
-     * (or the given replacements), and one primaria level with its Paso 2.4
-     * complete and its Paso 3 captured through the real use cases.
+     * (or the given replacements), and one level (`$nivelClave`, default
+     * primaria) with its Paso 2.4 complete and its Paso 3 captured through the real use cases.
      *
      * @param  array<string, DatosDocumento>  $reemplazos
      */

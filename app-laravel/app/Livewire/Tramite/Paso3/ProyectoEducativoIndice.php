@@ -3,6 +3,7 @@
 namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
+use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
@@ -30,6 +31,7 @@ class ProyectoEducativoIndice extends Component
         $this->escuelaNivel = $escuelaNivel;
 
         abort_unless(SeccionesProyectoEducativo::aplicaA($escuelaNivel->nivelEducativo->clave), 404);
+        abort_unless(app(EstadoPaso3::class)->tieneEnCatalogo($escuelaNivel->id, SeccionesProyectoEducativo::CLAVE_PASO), 404);
 
         $this->redirigirSiNoAlcanzable($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
     }

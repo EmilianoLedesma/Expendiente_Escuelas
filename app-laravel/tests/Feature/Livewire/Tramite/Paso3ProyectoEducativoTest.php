@@ -5,7 +5,12 @@ namespace Tests\Feature\Livewire\Tramite;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Livewire\Tramite\Paso3\Matricula;
 use App\Livewire\Tramite\Paso3\ProyectoEducativoIndice;
+use App\Models\Escuela;
+use App\Models\EscuelaNivel;
+use App\Models\NivelEducativo;
+use App\Models\Plantel;
 use App\Models\Solicitante;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -92,5 +97,58 @@ class Paso3ProyectoEducativoTest extends TestCase
             ->assertHasNoErrors()
             ->assertSessionHas('toast.titulo', 'Matrícula guardada')
             ->assertRedirect(route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]));
+    }
+
+    public function test_indice_explica_que_el_contenido_no_esta_disponible_y_marca_pendientes(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
+        $this->actingAs($escuelaNivel->escuela->solicitante->user);
+
+        $html = $this->get(route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]))
+            ->assertOk()
+            ->assertSee('El contenido de estas secciones aún no está disponible. Tu trámite podrá enviarse cuando puedas completarlas.')
+            ->getContent();
+
+        $this->assertSame(20, substr_count($html, 'Pendiente'));
+    }
+
+    public function test_sin_la_fila_del_catalogo_matricula_no_redirige_al_proyecto_y_las_paginas_dan_404(): void
+    {
+        $escuelaNivel = $this->nivelListoPara('media_superior', 'matricula');
+        $gradoId = DB::table('grados')->insertGetId(['nivel_educativo_id' => $escuelaNivel->nivel_educativo_id, 'nombre' => 'Primer semestre', 'orden' => 1]);
+        DB::table('pasos_captura')->where('clave', 'proyecto_educativo')->delete();
+        $this->actingAs($escuelaNivel->escuela->solicitante->user);
+
+        Livewire::test(Matricula::class, ['escuelaNivel' => $escuelaNivel])
+            ->set('grupos', [['gradoId' => (string) $gradoId, 'grupo' => 'A', 'alumnos' => '20']])
+            ->call('guardar')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]));
+
+        $this->get(route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]))->assertNotFound();
+        $slug = array_key_first(SeccionesProyectoEducativo::todas());
+        $this->get(route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]))->assertNotFound();
+    }
+
+    public function test_con_paso2_incompleto_las_paginas_redirigen_a_paso2(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $solicitante = Solicitante::factory()->create();
+        $plantel = Plantel::create(['calle' => 'Calle 1', 'colonia' => 'Centro', 'municipio' => 'Querétaro', 'codigo_postal' => '76000']);
+        $escuela = Escuela::create(['plantel_id' => $plantel->id, 'solicitante_id' => $solicitante->id]);
+        $escuelaNivel = EscuelaNivel::create([
+            'escuela_id' => $escuela->id,
+            'nivel_educativo_id' => NivelEducativo::where('clave', 'media_superior')->value('id'),
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_captura')->value('id'),
+            'tipo_tramite' => 'alta_nueva',
+        ]);
+        $slug = array_key_first(SeccionesProyectoEducativo::todas());
+
+        foreach ([
+            route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]),
+            route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]),
+        ] as $ruta) {
+            $this->actingAs($solicitante->user)->get($ruta)->assertRedirect(route('tramite.paso2', ['escuela' => $escuela->id]));
+        }
     }
 }

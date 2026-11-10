@@ -62,3 +62,11 @@ Base de pruebas `sedeq_incorporacion_testing_ui`, un directorio a la vez, nunca 
 | `tests/Feature/Application/EscuelaNiveles` | 49 pruebas, 49 pasan (113 aserciones) |
 
 Además: `vendor/bin/pint --test` limpio y `vendor/bin/phpstan analyse --memory-limit=1G` con 0 errores.
+
+## Revisión final
+
+- **Base sin la fila 7 del catálogo (importante 1).** Sin `PasosCapturaSeeder` ejecutado, guardar Matrícula en media superior redirigía a la página nueva y esta lanzaba `InvalidArgumentException` (500). Ahora `Matricula::guardar` solo redirige al Proyecto Educativo cuando `EstadoPaso3::primerPendiente` es `proyecto_educativo`; si no, cae al redirect de resumen de siempre. Las dos páginas (índice y sección) responden 404 si el paso no está en el catálogo del nivel, mediante el nuevo `EstadoPaso3::tieneEnCatalogo`. Pruebas de regresión en `Paso3ProyectoEducativoTest` y `EstadoPaso3Test`.
+- **Callejón sin explicación (importante 2).** El índice ahora explica que el contenido aún no está disponible y que el trámite podrá enviarse cuando se puedan completar las secciones, y marca cada una de las 20 filas con la etiqueta estática "Pendiente" (`x-ui.status-tag`).
+- Menores: prueba de redirección a Paso 2 incompleto para las dos rutas nuevas, docblocks corregidos (Matrícula, `completarTramite`) y comentario de `Paso3RequierePaso2CompletoTest` veraz.
+- **Nota.** Una vez sembrada la fila del catálogo, los trámites de media superior YA ENVIADOS mostrarán el paso nuevo como completado en el hub congelado (el avance pasa a 11) y como "pendiente" en el modelo de lectura de SEDEQ; no hay fallo, es aceptable.
+- **Diferido, no hecho:** memoizar `EstadoPaso3::catalogo` por nivel (hoy hace una consulta con join extra por llamada, unas 6 por nivel en el hub).
