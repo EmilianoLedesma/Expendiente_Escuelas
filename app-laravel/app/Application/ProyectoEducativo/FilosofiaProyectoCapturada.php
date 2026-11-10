@@ -21,6 +21,6 @@ class FilosofiaProyectoCapturada
 
     public function completa(int $escuelaNivelId): bool
     {
-        return ReglasFilosofiaProyecto::errores($this->datos($escuelaNivelId), completa: true) === [];
+        return ReglasFilosofiaProyecto::errores($this->datos($escuelaNivelId)) === [];
     }
 }

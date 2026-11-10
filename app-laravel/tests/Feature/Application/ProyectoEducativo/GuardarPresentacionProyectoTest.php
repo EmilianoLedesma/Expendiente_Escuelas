@@ -200,6 +200,17 @@ class GuardarPresentacionProyectoTest extends TestCase
         $this->assertSame([], $this->erroresPaso($nivel->id, $this->datos(['sintesis_factibilidad' => $this->palabras(500)]), 3));
     }
 
+    public function test_el_guardado_final_exige_todos_los_pasos_y_no_escribe_si_algo_falla(): void
+    {
+        $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
+
+        $errores = $this->erroresPaso($nivel->id, new DatosPresentacionProyecto(sintesis_factibilidad: $this->palabras(500)), 3);
+
+        $this->assertEqualsCanonicalizing(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono', 'modalidad', 'ciclo_escolar', 'duracion'], array_keys($errores));
+        $this->assertSame(0, DB::table('proyecto_educativo_presentacion')->count());
+        $this->assertSame([], $this->erroresPaso($nivel->id, $this->datos(), 3));
+    }
+
     public function test_paso_inicial_es_el_primero_con_requeridos_incompletos(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');

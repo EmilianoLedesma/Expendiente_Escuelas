@@ -144,6 +144,18 @@ class ProyectoEducativoSeccion extends Component
         }
     }
 
+    /** Si el error cae en un paso que no se está pintando (el "Guardar" final exige todo), se muestra ese paso. */
+    private function irAlPrimerPasoConErrores(array $campos): void
+    {
+        foreach (ReglasPresentacionProyecto::PASOS as $numero => $paso) {
+            if (array_intersect($campos, $paso['campos']) !== []) {
+                $this->paso = min($this->paso, $numero);
+
+                return;
+            }
+        }
+    }
+
     private function totalPasos(): int
     {
         return count(ReglasPresentacionProyecto::PASOS);
@@ -160,6 +172,7 @@ class ProyectoEducativoSeccion extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
+            $this->irAlPrimerPasoConErrores(array_keys($e->errores));
             $this->toastDatosInvalidos();
 
             return false;
@@ -194,10 +207,10 @@ class ProyectoEducativoSeccion extends Component
         };
     }
 
-    /** "Guardar" de una sección de una sola página: borrador (máximo de palabras); avisa si ya quedó completa. */
+    /** "Guardar" de una sección de una sola página: todo o nada (todas las reglas); con errores no escribe y los muestra todos. */
     private function guardarTexto(): void
     {
-        [$accion, $dto, $capturada] = $this->seccionTexto();
+        [$accion, $dto] = $this->seccionTexto();
         $this->resetErrorBag();
 
         try {
@@ -220,9 +233,7 @@ class ProyectoEducativoSeccion extends Component
         }
 
         $this->cargarTexto();
-        $capturada->completa($this->escuelaNivel->id)
-            ? $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.')
-            : $this->toast('Borrador guardado', 'Aún faltan campos o palabras para que la sección esté completa.', 'info');
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
     }
 
     private function cargarTexto(): void

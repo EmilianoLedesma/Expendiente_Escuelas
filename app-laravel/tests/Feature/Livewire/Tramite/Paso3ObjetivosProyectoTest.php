@@ -62,20 +62,33 @@ class Paso3ObjetivosProyectoTest extends TestCase
     public function test_abre_con_lo_guardado(): void
     {
         $nivel = $this->nivel();
-        app(GuardarObjetivosProyecto::class)->ejecutar($nivel->id, new DatosObjetivosProyecto(objetivo_general: 'Mi objetivo'));
+        app(GuardarObjetivosProyecto::class)->ejecutar($nivel->id, new DatosObjetivosProyecto($this->palabras(50), $this->palabras(100)));
 
-        $this->componente($nivel)->assertSet('objetivo_general', 'Mi objetivo')->assertSet('objetivos_especificos', '');
+        $this->componente($nivel)->assertSet('objetivo_general', $this->palabras(50))->assertSet('objetivos_especificos', $this->palabras(100));
     }
 
-    public function test_guardar_borrador_parcial_avisa_que_faltan_campos(): void
+    public function test_un_guardado_parcial_muestra_todos_los_errores_y_no_escribe(): void
     {
         $nivel = $this->nivel();
 
         $this->componente($nivel)->set('objetivo_general', $this->palabras(10))->call('guardar')
-            ->assertHasNoErrors()
-            ->assertDispatched('toast', tipo: 'info', titulo: 'Borrador guardado');
+            ->assertHasErrors(['objetivo_general', 'objetivos_especificos'])
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó')
+            ->assertNotDispatched('toast', titulo: 'Borrador guardado');
 
-        $this->assertSame($this->palabras(10), DB::table('proyecto_educativo_objetivos')->value('objetivo_general'));
+        $this->assertSame(0, DB::table('proyecto_educativo_objetivos')->count());
+    }
+
+    public function test_los_campos_llevan_las_restricciones_del_lado_del_cliente(): void
+    {
+        $html = $this->componente($this->nivel())->html();
+
+        $this->assertSame(2, substr_count($html, '<textarea'));
+        $this->assertStringContainsString('x-on:input="recortar()"', $html);
+        $this->assertStringContainsString('required="required"', $html);
+        $this->assertStringContainsString('max: 100', $html);
+        $this->assertStringContainsString('max: 250', $html);
+        $this->assertStringContainsString('min: 100', $html);
     }
 
     public function test_guardar_completo_avisa_que_la_seccion_esta_completa(): void
@@ -105,7 +118,7 @@ class Paso3ObjetivosProyectoTest extends TestCase
         $nivel = $this->nivel();
         $nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
 
-        $this->componente($nivel)->set('objetivo_general', $this->palabras(60))->call('guardar')
+        $this->componente($nivel)->set(['objetivo_general' => $this->palabras(50), 'objetivos_especificos' => $this->palabras(100)])->call('guardar')
             ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'El trámite ya se envió a revisión y no puede modificarse.');
 
         $this->assertSame(0, DB::table('proyecto_educativo_objetivos')->count());
@@ -138,9 +151,6 @@ class Paso3ObjetivosProyectoTest extends TestCase
         $guardar = app(GuardarObjetivosProyecto::class);
 
         $this->assertSame(20, substr_count($this->get($indice)->assertOk()->getContent(), 'Pendiente'));
-
-        $guardar->ejecutar($nivel->id, new DatosObjetivosProyecto(objetivo_general: $this->palabras(60)));
-        $this->assertSame(20, substr_count($this->get($indice)->getContent(), 'Pendiente'));
 
         $guardar->ejecutar($nivel->id, new DatosObjetivosProyecto($this->palabras(50), $this->palabras(100)));
         $html = $this->get($indice)->getContent();

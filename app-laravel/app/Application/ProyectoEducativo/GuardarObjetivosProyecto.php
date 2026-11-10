@@ -12,9 +12,8 @@ use App\Models\ProyectoEducativoObjetivos;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Sección 3 del Proyecto Educativo (media superior): guarda el objetivo general y los específicos como borrador. El
- * máximo de palabras de lo capturado se exige siempre; lo requerido y el mínimo solo cuentan para "completa"
- * (ObjetivosProyectoCapturada). No marca el paso proyecto_educativo como completado.
+ * Sección 3 del Proyecto Educativo (media superior): guarda el objetivo general y los específicos, todo o nada: si
+ * alguna regla falla (requerido, mínimo o máximo de palabras) no se escribe nada y se devuelven todos los errores. No marca el paso proyecto_educativo como completado.
  */
 class GuardarObjetivosProyecto
 {
@@ -34,7 +33,7 @@ class GuardarObjetivosProyecto
         $this->compuerta->verificar($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
 
         $campos = array_map(fn (?string $valor) => ($valor = trim((string) $valor)) === '' ? null : $valor, $datos->aArray());
-        $errores = ReglasObjetivosProyecto::errores($campos, completa: false);
+        $errores = ReglasObjetivosProyecto::errores($campos);
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
         }

@@ -21,6 +21,6 @@ class ObjetivosProyectoCapturada
 
     public function completa(int $escuelaNivelId): bool
     {
-        return ReglasObjetivosProyecto::errores($this->datos($escuelaNivelId), completa: true) === [];
+        return ReglasObjetivosProyecto::errores($this->datos($escuelaNivelId)) === [];
     }
 }

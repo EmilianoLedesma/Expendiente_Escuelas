@@ -8,6 +8,7 @@ use App\Application\ProyectoEducativo\ConteoPalabras;
 use App\Application\ProyectoEducativo\DTO\DatosFilosofiaProyecto;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
 use App\Application\ProyectoEducativo\GuardarFilosofiaProyecto;
+use App\Application\ProyectoEducativo\ReglasFilosofiaProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\TramiteEditable;
@@ -73,19 +74,20 @@ class GuardarFilosofiaProyectoTest extends TestCase
 
         $this->guardar($nivel->id, $this->datos());
 
-        $this->assertSame(1, DB::table('proyecto_educativo_filosofia')->where('escuela_nivel_id', $nivel->id)->count());
         $capturada = app(FilosofiaProyectoCapturada::class);
+        $this->assertSame(1, DB::table('proyecto_educativo_filosofia')->where('escuela_nivel_id', $nivel->id)->count());
         $this->assertTrue($capturada->completa($nivel->id));
         $this->assertSame($this->palabras(50), $capturada->datos($nivel->id)['mision']);
     }
 
-    public function test_borrador_parcial_se_guarda_y_no_esta_completo(): void
+    public function test_un_guardado_parcial_se_rechaza_con_todos_los_errores_y_no_escribe(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
-        $this->guardar($nivel->id, new DatosFilosofiaProyecto(mision: $this->palabras(10)));
+        $errores = $this->errores($nivel->id, new DatosFilosofiaProyecto(mision: $this->palabras(10)));
 
-        $this->assertSame(1, DB::table('proyecto_educativo_filosofia')->count());
+        $this->assertEqualsCanonicalizing(['mision', 'vision', 'valores'], array_keys($errores));
+        $this->assertSame(0, DB::table('proyecto_educativo_filosofia')->count());
         $this->assertFalse(app(FilosofiaProyectoCapturada::class)->completa($nivel->id));
     }
 
@@ -98,14 +100,12 @@ class GuardarFilosofiaProyectoTest extends TestCase
         $this->assertSame(['mision' => null, 'vision' => null, 'valores' => null], $capturada->datos($nivel->id));
     }
 
-    public function test_solo_espacios_se_guarda_como_nulo_y_no_completa(): void
+    public function test_solo_espacios_cuenta_como_vacio_y_no_escribe(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
-        $this->guardar($nivel->id, $this->datos(['mision' => "  \n\t "]));
-
-        $this->assertNull(DB::table('proyecto_educativo_filosofia')->value('mision'));
-        $this->assertFalse(app(FilosofiaProyectoCapturada::class)->completa($nivel->id));
+        $this->assertSame(['mision'], array_keys($this->errores($nivel->id, $this->datos(['mision' => "  \n\t "]))));
+        $this->assertSame(0, DB::table('proyecto_educativo_filosofia')->count());
     }
 
     public function test_segundo_guardado_actualiza_la_misma_fila(): void
@@ -130,30 +130,36 @@ class GuardarFilosofiaProyectoTest extends TestCase
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
         $capturada = app(FilosofiaProyectoCapturada::class);
+        $this->guardar($nivel->id, $this->datos());
+        $valido = $this->palabras(50);
 
-        // MIN - 1: el borrador se guarda (el mínimo solo cuenta para "completa") pero no está completa.
-        $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($min - 1)]));
-        $this->assertFalse($capturada->completa($nivel->id));
+        // Por debajo del mínimo y por encima del máximo: se rechaza y no se escribe nada.
+        foreach ([$min - 1, $max + 1] as $n) {
+            $errores = $this->errores($nivel->id, $this->datos([$campo => $this->palabras($n)]));
+            $this->assertSame([$campo], array_keys($errores), "{$campo} con {$n} palabras");
+            $this->assertSame($valido, DB::table('proyecto_educativo_filosofia')->value($campo));
+        }
 
-        $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($min)]));
-        $this->assertTrue($capturada->completa($nivel->id));
-
-        $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($max)]));
-        $this->assertTrue($capturada->completa($nivel->id));
-
-        // MAX + 1: se rechaza incluso como borrador y no se escribe.
-        $this->assertArrayHasKey($campo, $this->errores($nivel->id, $this->datos([$campo => $this->palabras($max + 1)])));
-        $this->assertSame($this->palabras($max), DB::table('proyecto_educativo_filosofia')->value($campo));
+        foreach ([$min, $max] as $n) {
+            $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($n)]));
+            $this->assertSame($this->palabras($n), DB::table('proyecto_educativo_filosofia')->value($campo));
+            $this->assertTrue($capturada->completa($nivel->id));
+        }
     }
 
-    public function test_cada_requerido_vacio_deja_la_seccion_incompleta(): void
+    public function test_cada_requerido_vacio_se_rechaza(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
         foreach (['mision', 'vision', 'valores'] as $campo) {
-            $this->guardar($nivel->id, $this->datos([$campo => null]));
-            $this->assertFalse(app(FilosofiaProyectoCapturada::class)->completa($nivel->id), $campo);
+            $this->assertSame([$campo], array_keys($this->errores($nivel->id, $this->datos([$campo => null]))));
         }
+        $this->assertSame(0, DB::table('proyecto_educativo_filosofia')->count());
+    }
+
+    public function test_ya_no_existe_la_via_de_borrador(): void
+    {
+        $this->assertSame(1, (new \ReflectionMethod(ReglasFilosofiaProyecto::class, 'errores'))->getNumberOfParameters());
     }
 
     public function test_no_marca_el_paso_completado(): void
