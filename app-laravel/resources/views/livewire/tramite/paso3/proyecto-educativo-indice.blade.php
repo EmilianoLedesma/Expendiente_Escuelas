@@ -11,7 +11,11 @@
                 <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]) }}" class="flex min-h-11 items-center gap-md px-lg py-xs text-body-md text-body hover:bg-surface-soft">
                     <span class="w-6 text-right tabular-nums text-muted">{{ $loop->iteration }}.</span>
                     <span class="min-w-0 flex-1 font-semibold text-primary">{{ $nombre }}</span>
-                    <x-ui.status-tag estado="pendiente" />
+                    @if ($completas[$slug] ?? false)
+                        <x-ui.status-tag estado="completado" texto="Completa" />
+                    @else
+                        <x-ui.status-tag estado="pendiente" />
+                    @endif
                 </a>
             </li>
         @endforeach
