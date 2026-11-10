@@ -1,7 +1,7 @@
 <div class="max-w-3xl">
     <x-ui.page-header :eyebrow="$encabezado" title="Presentación del Proyecto Educativo" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])">
         <x-slot:intro>
-            Estas son las secciones que integran el proyecto educativo del plantel. El contenido de estas secciones aún no está disponible. Tu trámite podrá enviarse cuando puedas completarlas.
+            Estas son las secciones que integran el proyecto educativo del plantel. Algunas secciones aún no están disponibles. Tu trámite podrá enviarse cuando puedas completarlas todas.
         </x-slot:intro>
     </x-ui.page-header>
 

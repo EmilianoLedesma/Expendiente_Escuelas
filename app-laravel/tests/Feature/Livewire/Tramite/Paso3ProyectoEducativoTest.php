@@ -106,7 +106,7 @@ class Paso3ProyectoEducativoTest extends TestCase
 
         $html = $this->get(route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]))
             ->assertOk()
-            ->assertSee('El contenido de estas secciones aún no está disponible. Tu trámite podrá enviarse cuando puedas completarlas.')
+            ->assertSee('Algunas secciones aún no están disponibles. Tu trámite podrá enviarse cuando puedas completarlas todas.')
             ->getContent();
 
         $this->assertSame(20, substr_count($html, 'Pendiente'));
