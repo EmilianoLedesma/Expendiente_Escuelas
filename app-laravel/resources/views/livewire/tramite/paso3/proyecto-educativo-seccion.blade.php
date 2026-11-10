@@ -4,9 +4,21 @@
     @if ($esPresentacion)
 
         {{-- La máscara es solo ayuda: escribe (442) 000-0000 y empuja ese valor a Livewire; el servidor normaliza y valida. Con +52/52 o más de 10 dígitos no recorta: deja el texto y el servidor explica el error. --}}
-        <form novalidate wire:submit="guardar" x-data="{ mascara(v) { const d = v.replace(/\D/g, ''); if (/[^\d\s().-]/.test(v) || d.length > 10) return v; return d.replace(/^(\d{1,3})(\d{0,3})(\d{0,4})$/, (m, a, b, c) => (b ? '(' + a + ') ' + b : a) + (c ? '-' + c : '')); } }">
+        <form novalidate wire:submit="{{ $paso === count($pasos) ? 'guardar' : 'siguiente' }}" x-data="{ mascara(v) { const d = v.replace(/\D/g, ''); if (/[^\d\s().-]/.test(v) || d.length > 10) return v; return d.replace(/^(\d{1,3})(\d{0,3})(\d{0,4})$/, (m, a, b, c) => (b ? '(' + a + ') ' + b : a) + (c ? '-' + c : '')); } }">
             <x-ui.error-summary />
 
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
+                @foreach ($pasos as $n => $p)
+                    <li @if ($n === $paso) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $paso ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $p['nombre'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $paso }} de {{ count($pasos) }}</p>
+
+            <div wire:key="paso-{{ $paso }}">
+
+            @if ($paso === 1)
             <x-ui.section title="Datos Generales">
                 <x-ui.field id="fecha_entrega" label="Fecha de entrega">
                     <x-ui.input type="date" wire:model="fecha_entrega" />
@@ -39,6 +51,7 @@
                 </x-ui.field>
             </x-ui.section>
 
+            @elseif ($paso === 2)
             <x-ui.section title="Modalidad, Ciclo Escolar y Duración">
                 <x-ui.radio-group id="modalidad" legend="Modalidad" wire:model="modalidad" :opciones="['presencial' => 'Presencial', 'virtual' => 'Virtual', 'mixta' => 'Mixta']" />
 
@@ -61,6 +74,7 @@
                 </div>
             </x-ui.section>
 
+            @else
             <x-ui.section title="Síntesis de los Resultados del Estudio de Factibilidad">
                 {{-- El contador es solo una ayuda; el servidor cuenta de nuevo al guardar. --}}
                 <div x-data="{ texto: $wire.entangle('sintesis_factibilidad') }">
@@ -73,7 +87,21 @@
                 </div>
             </x-ui.section>
 
-            <x-ui.action-bar accion="guardar" label="Guardar sección" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+            @endif
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($paso > 1)
+                    <x-ui.button-secondary type="button" wire:click="anterior">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $paso === count($pasos) ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
         </form>
     @else
         <p class="rounded-lg border border-dashed border-hairline p-lg text-body-md text-muted">Contenido por definir</p>

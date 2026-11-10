@@ -27,14 +27,18 @@ class GuardarPresentacionProyecto
      * @throws DatosInvalidos
      * @throws PrecondicionIncumplida
      */
-    public function ejecutar(int $escuelaNivelId, DatosPresentacionProyecto $datos): void
+    public function ejecutar(int $escuelaNivelId, DatosPresentacionProyecto $datos, ?int $paso = null): void
     {
         $escuelaNivel = EscuelaNivel::findOrFail($escuelaNivelId);
         // Fuera de media superior el paso no existe en el catálogo del nivel y la compuerta lanza InvalidArgumentException.
         $this->compuerta->verificar($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
 
         $campos = self::normalizar($datos);
+        // Con $paso (1 a 3) además se exige lo requerido de ese paso: es el "Siguiente"/"Guardar" del formulario por pasos.
         $errores = ReglasPresentacionProyecto::errores($campos, completa: false);
+        if ($paso !== null) {
+            $errores += ReglasPresentacionProyecto::errores($campos, completa: true, campos: ReglasPresentacionProyecto::PASOS[$paso]['campos']);
+        }
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
         }

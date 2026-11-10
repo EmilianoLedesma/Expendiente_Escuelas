@@ -15,6 +15,13 @@ final class ReglasPresentacionProyecto
 
     public const PALABRAS_MAX = 1000;
 
+    /** Pasos del formulario (nombre y campos de cada uno); los nombres son los del dueño. */
+    public const PASOS = [
+        1 => ['nombre' => 'Datos Generales', 'campos' => ['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono', 'celular', 'pagina_web']],
+        2 => ['nombre' => 'Modalidad, Ciclo Escolar y Duración', 'campos' => ['modalidad', 'ciclo_escolar', 'ciclo_escolar_otro', 'duracion', 'duracion_otro']],
+        3 => ['nombre' => 'Síntesis de los Resultados del Estudio de Factibilidad', 'campos' => ['sintesis_factibilidad']],
+    ];
+
     /** Palabras = trozos separados por espacio en blanco, sin vacíos. */
     public static function contarPalabras(?string $texto): int
     {
@@ -23,9 +30,10 @@ final class ReglasPresentacionProyecto
 
     /**
      * @param  array<string, mixed>  $datos  ya normalizados (teléfonos en dígitos, vacíos como null)
+     * @param  list<string>|null  $campos  si se da, solo se devuelven los errores de esos campos (un paso)
      * @return array<string, string> campo => primer mensaje
      */
-    public static function errores(array $datos, bool $completa): array
+    public static function errores(array $datos, bool $completa, ?array $campos = null): array
     {
         $req = $completa ? 'required' : 'nullable';
 
@@ -63,6 +71,8 @@ final class ReglasPresentacionProyecto
             'before_or_equal' => 'La fecha no puede ser posterior a hoy.',
         ]);
 
-        return array_map(fn (array $mensajes) => $mensajes[0], $validador->errors()->toArray());
+        $errores = array_map(fn (array $mensajes) => $mensajes[0], $validador->errors()->toArray());
+
+        return $campos === null ? $errores : array_intersect_key($errores, array_flip($campos));
     }
 }

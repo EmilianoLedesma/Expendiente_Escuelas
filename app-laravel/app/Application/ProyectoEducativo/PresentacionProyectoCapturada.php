@@ -19,6 +19,20 @@ class PresentacionProyectoCapturada
         );
     }
 
+    /** Primer paso (1 a 3) con requeridos incompletos en lo guardado; 1 si nada falta o no hay nada guardado. */
+    public function pasoInicial(int $escuelaNivelId): int
+    {
+        $datos = $this->datos($escuelaNivelId);
+
+        foreach (ReglasPresentacionProyecto::PASOS as $numero => $paso) {
+            if (ReglasPresentacionProyecto::errores($datos, completa: true, campos: $paso['campos']) !== []) {
+                return $numero;
+            }
+        }
+
+        return 1;
+    }
+
     public function completa(int $escuelaNivelId): bool
     {
         return ReglasPresentacionProyecto::errores($this->datos($escuelaNivelId), completa: true) === [];

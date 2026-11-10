@@ -49,3 +49,16 @@ Ronda de correcciones tras la revisión (`.superpowers/sdd/seccion1/review.md`),
 - **Fechas**: `fecha_entrega` y `fecha_apertura` rechazan fechas anteriores a 1900-01-01, con prueba.
 - **Sobre el formato de fecha (M-1)**: corrección de redacción: el input nativo muestra dd/mm/aaaa solo si el idioma de la interfaz del navegador es español; no depende de `<html lang>`. Es la misma limitación del Paso 2. Pendiente de aceptación explícita del dueño.
 - Sin cambios: M-7 (correo `a@b`), M-8 (tope de caracteres de la síntesis), M-9, M-10.
+
+## Revisión 2
+
+Cambio pedido por el dueño: el formulario de la sección 1 es un flujo por pasos (solo se pinta el paso actual, con `@if`, no con CSS).
+
+- **Pasos**: 1 "Datos Generales", 2 "Modalidad, Ciclo Escolar y Duración", 3 "Síntesis de los Resultados del Estudio de Factibilidad". Indicador "Paso N de 3" con el actual resaltado (`aria-current="step"`). Botones: "Siguiente" (pasos 1 y 2), "Anterior" (pasos 2 y 3), "Guardar" (paso 3). Enter en un campo envía el botón primario del paso.
+- **Una sola fuente de reglas**: `ReglasPresentacionProyecto::PASOS` define nombre y campos de cada paso; `errores(..., campos: [...])` devuelve solo los errores de un subconjunto. No hay listas de reglas duplicadas.
+- **Caso de uso**: `GuardarPresentacionProyecto::ejecutar($nivelId, $datos, ?int $paso)`. Con `$paso` exige además lo requerido de ese paso (modo "completa" filtrado a sus campos) y guarda el borrador del resto. Sin `$paso` se comporta igual que antes (datos guardados, bandera "completa", base y etiqueta del índice no cambian).
+- **Paso inicial**: `PresentacionProyectoCapturada::pasoInicial()` = primer paso con requeridos incompletos en lo guardado (1 si no hay nada, 3 si 1 y 2 están completos, 1 si todo está completo).
+- **Componente**: `#[Locked] public int $paso`, solo cambia `siguiente()`/`anterior()`. "Siguiente" valida solo el paso actual, guarda el borrador y avanza; con errores se queda y los muestra. "Anterior" no valida y no pierde lo tecleado. `guardar()` solo actúa en el paso 3. Trámite enviado: toast de error y no escribe.
+- **Alpine**: la máscara de teléfono vive en el `x-data` del formulario (persistente) y los campos se recrean al cambiar de paso (`wire:key` por paso); el contador de palabras está dentro del `x-data` del paso 3.
+- **Pruebas** (Application y Livewire): paso inicial según lo guardado; "Siguiente" bloqueado solo por los campos del paso; avanza y persiste; "Anterior" conserva valores; solo las etiquetas del paso actual están en el HTML; guardado final (499/500/1001 palabras); `paso` no se puede fijar desde el cliente; trámite enviado rechaza. Se reescribió `Paso3PresentacionProyectoTest` para el flujo por pasos.
+- Sigue sin verificarse en navegador la interacción Alpine (máscara y contador al cambiar de paso).

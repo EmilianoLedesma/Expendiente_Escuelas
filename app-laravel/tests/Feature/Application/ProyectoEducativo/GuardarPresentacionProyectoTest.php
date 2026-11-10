@@ -184,6 +184,54 @@ class GuardarPresentacionProyectoTest extends TestCase
         $this->assertCount(15, DatosPresentacionProyecto::campos());
     }
 
+    public function test_con_paso_solo_se_exigen_los_requeridos_de_ese_paso(): void
+    {
+        $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
+
+        $errores = $this->erroresPaso($nivel->id, new DatosPresentacionProyecto(modalidad: 'mixta'), 1);
+        $this->assertEqualsCanonicalizing(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono'], array_keys($errores));
+
+        // Paso 2 completo con los pasos 1 y 3 vacíos: se guarda.
+        $this->assertSame([], $this->erroresPaso($nivel->id, new DatosPresentacionProyecto(modalidad: 'mixta', ciclo_escolar: 'otro', ciclo_escolar_otro: 'X', duracion: '2_anios'), 2));
+        $this->assertSame('mixta', DB::table('proyecto_educativo_presentacion')->value('modalidad'));
+
+        $this->assertEqualsCanonicalizing(['modalidad', 'ciclo_escolar_otro', 'duracion'], array_keys($this->erroresPaso($nivel->id, new DatosPresentacionProyecto(ciclo_escolar: 'otro'), 2)));
+        $this->assertArrayHasKey('sintesis_factibilidad', $this->erroresPaso($nivel->id, $this->datos(['sintesis_factibilidad' => $this->palabras(499)]), 3));
+        $this->assertSame([], $this->erroresPaso($nivel->id, $this->datos(['sintesis_factibilidad' => $this->palabras(500)]), 3));
+    }
+
+    public function test_paso_inicial_es_el_primero_con_requeridos_incompletos(): void
+    {
+        $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
+        $capturada = app(PresentacionProyectoCapturada::class);
+
+        $this->assertSame(1, $capturada->pasoInicial($nivel->id));
+
+        $this->guardar($nivel->id, $this->datos(['modalidad' => null, 'ciclo_escolar' => null, 'duracion' => null, 'sintesis_factibilidad' => null]));
+        $this->assertSame(2, $capturada->pasoInicial($nivel->id));
+
+        $this->guardar($nivel->id, $this->datos(['sintesis_factibilidad' => null]));
+        $this->assertSame(3, $capturada->pasoInicial($nivel->id));
+
+        $this->guardar($nivel->id, $this->datos());
+        $this->assertSame(1, $capturada->pasoInicial($nivel->id));
+
+        $this->guardar($nivel->id, $this->datos(['nombre_institucion' => null, 'sintesis_factibilidad' => null]));
+        $this->assertSame(1, $capturada->pasoInicial($nivel->id));
+    }
+
+    /** @return array<string, string> */
+    private function erroresPaso(int $nivelId, DatosPresentacionProyecto $datos, int $paso): array
+    {
+        try {
+            app(GuardarPresentacionProyecto::class)->ejecutar($nivelId, $datos, $paso);
+        } catch (DatosInvalidos $e) {
+            return $e->errores;
+        }
+
+        return [];
+    }
+
     public function test_apertura_en_el_futuro_se_rechaza_y_hoy_se_acepta(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');

@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
+use App\Application\ProyectoEducativo\ReglasPresentacionProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
@@ -34,6 +35,10 @@ class ProyectoEducativoSeccion extends Component
 
     #[Locked]
     public string $seccion = '';
+
+    /** Paso del formulario de la sección 1 (1 a 3): solo lo cambian siguiente()/anterior(), nunca el cliente. */
+    #[Locked]
+    public int $paso = 1;
 
     public string $fecha_entrega = '';
 
@@ -80,23 +85,58 @@ class ProyectoEducativoSeccion extends Component
 
         if ($this->esPresentacion()) {
             $this->cargar();
+            $this->paso = app(PresentacionProyectoCapturada::class)->pasoInicial($escuelaNivel->id);
         }
     }
 
-    public function guardar(GuardarPresentacionProyecto $guardar): void
+    /** Valida y guarda el paso actual (borrador del resto) y avanza; con errores se queda en el paso. */
+    public function siguiente(GuardarPresentacionProyecto $guardar): void
+    {
+        abort_unless($this->esPresentacion(), 404);
+
+        if ($this->paso < $this->totalPasos() && $this->persistir($guardar)) {
+            $this->paso++;
+            $this->toast('Paso guardado', 'Continúa con el siguiente paso.');
+        }
+    }
+
+    /** Vuelve un paso sin validar ni perder lo tecleado (el estado del componente lo conserva). */
+    public function anterior(): void
     {
         abort_unless($this->esPresentacion(), 404);
         $this->resetErrorBag();
+        $this->paso = max(1, $this->paso - 1);
+    }
+
+    /** "Guardar" del último paso. */
+    public function guardar(GuardarPresentacionProyecto $guardar): void
+    {
+        abort_unless($this->esPresentacion(), 404);
+
+        if ($this->paso === $this->totalPasos() && $this->persistir($guardar)) {
+            $this->toast('Sección guardada', 'Puedes seguir con la siguiente sección.');
+        }
+    }
+
+    private function totalPasos(): int
+    {
+        return count(ReglasPresentacionProyecto::PASOS);
+    }
+
+    /** @return bool true si se guardó */
+    private function persistir(GuardarPresentacionProyecto $guardar): bool
+    {
+        $this->resetErrorBag();
 
         try {
-            $guardar->ejecutar($this->escuelaNivel->id, new DatosPresentacionProyecto(...$this->only(DatosPresentacionProyecto::campos())));
+            $guardar->ejecutar($this->escuelaNivel->id, new DatosPresentacionProyecto(...$this->only(DatosPresentacionProyecto::campos())), $this->paso);
         } catch (DatosInvalidos $e) {
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
             $this->toastDatosInvalidos();
 
-            return;
+            return false;
         } catch (PrecondicionIncumplida $e) {
             if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
                 $this->toast('No se guardó', $e->getMessage(), 'error');
@@ -104,11 +144,12 @@ class ProyectoEducativoSeccion extends Component
                 $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
             }
 
-            return;
+            return false;
         }
 
         $this->cargar();
-        $this->toast('Sección guardada', 'Puedes seguir con la siguiente sección.');
+
+        return true;
     }
 
     private function esPresentacion(): bool
@@ -140,6 +181,7 @@ class ProyectoEducativoSeccion extends Component
             'numero' => $indice + 1,
             'nombre' => SeccionesProyectoEducativo::nombre($this->seccion),
             'esPresentacion' => $this->esPresentacion(),
+            'pasos' => ReglasPresentacionProyecto::PASOS,
             'anterior' => isset($slugs[$indice - 1]) ? ['slug' => $slugs[$indice - 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice - 1])] : null,
             'siguiente' => isset($slugs[$indice + 1]) ? ['slug' => $slugs[$indice + 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice + 1])] : null,
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
