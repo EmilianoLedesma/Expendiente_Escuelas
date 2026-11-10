@@ -12,9 +12,8 @@ use App\Models\ProyectoEducativoFilosofia;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Sección 2 del Proyecto Educativo (media superior): guarda misión, visión y valores como borrador. El máximo de
- * palabras de lo capturado se exige siempre; lo requerido y el mínimo solo cuentan para "completa"
- * (FilosofiaProyectoCapturada). No marca el paso proyecto_educativo como completado.
+ * Sección 2 del Proyecto Educativo (media superior): guarda misión, visión y valores, todo o nada: si alguna regla
+ * falla (requerido, mínimo o máximo de palabras) no se escribe nada y se devuelven todos los errores. No marca el paso proyecto_educativo como completado.
  */
 class GuardarFilosofiaProyecto
 {
@@ -34,7 +33,7 @@ class GuardarFilosofiaProyecto
         $this->compuerta->verificar($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
 
         $campos = array_map(fn (?string $valor) => ($valor = trim((string) $valor)) === '' ? null : $valor, $datos->aArray());
-        $errores = ReglasFilosofiaProyecto::errores($campos, completa: false);
+        $errores = ReglasFilosofiaProyecto::errores($campos);
         if ($errores !== []) {
             throw new DatosInvalidos($errores);
         }

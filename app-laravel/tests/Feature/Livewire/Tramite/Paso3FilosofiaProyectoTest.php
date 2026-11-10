@@ -64,20 +64,37 @@ class Paso3FilosofiaProyectoTest extends TestCase
     public function test_abre_con_lo_guardado(): void
     {
         $nivel = $this->nivel();
-        app(GuardarFilosofiaProyecto::class)->ejecutar($nivel->id, new DatosFilosofiaProyecto(mision: 'Mi misión'));
+        app(GuardarFilosofiaProyecto::class)->ejecutar($nivel->id, new DatosFilosofiaProyecto($this->palabras(50), $this->palabras(51), $this->palabras(52)));
 
-        $this->componente($nivel)->assertSet('mision', 'Mi misión')->assertSet('vision', '');
+        $this->componente($nivel)->assertSet('mision', $this->palabras(50))->assertSet('valores', $this->palabras(52));
     }
 
-    public function test_guardar_borrador_parcial_avisa_que_faltan_campos(): void
+    public function test_un_guardado_parcial_muestra_todos_los_errores_y_no_escribe(): void
     {
         $nivel = $this->nivel();
 
         $this->componente($nivel)->set('mision', $this->palabras(10))->call('guardar')
-            ->assertHasNoErrors()
-            ->assertDispatched('toast', tipo: 'info', titulo: 'Borrador guardado');
+            ->assertHasErrors(['mision', 'vision', 'valores'])
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó')
+            ->assertNotDispatched('toast', titulo: 'Borrador guardado');
 
-        $this->assertSame($this->palabras(10), DB::table('proyecto_educativo_filosofia')->value('mision'));
+        $this->assertSame(0, DB::table('proyecto_educativo_filosofia')->count());
+    }
+
+    public function test_los_campos_llevan_las_restricciones_del_lado_del_cliente(): void
+    {
+        $html = $this->componente($this->nivel())->html();
+
+        foreach (['mision', 'vision', 'valores'] as $campo) {
+            $this->assertStringContainsString('$wire.entangle(\''.$campo.'\')', $html);
+        }
+        $this->assertSame(3, substr_count($html, '<textarea'));
+        $this->assertStringContainsString('x-on:input="recortar()"', $html);
+        $this->assertStringContainsString('required="required"', $html);
+        $this->assertStringContainsString('max: 150', $html);
+        $this->assertStringContainsString('max: 250', $html);
+        $this->assertStringContainsString('min: 50', $html);
+        $this->assertStringContainsString('fuera()', $html);
     }
 
     public function test_guardar_completo_avisa_que_la_seccion_esta_completa(): void
@@ -107,7 +124,7 @@ class Paso3FilosofiaProyectoTest extends TestCase
         $nivel = $this->nivel();
         $nivel->update(['estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id')]);
 
-        $this->componente($nivel)->set('mision', $this->palabras(60))->call('guardar')
+        $this->componente($nivel)->set(['mision' => $this->palabras(50), 'vision' => $this->palabras(50), 'valores' => $this->palabras(50)])->call('guardar')
             ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'El trámite ya se envió a revisión y no puede modificarse.');
 
         $this->assertSame(0, DB::table('proyecto_educativo_filosofia')->count());
@@ -140,9 +157,6 @@ class Paso3FilosofiaProyectoTest extends TestCase
         $guardar = app(GuardarFilosofiaProyecto::class);
 
         $this->assertSame(20, substr_count($this->get($indice)->assertOk()->getContent(), 'Pendiente'));
-
-        $guardar->ejecutar($nivel->id, new DatosFilosofiaProyecto(mision: $this->palabras(60)));
-        $this->assertSame(20, substr_count($this->get($indice)->getContent(), 'Pendiente'));
 
         $guardar->ejecutar($nivel->id, new DatosFilosofiaProyecto($this->palabras(50), $this->palabras(50), $this->palabras(50)));
         $html = $this->get($indice)->getContent();

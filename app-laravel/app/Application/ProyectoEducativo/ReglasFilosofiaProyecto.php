@@ -3,8 +3,8 @@
 namespace App\Application\ProyectoEducativo;
 
 /**
- * Única lista de reglas de la sección 2 (Filosofía Institucional), en los mismos dos modos que la sección 1:
- * borrador (el máximo de palabras de lo capturado) y completa (además, los tres campos y su mínimo).
+ * Única lista de reglas de la sección 2 (Filosofía Institucional): los tres campos son requeridos y respetan su
+ * rango de palabras. Se usa al guardar (todo o nada) y para saber si la sección está completa.
  */
 final class ReglasFilosofiaProyecto
 {
@@ -15,8 +15,8 @@ final class ReglasFilosofiaProyecto
      * @param  array<string, mixed>  $datos  ya normalizados (vacíos como null)
      * @return array<string, string> campo => primer mensaje
      */
-    public static function errores(array $datos, bool $completa): array
+    public static function errores(array $datos): array
     {
-        return ConteoPalabras::errores(self::RANGOS, $datos, $completa);
+        return ConteoPalabras::errores(self::RANGOS, $datos);
     }
 }

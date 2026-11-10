@@ -34,10 +34,11 @@ class GuardarPresentacionProyecto
         $this->compuerta->verificar($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
 
         $campos = self::normalizar($datos);
-        // Con $paso (1 a 3) además se exige lo requerido de ese paso: es el "Siguiente"/"Guardar" del formulario por pasos.
+        // Con $paso además se exige lo requerido de ese paso ("Siguiente"); en el último paso ("Guardar") se exige todo.
         $errores = ReglasPresentacionProyecto::errores($campos, completa: false);
         if ($paso !== null) {
-            $errores += ReglasPresentacionProyecto::errores($campos, completa: true, campos: ReglasPresentacionProyecto::PASOS[$paso]['campos']);
+            $enfocados = $paso === array_key_last(ReglasPresentacionProyecto::PASOS) ? null : ReglasPresentacionProyecto::PASOS[$paso]['campos'];
+            $errores += ReglasPresentacionProyecto::errores($campos, completa: true, campos: $enfocados);
         }
         if ($errores !== []) {
             throw new DatosInvalidos($errores);

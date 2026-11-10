@@ -7,6 +7,7 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
 use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
+use App\Application\ProyectoEducativo\ReglasObjetivosProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\TramiteEditable;
@@ -41,6 +42,18 @@ class GuardarObjetivosProyectoTest extends TestCase
         app(GuardarObjetivosProyecto::class)->ejecutar($nivelId, $datos);
     }
 
+    /** @return array<string, string> */
+    private function errores(int $nivelId, DatosObjetivosProyecto $datos): array
+    {
+        try {
+            $this->guardar($nivelId, $datos);
+        } catch (DatosInvalidos $e) {
+            return $e->errores;
+        }
+
+        return [];
+    }
+
     public function test_el_slug_sale_del_catalogo(): void
     {
         $this->assertSame('objetivos-institucionales', SeccionesProyectoEducativo::objetivos());
@@ -58,13 +71,14 @@ class GuardarObjetivosProyectoTest extends TestCase
         $this->assertSame($this->palabras(50), $capturada->datos($nivel->id)['objetivo_general']);
     }
 
-    public function test_borrador_parcial_se_guarda_y_no_esta_completo(): void
+    public function test_un_guardado_parcial_se_rechaza_con_todos_los_errores_y_no_escribe(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
-        $this->guardar($nivel->id, new DatosObjetivosProyecto(objetivo_general: $this->palabras(10)));
+        $errores = $this->errores($nivel->id, new DatosObjetivosProyecto(objetivo_general: $this->palabras(10)));
 
-        $this->assertSame(1, DB::table('proyecto_educativo_objetivos')->count());
+        $this->assertEqualsCanonicalizing(['objetivo_general', 'objetivos_especificos'], array_keys($errores));
+        $this->assertSame(0, DB::table('proyecto_educativo_objetivos')->count());
         $this->assertFalse(app(ObjetivosProyectoCapturada::class)->completa($nivel->id));
     }
 
@@ -77,14 +91,12 @@ class GuardarObjetivosProyectoTest extends TestCase
         $this->assertSame(['objetivo_general' => null, 'objetivos_especificos' => null], $capturada->datos($nivel->id));
     }
 
-    public function test_solo_espacios_se_guarda_como_nulo_y_no_completa(): void
+    public function test_solo_espacios_cuenta_como_vacio_y_no_escribe(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
-        $this->guardar($nivel->id, $this->datos(['objetivo_general' => "  \n\t "]));
-
-        $this->assertNull(DB::table('proyecto_educativo_objetivos')->value('objetivo_general'));
-        $this->assertFalse(app(ObjetivosProyectoCapturada::class)->completa($nivel->id));
+        $this->assertSame(['objetivo_general'], array_keys($this->errores($nivel->id, $this->datos(['objetivo_general' => "  \n\t "]))));
+        $this->assertSame(0, DB::table('proyecto_educativo_objetivos')->count());
     }
 
     public function test_segundo_guardado_actualiza_la_misma_fila(): void
@@ -109,35 +121,36 @@ class GuardarObjetivosProyectoTest extends TestCase
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
         $capturada = app(ObjetivosProyectoCapturada::class);
+        $this->guardar($nivel->id, $this->datos());
+        $valido = DB::table('proyecto_educativo_objetivos')->value($campo);
 
-        // MIN - 1: el borrador se guarda (el mínimo solo cuenta para "completa") pero no está completa.
-        $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($min - 1)]));
-        $this->assertFalse($capturada->completa($nivel->id));
-
-        $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($min)]));
-        $this->assertTrue($capturada->completa($nivel->id));
-
-        $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($max)]));
-        $this->assertTrue($capturada->completa($nivel->id));
-
-        // MAX + 1: se rechaza incluso como borrador y no se escribe.
-        try {
-            $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($max + 1)]));
-            $this->fail('Debió rechazar el exceso de palabras.');
-        } catch (DatosInvalidos $e) {
-            $this->assertArrayHasKey($campo, $e->errores);
+        // Por debajo del mínimo y por encima del máximo: se rechaza y no se escribe nada.
+        foreach ([$min - 1, $max + 1] as $n) {
+            $errores = $this->errores($nivel->id, $this->datos([$campo => $this->palabras($n)]));
+            $this->assertSame([$campo], array_keys($errores), "{$campo} con {$n} palabras");
+            $this->assertSame($valido, DB::table('proyecto_educativo_objetivos')->value($campo));
         }
-        $this->assertSame($this->palabras($max), DB::table('proyecto_educativo_objetivos')->value($campo));
+
+        foreach ([$min, $max] as $n) {
+            $this->guardar($nivel->id, $this->datos([$campo => $this->palabras($n)]));
+            $this->assertSame($this->palabras($n), DB::table('proyecto_educativo_objetivos')->value($campo));
+            $this->assertTrue($capturada->completa($nivel->id));
+        }
     }
 
-    public function test_cada_requerido_vacio_deja_la_seccion_incompleta(): void
+    public function test_cada_requerido_vacio_se_rechaza(): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
         foreach (['objetivo_general', 'objetivos_especificos'] as $campo) {
-            $this->guardar($nivel->id, $this->datos([$campo => null]));
-            $this->assertFalse(app(ObjetivosProyectoCapturada::class)->completa($nivel->id), $campo);
+            $this->assertSame([$campo], array_keys($this->errores($nivel->id, $this->datos([$campo => null]))));
         }
+        $this->assertSame(0, DB::table('proyecto_educativo_objetivos')->count());
+    }
+
+    public function test_ya_no_existe_la_via_de_borrador(): void
+    {
+        $this->assertSame(1, (new \ReflectionMethod(ReglasObjetivosProyecto::class, 'errores'))->getNumberOfParameters());
     }
 
     public function test_no_marca_el_paso_completado(): void

@@ -27,3 +27,13 @@ Pruebas escritas primero y vistas fallar.
 
 - Verificar en navegador el contador de palabras.
 - Aplicar la migración `2026_11_10_000200_create_proyecto_educativo_objetivos_table.php` a las instancias de desarrollo (la hace el controlador).
+
+## Revisión 3
+
+Instrucción del dueño: "Enforce rules on inputs". Esta revisión **sustituye** lo que arriba se dice del guardado como borrador en las secciones de una sola página.
+
+- **Servidor**: el "Guardar" de las secciones 2 y 3 exige todas las reglas (requeridos, mínimo y máximo de palabras), todo o nada: si algo falla no se escribe nada y se muestran todos los errores (toast "No se guardó"). Un guardado válido avisa "Sección completa". Se eliminó la vía de borrador y el aviso "Borrador guardado"; `ReglasFilosofiaProyecto::errores()`/`ReglasObjetivosProyecto::errores()` y `ConteoPalabras::errores()` ya no tienen bandera `completa`. "Completa" sigue leyéndose con las mismas reglas.
+- **Sección 1**: "Siguiente" sigue exigiendo requeridos y formatos del paso (y guarda el resto como borrador, necesario para ir de paso en paso); el "Guardar" del paso 3 ahora exige **todo** el formulario y, si el error cae en un paso que no se está pintando, lleva al primer paso con errores.
+- **Cliente** (solo ayuda; el servidor manda): `maxlength` igual a los máximos de las reglas en todos los textos (255/500/255/255/255/100, y 20 en teléfonos por la máscara y la lada), `type=email`, `type=url` con placeholder `https://...`, `inputmode="tel"` y `autocomplete` (`tel-national`, `email`, `organization`, `street-address`, `name`), fechas con `min="1900-01-01"` y `max` = hoy en la de apertura, atributo `required` en los obligatorios y selección con radios para los enums. En `x-ui.textarea-palabras`: contador en vivo que se pone en rojo por debajo del mínimo (ya con texto) o por encima del máximo, y tope duro: al teclear o pegar más del máximo se recorta a ese número de palabras; el valor que va a Livewire es el mismo que se ve (una sola variable `texto` enlazada con `entangle`).
+- **Pruebas**: fallas del guardado estricto por sección en cada frontera (no escribe nada), textos de aviso, atributos renderizados (`maxlength`, `type`, `min`/`max`, `inputmode`, `autocomplete`, `required`), y que la vía de borrador ya no existe.
+- Sigue sin verificarse en navegador el recorte y el contador (no se usó navegador).

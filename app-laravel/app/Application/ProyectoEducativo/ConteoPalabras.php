@@ -31,18 +31,18 @@ final class ConteoPalabras
     }
 
     /**
-     * Errores de campos de texto que solo tienen rango de palabras (secciones 2 y 3): en modo completa todos son
-     * requeridos y respetan el mínimo; en borrador solo el máximo de lo capturado.
+     * Errores de campos de texto que solo tienen rango de palabras (secciones 2 y 3): todos son requeridos y
+     * respetan mínimo y máximo (no hay guardado parcial).
      *
      * @param  array<string, array{int, int}>  $rangos  campo => [mínimo, máximo]
      * @param  array<string, mixed>  $datos  ya normalizados (vacíos como null)
      * @return array<string, string> campo => primer mensaje
      */
-    public static function errores(array $rangos, array $datos, bool $completa): array
+    public static function errores(array $rangos, array $datos): array
     {
         $reglas = [];
         foreach ($rangos as $campo => [$min, $max]) {
-            $reglas[$campo] = [$completa ? 'required' : 'nullable', 'string', self::regla($min, $max, $completa)];
+            $reglas[$campo] = ['required', 'string', self::regla($min, $max, completa: true)];
         }
 
         $validador = Validator::make($datos, $reglas, ['required' => 'Este campo es obligatorio.']);

@@ -214,6 +214,59 @@ class Paso3PresentacionProyectoTest extends TestCase
         $this->assertSame(500, str_word_count((string) DB::table('proyecto_educativo_presentacion')->value('sintesis_factibilidad')));
     }
 
+    public function test_el_guardado_final_exige_todo_y_lleva_al_primer_paso_con_errores(): void
+    {
+        $nivel = $this->nivel();
+        $this->sembrar($nivel, $this->pasosUnoYDos());
+
+        $this->componente($nivel)->assertSet('paso', 3)
+            ->set('sintesis_factibilidad', trim(str_repeat('palabra ', 500)))
+            ->set('nombre_institucion', '')
+            ->call('guardar')
+            ->assertHasErrors(['nombre_institucion'])
+            ->assertSet('paso', 1)
+            ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó');
+
+        $this->assertNull(DB::table('proyecto_educativo_presentacion')->value('sintesis_factibilidad'));
+    }
+
+    public function test_los_campos_del_paso_uno_llevan_las_restricciones_del_lado_del_cliente(): void
+    {
+        $html = $this->componente($this->nivel())->html();
+
+        foreach ([
+            'id="nombre_institucion"' => ['maxlength="255"', 'required', 'autocomplete="organization"'],
+            'id="domicilio_completo"' => ['maxlength="500"', 'required', 'autocomplete="street-address"'],
+            'id="representante_legal"' => ['maxlength="255"', 'required', 'autocomplete="name"'],
+            'id="correo"' => ['type="email"', 'maxlength="255"', 'required', 'autocomplete="email"'],
+            'id="telefono"' => ['type="tel"', 'inputmode="tel"', 'maxlength="20"', 'required', 'autocomplete="tel-national"'],
+            'id="celular"' => ['type="tel"', 'inputmode="tel"', 'maxlength="20"', 'autocomplete="tel-national"'],
+            'id="pagina_web"' => ['type="url"', 'maxlength="255"', 'placeholder="https://www.ejemplo.com"'],
+            'id="fecha_entrega"' => ['type="date"', 'min="1900-01-01"', 'required'],
+            'id="fecha_apertura"' => ['type="date"', 'min="1900-01-01"', 'max="'.now()->toDateString().'"', 'required'],
+        ] as $ancla => $atributos) {
+            $inicio = strpos($html, $ancla);
+            $this->assertNotFalse($inicio, $ancla);
+            $etiqueta = substr($html, strrpos(substr($html, 0, $inicio), '<input'), 700);
+            $etiqueta = substr($etiqueta, 0, strpos($etiqueta, '>') + 1);
+            foreach ($atributos as $atributo) {
+                $this->assertStringContainsString($atributo, $etiqueta, "{$ancla}: {$atributo}");
+            }
+        }
+    }
+
+    public function test_los_campos_del_paso_dos_y_tres_llevan_sus_restricciones(): void
+    {
+        $nivel = $this->nivel();
+        $this->sembrar($nivel, $this->pasosUnoYDos());
+        $html = $this->componente($nivel)->html();
+
+        $this->assertStringContainsString('x-on:input="recortar()"', $html);
+        $this->assertStringContainsString('max: 1000', $html);
+        $this->assertStringContainsString('min: 500', $html);
+        $this->assertStringContainsString('required', $html);
+    }
+
     public function test_guardar_fuera_del_paso_final_no_hace_nada(): void
     {
         $nivel = $this->nivel();
@@ -296,9 +349,6 @@ class Paso3PresentacionProyectoTest extends TestCase
         $ruta = route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $nivel->id]);
 
         $this->assertSame(20, substr_count($this->get($ruta)->assertOk()->getContent(), 'Pendiente'));
-
-        $this->sembrar($nivel, ['nombre_institucion' => 'Solo nombre']);
-        $this->assertSame(20, substr_count($this->get($ruta)->getContent(), 'Pendiente'));
 
         $this->sembrar($nivel, $this->completo());
         $html = $this->get($ruta)->getContent();

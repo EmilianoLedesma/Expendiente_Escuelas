@@ -21,29 +21,29 @@
             @if ($paso === 1)
             <x-ui.section title="Datos Generales">
                 <x-ui.field id="fecha_entrega" label="Fecha de entrega">
-                    <x-ui.input type="date" wire:model="fecha_entrega" />
+                    <x-ui.input type="date" wire:model="fecha_entrega" min="1900-01-01" required />
                 </x-ui.field>
                 <x-ui.field id="nombre_institucion" label="Nombre de la institución">
-                    <x-ui.input wire:model="nombre_institucion" maxlength="255" placeholder="Nombre completo de la institución educativa" />
+                    <x-ui.input wire:model="nombre_institucion" maxlength="255" required autocomplete="organization" placeholder="Nombre completo de la institución educativa" />
                 </x-ui.field>
                 <x-ui.field id="fecha_apertura" label="Fecha de apertura">
-                    <x-ui.input type="date" wire:model="fecha_apertura" max="{{ now()->toDateString() }}" />
+                    <x-ui.input type="date" wire:model="fecha_apertura" min="1900-01-01" max="{{ now()->toDateString() }}" required />
                 </x-ui.field>
                 <x-ui.field id="domicilio_completo" label="Domicilio completo">
-                    <x-ui.input wire:model="domicilio_completo" maxlength="500" placeholder="Calle, número, colonia, municipio, estado, C.P." />
+                    <x-ui.input wire:model="domicilio_completo" maxlength="500" required autocomplete="street-address" placeholder="Calle, número, colonia, municipio, estado, C.P." />
                 </x-ui.field>
                 <x-ui.field id="representante_legal" label="Representante legal">
-                    <x-ui.input wire:model="representante_legal" maxlength="255" placeholder="Nombre completo del representante" />
+                    <x-ui.input wire:model="representante_legal" maxlength="255" required autocomplete="name" placeholder="Nombre completo del representante" />
                 </x-ui.field>
                 <x-ui.field id="correo" label="Correo electrónico">
-                    <x-ui.input type="email" wire:model="correo" maxlength="255" placeholder="correo@ejemplo.com" />
+                    <x-ui.input type="email" wire:model="correo" maxlength="255" required autocomplete="email" placeholder="correo@ejemplo.com" />
                 </x-ui.field>
                 <div class="grid gap-md sm:grid-cols-2">
                     <x-ui.field id="telefono" label="Teléfono">
-                        <x-ui.input type="tel" inputmode="numeric" wire:model="telefono" x-on:input="$el.value = mascara($el.value); $wire.set('telefono', $el.value, false)" placeholder="(442) 000-0000" />
+                        <x-ui.input type="tel" inputmode="tel" maxlength="20" required autocomplete="tel-national" wire:model="telefono" x-on:input="$el.value = mascara($el.value); $wire.set('telefono', $el.value, false)" placeholder="(442) 000-0000" />
                     </x-ui.field>
                     <x-ui.field id="celular" label="Celular" optional>
-                        <x-ui.input type="tel" inputmode="numeric" wire:model="celular" x-on:input="$el.value = mascara($el.value); $wire.set('celular', $el.value, false)" placeholder="(442) 000-0000" />
+                        <x-ui.input type="tel" inputmode="tel" maxlength="20" autocomplete="tel-national" wire:model="celular" x-on:input="$el.value = mascara($el.value); $wire.set('celular', $el.value, false)" placeholder="(442) 000-0000" />
                     </x-ui.field>
                 </div>
                 <x-ui.field id="pagina_web" label="Página web" optional>
@@ -59,7 +59,7 @@
                     <x-ui.radio-group id="ciclo_escolar" legend="Ciclo escolar" wire:model.live="ciclo_escolar" :opciones="['semestral' => 'Semestral', 'cuatrimestral' => 'Cuatrimestral', 'trimestral' => 'Trimestral', 'bimestral' => 'Bimestral', 'mensual' => 'Mensual', 'otro' => 'Otro']" />
                     @if ($ciclo_escolar === 'otro')
                         <x-ui.field id="ciclo_escolar_otro" label="Especifica el ciclo escolar" class="mt-sm">
-                            <x-ui.input wire:model="ciclo_escolar_otro" maxlength="100" />
+                            <x-ui.input wire:model="ciclo_escolar_otro" maxlength="100" required />
                         </x-ui.field>
                     @endif
                 </div>
@@ -68,7 +68,7 @@
                     <x-ui.radio-group id="duracion" legend="Duración" wire:model.live="duracion" :opciones="['3_anios' => '3 años', '2_anios' => '2 años', 'otro' => 'Otro']" />
                     @if ($duracion === 'otro')
                         <x-ui.field id="duracion_otro" label="Especifica la duración" class="mt-sm">
-                            <x-ui.input wire:model="duracion_otro" maxlength="100" />
+                            <x-ui.input wire:model="duracion_otro" maxlength="100" required />
                         </x-ui.field>
                     @endif
                 </div>
