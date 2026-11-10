@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Application\ProyectoEducativo;
+
+use Illuminate\Support\Facades\Validator;
+
+/**
+ * Única lista de reglas de la sección 1 (Presentación del Proyecto Académico). Dos modos sobre las mismas reglas:
+ * borrador (formatos y máximos de lo que esté capturado) y completa (además, todo lo requerido y el mínimo de
+ * palabras). Guardar valida en borrador; "completa" es que pase en modo completa.
+ */
+final class ReglasPresentacionProyecto
+{
+    public const PALABRAS_MIN = 500;
+
+    public const PALABRAS_MAX = 1000;
+
+    /** Pasos del formulario (nombre y campos de cada uno); los nombres son los del dueño. */
+    public const PASOS = [
+        1 => ['nombre' => 'Datos Generales', 'campos' => ['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono', 'celular', 'pagina_web']],
+        2 => ['nombre' => 'Modalidad, Ciclo Escolar y Duración', 'campos' => ['modalidad', 'ciclo_escolar', 'ciclo_escolar_otro', 'duracion', 'duracion_otro']],
+        3 => ['nombre' => 'Síntesis de los Resultados del Estudio de Factibilidad', 'campos' => ['sintesis_factibilidad']],
+    ];
+
+    /**
+     * @param  array<string, mixed>  $datos  ya normalizados (teléfonos en dígitos, vacíos como null)
+     * @param  list<string>|null  $campos  si se da, solo se devuelven los errores de esos campos (un paso)
+     * @return array<string, string> campo => primer mensaje
+     */
+    public static function errores(array $datos, bool $completa, ?array $campos = null): array
+    {
+        $req = $completa ? 'required' : 'nullable';
+
+        $validador = Validator::make($datos, [
+            'fecha_entrega' => [$req, 'date_format:Y-m-d', 'after_or_equal:1900-01-01'],
+            'nombre_institucion' => [$req, 'string', 'max:255'],
+            'fecha_apertura' => [$req, 'date_format:Y-m-d', 'after_or_equal:1900-01-01', 'before_or_equal:today'],
+            'domicilio_completo' => [$req, 'string', 'max:500'],
+            'representante_legal' => [$req, 'string', 'max:255'],
+            'correo' => [$req, 'email', 'max:255'],
+            'telefono' => [$req, 'digits:10'],
+            'celular' => ['nullable', 'digits:10'],
+            'pagina_web' => ['nullable', 'url:http,https', 'max:255'],
+            'modalidad' => [$req, 'in:presencial,virtual,mixta'],
+            'ciclo_escolar' => [$req, 'in:semestral,cuatrimestral,trimestral,bimestral,mensual,otro'],
+            'ciclo_escolar_otro' => ['nullable', ...($completa ? ['required_if:ciclo_escolar,otro'] : []), 'string', 'max:100'],
+            'duracion' => [$req, 'in:3_anios,2_anios,otro'],
+            'duracion_otro' => ['nullable', ...($completa ? ['required_if:duracion,otro'] : []), 'string', 'max:100'],
+            'sintesis_factibilidad' => [$req, 'string', ConteoPalabras::regla(self::PALABRAS_MIN, self::PALABRAS_MAX, $completa)],
+        ], [
+            'required' => 'Este campo es obligatorio.',
+            'required_if' => 'Este campo es obligatorio.',
+            'max' => 'No debe pasar de :max caracteres.',
+            'email' => 'Captura un correo electrónico válido.',
+            'digits' => 'Captura un número de 10 dígitos.',
+            'url' => 'Captura una dirección válida que empiece con http:// o https://.',
+            'in' => 'Elige una opción de la lista.',
+            'date_format' => 'Captura una fecha válida.',
+            'after_or_equal' => 'La fecha no puede ser anterior a 1900.',
+            'before_or_equal' => 'La fecha no puede ser posterior a hoy.',
+        ]);
+
+        $errores = array_map(fn (array $mensajes) => $mensajes[0], $validador->errors()->toArray());
+
+        return $campos === null ? $errores : array_intersect_key($errores, array_flip($campos));
+    }
+}

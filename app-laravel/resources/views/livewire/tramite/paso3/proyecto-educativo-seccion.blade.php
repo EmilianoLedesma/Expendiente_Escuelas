@@ -1,7 +1,122 @@
 <div class="max-w-3xl">
     <x-ui.page-header :eyebrow="$encabezado" :title="$numero . '. ' . $nombre" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Presentación del Proyecto Educativo" />
 
-    <p class="rounded-lg border border-dashed border-hairline p-lg text-body-md text-muted">Contenido por definir</p>
+    @if ($esPresentacion)
+
+        {{-- La máscara es solo ayuda: escribe (442) 000-0000 y empuja ese valor a Livewire; el servidor normaliza y valida. Con +52/52 o más de 10 dígitos no recorta: deja el texto y el servidor explica el error. --}}
+        <form novalidate wire:submit="{{ $paso === count($pasos) ? 'guardar' : 'siguiente' }}" x-data="{ mascara(v) { const d = v.replace(/\D/g, ''); if (/[^\d\s().-]/.test(v) || d.length > 10) return v; return d.replace(/^(\d{1,3})(\d{0,3})(\d{0,4})$/, (m, a, b, c) => (b ? '(' + a + ') ' + b : a) + (c ? '-' + c : '')); } }">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
+                @foreach ($pasos as $n => $p)
+                    <li @if ($n === $paso) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $paso ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $p['nombre'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $paso }} de {{ count($pasos) }}</p>
+
+            <div wire:key="paso-{{ $paso }}">
+
+            @if ($paso === 1)
+            <x-ui.section title="Datos Generales">
+                <x-ui.field id="fecha_entrega" label="Fecha de entrega">
+                    <x-ui.input type="date" wire:model="fecha_entrega" />
+                </x-ui.field>
+                <x-ui.field id="nombre_institucion" label="Nombre de la institución">
+                    <x-ui.input wire:model="nombre_institucion" maxlength="255" placeholder="Nombre completo de la institución educativa" />
+                </x-ui.field>
+                <x-ui.field id="fecha_apertura" label="Fecha de apertura">
+                    <x-ui.input type="date" wire:model="fecha_apertura" max="{{ now()->toDateString() }}" />
+                </x-ui.field>
+                <x-ui.field id="domicilio_completo" label="Domicilio completo">
+                    <x-ui.input wire:model="domicilio_completo" maxlength="500" placeholder="Calle, número, colonia, municipio, estado, C.P." />
+                </x-ui.field>
+                <x-ui.field id="representante_legal" label="Representante legal">
+                    <x-ui.input wire:model="representante_legal" maxlength="255" placeholder="Nombre completo del representante" />
+                </x-ui.field>
+                <x-ui.field id="correo" label="Correo electrónico">
+                    <x-ui.input type="email" wire:model="correo" maxlength="255" placeholder="correo@ejemplo.com" />
+                </x-ui.field>
+                <div class="grid gap-md sm:grid-cols-2">
+                    <x-ui.field id="telefono" label="Teléfono">
+                        <x-ui.input type="tel" inputmode="numeric" wire:model="telefono" x-on:input="$el.value = mascara($el.value); $wire.set('telefono', $el.value, false)" placeholder="(442) 000-0000" />
+                    </x-ui.field>
+                    <x-ui.field id="celular" label="Celular" optional>
+                        <x-ui.input type="tel" inputmode="numeric" wire:model="celular" x-on:input="$el.value = mascara($el.value); $wire.set('celular', $el.value, false)" placeholder="(442) 000-0000" />
+                    </x-ui.field>
+                </div>
+                <x-ui.field id="pagina_web" label="Página web" optional>
+                    <x-ui.input type="url" wire:model="pagina_web" maxlength="255" placeholder="https://www.ejemplo.com" />
+                </x-ui.field>
+            </x-ui.section>
+
+            @elseif ($paso === 2)
+            <x-ui.section title="Modalidad, Ciclo Escolar y Duración">
+                <x-ui.radio-group id="modalidad" legend="Modalidad" wire:model="modalidad" :opciones="['presencial' => 'Presencial', 'virtual' => 'Virtual', 'mixta' => 'Mixta']" />
+
+                <div>
+                    <x-ui.radio-group id="ciclo_escolar" legend="Ciclo escolar" wire:model.live="ciclo_escolar" :opciones="['semestral' => 'Semestral', 'cuatrimestral' => 'Cuatrimestral', 'trimestral' => 'Trimestral', 'bimestral' => 'Bimestral', 'mensual' => 'Mensual', 'otro' => 'Otro']" />
+                    @if ($ciclo_escolar === 'otro')
+                        <x-ui.field id="ciclo_escolar_otro" label="Especifica el ciclo escolar" class="mt-sm">
+                            <x-ui.input wire:model="ciclo_escolar_otro" maxlength="100" />
+                        </x-ui.field>
+                    @endif
+                </div>
+
+                <div>
+                    <x-ui.radio-group id="duracion" legend="Duración" wire:model.live="duracion" :opciones="['3_anios' => '3 años', '2_anios' => '2 años', 'otro' => 'Otro']" />
+                    @if ($duracion === 'otro')
+                        <x-ui.field id="duracion_otro" label="Especifica la duración" class="mt-sm">
+                            <x-ui.input wire:model="duracion_otro" maxlength="100" />
+                        </x-ui.field>
+                    @endif
+                </div>
+            </x-ui.section>
+
+            @else
+            <x-ui.section title="Síntesis de los Resultados del Estudio de Factibilidad">
+                <x-ui.textarea-palabras id="sintesis_factibilidad" label="Síntesis (500 a 1000 palabras)" :min="500" :max="1000" :rows="14" />
+            </x-ui.section>
+
+            @endif
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($paso > 1)
+                    <x-ui.button-secondary type="button" wire:click="anterior">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $paso === count($pasos) ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
+    @elseif ($esTexto)
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            @if ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::filosofia())
+                <x-ui.section :title="$nombre">
+                    <x-ui.textarea-palabras id="mision" label="Misión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la razón de ser de la institución y su compromiso con la comunidad educativa..." />
+                    <x-ui.textarea-palabras id="vision" label="Visión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la proyección a futuro de la institución y las metas que aspira alcanzar..." />
+                    <x-ui.textarea-palabras id="valores" label="Valores (50 a 250 palabras)" :min="50" :max="250" placeholder="Enumere y describa los valores fundamentales que guían el quehacer institucional..." />
+                </x-ui.section>
+            @else
+                <x-ui.section :title="$nombre">
+                    <x-ui.textarea-palabras id="objetivo_general" label="Objetivo General (50 a 100 palabras)" :min="50" :max="100" placeholder="Redacte el objetivo principal que orienta el proyecto educativo de la institución..." />
+                    <x-ui.textarea-palabras id="objetivos_especificos" label="Objetivos Específicos (100 a 250 palabras)" :min="100" :max="250" placeholder="Desglose los objetivos puntuales derivados del objetivo general..." />
+                </x-ui.section>
+            @endif
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
+    @else
+        <p class="rounded-lg border border-dashed border-hairline p-lg text-body-md text-muted">Contenido por definir</p>
+    @endif
 
     <nav aria-label="Secciones del proyecto educativo" class="mt-lg flex flex-wrap items-center justify-between gap-md">
         @if ($anterior)

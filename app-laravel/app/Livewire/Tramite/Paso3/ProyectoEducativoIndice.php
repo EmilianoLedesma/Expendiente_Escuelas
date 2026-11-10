@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
+use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
+use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
@@ -14,8 +17,8 @@ use Livewire\Component;
 
 /**
  * Paso 3, sub-paso 7 (solo media superior): índice de las secciones de la
- * Presentación del Proyecto Educativo. Solo presentación; el contenido de cada
- * sección está por definir y el paso no se completa desde aquí.
+ * Presentación del Proyecto Educativo. Solo la primera sección tiene contenido
+ * (lleva su etiqueta Completa/Pendiente); el paso no se completa desde aquí.
  */
 #[Layout('layouts.tramite')]
 class ProyectoEducativoIndice extends Component
@@ -36,11 +39,16 @@ class ProyectoEducativoIndice extends Component
         $this->redirigirSiNoAlcanzable($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
     }
 
-    public function render()
+    public function render(PresentacionProyectoCapturada $presentacion, FilosofiaProyectoCapturada $filosofia, ObjetivosProyectoCapturada $objetivos)
     {
         return view('livewire.tramite.paso3.proyecto-educativo-indice', [
             'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
             'secciones' => SeccionesProyectoEducativo::todas(),
+            'completas' => [
+                SeccionesProyectoEducativo::presentacion() => $presentacion->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::filosofia() => $filosofia->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::objetivos() => $objetivos->completa($this->escuelaNivel->id),
+            ],
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
     }
 }
