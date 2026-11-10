@@ -102,7 +102,8 @@ class EstadoPaso3Test extends TestCase
 
     public function test_sin_pendientes_devuelve_null(): void
     {
-        $this->completar(...DB::table('pasos_captura')->orderBy('orden')->pluck('clave')->all());
+        // proyecto_educativo solo existe en media superior; este nivel no lo tiene.
+        $this->completar(...DB::table('pasos_captura')->where('clave', '!=', 'proyecto_educativo')->orderBy('orden')->pluck('clave')->all());
 
         $this->assertNull(app(EstadoPaso3::class)->primerPendiente($this->escuelaNivelId));
     }

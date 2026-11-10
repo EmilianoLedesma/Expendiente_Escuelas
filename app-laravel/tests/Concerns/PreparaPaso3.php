@@ -3,6 +3,7 @@
 namespace Tests\Concerns;
 
 use App\Application\EscuelaNiveles\MarcarPasoCompletado;
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
@@ -49,6 +50,9 @@ trait PreparaPaso3
         foreach (DB::table('pasos_captura')->orderBy('orden')->pluck('clave') as $clave) {
             if ($clave === $hasta) {
                 break;
+            }
+            if ($clave === SeccionesProyectoEducativo::CLAVE_PASO && ! SeccionesProyectoEducativo::aplicaA($nivelClave)) {
+                continue;
             }
             (new MarcarPasoCompletado)->ejecutar($escuelaNivel->id, (string) $clave);
         }

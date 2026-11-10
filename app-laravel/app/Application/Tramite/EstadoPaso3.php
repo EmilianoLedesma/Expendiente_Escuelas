@@ -2,6 +2,7 @@
 
 namespace App\Application\Tramite;
 
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -25,7 +26,7 @@ class EstadoPaso3
     {
         $completados = $this->completados($escuelaNivelId);
 
-        foreach ($this->catalogo() as $clave) {
+        foreach ($this->catalogo($escuelaNivelId) as $clave) {
             if (! in_array($clave, $completados, true)) {
                 return $clave;
             }
@@ -36,7 +37,7 @@ class EstadoPaso3
 
     public function puedeAcceder(int $escuelaNivelId, string $clave): bool
     {
-        $catalogo = $this->catalogo();
+        $catalogo = $this->catalogo($escuelaNivelId);
         $posicion = array_search($clave, $catalogo, true);
 
         if ($posicion === false) {
@@ -56,10 +57,17 @@ class EstadoPaso3
         return in_array($pasoClave, $this->completados($escuelaNivelId), true);
     }
 
-    /** @return list<string> */
-    private function catalogo(): array
+    /** Catálogo de sub-pasos de ese nivel: el proyecto educativo solo existe donde aplica (media superior). @return list<string> */
+    private function catalogo(int $escuelaNivelId): array
     {
-        return DB::table('pasos_captura')->orderBy('orden')->pluck('clave')->all();
+        $aplica = SeccionesProyectoEducativo::aplicaA((string) DB::table('escuela_niveles')
+            ->join('niveles_educativos', 'niveles_educativos.id', '=', 'escuela_niveles.nivel_educativo_id')
+            ->where('escuela_niveles.id', $escuelaNivelId)
+            ->value('niveles_educativos.clave'));
+
+        return DB::table('pasos_captura')->orderBy('orden')
+            ->when(! $aplica, fn ($q) => $q->where('clave', '!=', SeccionesProyectoEducativo::CLAVE_PASO))
+            ->pluck('clave')->all();
     }
 
     /** @return list<string> */

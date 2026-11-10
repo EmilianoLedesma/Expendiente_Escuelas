@@ -3,6 +3,7 @@
 namespace App\Application\Tramite;
 
 use App\Application\Documentos\DocumentosCompletos;
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Revision\PasosRevision;
 use App\Application\Tramite\DTO\NivelDelTramite;
@@ -38,6 +39,7 @@ class ResumenTramite
         'plan_estudios' => 'tramite.paso3-plan-estudios',
         'plantilla_docente' => 'tramite.paso3-plantilla',
         'matricula' => 'tramite.paso3-matricula',
+        'proyecto_educativo' => 'tramite.paso3-proyecto-educativo',
     ];
 
     /** Paso 2.4 de cada nivel (WS-5b); CompuertaPaso3 y Paso2Responsable redirigen aquí. */
@@ -79,6 +81,7 @@ class ResumenTramite
         'plan_estudios' => ['Plan de estudios', 'Plan de estudios del nivel.'],
         'plantilla_docente' => ['Plantilla docente', 'Personal docente del nivel.'],
         'matricula' => ['Matrícula', 'Alumnos inscritos en el nivel.'],
+        'proyecto_educativo' => ['Presentación del Proyecto Educativo', 'Las 20 secciones del proyecto educativo del nivel.'],
     ];
 
     /** Memo por instancia: "Mis trámites" arma un resumen por escuela con la misma instancia. */
@@ -262,7 +265,11 @@ class ResumenTramite
         // after a skipped Mobiliario one too high (latent until sub-steps 4-6 got pages).
         $disponibles = array_values(array_filter(
             ['documentos_nivel', ...array_keys(self::RUTAS_PASO3)],
-            fn (string $c) => $c !== 'mobiliario' || $nivelClave === self::NIVEL_CON_MOBILIARIO,
+            fn (string $c) => match ($c) {
+                'mobiliario' => $nivelClave === self::NIVEL_CON_MOBILIARIO,
+                SeccionesProyectoEducativo::CLAVE_PASO => SeccionesProyectoEducativo::aplicaA((string) $nivelClave),
+                default => true,
+            },
         ));
         $indice = array_search($clave, $disponibles, true);
 
@@ -404,6 +411,11 @@ class ResumenTramite
 
         foreach (DB::table('pasos_captura')->orderBy('orden')->pluck('nombre', 'clave') as $clave => $nombreCatalogo) {
             $clave = (string) $clave;
+
+            // El proyecto educativo solo existe en su nivel: en los demás no se emite fila (ni cambia el conteo).
+            if ($clave === SeccionesProyectoEducativo::CLAVE_PASO && ! SeccionesProyectoEducativo::aplicaA($nivelClave)) {
+                continue;
+            }
 
             if (! isset(self::RUTAS_PASO3[$clave])) {
                 $secciones[] = $this->seccion($clave, 'no_disponible', null, null, $nivelClave, (string) $nombreCatalogo, $escuelaNivel->id);
