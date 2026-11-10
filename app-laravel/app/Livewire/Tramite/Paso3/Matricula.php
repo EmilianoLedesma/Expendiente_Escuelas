@@ -7,6 +7,8 @@ use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Matricula\DTO\DatosMatricula;
 use App\Application\Matricula\MatriculaCapturada;
 use App\Application\Matricula\RegistrarMatricula;
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
+use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
 use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
@@ -16,7 +18,8 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
- * Paso 3, sub-step 6 and last: enrolment by sala (Inicial) or by grado and
+ * Paso 3, sub-step 6 (the last one for every nivel except media_superior, where the
+ * Proyecto Educativo follows): enrolment by sala (Inicial) or by grado and
  * grupo. Presentation only: RegistrarMatricula validates and writes. Saving
  * closes Paso 3 for the level and returns to the hub.
  */
@@ -92,6 +95,13 @@ class Matricula extends Component
             return;
         } catch (PrecondicionIncumplida) {
             $this->redirigirSiNoAlcanzable($this->escuelaNivel, 'matricula');
+
+            return;
+        }
+
+        if (SeccionesProyectoEducativo::aplicaA($this->escuelaNivel->nivelEducativo->clave)
+            && app(EstadoPaso3::class)->primerPendiente($this->escuelaNivel->id) === SeccionesProyectoEducativo::CLAVE_PASO) {
+            $this->redirigirTrasGuardar($this->escuelaNivel, 'tramite.paso3-proyecto-educativo', 'Matrícula guardada', 'Continúa con la Presentación del Proyecto Educativo.');
 
             return;
         }

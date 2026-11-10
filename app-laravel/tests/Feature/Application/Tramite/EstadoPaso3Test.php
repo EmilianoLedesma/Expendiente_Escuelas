@@ -46,6 +46,14 @@ class EstadoPaso3Test extends TestCase
         $this->completarPaso24($this->escuelaNivelId);
     }
 
+    public function test_tiene_en_catalogo_distingue_el_paso_que_no_aplica_al_nivel(): void
+    {
+        $estado = app(EstadoPaso3::class);
+
+        $this->assertTrue($estado->tieneEnCatalogo($this->escuelaNivelId, 'matricula'));
+        $this->assertFalse($estado->tieneEnCatalogo($this->escuelaNivelId, 'proyecto_educativo'));
+    }
+
     private function completar(string ...$claves): void
     {
         foreach ($claves as $clave) {
@@ -102,7 +110,8 @@ class EstadoPaso3Test extends TestCase
 
     public function test_sin_pendientes_devuelve_null(): void
     {
-        $this->completar(...DB::table('pasos_captura')->orderBy('orden')->pluck('clave')->all());
+        // proyecto_educativo solo existe en media superior; este nivel no lo tiene.
+        $this->completar(...DB::table('pasos_captura')->where('clave', '!=', 'proyecto_educativo')->orderBy('orden')->pluck('clave')->all());
 
         $this->assertNull(app(EstadoPaso3::class)->primerPendiente($this->escuelaNivelId));
     }

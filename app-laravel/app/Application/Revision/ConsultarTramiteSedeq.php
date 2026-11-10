@@ -5,6 +5,7 @@ namespace App\Application\Revision;
 use App\Application\Documentos\DocumentosCapturados;
 use App\Application\Documentos\DocumentosCompletos;
 use App\Application\Documentos\MetadatosDocumentales;
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\ResponsableLegal\TipoPersonaDeEscuela;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Tramite\TramiteEditable;
@@ -111,7 +112,7 @@ final class ConsultarTramiteSedeq
                     'estado' => (string) $estados[$nivel->estado_id],
                     'folio' => $nivel->folio_expediente,
                     'datos' => $this->datosNivel($nivel),
-                    'pasos' => $this->pasos($nivel->id),
+                    'pasos' => $this->pasos($nivel->id, $nivel->nivelEducativo->clave),
                     'documentos' => $this->filas(
                         $this->documentosCapturados->paraEscuelaNivel($nivel->id),
                         $this->metadatos->paraEscuelaNivel($nivel->id),
@@ -169,13 +170,14 @@ final class ConsultarTramiteSedeq
     }
 
     /** @return list<array{nombre: string, estado: string}> sub-pasos de Paso 3 con su estado (pendiente si no hay fila) */
-    private function pasos(int $escuelaNivelId): array
+    private function pasos(int $escuelaNivelId, string $nivelClave): array
     {
         $estados = DB::table('escuela_nivel_pasos')->where('escuela_nivel_id', $escuelaNivelId)->pluck('estado', 'paso_captura_id');
         // Catálogo constante: se lee una vez por consulta, no por nivel.
-        $this->catalogoPasos ??= DB::table('pasos_captura')->orderBy('orden')->get(['id', 'nombre']);
+        $this->catalogoPasos ??= DB::table('pasos_captura')->orderBy('orden')->get(['id', 'clave', 'nombre']);
 
         return $this->catalogoPasos
+            ->reject(fn (object $paso) => $paso->clave === SeccionesProyectoEducativo::CLAVE_PASO && ! SeccionesProyectoEducativo::aplicaA($nivelClave))
             ->map(fn (object $paso) => ['nombre' => (string) $paso->nombre, 'estado' => (string) ($estados[$paso->id] ?? 'pendiente')])
             ->values()->all();
     }

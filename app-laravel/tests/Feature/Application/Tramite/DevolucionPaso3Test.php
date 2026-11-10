@@ -76,7 +76,7 @@ class DevolucionPaso3Test extends TestCase
     {
         $nivel = $this->nivelEn($primero->escuela, $claveNivel);
         $this->completarPaso24($nivel->id);
-        foreach (DB::table('pasos_captura')->orderBy('orden')->pluck('clave') as $clave) {
+        foreach (DB::table('pasos_captura')->where('clave', '!=', 'proyecto_educativo')->orderBy('orden')->pluck('clave') as $clave) {
             (new MarcarPasoCompletado)->ejecutar($nivel->id, (string) $clave);
         }
         $this->fijarAntes($nivel);

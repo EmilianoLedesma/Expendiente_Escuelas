@@ -28,6 +28,8 @@ use App\Livewire\Tramite\Paso3\Matricula;
 use App\Livewire\Tramite\Paso3\MobiliarioNivel;
 use App\Livewire\Tramite\Paso3\PlanEstudios;
 use App\Livewire\Tramite\Paso3\PlantillaDocente;
+use App\Livewire\Tramite\Paso3\ProyectoEducativoIndice;
+use App\Livewire\Tramite\Paso3\ProyectoEducativoSeccion;
 use App\Livewire\Tramite\ResponsablesNivel;
 use App\Livewire\Tramite\ValidacionFinal;
 use App\Models\EscuelaNivel;
@@ -145,6 +147,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/paso3/{escuelaNivel}/matricula', Matricula::class)
         ->middleware("can:editarPaso,escuelaNivel,'matricula'")
         ->name('tramite.paso3-matricula');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/proyecto-educativo', ProyectoEducativoIndice::class)
+        ->middleware("can:editarPaso,escuelaNivel,'proyecto_educativo'")
+        ->name('tramite.paso3-proyecto-educativo');
+
+    Route::get('/tramite/paso3/{escuelaNivel}/proyecto-educativo/{seccion}', ProyectoEducativoSeccion::class)
+        ->middleware("can:editarPaso,escuelaNivel,'proyecto_educativo'")
+        ->name('tramite.paso3-proyecto-educativo-seccion');
 
     // Ya no es una página: el hub muestra el estado de cada nivel (rediseño UI, D12). Se conserva el nombre de ruta.
     Route::get('/tramite/paso3/{escuelaNivel}/proximos-pasos', fn (EscuelaNivel $escuelaNivel) => redirect()->route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id]))

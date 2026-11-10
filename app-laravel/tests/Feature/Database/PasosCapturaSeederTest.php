@@ -14,8 +14,9 @@ class PasosCapturaSeederTest extends TestCase
     {
         (new PasosCapturaSeeder)->run();
 
-        $this->assertDatabaseCount('pasos_captura', 6);
+        $this->assertDatabaseCount('pasos_captura', 7);
 
+        $this->assertDatabaseHas('pasos_captura', ['clave' => 'proyecto_educativo', 'nombre' => 'Presentación del Proyecto Educativo', 'orden' => 7]);
         $this->assertDatabaseHas('pasos_captura', ['clave' => 'inmueble', 'orden' => 1]);
         $this->assertDatabaseHas('pasos_captura', ['clave' => 'infraestructura', 'orden' => 2]);
         $this->assertDatabaseHas('pasos_captura', ['clave' => 'mobiliario', 'orden' => 3]);
@@ -29,6 +30,6 @@ class PasosCapturaSeederTest extends TestCase
         (new PasosCapturaSeeder)->run();
         (new PasosCapturaSeeder)->run();
 
-        $this->assertDatabaseCount('pasos_captura', 6);
+        $this->assertDatabaseCount('pasos_captura', 7);
     }
 }

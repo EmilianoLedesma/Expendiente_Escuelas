@@ -53,6 +53,7 @@ class SedeqSoloLecturaTest extends TestCase
             'escuela' => $this->nivel->escuela_id,
             'escuelaNivel' => $this->nivel->id,
             'clave' => 'ine',
+            'seccion' => 'filosofia-institucional',
             'evaluacion' => (int) DB::table('evaluaciones_validacion')->insertGetId(['escuela_id' => $this->nivel->escuela_id, 'archivo_path' => 'r.pdf', 'lista_para_envio' => true, 'resultados' => '[]']),
         ];
     }
