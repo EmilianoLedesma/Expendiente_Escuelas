@@ -105,6 +105,11 @@
                     <x-ui.textarea-palabras id="vision" label="Visión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la proyección a futuro de la institución y las metas que aspira alcanzar..." />
                     <x-ui.textarea-palabras id="valores" label="Valores (50 a 250 palabras)" :min="50" :max="250" placeholder="Enumere y describa los valores fundamentales que guían el quehacer institucional..." />
                 </x-ui.section>
+            @else
+                <x-ui.section :title="$nombre">
+                    <x-ui.textarea-palabras id="objetivo_general" label="Objetivo General (50 a 100 palabras)" :min="50" :max="100" placeholder="Redacte el objetivo principal que orienta el proyecto educativo de la institución..." />
+                    <x-ui.textarea-palabras id="objetivos_especificos" label="Objetivos Específicos (100 a 250 palabras)" :min="100" :max="250" placeholder="Desglose los objetivos puntuales derivados del objetivo general..." />
+                </x-ui.section>
             @endif
 
             <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />

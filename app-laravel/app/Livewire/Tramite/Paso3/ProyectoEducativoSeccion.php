@@ -5,10 +5,13 @@ namespace App\Livewire\Tramite\Paso3;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ProyectoEducativo\DTO\DatosFilosofiaProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
 use App\Application\ProyectoEducativo\GuardarFilosofiaProyecto;
+use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
+use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasPresentacionProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
@@ -79,6 +82,11 @@ class ProyectoEducativoSeccion extends Component
     public string $vision = '';
 
     public string $valores = '';
+
+    // Sección 3 (Objetivos Institucionales).
+    public string $objetivo_general = '';
+
+    public string $objetivos_especificos = '';
 
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
@@ -173,7 +181,7 @@ class ProyectoEducativoSeccion extends Component
     /** Secciones de una sola página con textos de rango de palabras: [guardar, DTO, lectura]. */
     private function esTexto(): bool
     {
-        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia()], true);
+        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos()], true);
     }
 
     /** @return array{object, class-string, object} */
@@ -181,6 +189,7 @@ class ProyectoEducativoSeccion extends Component
     {
         return match ($this->seccion) {
             SeccionesProyectoEducativo::filosofia() => [app(GuardarFilosofiaProyecto::class), DatosFilosofiaProyecto::class, app(FilosofiaProyectoCapturada::class)],
+            SeccionesProyectoEducativo::objetivos() => [app(GuardarObjetivosProyecto::class), DatosObjetivosProyecto::class, app(ObjetivosProyectoCapturada::class)],
             default => abort(404),
         };
     }
