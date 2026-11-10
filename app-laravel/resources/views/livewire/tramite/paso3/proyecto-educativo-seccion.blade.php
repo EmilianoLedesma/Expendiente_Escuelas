@@ -76,15 +76,7 @@
 
             @else
             <x-ui.section title="Síntesis de los Resultados del Estudio de Factibilidad">
-                {{-- El contador es solo una ayuda; el servidor cuenta de nuevo al guardar. --}}
-                <div x-data="{ texto: $wire.entangle('sintesis_factibilidad') }">
-                    <x-ui.field id="sintesis_factibilidad" label="Síntesis (500 a 1000 palabras)">
-                        <x-ui.textarea rows="14" x-model="texto" />
-                    </x-ui.field>
-                    <p class="mt-xs text-body-sm text-muted" aria-live="polite">
-                        <span x-text="(texto || '').trim().split(/\s+/).filter(Boolean).length">0</span> palabras
-                    </p>
-                </div>
+                <x-ui.textarea-palabras id="sintesis_factibilidad" label="Síntesis (500 a 1000 palabras)" :min="500" :max="1000" :rows="14" />
             </x-ui.section>
 
             @endif
@@ -102,6 +94,20 @@
                     <span wire:loading>Guardando…</span>
                 </x-ui.button-primary>
             </div>
+        </form>
+    @elseif ($esTexto)
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            @if ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::filosofia())
+                <x-ui.section :title="$nombre">
+                    <x-ui.textarea-palabras id="mision" label="Misión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la razón de ser de la institución y su compromiso con la comunidad educativa..." />
+                    <x-ui.textarea-palabras id="vision" label="Visión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la proyección a futuro de la institución y las metas que aspira alcanzar..." />
+                    <x-ui.textarea-palabras id="valores" label="Valores (50 a 250 palabras)" :min="50" :max="250" placeholder="Enumere y describa los valores fundamentales que guían el quehacer institucional..." />
+                </x-ui.section>
+            @endif
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
         </form>
     @else
         <p class="rounded-lg border border-dashed border-hairline p-lg text-body-md text-muted">Contenido por definir</p>

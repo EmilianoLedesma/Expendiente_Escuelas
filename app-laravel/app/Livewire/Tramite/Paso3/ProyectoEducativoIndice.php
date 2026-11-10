@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
@@ -37,12 +38,15 @@ class ProyectoEducativoIndice extends Component
         $this->redirigirSiNoAlcanzable($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
     }
 
-    public function render(PresentacionProyectoCapturada $presentacion)
+    public function render(PresentacionProyectoCapturada $presentacion, FilosofiaProyectoCapturada $filosofia)
     {
         return view('livewire.tramite.paso3.proyecto-educativo-indice', [
             'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
             'secciones' => SeccionesProyectoEducativo::todas(),
-            'completas' => [SeccionesProyectoEducativo::presentacion() => $presentacion->completa($this->escuelaNivel->id)],
+            'completas' => [
+                SeccionesProyectoEducativo::presentacion() => $presentacion->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::filosofia() => $filosofia->completa($this->escuelaNivel->id),
+            ],
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
     }
 }

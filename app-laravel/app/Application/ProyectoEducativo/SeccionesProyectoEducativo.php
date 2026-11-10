@@ -62,6 +62,18 @@ final class SeccionesProyectoEducativo
         return array_key_first(self::todas());
     }
 
+    /** Slug de la sección 2 (Filosofía Institucional). */
+    public static function filosofia(): string
+    {
+        return array_keys(self::todas())[1];
+    }
+
+    /** Slug de la sección 3 (Objetivos Institucionales). */
+    public static function objetivos(): string
+    {
+        return array_keys(self::todas())[2];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

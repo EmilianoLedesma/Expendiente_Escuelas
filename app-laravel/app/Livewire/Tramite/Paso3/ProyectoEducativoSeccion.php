@@ -4,7 +4,10 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\ProyectoEducativo\DTO\DatosFilosofiaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
+use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
+use App\Application\ProyectoEducativo\GuardarFilosofiaProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasPresentacionProyecto;
@@ -70,6 +73,13 @@ class ProyectoEducativoSeccion extends Component
 
     public string $sintesis_factibilidad = '';
 
+    // Sección 2 (Filosofía Institucional).
+    public string $mision = '';
+
+    public string $vision = '';
+
+    public string $valores = '';
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -86,6 +96,8 @@ class ProyectoEducativoSeccion extends Component
         if ($this->esPresentacion()) {
             $this->cargar();
             $this->paso = app(PresentacionProyectoCapturada::class)->pasoInicial($escuelaNivel->id);
+        } elseif ($this->esTexto()) {
+            $this->cargarTexto();
         }
     }
 
@@ -111,6 +123,12 @@ class ProyectoEducativoSeccion extends Component
     /** "Guardar" del último paso. */
     public function guardar(GuardarPresentacionProyecto $guardar): void
     {
+        if ($this->esTexto()) {
+            $this->guardarTexto();
+
+            return;
+        }
+
         abort_unless($this->esPresentacion(), 404);
 
         if ($this->paso === $this->totalPasos() && $this->persistir($guardar)) {
@@ -152,6 +170,60 @@ class ProyectoEducativoSeccion extends Component
         return true;
     }
 
+    /** Secciones de una sola página con textos de rango de palabras: [guardar, DTO, lectura]. */
+    private function esTexto(): bool
+    {
+        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia()], true);
+    }
+
+    /** @return array{object, class-string, object} */
+    private function seccionTexto(): array
+    {
+        return match ($this->seccion) {
+            SeccionesProyectoEducativo::filosofia() => [app(GuardarFilosofiaProyecto::class), DatosFilosofiaProyecto::class, app(FilosofiaProyectoCapturada::class)],
+            default => abort(404),
+        };
+    }
+
+    /** "Guardar" de una sección de una sola página: borrador (máximo de palabras); avisa si ya quedó completa. */
+    private function guardarTexto(): void
+    {
+        [$accion, $dto, $capturada] = $this->seccionTexto();
+        $this->resetErrorBag();
+
+        try {
+            $accion->ejecutar($this->escuelaNivel->id, new $dto(...$this->only($dto::campos())));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->cargarTexto();
+        $capturada->completa($this->escuelaNivel->id)
+            ? $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.')
+            : $this->toast('Borrador guardado', 'Aún faltan campos o palabras para que la sección esté completa.', 'info');
+    }
+
+    private function cargarTexto(): void
+    {
+        [, , $capturada] = $this->seccionTexto();
+        foreach ($capturada->datos($this->escuelaNivel->id) as $campo => $valor) {
+            $this->{$campo} = (string) $valor;
+        }
+    }
+
     private function esPresentacion(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::presentacion();
@@ -181,6 +253,7 @@ class ProyectoEducativoSeccion extends Component
             'numero' => $indice + 1,
             'nombre' => SeccionesProyectoEducativo::nombre($this->seccion),
             'esPresentacion' => $this->esPresentacion(),
+            'esTexto' => $this->esTexto(),
             'pasos' => ReglasPresentacionProyecto::PASOS,
             'anterior' => isset($slugs[$indice - 1]) ? ['slug' => $slugs[$indice - 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice - 1])] : null,
             'siguiente' => isset($slugs[$indice + 1]) ? ['slug' => $slugs[$indice + 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice + 1])] : null,

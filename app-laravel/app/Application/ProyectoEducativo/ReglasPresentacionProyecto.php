@@ -22,12 +22,6 @@ final class ReglasPresentacionProyecto
         3 => ['nombre' => 'Síntesis de los Resultados del Estudio de Factibilidad', 'campos' => ['sintesis_factibilidad']],
     ];
 
-    /** Palabras = trozos separados por espacio en blanco, sin vacíos. */
-    public static function contarPalabras(?string $texto): int
-    {
-        return count(preg_split('/\s+/u', trim((string) $texto), -1, PREG_SPLIT_NO_EMPTY) ?: []);
-    }
-
     /**
      * @param  array<string, mixed>  $datos  ya normalizados (teléfonos en dígitos, vacíos como null)
      * @param  list<string>|null  $campos  si se da, solo se devuelven los errores de esos campos (un paso)
@@ -52,12 +46,7 @@ final class ReglasPresentacionProyecto
             'ciclo_escolar_otro' => ['nullable', ...($completa ? ['required_if:ciclo_escolar,otro'] : []), 'string', 'max:100'],
             'duracion' => [$req, 'in:3_anios,2_anios,otro'],
             'duracion_otro' => ['nullable', ...($completa ? ['required_if:duracion,otro'] : []), 'string', 'max:100'],
-            'sintesis_factibilidad' => [$req, 'string', function (string $campo, mixed $valor, \Closure $falla) use ($completa) {
-                $palabras = self::contarPalabras($valor);
-                if ($palabras > self::PALABRAS_MAX || ($completa && $palabras < self::PALABRAS_MIN)) {
-                    $falla('La síntesis debe tener entre '.self::PALABRAS_MIN.' y '.self::PALABRAS_MAX." palabras (lleva {$palabras}).");
-                }
-            }],
+            'sintesis_factibilidad' => [$req, 'string', ConteoPalabras::regla(self::PALABRAS_MIN, self::PALABRAS_MAX, $completa)],
         ], [
             'required' => 'Este campo es obligatorio.',
             'required_if' => 'Este campo es obligatorio.',
