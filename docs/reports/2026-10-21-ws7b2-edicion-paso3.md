@@ -1,6 +1,6 @@
 # WS-7b-2 — Edición de Paso 3 hasta el envío (reporte)
 
-**Fecha:** 2026-10-21 · **Rama:** `ws7b2-edicion-paso3` (commits `07cf6c3` a `36f98a1`, más el de cierre) · **Plan:** `docs/superpowers/plans/2026-10-21-ws7b2-edicion-paso3.md` · **Spec:** `docs/superpowers/specs/2026-10-21-ws7b2-edicion-paso3-design.md` · **Decisión:** `docs/decisions/ADR-019-edicion-hasta-envio.md`
+**Fecha:** 2026-10-21 · **Rama:** `ws7b2-edicion-paso3` (commits `a11666c` a `3146a4a`, más el de cierre) · **Plan:** `docs/superpowers/plans/2026-10-21-ws7b2-edicion-paso3.md` · **Spec:** `docs/superpowers/specs/2026-10-21-ws7b2-edicion-paso3-design.md` · **Decisión:** `docs/decisions/ADR-019-edicion-hasta-envio.md`
 
 ## Qué se hizo
 1. **RegistroCompartidoBloqueado** (T1): clase única de consulta (`app/Application/`) que dice si otro nivel del plantel ya capturó datos propios de Paso 3, calculado de los datos. Incluye `bloquearNiveles`, que toma `FOR UPDATE` sobre todas las `escuela_niveles` del plantel, ordenadas por id, como primera sentencia.

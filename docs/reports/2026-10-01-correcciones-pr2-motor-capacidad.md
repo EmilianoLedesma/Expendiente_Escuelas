@@ -6,7 +6,7 @@
 
 ## 0. Preparación
 
-- Se trajo `master` a la rama (`git merge master`): sin conflictos, commit de merge automático `28da228`. Entraron, entre otras cosas, la corrección de PR #1 por la que `ValidacionFinal::mount()` solo valida si no hay una evaluación guardada.
+- Se trajo `master` a la rama (`git merge master`): sin conflictos, commit de merge automático `eaebd75`. Entraron, entre otras cosas, la corrección de PR #1 por la que `ValidacionFinal::mount()` solo valida si no hay una evaluación guardada.
 - El worktree no tenía `public/build` (ignorado por git); la primera corrida de la suite dio 71 fallos por `ViteManifestNotFoundException`. Se copió `public/build` del checkout principal (solo lectura del origen; archivo ignorado, no entra en ningún commit).
 - **Línea base** (tras el merge, sin los cambios de esta sesión, con `git stash`): `php -d memory_limit=1G vendor/bin/phpunit` → **882 pruebas, 882 aprobadas, 2377 aserciones**.
 - En la primera corrida (con el manifiesto faltante y otra carga en paralelo) falló además una vez `MisTramitesTest::test_ordena_del_mas_reciente_al_mas_antiguo` ("55163 is less than 51688"); no se repitió en la corrida limpia ni en la final. Ese archivo no lo toca este PR; se deja anotado como posible prueba inestable.

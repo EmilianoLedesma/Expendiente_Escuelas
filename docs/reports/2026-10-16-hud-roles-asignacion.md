@@ -1,7 +1,7 @@
 # Reporte: HUD SEDEQ, proyecto 1 (roles y asignación)
 
 **Fecha:** 2026-10-16
-**Rama / worktree:** `hud-sedeq-1` (desde `master` cf42b93), `C:\Users\Emili\Documents\sedeq-incorporacion-hud`. Sin commit: el árbol de trabajo está sin confirmar (las tareas completas están en el índice).
+**Rama / worktree:** `hud-sedeq-1` (desde `master` b4884ef), `C:\Users\Emili\Documents\sedeq-incorporacion-hud`. Sin commit: el árbol de trabajo está sin confirmar (las tareas completas están en el índice).
 **Spec:** `docs/superpowers/specs/2026-10-16-hud-sedeq-roles-asignacion-design.md`
 **Plan:** `docs/superpowers/plans/2026-10-16-hud-sedeq-roles-asignacion.md`
 **ADR:** `docs/decisions/ADR-016-roles-supervisor-revisor.md`

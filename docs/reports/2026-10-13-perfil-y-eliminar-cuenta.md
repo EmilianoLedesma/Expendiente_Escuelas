@@ -1,6 +1,6 @@
 # Perfil de usuario y eliminación de cuenta (2026-10-13)
 
-Rama `worktree-perfil-cuenta` (desde `master` en `c2e89fe`), con la rama de toasts integrada (`2e65ca1`, informe `2026-10-13-toast-notificaciones.md`). Probada por el dueño en el puerto 8001.
+Rama `worktree-perfil-cuenta` (desde `master` en `7836158`), con la rama de toasts integrada (`1cee1dc`, informe `2026-10-13-toast-notificaciones.md`). Probada por el dueño en el puerto 8001.
 
 ## Qué se hizo
 

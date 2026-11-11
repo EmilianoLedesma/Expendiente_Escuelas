@@ -1,20 +1,20 @@
 # Anexo 2 Instalaciones: reporte de la sesion
 
-Fecha: 2026-10-27. Rama `worktree-anexo-instalaciones` (base master `d187441`; T0-T5 hasta `3e83a6e`, mas la ola de correcciones finales, seccion 9).
+Fecha: 2026-10-27. Rama `worktree-anexo-instalaciones` (base master `1b45f01`; T0-T5 hasta `2db8950`, mas la ola de correcciones finales, seccion 9).
 Plan: `docs/superpowers/plans/2026-10-22-anexo2-instalaciones.md`. Ledger SDD: `.superpowers/sdd/2026-10-22-anexo2-instalaciones/progress.md` (local, gitignored). Reporte previo de T0: `docs/reports/2026-10-27-anexo-instalaciones-t0.md`.
 
 ## 1. Que se construyo
 
-Commits `d187441..3e83a6e` (18 archivos, 1513 inserciones, 64 borrados segun `git diff --stat`):
+Commits `1b45f01..2db8950` (18 archivos, 1513 inserciones, 64 borrados segun `git diff --stat`):
 
 | Tarea | Commit | Resultado |
 |---|---|---|
-| T0 verificaciones | `17d18bf` | Nota de solo lectura de codigo (consumidores de cubiculo/cancha/campo, biblioteca virtual, catalogo de materiales, diferencias de master vs plan). Ver el reporte T0. |
-| T1 modelo de lectura | `5163991` | `app/Application/Infraestructura/ConsultarAnexoInstalaciones.php` y DTO `DTO/AnexoInstalaciones.php`. Sin cambio de plantilla por nivel: los tipos aplicables salen de `niveles_tipos_espacios`, las categorias de sanitarios de `CategoriasSanitariosPorNivel`. Cada tipo aplicable tiene linea (en blanco si no hay captura); lo capturado que ya no aplica se imprime en `otros`. |
-| T2 PDF generico unico | `50cc9b3` | `app/Infrastructure/Pdf/AnexoInstalacionesPdf.php` y `resources/views/pdf/anexo2-instalaciones.blade.php` (dompdf, mismo patron que el Formato de Solicitud). Pie "Pagina N de M". |
-| T3 ruta y politica | `cbcaa88` | `GET /tramite/paso3/{escuelaNivel}/infraestructura/anexo-instalaciones.pdf`, nombre `tramite.paso3.infraestructura.anexo-instalaciones`, controlador invocable `AnexoInstalacionesPdfController`, habilidad `EscuelaNivelPolicy::descargarAnexo` (dueno o responsable de ese nivel; el docblock de la politica ya lo documenta). |
-| T4 matriz de Inicial | `a48243d` | `TiposEspaciosSeeder` mapea cubiculo, cancha_usos_multiples y campo_futbol solo a preescolar/primaria/secundaria; migracion de datos `2026_10_27_000000_retirar_espacios_no_aplicables_de_inicial` (DELETE acotado sobre `niveles_tipos_espacios`, idempotente, `down()` reinserta con `insertOrIgnore`). Nota fechada en `PENDIENTE-matriz-espacios-por-nivel.md` (sin renombrar). |
-| T5 pagina de Infraestructura | `3e83a6e` | `infraestructura-nivel.blade.php`: orden de paneles del Anexo 2 por nivel, etiqueta "Equipamiento y caracteristicas" en recreativo, enlace "Descargar Anexo" bajo `@can('descargarAnexo')`. Componente PHP sin tocar. |
+| T0 verificaciones | `0996b18` | Nota de solo lectura de codigo (consumidores de cubiculo/cancha/campo, biblioteca virtual, catalogo de materiales, diferencias de master vs plan). Ver el reporte T0. |
+| T1 modelo de lectura | `8e7cc5e` | `app/Application/Infraestructura/ConsultarAnexoInstalaciones.php` y DTO `DTO/AnexoInstalaciones.php`. Sin cambio de plantilla por nivel: los tipos aplicables salen de `niveles_tipos_espacios`, las categorias de sanitarios de `CategoriasSanitariosPorNivel`. Cada tipo aplicable tiene linea (en blanco si no hay captura); lo capturado que ya no aplica se imprime en `otros`. |
+| T2 PDF generico unico | `6b910d0` | `app/Infrastructure/Pdf/AnexoInstalacionesPdf.php` y `resources/views/pdf/anexo2-instalaciones.blade.php` (dompdf, mismo patron que el Formato de Solicitud). Pie "Pagina N de M". |
+| T3 ruta y politica | `8486a28` | `GET /tramite/paso3/{escuelaNivel}/infraestructura/anexo-instalaciones.pdf`, nombre `tramite.paso3.infraestructura.anexo-instalaciones`, controlador invocable `AnexoInstalacionesPdfController`, habilidad `EscuelaNivelPolicy::descargarAnexo` (dueno o responsable de ese nivel; el docblock de la politica ya lo documenta). |
+| T4 matriz de Inicial | `ab46571` | `TiposEspaciosSeeder` mapea cubiculo, cancha_usos_multiples y campo_futbol solo a preescolar/primaria/secundaria; migracion de datos `2026_10_27_000000_retirar_espacios_no_aplicables_de_inicial` (DELETE acotado sobre `niveles_tipos_espacios`, idempotente, `down()` reinserta con `insertOrIgnore`). Nota fechada en `PENDIENTE-matriz-espacios-por-nivel.md` (sin renombrar). |
+| T5 pagina de Infraestructura | `2db8950` | `infraestructura-nivel.blade.php`: orden de paneles del Anexo 2 por nivel, etiqueta "Equipamiento y caracteristicas" en recreativo, enlace "Descargar Anexo" bajo `@can('descargarAnexo')`. Componente PHP sin tocar. |
 
 Orden de paneles (T5): generico = Espacios administrativos, Aulas del nivel, Cubiculos, Sanitarios, Actividades fisicas y recreativas, Instalaciones especiales. Inicial = Espacios administrativos, Aulas del nivel, Sanitarios, Areas recreativas, Instalaciones especiales. "Ya registrada" sigue primero cuando existe. "Guardar y continuar" pasa al ultimo panel.
 

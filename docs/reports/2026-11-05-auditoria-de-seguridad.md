@@ -1,6 +1,6 @@
 # Auditoría de seguridad (2026-11-05)
 
-Auditoría de solo lectura del código en `master` `cb01d35`, hecha con el skill de Cloudflare `security-audit` (instalado en `~/.claude/skills/security-audit`). Los resultados completos viven fuera del repositorio, en `C:\Users\Emili\security-audit-skill\sedeq-incorporacion\run-1\` (`REPORT.md`, `NEEDS-VALIDATION.md`, `findings.json`, `coverage-ledger.json`).
+Auditoría de solo lectura del código en `master` `9984a0e`, hecha con el skill de Cloudflare `security-audit` (instalado en `~/.claude/skills/security-audit`). Los resultados completos viven fuera del repositorio, en `C:\Users\Emili\security-audit-skill\sedeq-incorporacion\run-1\` (`REPORT.md`, `NEEDS-VALIDATION.md`, `findings.json`, `coverage-ledger.json`).
 
 ## Alcance y método
 

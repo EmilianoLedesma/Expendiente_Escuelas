@@ -1,6 +1,6 @@
 # Especificación SDD — Paso 2 reordenado, motores integrados, geografía y lectura SEDEQ
 
-**Fecha:** 2026-10-20 · **Base:** `master` @ `c9a97cd` · **Rama:** `claude/gifted-franklin-7il8b2`
+**Fecha:** 2026-10-20 · **Base:** `master` @ `4023b87` · **Rama:** `claude/gifted-franklin-7il8b2`
 **Estado:** implementada en la rama (ver `docs/reports/2026-10-20-paso2-integracion-end-to-end.md` y `docs/decisions/ADR-018-orden-paso2-niveles-antes-de-documentos.md`).
 
 Esta especificación es versionada a propósito: `docs/superpowers/` está en `.gitignore` y no viaja con el repositorio.
@@ -20,7 +20,7 @@ Esta especificación es versionada a propósito: `docs/superpowers/` está en `.
 | `EscuelaPolicy::verReporte` | Reporte PDF | Solo dueño; SEDEQ no puede ver el reporte con que se envió | Código | Integración incompleta | Media | Habilidad nueva `verReporteEnviado`, acotada (§7.3) |
 | `ComparadorDomicilios` | Comparación | Compara municipio solo por texto aun cuando ambas fuentes tienen clave del catálogo | Código | Mejora | Baja | Compara por id cuando ambas lo traen |
 
-No se encontraron fallas reproducidas en la suite base: **1810/1810 pruebas pasan**, Pint y PHPStan limpios en `c9a97cd`.
+No se encontraron fallas reproducidas en la suite base: **1810/1810 pruebas pasan**, Pint y PHPStan limpios en `4023b87`.
 
 ## 2. Comparación de ramas
 

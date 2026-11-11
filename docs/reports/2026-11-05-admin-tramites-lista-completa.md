@@ -1,6 +1,6 @@
 # 2026-11-05 — Pantalla "Trámites" del admin lista todos los trámites
 
-Rama `worktree-admin-tramites`, fusionada en `master` (`899c2e8`). Proyecto 3 (cerrar y reabrir) y pantalla de Planteles al final de este documento.
+Rama `worktree-admin-tramites`, fusionada en `master` (`9dd3eeb`). Proyecto 3 (cerrar y reabrir) y pantalla de Planteles al final de este documento.
 
 ## Qué se hizo
 - `TramiteArchivadoResource` ya no filtra solo archivados: lista todas las escuelas. Etiqueta, slug y navegación pasan de "Trámites archivados" / `tramites-archivados` a "Trámites" / `tramites`.
@@ -17,7 +17,7 @@ Se renombró solo lo visible (etiqueta, slug, navegación). Clase, carpeta y nam
 - Sin revisión en navegador ni escrituras en la BD de desarrollo.
 - Entorno: el worktree usa una copia real de `vendor` (un junction hacía que el autoload cargara el código de `master`).
 
-## Proyecto 3: cerrar y reabrir un trámite (`957b44f`, `f5966f1`)
+## Proyecto 3: cerrar y reabrir un trámite (`ee83076`, `ecccfce`)
 Decisión del dueño: no se construye un estado "Cerrado". Cerrar = Archivar y reabrir = Restaurar, porque el archivo ya hace lo necesario (el solicitante no ve nada de un trámite archivado, comprobado a mano por el dueño). El admin actúa solo: sin solicitante, sin aprobación, y solo queda una traza fechada en `bitacora_acciones`.
 
 - **Motivo opcional** al archivar desde la pantalla (`ArchivarTramite` ya no lo exige al admin).
@@ -35,7 +35,7 @@ El dueño no tiene un caso concreto para editar un plantel, así que no se const
 
 ## Evidencia
 - Pruebas enfocadas (Admin, Archivo, Notifications, Revision, Sedeq, Application, Livewire/Tramite y más), Pint y PHPStan limpios en cada paso.
-- CI: `957b44f` verde. `f5966f1` y el merge `369f726` fallaron en una sola prueba, `AvisosEnValidacionFinalTest`, que aún afirmaba "SEDEQ" en un aviso que ya es neutro; se corrigió el texto esperado.
+- CI: `ee83076` verde. `ecccfce` y el merge `06d9502` fallaron en una sola prueba, `AvisosEnValidacionFinalTest`, que aún afirmaba "SEDEQ" en un aviso que ya es neutro; se corrigió el texto esperado.
 
 ## Pendiente
 - Prueba manual en navegador (Trámites, Planteles, Cambiar rol, Crear cuenta de SEDEQ).

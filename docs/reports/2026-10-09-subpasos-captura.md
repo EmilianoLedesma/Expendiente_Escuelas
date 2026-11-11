@@ -1,6 +1,6 @@
 # Sub-pasos dentro de la captura larga (Infraestructura, Mobiliario, Documentos del responsable)
 
-Fecha: 2026-10-09. Commit `5d37468` en `master` (fast-forward de la rama `worktree-stepper-infra-mobiliario`). Solo presentación: no cambia casos de uso, reglas ni esquema.
+Fecha: 2026-10-09. Commit `695e0ee` en `master` (fast-forward de la rama `worktree-stepper-infra-mobiliario`). Solo presentación: no cambia casos de uso, reglas ni esquema.
 
 ## Problema
 

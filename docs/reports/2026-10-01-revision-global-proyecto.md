@@ -1,4 +1,4 @@
-# Revisión global del proyecto — estado en `master` @ `70b0cdf`
+# Revisión global del proyecto — estado en `master` @ `bd9725f`
 
 **Fecha:** 2026-10-01
 **Tipo:** revisión de solo lectura, basada en evidencia. No se editó código, pruebas, migraciones ni configuración; no se tocó la base de desarrollo `sedeq_incorporacion`. Este es el único archivo creado.

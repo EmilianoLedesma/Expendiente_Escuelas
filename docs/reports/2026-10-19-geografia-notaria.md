@@ -13,10 +13,10 @@ Pedido del dueño: en la acreditación del inmueble, "municipio y entidad federa
 
 | Tarea | Commit | Resultado |
 |---|---|---|
-| 1 | `d6ba79a` | Migración `2026_10_19_000400`: `entidades_federativas` y `municipios` (único por entidad y clave, `ON DELETE CASCADE`); modelos `EntidadFederativa` y `Municipio`. |
-| 2 | `1c83065` | Importación: puerto `FuenteCatalogoGeografico`, cliente `ApiInfoMexico` (Infrastructure), caso de uso `ImportarCatalogoGeografico`, comando `geografia:importar`, configuración `services.api_info_mexico`. |
-| 3–4 | `f2ac0a3` | Consulta `ListarCatalogoGeografico`; migración `2026_10_19_000500` (`notario_entidad_federativa_id`, `notario_municipio_id`, FK nullable `ON DELETE SET NULL`); `RegistrarDocumento` valida y guarda; el formulario deja de usar `notarioLocalidad`. |
-| 5 | `e0c998b` | Vista y componente: dos `x-ui.select` dependientes; cambiar la entidad borra el municipio; aviso cuando el catálogo aún no se ha importado. |
+| 1 | `f1d99fd` | Migración `2026_10_19_000400`: `entidades_federativas` y `municipios` (único por entidad y clave, `ON DELETE CASCADE`); modelos `EntidadFederativa` y `Municipio`. |
+| 2 | `9bdc047` | Importación: puerto `FuenteCatalogoGeografico`, cliente `ApiInfoMexico` (Infrastructure), caso de uso `ImportarCatalogoGeografico`, comando `geografia:importar`, configuración `services.api_info_mexico`. |
+| 3–4 | `da4dce8` | Consulta `ListarCatalogoGeografico`; migración `2026_10_19_000500` (`notario_entidad_federativa_id`, `notario_municipio_id`, FK nullable `ON DELETE SET NULL`); `RegistrarDocumento` valida y guarda; el formulario deja de usar `notarioLocalidad`. |
+| 5 | `cd88b1e` | Vista y componente: dos `x-ui.select` dependientes; cambiar la entidad borra el municipio; aviso cuando el catálogo aún no se ha importado. |
 | 6 | (este) | ADR-017, nota en ADR-008, este informe. |
 
 ## 3. Cómo funciona la importación

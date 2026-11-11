@@ -1,6 +1,6 @@
 # HUD de SEDEQ, proyecto 2: revisión por pasos del revisor
 
-Fecha: 2026-10-19. Rama `hud-revision` (desde `master` cf707f6), sin commits (el dueño decide el commit). Especificación: `docs/superpowers/specs/2026-10-19-revision-revisor-design.md`. Sigue al proyecto 1 (roles y asignación, ADR-016).
+Fecha: 2026-10-19. Rama `hud-revision` (desde `master` b8f1fa7), sin commits (el dueño decide el commit). Especificación: `docs/superpowers/specs/2026-10-19-revision-revisor-design.md`. Sigue al proyecto 1 (roles y asignación, ADR-016).
 
 ## Qué se construyó
 

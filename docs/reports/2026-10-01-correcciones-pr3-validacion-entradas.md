@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-10-01
 **Rama:** `claude/beautiful-brahmagupta-ask783` (worktree `.claude/worktrees/pr3-fixes`)
-**Base:** PR #3 sobre `8f2fb1e`; se integró `master` en `dbf341e` (PR #1 motor documental, ADR-007; PR #2 motor de capacidad y sub-pasos 4-6 de Paso 3; ola de correcciones).
+**Base:** PR #3 sobre `8f2fb1e`; se integró `master` en `5147c47` (PR #1 motor documental, ADR-007; PR #2 motor de capacidad y sub-pasos 4-6 de Paso 3; ola de correcciones).
 **Suite:** 989 tests tras la fusión, 987 en verde y 2 en rojo (línea base) → 997/997 al terminar · Pint limpio · PHPStan nivel 5 + PHPat: 0 errores.
 
 ## 1. Fusión con `master`
@@ -14,7 +14,7 @@
 | `app/Livewire/Forms/GestorForm.php` | Se conservan las reglas de PR #3 (`ReglasCaptura`, nombres visibles) y se agrega el campo `curp` de PR #1, ahora con `#[Normalizar(Identificador)]`, `ReglasCaptura::curp(requerido: true)` y el nombre visible "CURP del gestor". |
 | `app/Livewire/Tramite/Paso2Responsable.php` | Se conserva el flujo de PR #3 (`validarEnConjunto` y la captura de `DatosInvalidos`) y se agrega `gestorCurp` al DTO, como en PR #1. El `mb_strtoupper(trim(...))` manual de `master` ya no hace falta porque el hook normaliza al capturar. |
 
-Commit de fusión: `246fe34` (automático, sin otros cambios). Todo lo demás está **sin commit**.
+Commit de fusión: `72ca6ec` (automático, sin otros cambios). Todo lo demás está **sin commit**.
 
 **Línea base, antes de corregir nada** (`php -d memory_limit=1G vendor/bin/phpunit`): 989 tests, 987 pasan y 2 fallan. Los dos son las pruebas de guardia de PR #3, que ya detectaban lo que trajo `master`:
 

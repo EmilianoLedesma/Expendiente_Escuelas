@@ -24,12 +24,12 @@
 
 | Tarea | Commit | Resultado |
 |---|---|---|
-| 1 | `6287630` | Migración `2026_10_19_000200`: `tipo_vigencia` (`fecha_expresa` / `sin_fecha_expresa` / `no_capturada`, por omisión `no_capturada`), `fecha_vencimiento_documento`, `condicionantes`, CHECK de coherencia. Migración de datos `2026_10_19_000300`. Seeder `vigencia_max_dias => null`. |
-| 2 | `11796d7` | `RegistrarDocumento::validarDictamen()` (largos, solo espacios, fechas reales, vencimiento ≥ emisión, requeridos en captura nueva); no calcula vigencia; helpers de validación compartidos con la acreditación. |
-| 3 | `ded36ad` | `ValidarVigenciaDocumentos` juzga el dictamen por la fecha declarada; mensaje con la fecha. Fixtures de "dictamen vencido" migrados. |
-| 4 | `e3b0f69` | `DictamenUsoSueloForm`: `tipoVigencia`, `fechaVencimientoDocumento`, `condicionantes`, `datosParaDocumento()`. |
-| 5 | `e7dcbf2` | Vista: etiqueta y ayuda de uso/giro, pregunta de fecha de vencimiento, fecha condicional, condicionantes. |
-| 6 | `7aef56c` | Pruebas de regresión. |
+| 1 | `8204fcb` | Migración `2026_10_19_000200`: `tipo_vigencia` (`fecha_expresa` / `sin_fecha_expresa` / `no_capturada`, por omisión `no_capturada`), `fecha_vencimiento_documento`, `condicionantes`, CHECK de coherencia. Migración de datos `2026_10_19_000300`. Seeder `vigencia_max_dias => null`. |
+| 2 | `a373ff3` | `RegistrarDocumento::validarDictamen()` (largos, solo espacios, fechas reales, vencimiento ≥ emisión, requeridos en captura nueva); no calcula vigencia; helpers de validación compartidos con la acreditación. |
+| 3 | `be35738` | `ValidarVigenciaDocumentos` juzga el dictamen por la fecha declarada; mensaje con la fecha. Fixtures de "dictamen vencido" migrados. |
+| 4 | `217efe3` | `DictamenUsoSueloForm`: `tipoVigencia`, `fechaVencimientoDocumento`, `condicionantes`, `datosParaDocumento()`. |
+| 5 | `e5caf07` | Vista: etiqueta y ayuda de uso/giro, pregunta de fecha de vencimiento, fecha condicional, condicionantes. |
+| 6 | `07a19c9` | Pruebas de regresión. |
 | 7 | (este) | Compendio (filas 4 y 195), PRD, PENDIENTE, este informe. |
 
 ## 4. Verificación (ejecutada)

@@ -22,7 +22,7 @@ Rama `worktree-admin-fundacion`, fusionada a `master`. Spec y plan (ignorados po
 
 ## Decisiones tomadas por el controlador
 
-- R1: Tarea 9 recuperó el cuerpo del antiguo `EliminarTramite` desde git (`0140940`). R2: se commitea en la rama del worktree por haber elegido el dueño la ejecución con subagentes; no se empujó ni fusionó sin orden. R3: ninguna escritura contra la BD de desarrollo.
+- R1: Tarea 9 recuperó el cuerpo del antiguo `EliminarTramite` desde git (`f180bc4`). R2: se commitea en la rama del worktree por haber elegido el dueño la ejecución con subagentes; no se empujó ni fusionó sin orden. R3: ninguna escritura contra la BD de desarrollo.
 - R4: la cascada de archivo solo alcanza a responsables sin otro acceso y que no sean solicitantes (ADR-015). Pendiente de confirmación del dueño; si no, se ensancha la consulta.
 
 ## Lo que se dejó sin hacer

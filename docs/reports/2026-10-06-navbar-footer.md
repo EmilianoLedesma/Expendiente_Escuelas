@@ -1,6 +1,6 @@
 # 2026-10-06 — Barra institucional, encabezado y pie (estilo tableros_municipales)
 
-Rama/worktree: `worktree-agent-ace24d116898d9214`. Primera entrega sobre `master` @ `8ee9394`; tras la revisión, rebase sobre `master` @ `71655ae` con un único commit WIP local `6223a30` (sin push). La ronda de correcciones queda **sin commit**.
+Rama/worktree: `worktree-agent-ace24d116898d9214`. Primera entrega sobre `master` @ `262164d`; tras la revisión, rebase sobre `master` @ `e90e3a3` con un único commit WIP local `6223a30` (sin push). La ronda de correcciones queda **sin commit**.
 
 ## Qué se construyó
 
@@ -33,10 +33,10 @@ Ciclo rojo observado antes de implementar: 10 fallas por las razones esperadas (
 
 ## Evidencia
 
-Primera entrega (sobre `8ee9394`):
+Primera entrega (sobre `262164d`):
 - Suite completa: base en `master` **997/997** (2692 aserciones) → **1014/1014** (3093 aserciones). +18 nuevas, −1 eliminada.
 
-Tras la ronda de correcciones y el rebase sobre `master` `71655ae` (ver sección siguiente):
+Tras la ronda de correcciones y el rebase sobre `master` `e90e3a3` (ver sección siguiente):
 - Suite completa **1037/1037** (3311 aserciones) = 1017 de `master` + 20 netas de esta rama.
 - PHPStan `{"tool":"phpstan","result":"passed","errors":0}`; Pint `{"tool":"pint","result":"passed"}`; `npm run build` ✓ (`app-ASgEBP2E.css`, contiene `hover:bg-black/10` y `outline-offset:-3px`).
 
@@ -47,7 +47,7 @@ Valores de la primera entrega:
 
 ## Ronda de correcciones (revisión Opus: 4 importantes, 5 menores)
 
-Commit WIP local `6223a30` (solo archivos de esta rama, sin push) para poder hacer `git rebase master` (`71655ae`, incluye el merge de eliminar trámite `0af0070`). Conflicto único en `resources/views/components/ui/icon.blade.php`: `master` añadió `trash` y esta rama `map-pin`/`phone`/`envelope` + `$marcas`; se conservaron **ambos**. El resto de la ronda queda sin commit.
+Commit WIP local `6223a30` (solo archivos de esta rama, sin push) para poder hacer `git rebase master` (`e90e3a3`, incluye el merge de eliminar trámite `8286b22`). Conflicto único en `resources/views/components/ui/icon.blade.php`: `master` añadió `trash` y esta rama `map-pin`/`phone`/`envelope` + `$marcas`; se conservaron **ambos**. El resto de la ronda queda sin commit.
 
 1. **Hover de la barra** (importante): `hover:bg-white/10` dejaba el texto blanco de 12 px en 4.32:1. Se cambió a `hover:bg-black/10` en `encabezado` y `redes` (6.1:1). Prueba: `test_hover_de_la_barra_no_aclara_el_azul` (roja → verde).
 2. **Anillo de foco recortado** (importante): la barra es una fila de enlaces de 44 px sin padding vertical; con offset +2 px el anillo blanco quedaba cortado arriba e invisible (blanco sobre blanco) abajo. `.shell-oscuro :focus-visible` ahora lleva `outline-offset: -3px` (anillo dentro del enlace), conservando el color blanco. Al «Aviso de privacidad» se le dio `px-xs` (con `-mx-xs`) para que el anillo interior no tape las letras. Prueba: `test_el_foco_en_las_franjas_oscuras_es_blanco_y_hacia_dentro` (roja → verde).
@@ -114,7 +114,7 @@ Commit WIP local `6223a30` (solo archivos de esta rama, sin push) para poder hac
 
 ## Ajuste visual del pie
 
-Segunda ronda, solo presentación, sobre `master` @ `c854446`, sin commit. Objetivo: que el pie se parezca al del portal estatal queretaro.gob.mx (captura de referencia del dueño).
+Segunda ronda, solo presentación, sobre `master` @ `6ecc689`, sin commit. Objetivo: que el pie se parezca al del portal estatal queretaro.gob.mx (captura de referencia del dueño).
 
 ### Qué cambió frente a la referencia
 

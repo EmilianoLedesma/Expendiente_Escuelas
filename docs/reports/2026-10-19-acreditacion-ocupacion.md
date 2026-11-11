@@ -7,12 +7,12 @@
 
 | Tarea | Commit | Resultado |
 |---|---|---|
-| 1 | `a57101b` | Migración aditiva `2026_10_19_000100`: 13 columnas nullable en `acreditaciones_ocupacion_legal`; modelo con `$fillable` y casts |
-| 2 | `6f008e2` | `DatosDocumento` (13 parámetros); `RegistrarDocumento::validarAcreditacion()` y `columnasAcreditacion()`: valida por variante y **escribe NULL en toda columna ajena a la variante**, aunque el llamador evite Livewire |
-| 3 | `ccbf7f6` | `AcreditacionOcupacionForm`: reglas condicionales por variante y `datosParaTipo()` |
-| 4 | `cbdce05` | `guardarAcreditacion()` usa `datosParaTipo()` (se eliminan 15 líneas de coerción) |
-| 5 | `89a78e7` | Vista: campos, etiquetas y ayudas por variante |
-| 6 | `344f9ca`, `4eef244` | Pruebas de regresión; corrección de un fixture del test de auditoría |
+| 1 | `faa7c5d` | Migración aditiva `2026_10_19_000100`: 13 columnas nullable en `acreditaciones_ocupacion_legal`; modelo con `$fillable` y casts |
+| 2 | `ecea591` | `DatosDocumento` (13 parámetros); `RegistrarDocumento::validarAcreditacion()` y `columnasAcreditacion()`: valida por variante y **escribe NULL en toda columna ajena a la variante**, aunque el llamador evite Livewire |
+| 3 | `f1cf3f3` | `AcreditacionOcupacionForm`: reglas condicionales por variante y `datosParaTipo()` |
+| 4 | `f99d28b` | `guardarAcreditacion()` usa `datosParaTipo()` (se eliminan 15 líneas de coerción) |
+| 5 | `cb0f6ab` | Vista: campos, etiquetas y ayudas por variante |
+| 6 | `9d49435`, `0477038` | Pruebas de regresión; corrección de un fixture del test de auditoría |
 | 7 | (este) | Revisión de decisiones pendientes, PENDIENTE, informe, Compendio |
 
 Se mantuvo: `ambito = plantel`, clave primaria `documento_plantel_id`, PDF obligatorio de 10 MB, almacenamiento privado, `TramiteEditable`, autorización por ruta (`can:update`), `DocumentosCompletos` y `ValidarVigenciaDocumentos` sin cambios.
@@ -20,7 +20,7 @@ Se mantuvo: `ambito = plantel`, clave primaria `documento_plantel_id`, PDF oblig
 ## 2. Verificación (ejecutada)
 
 - Línea base antes de cambiar: 1493 pruebas verdes, Pint limpio, PHPStan 0 errores.
-- Última corrida completa en la rama: **1537 de 1538 pruebas pasaron**; Pint limpio; PHPStan 0 errores. La única falla (`AuditoriaSeguridadTest::test_solicitante_b_no_puede_descargar_documentos_de_plantel_de_a`) usaba un DTO incompleto que la nueva validación rechaza correctamente; se corrigió el fixture (`4eef244`) y esa clase más `DocumentoDownloadTest` pasan (17 de 17). **No se repitió la corrida completa después de esa corrección.**
+- Última corrida completa en la rama: **1537 de 1538 pruebas pasaron**; Pint limpio; PHPStan 0 errores. La única falla (`AuditoriaSeguridadTest::test_solicitante_b_no_puede_descargar_documentos_de_plantel_de_a`) usaba un DTO incompleto que la nueva validación rechaza correctamente; se corrigió el fixture (`0477038`) y esa clase más `DocumentoDownloadTest` pasan (17 de 17). **No se repitió la corrida completa después de esa corrección.**
 - Migración: reversible, comprobada solo en la BD de **pruebas** (30 → 17 → 30 columnas). **No se ejecutó en la BD de desarrollo ni en una compartida.**
 - La corrida completa necesita `php -d memory_limit=1G` (el límite por omisión de 128 MB mata PHP) y `public/build` copiado del checkout principal (manifest de Vite); ambos ajustes son del entorno del worktree, no del código.
 

@@ -6,9 +6,9 @@ Fecha: 2026-11-10. Rama: `worktree-proyecto-educativo`. Spec: `docs/superpowers/
 
 Un séptimo sub-paso del Paso 3, "Presentación del Proyecto Educativo", que aplica solo al nivel `media_superior`. En esta entrega es únicamente el paso y su compuerta: el contenido de la sección todavía no existe, así que un trámite de media superior queda con ese paso pendiente y no se puede enviar.
 
-- `5b80031` — `SeccionesProyectoEducativo` (`aplicaA`, lista de secciones), séptima fila `proyecto_educativo` en `pasos_captura` (`PasosCapturaSeeder`) y aplicabilidad por nivel.
-- `d6494cb` — catálogo por nivel en `EstadoPaso3`; `ResumenTramite` y el modelo de lectura de SEDEQ (`ConsultarTramiteSedeq`) usan ese catálogo.
-- `c9894b0` — páginas de índice y de sección, 404 para niveles donde no aplica, y redirección desde Matrícula en `media_superior`.
+- `0f77cf5` — `SeccionesProyectoEducativo` (`aplicaA`, lista de secciones), séptima fila `proyecto_educativo` en `pasos_captura` (`PasosCapturaSeeder`) y aplicabilidad por nivel.
+- `0fac085` — catálogo por nivel en `EstadoPaso3`; `ResumenTramite` y el modelo de lectura de SEDEQ (`ConsultarTramiteSedeq`) usan ese catálogo.
+- `64d8f7f` — páginas de índice y de sección, 404 para niveles donde no aplica, y redirección desde Matrícula en `media_superior`.
 - Esta tarea — prueba de que el envío queda bloqueado y la barrida de regresión. No hay cambios en `app/`.
 
 El hub emite la sección solo en media superior (`totalPasos` 11 frente a 10 en el resto).

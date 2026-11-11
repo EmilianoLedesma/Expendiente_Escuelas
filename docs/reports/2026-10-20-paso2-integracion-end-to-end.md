@@ -1,6 +1,6 @@
 # Refactor integral del Paso 2, motores, geografía e integración SEDEQ
 
-**Fecha:** 2026-10-20 · **Rama:** `claude/gifted-franklin-7il8b2` · **Base:** `master` @ `c9a97cd70dc9fa4d78be687c5612a83b305d0f84`
+**Fecha:** 2026-10-20 · **Rama:** `claude/gifted-franklin-7il8b2` · **Base:** `master` @ `4023b877285a14ba481812a00fd17ddfcebab288`
 **Especificación:** `docs/specs/2026-10-20-paso2-integracion-end-to-end.md` · **Decisiones:** `docs/decisions/ADR-018-orden-paso2-niveles-antes-de-documentos.md`, `docs/decisions/PENDIENTE-fuentes-domicilio-municipal.md`
 
 Este informe es el registro de la sesión. `docs/progress.md` no se tocó (CLAUDE.md: lo actualiza el controlador al fusionar, a partir de este informe).
@@ -11,7 +11,7 @@ Este informe es el registro de la sesión. `docs/progress.md` no se tocó (CLAUD
 
 El contenedor traía PHP 8.3, pero `composer.lock` exige PHP 8.4 (Symfony 8 usa sintaxis de 8.4). Se compiló PHP 8.4.26 desde el repositorio oficial `php/php-src` (con `pdo_pgsql`, `intl`, `gd`, `zip`, `mbstring`) y se usó PostgreSQL 16 local con la base desechable `sedeq_incorporacion_testing` que pide `phpunit.xml`. La descarga del paquete `phpstan/phpstan` desde la API de GitHub estaba bloqueada por la red del entorno; se instaló su mismo commit fijado en el lock (`9ba9ac7`) desde git, con un `composer.local.json/lock` sin versionar (excluido en `.git/info/exclude`). No cambia `composer.json` ni `composer.lock`.
 
-| Verificación base en `c9a97cd` | Resultado |
+| Verificación base en `4023b87` | Resultado |
 |---|---|
 | Suite completa (`php artisan test`) | **1810/1810** pruebas, 6442 aserciones |
 | Pint (`--test`) | sin cambios |

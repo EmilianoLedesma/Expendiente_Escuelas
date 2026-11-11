@@ -1,6 +1,6 @@
 # Informe — Refactor del Visto Bueno / Dictamen de Protección Civil (Paso 2.2)
 
-Fecha: 2026-10-20. Rama: `worktree-proteccion-civil-vb`. Referencia normativa: `COMPENDIO_MAESTRO` §4 («Fundamento normativo del Visto Bueno de Protección Civil») y §9 («Segunda pasada sobre Protección Civil»), commit `8c5d405`. El Compendio **no se modificó**. Especificación y plan locales (gitignored): `docs/superpowers/specs/2026-10-20-proteccion-civil-design.md` y `docs/superpowers/plans/2026-10-20-proteccion-civil.md`.
+Fecha: 2026-10-20. Rama: `worktree-proteccion-civil-vb`. Referencia normativa: `COMPENDIO_MAESTRO` §4 («Fundamento normativo del Visto Bueno de Protección Civil») y §9 («Segunda pasada sobre Protección Civil»), commit `4bbac1a`. El Compendio **no se modificó**. Especificación y plan locales (gitignored): `docs/superpowers/specs/2026-10-20-proteccion-civil-design.md` y `docs/superpowers/plans/2026-10-20-proteccion-civil.md`.
 
 ## 1. Comparación antes / después
 

@@ -1,7 +1,7 @@
 # Revisión, correcciones y merge del PR #1 (motor de validación documental, ADR-007)
 
 **Fecha:** 2026-10-01
-**PR:** #1 `spike/validation-engine-eval` → `master` (merge `b684e12`, commit de correcciones `15c73d6`)
+**PR:** #1 `spike/validation-engine-eval` → `master` (merge `c42017d`, commit de correcciones `15c73d6`)
 **Relacionado:** `docs/decisions/ADR-007-motor-validacion-hechos.md`, `docs/reports/2026-09-30-evaluacion-motor-validacion.md`, `docs/reports/2026-09-30-motor-validacion-integracion.md`
 
 ## 1. Qué se pidió
@@ -37,7 +37,7 @@ Pruebas escritas primero y vistas fallar por la razón correcta:
 
 Archivos: `ConstruirContextoValidacion.php`, `ContextoValidacion.php` (solo docblock), `Livewire/Tramite/ValidacionFinal.php` y los dos archivos de prueba.
 
-**Evidencia:** suite completa 806/806 (2 170 aserciones; el PR traía 804), Pint limpio, PHPStan nivel 5 + PHPat 0 errores. CI en verde sobre `15c73d6` (las tres verificaciones, dos ejecuciones). Merge con `gh pr merge 1 --merge` → `b684e12`.
+**Evidencia:** suite completa 806/806 (2 170 aserciones; el PR traía 804), Pint limpio, PHPStan nivel 5 + PHPat 0 errores. CI en verde sobre `15c73d6` (las tres verificaciones, dos ejecuciones). Merge con `gh pr merge 1 --merge` → `c42017d`.
 
 **Notas de entorno:** en este equipo `php artisan test` completo se cae por límite de memoria de 128 M y PHPStan también; se corrió con `php -d memory_limit=1G vendor/bin/phpunit` y `--memory-limit=1G`. Un worktree nuevo necesita su propio `composer install` (no se puede enlazar `vendor/` de otro checkout con una junction: el autoload resolvería a las rutas del checkout original).
 

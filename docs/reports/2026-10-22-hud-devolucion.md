@@ -1,6 +1,6 @@
 # HUD proyecto 3 — Devolución al solicitante y reenvío de correcciones (reporte)
 
-**Fecha:** 2026-10-22 / 2026-10-23 · **Rama:** `worktree-hud-devolucion` (base `3f44d65`, commits `b46822c` a `147701a` más el de documentación) · **Plan:** `docs/superpowers/plans/2026-10-22-hud-devolucion.md` · **Spec:** `docs/superpowers/specs/2026-10-22-hud-devolucion-design.md` · **Decisión:** `docs/decisions/ADR-020-devolucion-por-secciones.md`
+**Fecha:** 2026-10-22 / 2026-10-23 · **Rama:** `worktree-hud-devolucion` (base `b74f281`, commits `41733c7` a `789420f` más el de documentación) · **Plan:** `docs/superpowers/plans/2026-10-22-hud-devolucion.md` · **Spec:** `docs/superpowers/specs/2026-10-22-hud-devolucion-design.md` · **Decisión:** `docs/decisions/ADR-020-devolucion-por-secciones.md`
 
 ## Qué se hizo
 Cuando el revisor termina todos los niveles de una escuela con al menos un rechazo, el solicitante recibe aviso, corrige solo los pasos rechazados y reenvía; el revisor revisa solo lo corregido.
@@ -20,7 +20,7 @@ Cuando el revisor termina todos los niveles de una escuela con al menos un recha
     - `DevolucionPaso2CongeladoTest`: la prueba del cambio de responsable ahora cambia de verdad lo que imprime el Formato (nombre del titular; el tipo de persona solo cuenta como moral/no moral en la huella), comprueba que el Formato se descartó, que el Paso 3 del nivel redirige a 2.4 antes de recargarlo, y luego recarga, corrige y reenvía. Se verificó que con el nombre anterior la prueba falla («El Formato debe haberse descartado»).
     - `ObservacionesDeEscuela::MOTIVO_FORMATO` pasa a ser declarativo («Se reabrió porque el responsable legal está en corrección: …»): lo lee también el responsable del nivel, que no puede corregir el responsable legal. La aserción de `DevolucionResponsableTest` se vio fallar antes del cambio.
 
-Sin migraciones ni columnas nuevas. Un commit lateral fuera del plan (`80fa412`, «documentos generales completos ofrecen revisar») ya está en `master` como `aadbeea`.
+Sin migraciones ni columnas nuevas. Un commit lateral fuera del plan (`97858be`, «documentos generales completos ofrecen revisar») ya está en `master` como `fe988ea`.
 
 ## Decisiones
 Las del dueño y las de diseño están en ADR-020. Resoluciones del controlador durante la ejecución (ledger `.superpowers/sdd/2026-10-22-hud-devolucion/progress.md`):
@@ -60,7 +60,7 @@ Base de pruebas: `sedeq_incorporacion_testing_ui` (nunca la de desarrollo). Suit
 | Feature/Application/Tramite (corrida aparte, tras los cambios de esta sesión) | 219 (218 + 1 omitida preexistente) | 621 | verde |
 | **Subtotal corrido en esta sesión** | **1379** | **4809** | **0 fallos** |
 
-**Corrida incompleta:** Claude Code detuvo la corrida por falta de memoria del sistema (no por un fallo de las pruebas) antes de llegar a Application/{Inmueble, Matricula, Mobiliario, Personal, PlanEstudios, Preregistro, ResponsableLegal, Revision, Validaciones}, Livewire/{Sedeq, Tramite} y los archivos raíz de Feature, Feature/Application y Feature/Livewire. No se volvió a lanzar. Esos bloques estaban en verde en la ola de correcciones anterior (`08430fb`, ver `final-fixwave-report.md` del ledger); los cambios de esta sesión solo tocan `ObservacionesDeEscuela::MOTIVO_FORMATO` y dos pruebas. Falta volver a correrlos antes de fusionar.
+**Corrida incompleta:** Claude Code detuvo la corrida por falta de memoria del sistema (no por un fallo de las pruebas) antes de llegar a Application/{Inmueble, Matricula, Mobiliario, Personal, PlanEstudios, Preregistro, ResponsableLegal, Revision, Validaciones}, Livewire/{Sedeq, Tramite} y los archivos raíz de Feature, Feature/Application y Feature/Livewire. No se volvió a lanzar. Esos bloques estaban en verde en la ola de correcciones anterior (`cce76c2`, ver `final-fixwave-report.md` del ledger); los cambios de esta sesión solo tocan `ObservacionesDeEscuela::MOTIVO_FORMATO` y dos pruebas. Falta volver a correrlos antes de fusionar.
 
 Pint `--test`: limpio. PHPStan nivel 5 + PHPat: 0 errores. No hubo verificación manual en navegador (no verificado).
 

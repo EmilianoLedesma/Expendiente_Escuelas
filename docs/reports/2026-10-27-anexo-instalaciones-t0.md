@@ -1,6 +1,6 @@
 # Anexo 2 Instalaciones: T0 verificaciones previas (solo lectura de codigo)
 
-Fecha: 2026-10-27. Rama `worktree-anexo-instalaciones` sobre master `d187441`. Sin cambios de codigo, sin tocar la BD de desarrollo, sin seeders ni migraciones.
+Fecha: 2026-10-27. Rama `worktree-anexo-instalaciones` sobre master `1b45f01`. Sin cambios de codigo, sin tocar la BD de desarrollo, sin seeders ni migraciones.
 Plan: `.superpowers/sdd/2026-10-22-anexo2-instalaciones/task-0-brief.md` (ruling R2: T0 solo del lado del codigo).
 
 ## 1. Consumidores de cubiculo / cancha / campo de futbol / area civica (Regla 3)

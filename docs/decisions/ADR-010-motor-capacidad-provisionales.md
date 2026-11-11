@@ -22,7 +22,7 @@ Revisadas una por una con el dueño del proyecto:
 El resto del documento conserva el texto original de cada punto.
 **Fecha:** 2026-09-30
 **Origen:** `docs/reports/2026-09-30-motor-capacidad-instalada.md`
-**Rama:** `feat/motor-capacidad-instalada` (mergeada a `master` en `df9ce33`, PR #2)
+**Rama:** `feat/motor-capacidad-instalada` (mergeada a `master` en `27602de`, PR #2)
 
 Documentos relacionados que siguen abiertos y que este archivo **no** resuelve: `PENDIENTE-origen-de-magnitud.md`, `PENDIENTE-umbral-educacion-fisica.md`, `PENDIENTE-personal-condicionado-por-grado.md`, `PENDIENTE-matriz-espacios-por-nivel.md`.
 

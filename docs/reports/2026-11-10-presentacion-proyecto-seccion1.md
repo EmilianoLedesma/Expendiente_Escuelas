@@ -1,6 +1,6 @@
 # Sección 1 del Proyecto Educativo: Presentación del Proyecto Académico (media superior)
 
-Fecha: 2026-11-10. Rama `worktree-presentacion-seccion1`, base `5633150`.
+Fecha: 2026-11-10. Rama `worktree-presentacion-seccion1`, base `f27828c`.
 
 ## Qué se construyó
 
