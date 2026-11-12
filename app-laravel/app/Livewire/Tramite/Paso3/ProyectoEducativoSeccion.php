@@ -10,32 +10,43 @@ use App\Application\ProyectoEducativo\DTO\DatosEgresoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEnfoqueProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEvaluacionProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosFilosofiaProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosFormacionContinuaProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosFormacionInicialProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosIngresoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPaecProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosPerfilDocenteProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
 use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
 use App\Application\ProyectoEducativo\EnfoqueProyectoCapturada;
 use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
+use App\Application\ProyectoEducativo\FormacionContinuaProyectoCapturada;
+use App\Application\ProyectoEducativo\FormacionInicialProyectoCapturada;
 use App\Application\ProyectoEducativo\GuardarCurriculumProyecto;
 use App\Application\ProyectoEducativo\GuardarEgresoProyecto;
 use App\Application\ProyectoEducativo\GuardarEnfoqueProyecto;
 use App\Application\ProyectoEducativo\GuardarEvaluacionProyecto;
 use App\Application\ProyectoEducativo\GuardarFilosofiaProyecto;
+use App\Application\ProyectoEducativo\GuardarFormacionContinuaProyecto;
+use App\Application\ProyectoEducativo\GuardarFormacionInicialProyecto;
 use App\Application\ProyectoEducativo\GuardarIngresoProyecto;
 use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
 use App\Application\ProyectoEducativo\GuardarPaecProyecto;
+use App\Application\ProyectoEducativo\GuardarPerfilDocenteProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
 use App\Application\ProyectoEducativo\IngresoProyectoCapturada;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
 use App\Application\ProyectoEducativo\PaecProyectoCapturada;
+use App\Application\ProyectoEducativo\PerfilDocenteProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasCurriculumProyecto;
 use App\Application\ProyectoEducativo\ReglasEnfoqueProyecto;
 use App\Application\ProyectoEducativo\ReglasEvaluacionProyecto;
+use App\Application\ProyectoEducativo\ReglasFormacionProyecto;
 use App\Application\ProyectoEducativo\ReglasIngresoProyecto;
 use App\Application\ProyectoEducativo\ReglasPresentacionProyecto;
+use App\Application\ProyectoEducativo\RevisarPdfProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
 use App\Application\Tramite\ResumenTramite;
@@ -48,6 +59,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use RuntimeException;
 
 /**
  * Una sección de la Presentación del Proyecto Educativo. La primera (presentación del proyecto académico) es un
@@ -188,6 +200,26 @@ class ProyectoEducativoSeccion extends Component
     // Sección 9 (Perfil de Egreso).
     public string $perfil_egreso = '';
 
+    // Sección 11 (Formación Docente), bloque inicial: la política y la lista de acciones. `pantalla` (1 = política, 2 en adelante = una acción por pantalla) solo la cambian las acciones del servidor.
+    public string $politica_inicial = '';
+
+    /** @var array<array-key, mixed> llega del navegador: puede no ser una lista de acciones completas; normalizarAcciones() la corrige */
+    public array $acciones = [];
+
+    // Bloque continuo: la política, el PDF de planeación (subida temporal de Livewire; null = conservar el guardado) y sus acciones.
+    public string $politica_continua = '';
+
+    public mixed $planeacion_continua = null;
+
+    /** @var array<array-key, mixed> como */
+    public array $acciones_continua = [];
+
+    /** @var array<string, string|int|null> nombre y páginas del PDF de planeación ya guardado (nunca la ruta de disco) */
+    public array $formacionGuardado = [];
+
+    // Sección 10 (Perfil Docente).
+    public string $habilidades_virtudes = '';
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -210,7 +242,301 @@ class ProyectoEducativoSeccion extends Component
             $this->cargarEnfoque();
         } elseif ($this->esPaec()) {
             $this->cargarPaec();
+        } elseif ($this->esFormacion()) {
+            $this->cargarFormacion();
         }
+    }
+
+    private function esFormacion(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::formacion();
+    }
+
+    private function cargarFormacion(): void
+    {
+        $this->cargarBloqueInicial();
+        $this->cargarBloqueContinuo();
+    }
+
+    private function cargarBloqueInicial(): void
+    {
+        $guardado = app(FormacionInicialProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        $this->politica_inicial = (string) $guardado['politica_inicial'];
+        $this->acciones = $this->accionesComoTexto($guardado['acciones']);
+        $this->normalizarAcciones();
+    }
+
+    private function cargarBloqueContinuo(): void
+    {
+        $guardado = app(FormacionContinuaProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        $this->politica_continua = (string) $guardado['politica_continua'];
+        $this->acciones_continua = $this->accionesComoTexto($guardado['acciones_continua']);
+        $this->formacionGuardado = ['planeacion_nombre' => $guardado['planeacion_nombre'], 'planeacion_paginas' => $guardado['planeacion_paginas']];
+        $this->normalizarAcciones();
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $acciones
+     * @return list<array<string, mixed>>
+     */
+    private function accionesComoTexto(array $acciones): array
+    {
+        return array_map(function (array $accion): array {
+            foreach ($accion as $campo => $valor) {
+                $accion[$campo] = $campo === 'dias' ? (array) $valor : (string) $valor;
+            }
+
+            return $accion;
+        }, $acciones);
+    }
+
+    /** Las listas llegan del navegador: se vuelven listas de acciones con todos sus campos, y nunca quedan vacías (arrancan con una). */
+    private function normalizarAcciones(): void
+    {
+        foreach (['acciones', 'acciones_continua'] as $lista) {
+            $this->{$lista} = array_values(array_map(
+                fn (mixed $accion) => is_array($accion) ? array_merge(ReglasFormacionProyecto::accionVacia(), $accion) : ReglasFormacionProyecto::accionVacia(),
+                $this->{$lista},
+            ));
+            if ($this->{$lista} === []) {
+                $this->{$lista} = [ReglasFormacionProyecto::accionVacia()];
+            }
+        }
+    }
+
+    /** @return string nombre de la propiedad con las acciones de ese bloque */
+    private function listaDeAcciones(string $bloque): string
+    {
+        return $bloque === 'inicial' ? 'acciones' : 'acciones_continua';
+    }
+
+    /**
+     * Las pantallas de la sección 11, en orden: política inicial, una por acción inicial, política continua, planeación y una
+     * por acción continua.
+     *
+     * @return list<array{bloque: string, tipo: string, indice: int|null}>
+     */
+    private function pantallasFormacion(): array
+    {
+        $this->normalizarAcciones();
+
+        $pantallas = [['bloque' => 'inicial', 'tipo' => 'politica', 'indice' => null]];
+        foreach (array_keys($this->acciones) as $i) {
+            $pantallas[] = ['bloque' => 'inicial', 'tipo' => 'accion', 'indice' => $i];
+        }
+        $pantallas[] = ['bloque' => 'continua', 'tipo' => 'politica', 'indice' => null];
+        $pantallas[] = ['bloque' => 'continua', 'tipo' => 'planeacion', 'indice' => null];
+        foreach (array_keys($this->acciones_continua) as $i) {
+            $pantallas[] = ['bloque' => 'continua', 'tipo' => 'accion', 'indice' => $i];
+        }
+
+        return $pantallas;
+    }
+
+    /** @return array{int, array{bloque: string, tipo: string, indice: int|null}, list<array{bloque: string, tipo: string, indice: int|null}>} número, pantalla actual y todas */
+    private function pantallaFormacion(): array
+    {
+        $pantallas = $this->pantallasFormacion();
+        $numero = min(max($this->pantalla, 1), count($pantallas));
+
+        return [$numero, $pantallas[$numero - 1], $pantallas];
+    }
+
+    private function numeroDePantalla(string $bloque, string $tipo, ?int $indice): int
+    {
+        foreach ($this->pantallasFormacion() as $posicion => $pantalla) {
+            if ($pantalla === ['bloque' => $bloque, 'tipo' => $tipo, 'indice' => $indice]) {
+                return $posicion + 1;
+            }
+        }
+
+        return 1;
+    }
+
+    /** Número de la pantalla donde se muestra el error de esa clave (null si no tiene una, como el número de acciones). */
+    private function pantallaDeError(string $clave): ?int
+    {
+        return match (true) {
+            $clave === 'politica_inicial' => $this->numeroDePantalla('inicial', 'politica', null),
+            $clave === 'politica_continua' => $this->numeroDePantalla('continua', 'politica', null),
+            $clave === 'planeacion_continua' => $this->numeroDePantalla('continua', 'planeacion', null),
+            (bool) preg_match('/^acciones_continua\.(\d+)\./', $clave, $m) => $this->numeroDePantalla('continua', 'accion', (int) $m[1]),
+            (bool) preg_match('/^acciones\.(\d+)\./', $clave, $m) => $this->numeroDePantalla('inicial', 'accion', (int) $m[1]),
+            default => null,
+        };
+    }
+
+    private function planeacionSubida(): ?UploadedFile
+    {
+        return $this->planeacion_continua instanceof UploadedFile ? $this->planeacion_continua : null;
+    }
+
+    /** @return array<string, string> errores del bloque (sin revisar el PDF: eso lo hace la pantalla de la planeación y el guardado) */
+    private function erroresDelBloque(string $bloque): array
+    {
+        if ($bloque === 'inicial') {
+            return ReglasFormacionProyecto::errores(ReglasFormacionProyecto::normalizar($this->politica_inicial, $this->acciones));
+        }
+
+        return ReglasFormacionProyecto::errores(ReglasFormacionProyecto::normalizar($this->politica_continua, $this->acciones_continua), 'politica_continua', 'acciones_continua');
+    }
+
+    /** @return array<string, string> */
+    private function erroresDePlaneacion(): array
+    {
+        $archivo = $this->planeacionSubida();
+        if ($archivo === null) {
+            return ($this->formacionGuardado['planeacion_nombre'] ?? null) === null ? ['planeacion_continua' => 'Este campo es obligatorio.'] : [];
+        }
+
+        try {
+            app(RevisarPdfProyecto::class)->revisar($archivo);
+        } catch (RuntimeException $e) {
+            return ['planeacion_continua' => $e->getMessage()];
+        }
+
+        return [];
+    }
+
+    /** Sección 11: valida solo lo de la pantalla actual (una política, la planeación o una acción); nada se escribe; con error se queda. */
+    public function siguienteFormacion(): void
+    {
+        abort_unless($this->esFormacion(), 404);
+        $this->resetErrorBag();
+
+        [$numero, $actual, $pantallas] = $this->pantallaFormacion();
+        $errores = $actual['tipo'] === 'planeacion' ? $this->erroresDePlaneacion() : array_filter(
+            $this->erroresDelBloque($actual['bloque']),
+            fn (string $clave) => $actual['tipo'] === 'politica'
+                ? $clave === 'politica_'.$actual['bloque']
+                : str_starts_with($clave, $this->listaDeAcciones($actual['bloque']).'.'.$actual['indice'].'.'),
+            ARRAY_FILTER_USE_KEY,
+        );
+        if ($errores !== []) {
+            foreach ($errores as $clave => $mensaje) {
+                $this->addError($clave, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        }
+
+        $this->pantalla = min($numero + 1, count($pantallas));
+    }
+
+    /** Sección 11: vuelve una pantalla sin validar ni perder lo tecleado. */
+    public function anteriorFormacion(): void
+    {
+        abort_unless($this->esFormacion(), 404);
+        $this->resetErrorBag();
+        [$numero] = $this->pantallaFormacion();
+        $this->pantalla = max(1, $numero - 1);
+    }
+
+    /** Sección 11: suma una acción en blanco al bloque de la pantalla actual (hasta el máximo) y pasa a ella. */
+    public function agregarAccion(): void
+    {
+        abort_unless($this->esFormacion(), 404);
+        [, $actual] = $this->pantallaFormacion();
+        $lista = $this->listaDeAcciones($actual['bloque']);
+        if ($actual['tipo'] !== 'accion' || count($this->{$lista}) >= ReglasFormacionProyecto::MAX_ACCIONES) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        $this->{$lista}[] = ReglasFormacionProyecto::accionVacia();
+        $this->pantalla = $this->numeroDePantalla($actual['bloque'], 'accion', count($this->{$lista}) - 1);
+    }
+
+    /** Sección 11: quita la acción de la pantalla actual (el bloque conserva al menos una). */
+    public function quitarAccion(): void
+    {
+        abort_unless($this->esFormacion(), 404);
+        [, $actual] = $this->pantallaFormacion();
+        $lista = $this->listaDeAcciones($actual['bloque']);
+        if ($actual['tipo'] !== 'accion' || count($this->{$lista}) <= 1) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        unset($this->{$lista}[$actual['indice']]);
+        $this->{$lista} = array_values($this->{$lista});
+        $this->pantalla = $this->numeroDePantalla($actual['bloque'], 'accion', min((int) $actual['indice'], count($this->{$lista}) - 1));
+    }
+
+    /** "Guardar" de la sección 11: guarda el bloque de la pantalla actual, todo o nada; con errores no escribe y lleva a la primera pantalla con error. */
+    private function guardarFormacion(): void
+    {
+        $this->resetErrorBag();
+        [$numero, $actual] = $this->pantallaFormacion();
+        $bloque = $actual['bloque'];
+
+        try {
+            if ($bloque === 'inicial') {
+                app(GuardarFormacionInicialProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosFormacionInicialProyecto($this->politica_inicial, $this->acciones));
+            } else {
+                app(GuardarFormacionContinuaProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosFormacionContinuaProyecto($this->politica_continua, $this->planeacionSubida(), $this->acciones_continua));
+            }
+        } catch (DatosInvalidos $e) {
+            $primera = null;
+            foreach ($e->errores as $clave => $mensaje) {
+                $this->addError($clave, $mensaje);
+                $pantalla = $this->pantallaDeError($clave);
+                if ($pantalla !== null && ($primera === null || $pantalla < $primera)) {
+                    $primera = $pantalla;
+                }
+            }
+            $this->pantalla = $primera ?? $numero;
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        if ($bloque === 'inicial') {
+            $this->cargarBloqueInicial();
+            $this->pantalla = $this->numeroDePantalla('continua', 'politica', null);
+        } else {
+            $this->planeacion_continua = null;
+            $this->cargarBloqueContinuo();
+        }
+
+        $completa = app(FormacionInicialProyectoCapturada::class)->completa($this->escuelaNivel->id)
+            && app(FormacionContinuaProyectoCapturada::class)->completa($this->escuelaNivel->id);
+        $this->toast(
+            $completa ? 'Sección completa' : 'Bloque guardado',
+            $completa ? 'Puedes seguir con la siguiente sección.' : ($bloque === 'inicial' ? 'Continúa con la formación docente continua.' : 'Falta guardar la formación docente inicial.'),
+        );
+    }
+
+    /** Lo que la vista de la sección 11 necesita para pintar la pantalla actual. @return array<string, mixed> */
+    private function datosPantallaFormacion(): array
+    {
+        [$numero, $actual, $pantallas] = $this->pantallaFormacion();
+        $lista = $this->listaDeAcciones($actual['bloque']);
+        $cuantas = count($this->{$lista});
+        $ultima = $actual['bloque'] === 'inicial' ? $numero === 1 + $cuantas : $numero === count($pantallas);
+
+        return [
+            'pantalla' => $numero,
+            'total' => count($pantallas),
+            'bloque' => $actual['bloque'],
+            'tipo' => $actual['tipo'],
+            'accion' => $actual['indice'],
+            'lista' => $lista,
+            'acciones' => $cuantas,
+            'ultima' => $ultima,
+            'continuar' => $ultima && $actual['bloque'] === 'inicial',
+            'puedeAgregar' => $cuantas < ReglasFormacionProyecto::MAX_ACCIONES,
+            'puedeQuitar' => $cuantas > 1,
+        ];
     }
 
     /** Sección 4: valida solo el campo de la pantalla actual (nada se escribe) y avanza; con error se queda. */
@@ -554,6 +880,12 @@ class ProyectoEducativoSeccion extends Component
             return;
         }
 
+        if ($this->esFormacion()) {
+            $this->guardarFormacion();
+
+            return;
+        }
+
         abort_unless($this->esPresentacion(), 404);
 
         if ($this->paso === $this->totalPasos() && $this->persistir($guardar)) {
@@ -611,7 +943,7 @@ class ProyectoEducativoSeccion extends Component
     /** Secciones de una sola página con textos de rango de palabras: [guardar, DTO, lectura]. */
     private function esTexto(): bool
     {
-        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso()], true);
+        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso(), SeccionesProyectoEducativo::perfilDocente()], true);
     }
 
     /** @return array{object, class-string, object} */
@@ -624,6 +956,7 @@ class ProyectoEducativoSeccion extends Component
             SeccionesProyectoEducativo::curriculum() => [app(GuardarCurriculumProyecto::class), DatosCurriculumProyecto::class, app(CurriculumProyectoCapturada::class)],
             SeccionesProyectoEducativo::ingreso() => [app(GuardarIngresoProyecto::class), DatosIngresoProyecto::class, app(IngresoProyectoCapturada::class)],
             SeccionesProyectoEducativo::egreso() => [app(GuardarEgresoProyecto::class), DatosEgresoProyecto::class, app(EgresoProyectoCapturada::class)],
+            SeccionesProyectoEducativo::perfilDocente() => [app(GuardarPerfilDocenteProyecto::class), DatosPerfilDocenteProyecto::class, app(PerfilDocenteProyectoCapturada::class)],
             default => abort(404),
         };
     }
@@ -724,6 +1057,7 @@ class ProyectoEducativoSeccion extends Component
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
             'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
             'ingreso' => $this->esIngreso() ? ['bloque' => $this->bloque, 'total' => count(ReglasIngresoProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasIngresoProyecto::BLOQUES), ...ReglasIngresoProyecto::BLOQUES[$this->bloque]] : null,
+            'formacion' => $this->esFormacion() ? $this->datosPantallaFormacion() : null,
             'pasos' => ReglasPresentacionProyecto::PASOS,
             'anterior' => isset($slugs[$indice - 1]) ? ['slug' => $slugs[$indice - 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice - 1])] : null,
             'siguiente' => isset($slugs[$indice + 1]) ? ['slug' => $slugs[$indice + 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice + 1])] : null,

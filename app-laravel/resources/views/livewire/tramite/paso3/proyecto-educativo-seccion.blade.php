@@ -293,6 +293,147 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($formacion)
+        {{-- Sección 11: dos bloques que se guardan por separado. Inicial: política y una acción por pantalla. Continua: política, planeación (PDF) y una acción por pantalla. Siguiente valida la pantalla y no escribe; Guardar (última del bloque) valida el bloque y lo guarda todo o nada. Horas, fechas y duración usan campos nativos. --}}
+        @php
+            $i = $formacion['accion'];
+            $p = $formacion['lista'].'.'.$i.'.';
+            $esContinua = $formacion['bloque'] === 'continua';
+            $accionesDelBloque = $esContinua ? $acciones_continua : $acciones;
+            $dias = ['lunes' => 'Lunes', 'martes' => 'Martes', 'miercoles' => 'Miércoles', 'jueves' => 'Jueves', 'viernes' => 'Viernes', 'sabado' => 'Sábado', 'domingo' => 'Domingo'];
+            $formatos = ['taller' => 'Taller', 'curso' => 'Curso', 'seminario' => 'Seminario', 'diplomado' => 'Diplomado', 'otro' => 'Otro'];
+            $textos = [
+                'proposito' => ['Propósito', 'Propósito de la acción'],
+                'participantes' => ['Participantes', '¿A quién va dirigida?'],
+            ];
+            $textos2 = [
+                'temario' => ['Temario', 'Describa los temas principales'],
+                'evaluacion' => ['Evaluación', '¿Cómo se evaluará a los participantes?'],
+                'recursos' => ['Recursos', 'Recursos necesarios'],
+                'perfil_ponente' => ['Perfil de ponente(s) o encargado(s)', 'Perfil profesional requerido'],
+                'reconocimiento' => ['Reconocimiento', 'Tipo de reconocimiento que se otorgará'],
+            ];
+            $lugar = match ($formacion['tipo']) {
+                'politica' => 'Política global',
+                'planeacion' => 'Planeación',
+                default => 'Acción '.($i + 1).' de '.$formacion['acciones'],
+            };
+        @endphp
+        <form novalidate wire:submit="{{ $formacion['ultima'] ? 'guardar' : 'siguienteFormacion' }}">
+            <x-ui.error-summary />
+
+            <p class="mb-xs text-body-md font-semibold text-ink">{{ $esContinua ? 'Formación Docente Continua' : 'Formación Docente Inicial' }}</p>
+            <p class="mb-md text-body-sm text-muted">Pantalla {{ $formacion['pantalla'] }} de {{ $formacion['total'] }} · {{ $lugar }}</p>
+
+            <div wire:key="formacion-{{ $formacion['pantalla'] }}">
+                @if ($formacion['tipo'] === 'politica')
+                    @if ($esContinua)
+                        <x-ui.section title="Política Global de Formación Continua">
+                            <x-ui.textarea-palabras id="politica_continua" label="Política Global de Formación Continua (100 a 250 palabras)" :min="100" :max="250" placeholder="Describa la política institucional para la formación continua de los docentes..." />
+                        </x-ui.section>
+                    @else
+                        <x-ui.section title="Política Global de Formación Inicial">
+                            <x-ui.textarea-palabras id="politica_inicial" label="Política Global de Formación Inicial (100 a 250 palabras)" :min="100" :max="250" placeholder="Describa la política institucional para la formación inicial de los docentes..." />
+                        </x-ui.section>
+                    @endif
+                @elseif ($formacion['tipo'] === 'planeacion')
+                    <x-ui.section title="Planeación de la formación docente continua">
+                        <x-ui.field id="planeacion_continua" label="Planeación del curso o las acciones de formación docente continua (1 a 2 cuartillas)">
+                            <p class="mb-xs text-body-sm text-muted">Presente la planeación detallada de las acciones de formación continua...</p>
+                            <input
+                                type="file"
+                                id="planeacion_continua"
+                                wire:model="planeacion_continua"
+                                accept="application/pdf"
+                                @error('planeacion_continua') aria-invalid="true" aria-describedby="planeacion_continua-error" @enderror
+                                class="block w-full text-body-md text-body file:mr-sm file:min-h-11 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-primary file:bg-canvas file:px-md file:font-semibold file:text-primary"
+                            >
+                            <p wire:loading wire:target="planeacion_continua" class="mt-xxs text-body-sm text-muted">Subiendo…</p>
+                            @if ($formacionGuardado['planeacion_nombre'] ?? null)
+                                @php $paginas = (int) $formacionGuardado['planeacion_paginas']; @endphp
+                                <p class="mt-xs text-body-sm text-ink">Archivo guardado: <strong>{{ $formacionGuardado['planeacion_nombre'] }}</strong> ({{ $paginas }} {{ $paginas === 1 ? 'página' : 'páginas' }}). Sube otro solo si quieres reemplazarlo.</p>
+                            @endif
+                        </x-ui.field>
+                    </x-ui.section>
+                @else
+                    <x-ui.section :title="'Acción '.($i + 1).' de '.$formacion['acciones']">
+                        <x-ui.field :id="$p.'nombre'" label="Nombre de la acción">
+                            <x-ui.input wire:model.blur="{{ $p }}nombre" maxlength="150" placeholder="Describa la acción formativa" />
+                        </x-ui.field>
+
+                        @foreach ($textos as $campo => [$etiqueta, $ayuda])
+                            @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasFormacionProyecto::TEXTOS[$campo]; @endphp
+                            <x-ui.textarea-palabras :id="$p.$campo" :label="$etiqueta.' ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" :rows="4" :placeholder="$ayuda" />
+                        @endforeach
+
+                        <x-ui.radio-group :id="$p.'formato'" legend="Formato" :wire:model.live="$p.'formato'" :opciones="$formatos" />
+                        @if (($accionesDelBloque[$i]['formato'] ?? '') === 'otro')
+                            <x-ui.field :id="$p.'formato_otro'" label="Especifique el formato">
+                                <x-ui.input wire:model.blur="{{ $p }}formato_otro" maxlength="60" />
+                            </x-ui.field>
+                        @endif
+
+                        <x-ui.field :id="$p.'duracion_horas'" label="Duración">
+                            <x-ui.input type="number" min="1" max="999" step="1" inputmode="numeric" unit="horas" wire:model.blur="{{ $p }}duracion_horas" placeholder="Ej. 40" />
+                        </x-ui.field>
+
+                        <x-ui.field :id="$p.'dias'" label="Horario: días">
+                            <div class="grid grid-cols-2 gap-x-md sm:grid-cols-4">
+                                @foreach ($dias as $valor => $etiqueta)
+                                    <x-ui.checkbox :id="$p.'dias-'.$valor" :value="$valor" wire:model="{{ $p }}dias">{{ $etiqueta }}</x-ui.checkbox>
+                                @endforeach
+                            </div>
+                        </x-ui.field>
+                        <div class="grid gap-md sm:grid-cols-2">
+                            <x-ui.field :id="$p.'hora_inicio'" label="Hora de inicio">
+                                <x-ui.input type="time" wire:model.blur="{{ $p }}hora_inicio" />
+                            </x-ui.field>
+                            <x-ui.field :id="$p.'hora_fin'" label="Hora de fin">
+                                <x-ui.input type="time" wire:model.blur="{{ $p }}hora_fin" />
+                            </x-ui.field>
+                        </div>
+
+                        <div class="grid gap-md sm:grid-cols-2">
+                            <x-ui.field :id="$p.'fecha_inicio'" label="Periodo: fecha de inicio">
+                                <x-ui.input type="date" wire:model.blur="{{ $p }}fecha_inicio" />
+                            </x-ui.field>
+                            <x-ui.field :id="$p.'fecha_fin'" label="Periodo: fecha de fin">
+                                <x-ui.input type="date" wire:model.blur="{{ $p }}fecha_fin" />
+                            </x-ui.field>
+                        </div>
+
+                        @foreach ($textos2 as $campo => [$etiqueta, $ayuda])
+                            @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasFormacionProyecto::TEXTOS[$campo]; @endphp
+                            <x-ui.textarea-palabras :id="$p.$campo" :label="$etiqueta.' ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" :rows="$campo === 'temario' ? 6 : 4" :placeholder="$ayuda" />
+                        @endforeach
+
+                        <x-ui.textarea-palabras :id="$p.'otros'" label="Otros (hasta 100 palabras)" :min="0" :max="100" :rows="3" :optional="true" placeholder="Información adicional" />
+
+                        <div class="flex flex-wrap gap-sm">
+                            @if ($formacion['puedeAgregar'])
+                                <x-ui.button-secondary type="button" wire:click="agregarAccion">Agregar acción</x-ui.button-secondary>
+                            @endif
+                            @if ($formacion['puedeQuitar'])
+                                <x-ui.button-secondary type="button" wire:click="quitarAccion">Quitar esta acción</x-ui.button-secondary>
+                            @endif
+                        </div>
+                    </x-ui.section>
+                @endif
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($formacion['pantalla'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorFormacion">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $formacion['ultima'] ? ($formacion['continuar'] ? 'Guardar y continuar' : 'Guardar') : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
     @elseif ($ingreso)
         {{-- Sección 8: dos bloques de dos campos. Siguiente valida los campos del bloque y no escribe; Guardar (último bloque) valida todo y guarda todo o nada. --}}
         @php
@@ -350,6 +491,10 @@
             @elseif ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::egreso())
                 <x-ui.section :title="$nombre">
                     <x-ui.textarea-palabras id="perfil_egreso" label="Perfil de Egreso (100 a 400 palabras)" :min="100" :max="400" :rows="12" placeholder="Describa las competencias, habilidades y conocimientos que el egresado habrá desarrollado al concluir el programa educativo..." />
+                </x-ui.section>
+            @elseif ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::perfilDocente())
+                <x-ui.section :title="$nombre">
+                    <x-ui.textarea-palabras id="habilidades_virtudes" label="Habilidades y Virtudes Docentes (200 a 400 palabras)" :min="200" :max="400" :rows="12" placeholder="Describa las habilidades profesionales, pedagógicas y personales que deben poseer los docentes de la institución..." />
                 </x-ui.section>
             @else
                 <x-ui.section :title="$nombre">

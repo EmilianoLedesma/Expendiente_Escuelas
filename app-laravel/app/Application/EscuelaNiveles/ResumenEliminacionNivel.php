@@ -58,9 +58,11 @@ class ResumenEliminacionNivel
 
         return [
             'datos' => array_filter($fila, fn ($valor) => $valor !== null) !== [] ? 1 : 0,
-            // Incluye los PDF del PAEC (sección 6 del Proyecto Educativo): también son archivos que se borran con el nivel.
+            // Incluye los PDF del PAEC (sección 6) y el de planeación de la formación continua (sección 11): también son
+            // archivos que se borran con el nivel.
             'documentos' => $contar('documentos_escuela_nivel') + (int) DB::table('proyecto_educativo_paec')->where('escuela_nivel_id', $escuelaNivelId)
-                ->selectRaw('(hoja_ruta_path IS NOT NULL)::int + (planeacion_path IS NOT NULL)::int AS n')->value('n'),
+                ->selectRaw('(hoja_ruta_path IS NOT NULL)::int + (planeacion_path IS NOT NULL)::int AS n')->value('n')
+                + DB::table('proyecto_educativo_formacion_politica')->where('escuela_nivel_id', $escuelaNivelId)->whereNotNull('planeacion_path')->count(),
             'recibos' => DB::table('recibos_pago_derechos')
                 ->join('documentos_escuela_nivel', 'documentos_escuela_nivel.id', '=', 'recibos_pago_derechos.documento_escuela_nivel_id')
                 ->where('documentos_escuela_nivel.escuela_nivel_id', $escuelaNivelId)

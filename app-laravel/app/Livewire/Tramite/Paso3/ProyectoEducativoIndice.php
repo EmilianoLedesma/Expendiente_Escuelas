@@ -7,9 +7,12 @@ use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
 use App\Application\ProyectoEducativo\EnfoqueProyectoCapturada;
 use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
+use App\Application\ProyectoEducativo\FormacionContinuaProyectoCapturada;
+use App\Application\ProyectoEducativo\FormacionInicialProyectoCapturada;
 use App\Application\ProyectoEducativo\IngresoProyectoCapturada;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
 use App\Application\ProyectoEducativo\PaecProyectoCapturada;
+use App\Application\ProyectoEducativo\PerfilDocenteProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
@@ -45,7 +48,7 @@ class ProyectoEducativoIndice extends Component
         $this->redirigirSiNoAlcanzable($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
     }
 
-    public function render(PresentacionProyectoCapturada $presentacion, FilosofiaProyectoCapturada $filosofia, ObjetivosProyectoCapturada $objetivos, EnfoqueProyectoCapturada $enfoque, EvaluacionProyectoCapturada $evaluacion, PaecProyectoCapturada $paec, CurriculumProyectoCapturada $curriculum, IngresoProyectoCapturada $ingreso, EgresoProyectoCapturada $egreso)
+    public function render(PresentacionProyectoCapturada $presentacion, FilosofiaProyectoCapturada $filosofia, ObjetivosProyectoCapturada $objetivos, EnfoqueProyectoCapturada $enfoque, EvaluacionProyectoCapturada $evaluacion, PaecProyectoCapturada $paec, CurriculumProyectoCapturada $curriculum, IngresoProyectoCapturada $ingreso, EgresoProyectoCapturada $egreso, PerfilDocenteProyectoCapturada $perfilDocente, FormacionInicialProyectoCapturada $formacion, FormacionContinuaProyectoCapturada $formacionContinua)
     {
         return view('livewire.tramite.paso3.proyecto-educativo-indice', [
             'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
@@ -60,6 +63,9 @@ class ProyectoEducativoIndice extends Component
                 SeccionesProyectoEducativo::curriculum() => $curriculum->completa($this->escuelaNivel->id),
                 SeccionesProyectoEducativo::ingreso() => $ingreso->completa($this->escuelaNivel->id),
                 SeccionesProyectoEducativo::egreso() => $egreso->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::perfilDocente() => $perfilDocente->completa($this->escuelaNivel->id),
+                // La sección 11 son dos bloques: solo está completa con los dos guardados y completos.
+                SeccionesProyectoEducativo::formacion() => $formacion->completa($this->escuelaNivel->id) && $formacionContinua->completa($this->escuelaNivel->id),
             ],
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
     }

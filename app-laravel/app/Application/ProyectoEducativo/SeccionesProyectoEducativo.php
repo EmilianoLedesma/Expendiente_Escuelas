@@ -110,6 +110,18 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[8];
     }
 
+    /** Slug de la sección 10 (Perfil Docente). */
+    public static function perfilDocente(): string
+    {
+        return array_keys(self::todas())[9];
+    }
+
+    /** Slug de la sección 11 (Formación Docente). */
+    public static function formacion(): string
+    {
+        return array_keys(self::todas())[10];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

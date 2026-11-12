@@ -216,6 +216,27 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         }
     }
 
+    public function test_quitar_un_nivel_borra_el_pdf_de_la_formacion_continua_y_el_resumen_lo_cuenta_como_documento(): void
+    {
+        $escuela = $this->crearEscuela();
+        $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar'), $this->id('primaria')]);
+        $nivelId = EscuelaNivel::where('escuela_id', $escuela->id)->where('nivel_educativo_id', $this->id('preescolar'))->value('id');
+        $ruta = "proyecto_educativo/{$nivelId}/formacion_continua_planeacion-x.pdf";
+        Storage::disk('documentos')->put($ruta, '%PDF');
+        DB::table('proyecto_educativo_formacion_politica')->insert([
+            'escuela_nivel_id' => $nivelId, 'tipo' => 'continua', 'politica' => 'texto',
+            'planeacion_path' => $ruta, 'planeacion_nombre' => 'planeacion.pdf', 'planeacion_paginas' => 1,
+        ]);
+        $confirmado = app(ResumenEliminacionNivel::class)->ejecutar($escuela->id, [$this->id('preescolar')]);
+
+        $this->assertSame(1, $confirmado[$this->id('preescolar')]['documentos']);
+
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')], confirmado: $confirmado);
+
+        $this->assertDatabaseCount('proyecto_educativo_formacion_politica', 0);
+        Storage::disk('documentos')->assertMissing($ruta);
+    }
+
     public function test_un_pdf_del_paec_subido_despues_de_confirmar_invalida_la_confirmacion(): void
     {
         $escuela = $this->crearEscuela();

@@ -3,7 +3,7 @@
      Es la única copia del conteo en el navegador. Tope duro: si se teclea o se pega más del máximo, se recorta a ese
      número de palabras; el valor que va a Livewire (`texto`, entangle) es el mismo que se ve. El contador se pone en
      rojo por debajo del mínimo (ya con texto) o por encima del máximo. El id es el nombre de la propiedad Livewire. --}}
-@props(['id', 'label', 'min', 'max', 'rows' => 8])
+@props(['id', 'label', 'min', 'max', 'rows' => 8, 'optional' => false])
 
 <div x-data="{
     texto: $wire.entangle('{{ $id }}'),
@@ -20,8 +20,8 @@
         }
     },
 }">
-    <x-ui.field :id="$id" :label="$label">
-        <x-ui.textarea :rows="$rows" required x-model="texto" x-on:input="recortar()" {{ $attributes }} />
+    <x-ui.field :id="$id" :label="$label" :optional="$optional">
+        <x-ui.textarea :rows="$rows" :required="! $optional" x-model="texto" x-on:input="recortar()" {{ $attributes }} />
     </x-ui.field>
     <p class="mt-xs text-body-sm" :class="fuera() ? 'font-semibold text-error-ink' : 'text-muted'" aria-live="polite">
         <span x-text="n()">0</span> palabras (de {{ $min }} a {{ $max }})<span x-show="n() > 0 && n() < min" x-text="' · faltan ' + (min - n())"></span><span x-show="n() >= max"> · máximo alcanzado</span>

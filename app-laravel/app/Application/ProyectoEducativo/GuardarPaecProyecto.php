@@ -8,10 +8,8 @@ use App\Application\ProyectoEducativo\DTO\DatosPaecProyecto;
 use App\Application\Tramite\CompuertaSubPaso3;
 use App\Application\Tramite\TramiteEditable;
 use App\Infrastructure\Documentos\AlmacenDocumentos;
-use App\Infrastructure\Documentos\ContadorPaginasPdf;
 use App\Models\EscuelaNivel;
 use App\Models\ProyectoEducativoPaec;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
@@ -31,7 +29,7 @@ class GuardarPaecProyecto
         private readonly CompuertaSubPaso3 $compuerta,
         private readonly TramiteEditable $tramiteEditable,
         private readonly AlmacenDocumentos $almacen,
-        private readonly ContadorPaginasPdf $contador,
+        private readonly RevisarPdfProyecto $revisor,
     ) {}
 
     /**
@@ -60,7 +58,7 @@ class GuardarPaecProyecto
             }
 
             try {
-                $paginas[$campo] = $this->revisar($archivo);
+                $paginas[$campo] = $this->revisor->revisar($archivo);
             } catch (RuntimeException $e) {
                 $errores[$campo] = $e->getMessage();
             }
@@ -132,36 +130,5 @@ class GuardarPaecProyecto
 
             throw $e;
         }
-    }
-
-    /**
-     * @return int páginas del PDF
-     *
-     * @throws RuntimeException con el mensaje para el solicitante
-     */
-    private function revisar(UploadedFile $archivo): int
-    {
-        if ((int) $archivo->getSize() > ReglasPaecProyecto::MAX_MB * 1024 * 1024) {
-            throw new RuntimeException('El archivo no debe pesar más de '.ReglasPaecProyecto::MAX_MB.' MB.');
-        }
-
-        // El nombre y el tipo MIME los manda el cliente: se confía en los primeros bytes (todo PDF empieza con %PDF-).
-        $ruta = (string) $archivo->getRealPath();
-        if (! is_file($ruta) || file_get_contents($ruta, false, null, 0, 5) !== '%PDF-') {
-            throw new RuntimeException('Debe ser un archivo PDF.');
-        }
-
-        try {
-            $paginas = $this->contador->contar($archivo);
-        } catch (RuntimeException) {
-            throw new RuntimeException('No se pudo leer el PDF. Verifica que no esté dañado ni protegido con contraseña.');
-        }
-
-        [$min, $max] = ReglasPaecProyecto::PAGINAS;
-        if ($paginas < $min || $paginas > $max) {
-            throw new RuntimeException("El PDF debe tener entre {$min} y {$max} páginas (tiene {$paginas}).");
-        }
-
-        return $paginas;
     }
 }

@@ -137,6 +137,24 @@ class PurgarTest extends TestCase
         }
     }
 
+    public function test_purgar_borra_tambien_el_pdf_de_planeacion_de_la_formacion_continua(): void
+    {
+        $admin = $this->admin();
+        $escuela = $this->tramiteArchivado($admin);
+        $nivelId = EscuelaNivel::withoutGlobalScope(NivelDeEscuelaNoArchivada::class)->where('escuela_id', $escuela->id)->value('id');
+        $ruta = "proyecto_educativo/{$nivelId}/formacion_continua_planeacion-x.pdf";
+        Storage::disk('documentos')->put($ruta, '%PDF');
+        DB::table('proyecto_educativo_formacion_politica')->insert([
+            'escuela_nivel_id' => $nivelId, 'tipo' => 'continua', 'politica' => 'texto',
+            'planeacion_path' => $ruta, 'planeacion_nombre' => 'planeacion.pdf', 'planeacion_paginas' => 1,
+        ]);
+
+        app(PurgarTramite::class)->ejecutar($admin->id, $escuela->id, 'Solicitud de baja', Purga::CONFIRMACION);
+
+        $this->assertSame(0, DB::table('proyecto_educativo_formacion_politica')->count());
+        Storage::disk('documentos')->assertMissing($ruta);
+    }
+
     public function test_un_tramite_no_archivado_no_se_purga(): void
     {
         $admin = $this->admin();
