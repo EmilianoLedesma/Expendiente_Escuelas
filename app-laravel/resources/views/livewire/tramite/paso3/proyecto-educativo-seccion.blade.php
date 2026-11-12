@@ -95,6 +95,109 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($enfoque)
+        {{-- Sección 4: un solo campo por pantalla. Siguiente valida ese campo y no escribe; Guardar (último campo) valida todo y guarda todo o nada. --}}
+        @php
+            $grupos = [1 => 'Propuesta Global del Proyecto', 2 => 'Apropiación del Enfoque Pedagógico-Didáctico', 3 => 'Estrategias y Actividades Didácticas Principales'];
+            $esEstrategia = $enfoque['lista'] === 'estrategias_centrales';
+        @endphp
+        <form novalidate wire:submit="{{ $enfoque['ultima'] ? 'guardar' : 'siguienteEnfoque' }}">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Grupos de la sección">
+                @foreach ($grupos as $n => $titulo)
+                    <li @if ($n === $enfoque['grupo']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $enfoque['grupo'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $titulo }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Campo {{ $enfoque['numero'] }} de {{ $enfoque['total'] }}</p>
+
+            <div wire:key="enfoque-{{ $enfoque['clave'] }}">
+                @if ($enfoque['clave'] === 'propuesta_global')
+                    <x-ui.section title="Propuesta Global del Proyecto">
+                        <x-ui.textarea-palabras id="propuesta_global" label="Propuesta Global del Proyecto Educativo (100 a 200 palabras)" :min="100" :max="200" placeholder="Describa de manera integral la propuesta educativa del proyecto..." />
+                    </x-ui.section>
+                @elseif ($enfoque['clave'] === 'apropiacion_enfoque')
+                    <x-ui.section title="Apropiación del Enfoque Pedagógico-Didáctico">
+                        <x-ui.textarea-palabras id="apropiacion_enfoque" label="Apropiación del Enfoque Pedagógico-Didáctico Constructivista-Humanista (450 a 600 palabras)" :min="450" :max="600" :rows="14" placeholder="Explique cómo la institución se apropia del enfoque constructivista-humanista en su práctica educativa..." />
+                    </x-ui.section>
+                @else
+                    <x-ui.section title="Estrategias y Actividades Didácticas Principales (2 a 5 ejemplos)">
+                        <p class="text-body-sm text-muted">{{ $esEstrategia ? 'Estrategias centrales' : 'Actividades sustantivas' }}: ejemplo {{ $enfoque['ejemplo'] }} de {{ $enfoque['ejemplos'] }}</p>
+                        <x-ui.textarea-palabras :id="$enfoque['clave']" :label="($esEstrategia ? 'Estrategias centrales' : 'Actividades sustantivas') . ' (20 a 80 palabras)'" :min="20" :max="80" :rows="6" :placeholder="$esEstrategia ? 'Describa las estrategias didácticas principales que se implementarán...' : 'Describa las actividades sustantivas que darán soporte a las estrategias...'" />
+                        <div class="flex flex-wrap gap-sm">
+                            @if ($enfoque['puedeAgregar'])
+                                <x-ui.button-secondary type="button" wire:click="agregarEjemplo">Añadir otro ejemplo</x-ui.button-secondary>
+                            @endif
+                            @if ($enfoque['puedeQuitar'])
+                                <x-ui.button-secondary type="button" wire:click="quitarEjemplo">Quitar este ejemplo</x-ui.button-secondary>
+                            @endif
+                        </div>
+                    </x-ui.section>
+                @endif
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($enfoque['numero'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorEnfoque">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $enfoque['ultima'] ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
+    @elseif ($evaluacion)
+        {{-- Sección 5: un bloque por pantalla. Siguiente valida los campos del bloque y no escribe; Guardar (último bloque) valida todo y guarda todo o nada. --}}
+        @php
+            $campos = [
+                'evaluacion_diagnostica' => ['Evaluación Diagnóstica', 'Describa el propósito, instrumentos y momentos de la evaluación diagnóstica...'],
+                'evaluacion_formativa' => ['Evaluación Formativa', 'Describa cómo se implementará la evaluación formativa durante el proceso de enseñanza-aprendizaje...'],
+                'evaluacion_sumativa' => ['Evaluación Sumativa', 'Describa los criterios y mecanismos de la evaluación sumativa...'],
+                'heteroevaluacion' => ['Heteroevaluación', 'Describa los procesos de evaluación del docente hacia el alumno...'],
+                'coevaluacion' => ['Coevaluación', 'Describa los procesos de evaluación entre pares...'],
+                'autoevaluacion' => ['Autoevaluación', 'Describa los procesos de autoevaluación del estudiante...'],
+                'elementos_porcentajes' => ['Elementos y porcentajes', 'Detalle los componentes que integran la calificación y sus porcentajes correspondientes...'],
+            ];
+        @endphp
+        <form novalidate wire:submit="{{ $evaluacion['ultimo'] ? 'guardar' : 'siguienteEvaluacion' }}">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Bloques de la sección">
+                @foreach (\App\Application\ProyectoEducativo\ReglasEvaluacionProyecto::BLOQUES as $n => $b)
+                    <li @if ($n === $evaluacion['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $evaluacion['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ \Illuminate\Support\Str::before($b['titulo'], ' (') }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Bloque {{ $evaluacion['bloque'] }} de {{ $evaluacion['total'] }}</p>
+
+            <div wire:key="evaluacion-{{ $evaluacion['bloque'] }}">
+                <x-ui.section :title="$evaluacion['titulo']">
+                    @foreach ($evaluacion['campos'] as $campo)
+                        @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasEvaluacionProyecto::RANGOS[$campo]; @endphp
+                        <x-ui.textarea-palabras :id="$campo" :label="$campos[$campo][0]" :min="$min" :max="$max" :rows="$max > 300 ? 12 : 8" :placeholder="$campos[$campo][1]" />
+                    @endforeach
+                </x-ui.section>
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($evaluacion['bloque'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorEvaluacion">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $evaluacion['ultimo'] ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
     @elseif ($esTexto)
         <form novalidate wire:submit="guardar">
             <x-ui.error-summary />
