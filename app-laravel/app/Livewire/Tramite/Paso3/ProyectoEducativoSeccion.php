@@ -4,23 +4,37 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
+use App\Application\ProyectoEducativo\DTO\DatosCurriculumProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosEgresoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEnfoqueProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEvaluacionProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosFilosofiaProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosIngresoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosPaecProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
+use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
 use App\Application\ProyectoEducativo\EnfoqueProyectoCapturada;
 use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
+use App\Application\ProyectoEducativo\GuardarCurriculumProyecto;
+use App\Application\ProyectoEducativo\GuardarEgresoProyecto;
 use App\Application\ProyectoEducativo\GuardarEnfoqueProyecto;
 use App\Application\ProyectoEducativo\GuardarEvaluacionProyecto;
 use App\Application\ProyectoEducativo\GuardarFilosofiaProyecto;
+use App\Application\ProyectoEducativo\GuardarIngresoProyecto;
 use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
+use App\Application\ProyectoEducativo\GuardarPaecProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
+use App\Application\ProyectoEducativo\IngresoProyectoCapturada;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
+use App\Application\ProyectoEducativo\PaecProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
+use App\Application\ProyectoEducativo\ReglasCurriculumProyecto;
 use App\Application\ProyectoEducativo\ReglasEnfoqueProyecto;
 use App\Application\ProyectoEducativo\ReglasEvaluacionProyecto;
+use App\Application\ProyectoEducativo\ReglasIngresoProyecto;
 use App\Application\ProyectoEducativo\ReglasPresentacionProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
@@ -29,9 +43,11 @@ use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Concerns\NotificaToast;
 use App\Livewire\Tramite\Paso3\Concerns\CompuertaPaso3;
 use App\Models\EscuelaNivel;
+use Illuminate\Http\UploadedFile;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 /**
  * Una sección de la Presentación del Proyecto Educativo. La primera (presentación del proyecto académico) es un
@@ -43,6 +59,7 @@ class ProyectoEducativoSeccion extends Component
 {
     use CompuertaPaso3;
     use NotificaToast;
+    use WithFileUploads;
 
     #[Locked]
     public EscuelaNivel $escuelaNivel;
@@ -128,6 +145,49 @@ class ProyectoEducativoSeccion extends Component
 
     public string $elementos_porcentajes = '';
 
+    // Sección 6 (PAEC): un solo bloque. Los dos archivos son subidas temporales de Livewire (null = conservar el guardado).
+    public string $diagnostico = '';
+
+    public mixed $hoja_ruta = null;
+
+    public mixed $planeacion = null;
+
+    /** @var array<string, string|int|null> nombre y páginas de los PDF ya guardados (nunca las rutas de disco) */
+    public array $paecGuardado = [];
+
+    // Sección 7 (Currículum Ampliado): un ámbito por pantalla (ReglasCurriculumProyecto::BLOQUES), con el mismo `bloque`; la respuesta es 'si' o 'no'.
+    public string $practica_ciudadana_trabaja = '';
+
+    public string $practica_ciudadana_justificacion = '';
+
+    public string $salud_trabaja = '';
+
+    public string $salud_justificacion = '';
+
+    public string $actividad_fisica_trabaja = '';
+
+    public string $actividad_fisica_justificacion = '';
+
+    public string $sexualidad_genero_trabaja = '';
+
+    public string $sexualidad_genero_justificacion = '';
+
+    public string $artistico_cultural_trabaja = '';
+
+    public string $artistico_cultural_justificacion = '';
+
+    // Sección 8 (Perfil de Ingreso).
+    public string $perfil_ingreso = '';
+
+    public string $mecanismo_ingreso = '';
+
+    public string $costo_usuario = '';
+
+    public string $instrumentos_evaluacion = '';
+
+    // Sección 9 (Perfil de Egreso).
+    public string $perfil_egreso = '';
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -148,6 +208,8 @@ class ProyectoEducativoSeccion extends Component
             $this->cargarTexto();
         } elseif ($this->esEnfoque()) {
             $this->cargarEnfoque();
+        } elseif ($this->esPaec()) {
+            $this->cargarPaec();
         }
     }
 
@@ -265,10 +327,85 @@ class ProyectoEducativoSeccion extends Component
         $this->bloque = max(1, $this->bloque - 1);
     }
 
-    /** Si el "Guardar" final falla, se muestra el primer bloque que tiene un error. @param  list<string>  $campos */
+    /** Sección 7: valida solo la respuesta y la justificación del ámbito actual (nada se escribe) y avanza; con error se queda. */
+    public function siguienteCurriculum(): void
+    {
+        abort_unless($this->esCurriculum(), 404);
+        $this->resetErrorBag();
+
+        $errores = array_intersect_key(
+            ReglasCurriculumProyecto::errores($this->only(DatosCurriculumProyecto::campos())),
+            array_flip(ReglasCurriculumProyecto::BLOQUES[$this->bloque]['campos']),
+        );
+        if ($errores !== []) {
+            foreach ($errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        }
+
+        $this->bloque = min($this->bloque + 1, count(ReglasCurriculumProyecto::BLOQUES));
+    }
+
+    /** Sección 7: vuelve un ámbito sin validar ni perder lo tecleado. */
+    public function anteriorCurriculum(): void
+    {
+        abort_unless($this->esCurriculum(), 404);
+        $this->resetErrorBag();
+        $this->bloque = max(1, $this->bloque - 1);
+    }
+
+    /** Sección 8: valida solo los campos del bloque actual (nada se escribe) y avanza; con error se queda. */
+    public function siguienteIngreso(): void
+    {
+        abort_unless($this->esIngreso(), 404);
+        $this->resetErrorBag();
+
+        $errores = array_intersect_key(
+            ReglasIngresoProyecto::errores($this->only(DatosIngresoProyecto::campos())),
+            array_flip(ReglasIngresoProyecto::BLOQUES[$this->bloque]['campos']),
+        );
+        if ($errores !== []) {
+            foreach ($errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        }
+
+        $this->bloque = min($this->bloque + 1, count(ReglasIngresoProyecto::BLOQUES));
+    }
+
+    /** Sección 8: vuelve un bloque sin validar ni perder lo tecleado. */
+    public function anteriorIngreso(): void
+    {
+        abort_unless($this->esIngreso(), 404);
+        $this->resetErrorBag();
+        $this->bloque = max(1, $this->bloque - 1);
+    }
+
+    private function esIngreso(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::ingreso();
+    }
+
+    private function esCurriculum(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::curriculum();
+    }
+
+    /** Si el "Guardar" final falla, se muestra el primer bloque que tiene un error (secciones 5, 7 y 8). @param  list<string>  $campos */
     private function irAlPrimerBloqueConErrores(array $campos): void
     {
-        foreach (ReglasEvaluacionProyecto::BLOQUES as $numero => $bloque) {
+        $bloques = match (true) {
+            $this->esCurriculum() => ReglasCurriculumProyecto::BLOQUES,
+            $this->esIngreso() => ReglasIngresoProyecto::BLOQUES,
+            default => ReglasEvaluacionProyecto::BLOQUES,
+        };
+        foreach ($bloques as $numero => $bloque) {
             if (array_intersect($campos, $bloque['campos']) !== []) {
                 $this->bloque = $numero;
 
@@ -280,6 +417,50 @@ class ProyectoEducativoSeccion extends Component
     private function esEvaluacion(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::evaluacion();
+    }
+
+    private function esPaec(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::paec();
+    }
+
+    private function cargarPaec(): void
+    {
+        $guardado = app(PaecProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        $this->diagnostico = (string) $guardado['diagnostico'];
+        unset($guardado['diagnostico']);
+        $this->paecGuardado = $guardado;
+    }
+
+    /** "Guardar" de la sección 6: todo o nada; sin archivo nuevo se conserva el guardado. Un valor que no sea una subida cuenta como "sin archivo". */
+    private function guardarPaec(): void
+    {
+        $this->resetErrorBag();
+        $subida = fn (mixed $valor) => $valor instanceof UploadedFile ? $valor : null;
+
+        try {
+            app(GuardarPaecProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosPaecProyecto($this->diagnostico, $subida($this->hoja_ruta), $subida($this->planeacion)));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->hoja_ruta = null;
+        $this->planeacion = null;
+        $this->cargarPaec();
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
     }
 
     private function esEnfoque(): bool
@@ -367,6 +548,12 @@ class ProyectoEducativoSeccion extends Component
             return;
         }
 
+        if ($this->esPaec()) {
+            $this->guardarPaec();
+
+            return;
+        }
+
         abort_unless($this->esPresentacion(), 404);
 
         if ($this->paso === $this->totalPasos() && $this->persistir($guardar)) {
@@ -424,7 +611,7 @@ class ProyectoEducativoSeccion extends Component
     /** Secciones de una sola página con textos de rango de palabras: [guardar, DTO, lectura]. */
     private function esTexto(): bool
     {
-        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion()], true);
+        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso()], true);
     }
 
     /** @return array{object, class-string, object} */
@@ -434,6 +621,9 @@ class ProyectoEducativoSeccion extends Component
             SeccionesProyectoEducativo::filosofia() => [app(GuardarFilosofiaProyecto::class), DatosFilosofiaProyecto::class, app(FilosofiaProyectoCapturada::class)],
             SeccionesProyectoEducativo::objetivos() => [app(GuardarObjetivosProyecto::class), DatosObjetivosProyecto::class, app(ObjetivosProyectoCapturada::class)],
             SeccionesProyectoEducativo::evaluacion() => [app(GuardarEvaluacionProyecto::class), DatosEvaluacionProyecto::class, app(EvaluacionProyectoCapturada::class)],
+            SeccionesProyectoEducativo::curriculum() => [app(GuardarCurriculumProyecto::class), DatosCurriculumProyecto::class, app(CurriculumProyectoCapturada::class)],
+            SeccionesProyectoEducativo::ingreso() => [app(GuardarIngresoProyecto::class), DatosIngresoProyecto::class, app(IngresoProyectoCapturada::class)],
+            SeccionesProyectoEducativo::egreso() => [app(GuardarEgresoProyecto::class), DatosEgresoProyecto::class, app(EgresoProyectoCapturada::class)],
             default => abort(404),
         };
     }
@@ -450,7 +640,7 @@ class ProyectoEducativoSeccion extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
-            if ($this->esEvaluacion()) {
+            if ($this->esEvaluacion() || $this->esCurriculum() || $this->esIngreso()) {
                 $this->irAlPrimerBloqueConErrores(array_keys($e->errores));
             }
             $this->toastDatosInvalidos();
@@ -530,7 +720,10 @@ class ProyectoEducativoSeccion extends Component
             'esPresentacion' => $this->esPresentacion(),
             'esTexto' => $this->esTexto(),
             'enfoque' => $this->esEnfoque() ? $this->datosPantallaEnfoque() : null,
+            'esPaec' => $this->esPaec(),
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
+            'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
+            'ingreso' => $this->esIngreso() ? ['bloque' => $this->bloque, 'total' => count(ReglasIngresoProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasIngresoProyecto::BLOQUES), ...ReglasIngresoProyecto::BLOQUES[$this->bloque]] : null,
             'pasos' => ReglasPresentacionProyecto::PASOS,
             'anterior' => isset($slugs[$indice - 1]) ? ['slug' => $slugs[$indice - 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice - 1])] : null,
             'siguiente' => isset($slugs[$indice + 1]) ? ['slug' => $slugs[$indice + 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice + 1])] : null,

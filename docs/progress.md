@@ -285,3 +285,16 @@ Spanish record: `docs/reports/2026-11-11-ci-y-reescritura-de-autoria.md`.
 - **Cleanup (owner approved).** Worktrees `presentacion-seccion1` and `proyecto-educativo` and their branches removed (Windows long paths needed a `\?\` rmdir), dev DB schema `seccion1` dropped (`public` intact), scratchpad dumps deleted.
 - **Open.** Browser walk-through of the Proyecto Educativo sections; owner call on native date input vs dd/mm/aaaa mask and red counter from zero words; GitHub contributors list recheck.
 - **Next.** Section 4 (Enfoque Pedagógico), owner supplies fields; then sections 5-20, then making the step completable, the parked CCT plan and accepted-trámite visibility.
+
+### 2026-11-12 (`master`, not pushed) — Proyecto Educativo sections 4-9
+
+Spanish records: `docs/reports/2026-11-12-enfoque-pedagogico.md` (4+5), `…-paec-seccion6.md`, `…-curriculum-seccion7.md`, `…-ingreso-seccion8.md`, `…-egreso-seccion9.md`. Sections 4+5 were built in worktree `enfoque-pedagogico` and merged (`766e410`); 6-9 were built directly on `master` at the owner's request ("stay in main"). One commit for 6-9 plus the navigation move.
+
+- **Built (media superior only, one table per section, one row per `escuela_nivel`, all-or-nothing save, shared `ConteoPalabras` and `x-ui.textarea-palabras`).** 4 Enfoque (one field per screen, two lists of 2-5 items as JSONB), 5 Evaluación (3 blocks), 6 PAEC (text + two PDFs of 1-2 pages), 7 Currículum Ampliado (5 screens, Sí/No + 100-250 words, justification required also for No), 8 Perfil de Ingreso (2 blocks of 2 fields; Instrumentos range 100-250 was agreed, not given), 9 Perfil de Egreso (one field, 100-400).
+- **New dependency.** `smalot/pdfparser` ^2.13 (pure PHP, counts PDF pages in `Infrastructure\Documentos\ContadorPaginasPdf`). Licence is LGPL-3.0 (an earlier message wrongly said MIT); `composer audit` shows no advisory. Not measured: time and memory on a 10 MB image-heavy PDF.
+- **PAEC file cleanup.** `PurgarTramite`, `RegistrarNivelesSeleccionados::quitar` and `ResumenEliminacionNivel` know the PAEC PDFs; old files are deleted only after commit, new ones on rollback.
+- **UI.** The section pages' Anterior / Índice de secciones / Siguiente links moved from the bottom to the top (owner request).
+- **Migrations.** `2026_11_11_…enfoque`, `2026_11_12_000000…evaluacion`, `…000100…paec`, `…000200…curriculum`, `…000300…ingreso`, `…000400…egreso`, all run on the dev DB. Standing owner rule: run migrations after each section.
+- **Evidence.** Per section, application and Livewire tests focused, Pint and PHPStan clean. Not seen red first: the section 5 Livewire tests and the section 6 Livewire tests. Full suite not run locally (owner rule); CI verdict pending, nothing pushed. Nothing seen in a browser.
+- **Open.** Browser walk-through of sections 4-9 (dotted `entangle` counter on the section 4 lists, real PDF upload and its error messages, Siguiente/Anterior flows); no PDF download or reviewer view for PAEC files; `ResumenEliminacionNivel` does not count the text rows of sections 1-9 (they cascade-delete unlisted); worktree `.claude/worktrees/enfoque-pedagogico` and branch `worktree-enfoque-pedagogico` still on disk, merged.
+- **Next.** Section 10 (Perfil Docente), then 11-20; then making the step completable, the parked CCT plan and accepted-trámite visibility.

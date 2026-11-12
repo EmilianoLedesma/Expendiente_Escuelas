@@ -114,6 +114,29 @@ class PurgarTest extends TestCase
         $this->assertSame('Solicitud de baja', $fila->motivo);
     }
 
+    public function test_purgar_borra_tambien_los_pdf_del_paec(): void
+    {
+        $admin = $this->admin();
+        $escuela = $this->tramiteArchivado($admin);
+        $nivelId = EscuelaNivel::withoutGlobalScope(NivelDeEscuelaNoArchivada::class)->where('escuela_id', $escuela->id)->value('id');
+        $rutas = ["proyecto_educativo/{$nivelId}/paec_hoja_ruta-x.pdf", "proyecto_educativo/{$nivelId}/paec_planeacion-x.pdf"];
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->put($ruta, '%PDF');
+        }
+        DB::table('proyecto_educativo_paec')->insert([
+            'escuela_nivel_id' => $nivelId,
+            'hoja_ruta_path' => $rutas[0], 'hoja_ruta_nombre' => 'hoja.pdf', 'hoja_ruta_paginas' => 1,
+            'planeacion_path' => $rutas[1], 'planeacion_nombre' => 'planeacion.pdf', 'planeacion_paginas' => 2,
+        ]);
+
+        app(PurgarTramite::class)->ejecutar($admin->id, $escuela->id, 'Solicitud de baja', Purga::CONFIRMACION);
+
+        $this->assertSame(0, DB::table('proyecto_educativo_paec')->count());
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->assertMissing($ruta);
+        }
+    }
+
     public function test_un_tramite_no_archivado_no_se_purga(): void
     {
         $admin = $this->admin();

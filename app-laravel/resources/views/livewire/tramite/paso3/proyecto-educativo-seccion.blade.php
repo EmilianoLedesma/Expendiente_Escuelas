@@ -1,6 +1,20 @@
 <div class="max-w-3xl">
     <x-ui.page-header :eyebrow="$encabezado" :title="$numero . '. ' . $nombre" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Presentación del Proyecto Educativo" />
 
+    <nav aria-label="Secciones del proyecto educativo" class="mb-lg flex flex-wrap items-center justify-between gap-md">
+        @if ($anterior)
+            <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $anterior['slug']]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
+                Anterior<span class="sr-only">: {{ $anterior['nombre'] }}</span>
+            </a>
+        @endif
+        <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">Índice de secciones</a>
+        @if ($siguiente)
+            <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $siguiente['slug']]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
+                Siguiente<span class="sr-only">: {{ $siguiente['nombre'] }}</span>
+            </a>
+        @endif
+    </nav>
+
     @if ($esPresentacion)
 
         {{-- La máscara es solo ayuda: escribe (442) 000-0000 y empuja ese valor a Livewire; el servidor normaliza y valida. Con +52/52 o más de 10 dígitos no recorta: deja el texto y el servidor explica el error. --}}
@@ -151,6 +165,42 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($esPaec)
+        {{-- Sección 6: un solo bloque (diagnóstico y dos PDF). Guardar valida todo y guarda todo o nada; sin archivo nuevo se conserva el ya guardado. --}}
+        @php
+            $archivos = [
+                'hoja_ruta' => ['Hoja de Ruta del PEC (1 a 2 páginas)', 'Describa la hoja de ruta que guiará la implementación del Programa Escolar de Mejora Continua...'],
+                'planeacion' => ['Planeación del Abordaje (1 a 2 páginas)', 'Deberá contemplar las Progresiones de las UAC del Currículum Fundamental y Ampliado que se alinean al tema que aborda el PEC...'],
+            ];
+        @endphp
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <x-ui.section :title="$nombre">
+                <x-ui.textarea-palabras id="diagnostico" label="Diagnóstico para el PAEC (150 a 500 palabras)" :min="150" :max="500" :rows="12" placeholder="Presente el diagnóstico que sustenta el Programa Aula, Escuela y Comunidad..." />
+
+                @foreach ($archivos as $campo => [$etiqueta, $ayuda])
+                    <x-ui.field :id="$campo" :label="$etiqueta">
+                        <p class="mb-xs text-body-sm text-muted">{{ $ayuda }}</p>
+                        <input
+                            type="file"
+                            id="{{ $campo }}"
+                            wire:model="{{ $campo }}"
+                            accept="application/pdf"
+                            @error($campo) aria-invalid="true" aria-describedby="{{ $campo }}-error" @enderror
+                            class="block w-full text-body-md text-body file:mr-sm file:min-h-11 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-primary file:bg-canvas file:px-md file:font-semibold file:text-primary"
+                        >
+                        <p wire:loading wire:target="{{ $campo }}" class="mt-xxs text-body-sm text-muted">Subiendo…</p>
+                        @if ($paecGuardado[$campo.'_nombre'] ?? null)
+                            @php $paginas = (int) $paecGuardado[$campo.'_paginas']; @endphp
+                            <p class="mt-xs text-body-sm text-ink">Archivo guardado: <strong>{{ $paecGuardado[$campo.'_nombre'] }}</strong> ({{ $paginas }} {{ $paginas === 1 ? 'página' : 'páginas' }}). Sube otro solo si quieres reemplazarlo.</p>
+                        @endif
+                    </x-ui.field>
+                @endforeach
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
     @elseif ($evaluacion)
         {{-- Sección 5: un bloque por pantalla. Siguiente valida los campos del bloque y no escribe; Guardar (último bloque) valida todo y guarda todo o nada. --}}
         @php
@@ -198,6 +248,95 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($curriculum)
+        {{-- Sección 7: un ámbito por pantalla (Sí/No + justificación). Siguiente valida el ámbito y no escribe; Guardar (último) valida todo y guarda todo o nada. --}}
+        @php
+            $ambitos = [
+                'practica_ciudadana' => 'Justifique la selección o no del ámbito de práctica y colaboración ciudadana...',
+                'salud' => 'Justifique la selección o no del ámbito de educación para la salud...',
+                'actividad_fisica' => 'Justifique la selección o no del ámbito de actividades físicas y deportivas...',
+                'sexualidad_genero' => 'Justifique la selección o no del ámbito de educación integral en sexualidad y género...',
+                'artistico_cultural' => 'Justifique la selección o no del ámbito de actividades artísticas y culturales...',
+            ];
+            $ambito = array_keys($ambitos)[$curriculum['bloque'] - 1];
+            [$min, $max] = \App\Application\ProyectoEducativo\ReglasCurriculumProyecto::PALABRAS;
+        @endphp
+        <form novalidate wire:submit="{{ $curriculum['ultimo'] ? 'guardar' : 'siguienteCurriculum' }}">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Ámbitos de la sección">
+                @foreach (\App\Application\ProyectoEducativo\ReglasCurriculumProyecto::BLOQUES as $n => $b)
+                    <li @if ($n === $curriculum['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $curriculum['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Ámbito {{ $curriculum['bloque'] }} de {{ $curriculum['total'] }} · Recursos Socioemocionales: indique si lo trabajan y justifique ({{ $min }} a {{ $max }} palabras).</p>
+
+            <div wire:key="curriculum-{{ $curriculum['bloque'] }}">
+                <x-ui.section :title="$curriculum['titulo']">
+                    <x-ui.radio-group :id="$ambito.'_trabaja'" legend="¿La trabajan?" :wire:model="$ambito.'_trabaja'" :opciones="['si' => 'Sí', 'no' => 'No']" />
+                    <x-ui.textarea-palabras :id="$ambito.'_justificacion'" :label="'Justificación ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" :placeholder="$ambitos[$ambito]" />
+                </x-ui.section>
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($curriculum['bloque'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorCurriculum">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $curriculum['ultimo'] ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
+    @elseif ($ingreso)
+        {{-- Sección 8: dos bloques de dos campos. Siguiente valida los campos del bloque y no escribe; Guardar (último bloque) valida todo y guarda todo o nada. --}}
+        @php
+            $campos = [
+                'perfil_ingreso' => ['Perfil de Ingreso', 'Describa las características, conocimientos y habilidades que debe poseer el aspirante...'],
+                'mecanismo_ingreso' => ['Mecanismo de Ingreso', 'Describa el proceso y los pasos que debe seguir el aspirante para ingresar a la institución...'],
+                'costo_usuario' => ['Costo para el Usuario', 'Indique los costos asociados al proceso de ingreso...'],
+                'instrumentos_evaluacion' => ['Instrumentos de Evaluación para Nuevo Ingreso', 'Describa los instrumentos o exámenes que se aplicarán a los aspirantes...'],
+            ];
+        @endphp
+        <form novalidate wire:submit="{{ $ingreso['ultimo'] ? 'guardar' : 'siguienteIngreso' }}">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Bloques de la sección">
+                @foreach (\App\Application\ProyectoEducativo\ReglasIngresoProyecto::BLOQUES as $n => $b)
+                    <li @if ($n === $ingreso['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $ingreso['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Bloque {{ $ingreso['bloque'] }} de {{ $ingreso['total'] }}</p>
+
+            <div wire:key="ingreso-{{ $ingreso['bloque'] }}">
+                <x-ui.section :title="$ingreso['titulo']">
+                    @foreach ($ingreso['campos'] as $campo)
+                        @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasIngresoProyecto::RANGOS[$campo]; @endphp
+                        <x-ui.textarea-palabras :id="$campo" :label="$campos[$campo][0].' ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" :placeholder="$campos[$campo][1]" />
+                    @endforeach
+                </x-ui.section>
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($ingreso['bloque'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorIngreso">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $ingreso['ultimo'] ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
     @elseif ($esTexto)
         <form novalidate wire:submit="guardar">
             <x-ui.error-summary />
@@ -207,6 +346,10 @@
                     <x-ui.textarea-palabras id="mision" label="Misión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la razón de ser de la institución y su compromiso con la comunidad educativa..." />
                     <x-ui.textarea-palabras id="vision" label="Visión (50 a 150 palabras)" :min="50" :max="150" placeholder="Describa la proyección a futuro de la institución y las metas que aspira alcanzar..." />
                     <x-ui.textarea-palabras id="valores" label="Valores (50 a 250 palabras)" :min="50" :max="250" placeholder="Enumere y describa los valores fundamentales que guían el quehacer institucional..." />
+                </x-ui.section>
+            @elseif ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::egreso())
+                <x-ui.section :title="$nombre">
+                    <x-ui.textarea-palabras id="perfil_egreso" label="Perfil de Egreso (100 a 400 palabras)" :min="100" :max="400" :rows="12" placeholder="Describa las competencias, habilidades y conocimientos que el egresado habrá desarrollado al concluir el programa educativo..." />
                 </x-ui.section>
             @else
                 <x-ui.section :title="$nombre">
@@ -220,18 +363,4 @@
     @else
         <p class="rounded-lg border border-dashed border-hairline p-lg text-body-md text-muted">Contenido por definir</p>
     @endif
-
-    <nav aria-label="Secciones del proyecto educativo" class="mt-lg flex flex-wrap items-center justify-between gap-md">
-        @if ($anterior)
-            <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $anterior['slug']]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
-                Anterior<span class="sr-only">: {{ $anterior['nombre'] }}</span>
-            </a>
-        @endif
-        <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">Índice de secciones</a>
-        @if ($siguiente)
-            <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $siguiente['slug']]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
-                Siguiente<span class="sr-only">: {{ $siguiente['nombre'] }}</span>
-            </a>
-        @endif
-    </nav>
 </div>

@@ -182,6 +182,58 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         }
     }
 
+    /** @return array{list<string>, int} rutas de los dos PDF del PAEC (ya en disco y registrados) y el nivel */
+    private function paecConArchivos($escuela, string $nivel): array
+    {
+        $escuelaNivel = EscuelaNivel::where('escuela_id', $escuela->id)->where('nivel_educativo_id', $this->id($nivel))->firstOrFail();
+        $rutas = ["proyecto_educativo/{$escuelaNivel->id}/paec_hoja_ruta-x.pdf", "proyecto_educativo/{$escuelaNivel->id}/paec_planeacion-x.pdf"];
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->put($ruta, '%PDF');
+        }
+        DB::table('proyecto_educativo_paec')->insert([
+            'escuela_nivel_id' => $escuelaNivel->id,
+            'hoja_ruta_path' => $rutas[0], 'hoja_ruta_nombre' => 'hoja.pdf', 'hoja_ruta_paginas' => 1,
+            'planeacion_path' => $rutas[1], 'planeacion_nombre' => 'planeacion.pdf', 'planeacion_paginas' => 2,
+        ]);
+
+        return [$rutas, $escuelaNivel->id];
+    }
+
+    public function test_quitar_un_nivel_borra_los_pdf_del_paec_y_el_resumen_los_cuenta_como_documentos(): void
+    {
+        $escuela = $this->crearEscuela();
+        $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar'), $this->id('primaria')]);
+        [$rutas] = $this->paecConArchivos($escuela, 'preescolar');
+        $confirmado = app(ResumenEliminacionNivel::class)->ejecutar($escuela->id, [$this->id('preescolar')]);
+
+        $this->assertSame(2, $confirmado[$this->id('preescolar')]['documentos']);
+
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')], confirmado: $confirmado);
+
+        $this->assertDatabaseCount('proyecto_educativo_paec', 0);
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->assertMissing($ruta);
+        }
+    }
+
+    public function test_un_pdf_del_paec_subido_despues_de_confirmar_invalida_la_confirmacion(): void
+    {
+        $escuela = $this->crearEscuela();
+        $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar'), $this->id('primaria')]);
+        $confirmado = app(ResumenEliminacionNivel::class)->ejecutar($escuela->id, [$this->id('preescolar')]);
+        [$rutas, $nivelId] = $this->paecConArchivos($escuela, 'preescolar');
+
+        try {
+            $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')], confirmado: $confirmado);
+            $this->fail('Se esperaba PrecondicionIncumplida.');
+        } catch (PrecondicionIncumplida) {
+            $this->assertDatabaseHas('escuela_niveles', ['id' => $nivelId]);
+        }
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->assertExists($ruta);
+        }
+    }
+
     /** Los archivos se borran solo si el borrado se confirma: una transacción exterior revertida los conserva. */
     public function test_si_la_transaccion_se_revierte_los_archivos_y_el_nivel_se_conservan(): void
     {

@@ -2,10 +2,14 @@
 
 namespace App\Livewire\Tramite\Paso3;
 
+use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
+use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
 use App\Application\ProyectoEducativo\EnfoqueProyectoCapturada;
 use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
+use App\Application\ProyectoEducativo\IngresoProyectoCapturada;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
+use App\Application\ProyectoEducativo\PaecProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
@@ -41,7 +45,7 @@ class ProyectoEducativoIndice extends Component
         $this->redirigirSiNoAlcanzable($escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
     }
 
-    public function render(PresentacionProyectoCapturada $presentacion, FilosofiaProyectoCapturada $filosofia, ObjetivosProyectoCapturada $objetivos, EnfoqueProyectoCapturada $enfoque, EvaluacionProyectoCapturada $evaluacion)
+    public function render(PresentacionProyectoCapturada $presentacion, FilosofiaProyectoCapturada $filosofia, ObjetivosProyectoCapturada $objetivos, EnfoqueProyectoCapturada $enfoque, EvaluacionProyectoCapturada $evaluacion, PaecProyectoCapturada $paec, CurriculumProyectoCapturada $curriculum, IngresoProyectoCapturada $ingreso, EgresoProyectoCapturada $egreso)
     {
         return view('livewire.tramite.paso3.proyecto-educativo-indice', [
             'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
@@ -52,6 +56,10 @@ class ProyectoEducativoIndice extends Component
                 SeccionesProyectoEducativo::objetivos() => $objetivos->completa($this->escuelaNivel->id),
                 SeccionesProyectoEducativo::enfoque() => $enfoque->completa($this->escuelaNivel->id),
                 SeccionesProyectoEducativo::evaluacion() => $evaluacion->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::paec() => $paec->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::curriculum() => $curriculum->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::ingreso() => $ingreso->completa($this->escuelaNivel->id),
+                SeccionesProyectoEducativo::egreso() => $egreso->completa($this->escuelaNivel->id),
             ],
         ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
     }

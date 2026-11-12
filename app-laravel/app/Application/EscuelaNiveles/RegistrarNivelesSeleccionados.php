@@ -11,6 +11,7 @@ use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
+use App\Models\ProyectoEducativoPaec;
 use App\Models\ResponsableNivel;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -147,7 +148,10 @@ class RegistrarNivelesSeleccionados
 
         // Rutas reunidas ANTES del borrado (después, el cascade ya se llevó las filas).
         // lockForUpdate: un RegistrarDocumento concurrente no puede reemplazar la ruta y dejar un archivo huérfano.
-        $rutas = DocumentoEscuelaNivel::whereIn('escuela_nivel_id', $ids)->whereNotNull('archivo_path')->lockForUpdate()->pluck('archivo_path')->all();
+        $rutas = [
+            ...DocumentoEscuelaNivel::whereIn('escuela_nivel_id', $ids)->whereNotNull('archivo_path')->lockForUpdate()->pluck('archivo_path')->all(),
+            ...ProyectoEducativoPaec::rutasDe($ids),
+        ];
 
         // Serializa con una invitación o revocación concurrente del mismo usuario (RevocarResponsableNivel).
         $usuarios = User::whereIn('id', ResponsableNivel::whereIn('escuela_nivel_id', $ids)->pluck('user_id'))->orderBy('id')->lockForUpdate()->get();

@@ -128,9 +128,9 @@ class Paso3ObjetivosProyectoTest extends TestCase
     {
         $nivel = $this->nivel();
         $slugs = array_keys(SeccionesProyectoEducativo::todas());
-        $this->assertCount(15, array_slice($slugs, 5));
+        $this->assertCount(11, array_slice($slugs, 9));
 
-        foreach ([$slugs[5], $slugs[19]] as $slug) {
+        foreach ([$slugs[9], $slugs[19]] as $slug) {
             $this->get($this->ruta($nivel, $slug))->assertOk()->assertSee('Contenido por definir')->assertDontSee('Objetivo General (50 a 100 palabras)');
         }
     }

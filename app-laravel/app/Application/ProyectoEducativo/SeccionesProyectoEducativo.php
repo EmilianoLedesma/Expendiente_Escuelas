@@ -86,6 +86,30 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[4];
     }
 
+    /** Slug de la sección 6 (Programa Aula, Escuela y Comunidad). */
+    public static function paec(): string
+    {
+        return array_keys(self::todas())[5];
+    }
+
+    /** Slug de la sección 7 (Currículum Ampliado). */
+    public static function curriculum(): string
+    {
+        return array_keys(self::todas())[6];
+    }
+
+    /** Slug de la sección 8 (Perfil de Ingreso). */
+    public static function ingreso(): string
+    {
+        return array_keys(self::todas())[7];
+    }
+
+    /** Slug de la sección 9 (Perfil de Egreso). */
+    public static function egreso(): string
+    {
+        return array_keys(self::todas())[8];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());
