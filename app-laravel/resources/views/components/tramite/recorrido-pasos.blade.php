@@ -1,5 +1,5 @@
 {{-- Lista del recorrido a partir de ResumenTramiteDTO. Estados: ver spec §3.3. --}}
-@props(['resumen', 'seccionActual' => null, 'escuelaNivelId' => null])
+@props(['resumen', 'seccionActual' => null, 'escuelaNivelId' => null, 'proyecto' => [], 'subseccionActual' => null])
 
 @php
     $grupos = [[null, null, 'Datos generales', $resumen->generales]];
@@ -72,6 +72,41 @@
                             @endif
                         </span>
                     </{{ $etiqueta }}>
+                    @if ($seccion->clave === 'proyecto_educativo' && isset($proyecto[$nivelId]))
+                        {{-- Las 20 secciones del proyecto educativo, plegables; abierto solo estando dentro del paso. --}}
+                        <details data-subsecciones @if ($esActual)open @endif class="ml-10 mt-xxs">
+                            <summary class="flex min-h-9 cursor-pointer items-center text-caption font-semibold text-primary">
+                                Secciones ({{ count(array_filter($proyecto[$nivelId])) }} de {{ count($proyecto[$nivelId]) }})
+                            </summary>
+                            <ol class="mt-xxs space-y-xxs border-l border-hairline pl-sm" aria-label="Secciones del proyecto educativo">
+                                @foreach (\App\Application\ProyectoEducativo\SeccionesProyectoEducativo::todas() as $slug => $nombreSub)
+                                    @php
+                                        $subActual = $esActual && $slug === $subseccionActual;
+                                        $subHecha = $proyecto[$nivelId][$slug] ?? false;
+                                        $subEtiqueta = $seccion->href ? 'a' : 'span';
+                                    @endphp
+                                    <li>
+                                        <{{ $subEtiqueta }}
+                                            @if ($seccion->href) href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $nivelId, 'seccion' => $slug]) }}" @endif
+                                            @if ($subActual) aria-current="page" data-subseccion-actual @endif
+                                            @class(['flex min-h-9 items-start gap-xs rounded-md py-xxs pr-xs text-caption', 'bg-surface-card font-semibold text-ink' => $subActual, 'text-ink hover:bg-surface-soft' => ! $subActual && $seccion->href, 'text-muted' => ! $seccion->href])
+                                        >
+                                            {{-- Completada: palomita verde pequeña en lugar del número; pendiente: número tenue. --}}
+                                            @if ($subHecha)
+                                                <span data-subseccion-hecha class="grid w-5 shrink-0 place-items-center pt-0.5 text-success-ink" aria-hidden="true">
+                                                    <x-ui.icon nombre="check" class="h-3.5 w-3.5" />
+                                                </span>
+                                                <span class="min-w-0 flex-1">{{ $nombreSub }}<span class="sr-only"> (completada)</span></span>
+                                            @else
+                                                <span class="w-5 shrink-0 text-right tabular-nums text-muted/70" aria-hidden="true">{{ $loop->iteration }}</span>
+                                                <span class="min-w-0 flex-1">{{ $nombreSub }}</span>
+                                            @endif
+                                        </{{ $subEtiqueta }}>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        </details>
+                    @endif
                 </li>
             @endforeach
         </ol>

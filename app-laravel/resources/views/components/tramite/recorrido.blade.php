@@ -2,6 +2,8 @@
 @php($avance = $resumen->avance())
 
 <aside aria-label="Tu trámite" {{ $attributes }}>
+    {{-- Escritorio: el menú se desplaza por separado de la página (sticky + altura máxima de la ventana). --}}
+    <div class="lg:sticky lg:top-md lg:max-h-[calc(100vh-2rem)] scroll-minimal lg:overflow-y-auto">
     <a href="{{ route('tramite.index') }}" class="inline-flex min-h-11 items-center gap-xxs text-body-sm font-semibold text-muted hover:text-ink">
         <x-ui.icon nombre="arrow-left" class="h-4 w-4" />
         Mis trámites
@@ -23,7 +25,8 @@
     {{-- Dos copias de la lista: una siempre tiene display:none, así que solo una llega a lectores de pantalla. --}}
     <details class="mt-md rounded-md border border-hairline lg:hidden">
         <summary class="min-h-11 cursor-pointer px-md py-sm text-body-sm font-semibold text-ink">Secciones del trámite</summary>
-        <x-tramite.recorrido-pasos :resumen="$resumen" :seccion-actual="$seccionActual" :escuela-nivel-id="$escuelaNivelId" class="border-t border-hairline p-md" />
+        <x-tramite.recorrido-pasos :resumen="$resumen" :seccion-actual="$seccionActual" :escuela-nivel-id="$escuelaNivelId" :proyecto="$proyecto" :subseccion-actual="$subseccionActual" class="border-t border-hairline p-md" />
     </details>
-    <x-tramite.recorrido-pasos :resumen="$resumen" :seccion-actual="$seccionActual" :escuela-nivel-id="$escuelaNivelId" class="mt-lg hidden lg:block" />
+    <x-tramite.recorrido-pasos :resumen="$resumen" :seccion-actual="$seccionActual" :escuela-nivel-id="$escuelaNivelId" :proyecto="$proyecto" :subseccion-actual="$subseccionActual" class="mt-lg hidden lg:block" />
+    </div>
 </aside>

@@ -137,10 +137,10 @@ class Paso3PresentacionProyectoTest extends TestCase
     public function test_las_otras_secciones_siguen_con_el_marcador(): void
     {
         $nivel = $this->nivel();
-        $otras = array_slice(array_keys(SeccionesProyectoEducativo::todas()), 11); // 1 a 11 son formularios
-        $this->assertCount(9, $otras);
+        $otras = array_slice(array_keys(SeccionesProyectoEducativo::todas()), 12); // 1 a 12 son formularios
+        $this->assertCount(8, $otras);
 
-        foreach ([$otras[0], $otras[8]] as $slug) {
+        foreach ([$otras[0], $otras[7]] as $slug) {
             $this->get(route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $nivel->id, 'seccion' => $slug]))
                 ->assertOk()->assertSee('Contenido por definir')->assertDontSee('Datos Generales');
         }

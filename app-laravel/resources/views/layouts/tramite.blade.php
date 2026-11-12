@@ -22,6 +22,7 @@
                     :escuela-id="$escuelaId ?? null"
                     :escuela-nivel-id="$escuelaNivelId ?? null"
                     :seccion-actual="$seccionActual ?? null"
+                    :subseccion-actual="$subseccionActual ?? null"
                     class="pt-lg lg:border-r lg:border-hairline lg:py-xl lg:pr-xl"
                 />
                 <main id="contenido" tabindex="-1" class="min-w-0 py-lg lg:py-xl">

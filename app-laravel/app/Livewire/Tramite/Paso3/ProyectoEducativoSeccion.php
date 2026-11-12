@@ -4,7 +4,9 @@ namespace App\Livewire\Tramite\Paso3;
 
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
+use App\Application\ProyectoEducativo\AcademiasProyectoCapturada;
 use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
+use App\Application\ProyectoEducativo\DTO\DatosAcademiasProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosCurriculumProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEgresoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEnfoqueProyecto;
@@ -23,6 +25,7 @@ use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionContinuaProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionInicialProyectoCapturada;
+use App\Application\ProyectoEducativo\GuardarAcademiasProyecto;
 use App\Application\ProyectoEducativo\GuardarCurriculumProyecto;
 use App\Application\ProyectoEducativo\GuardarEgresoProyecto;
 use App\Application\ProyectoEducativo\GuardarEnfoqueProyecto;
@@ -40,6 +43,7 @@ use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
 use App\Application\ProyectoEducativo\PaecProyectoCapturada;
 use App\Application\ProyectoEducativo\PerfilDocenteProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
+use App\Application\ProyectoEducativo\ReglasAcademiasProyecto;
 use App\Application\ProyectoEducativo\ReglasCurriculumProyecto;
 use App\Application\ProyectoEducativo\ReglasEnfoqueProyecto;
 use App\Application\ProyectoEducativo\ReglasEvaluacionProyecto;
@@ -219,6 +223,13 @@ class ProyectoEducativoSeccion extends Component
 
     // Sección 10 (Perfil Docente).
     public string $habilidades_virtudes = '';
+
+    // Sección 12 (Programa de Academias Docentes): dos bloques (tipo + descripción; justificación).
+    public string $tipo_academia = '';
+
+    public string $descripcion_academia = '';
+
+    public string $justificacion_academia = '';
 
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
@@ -713,6 +724,41 @@ class ProyectoEducativoSeccion extends Component
         $this->bloque = max(1, $this->bloque - 1);
     }
 
+    /** Sección 12: valida solo los campos del bloque actual (nada se escribe) y avanza; con error se queda. */
+    public function siguienteAcademias(): void
+    {
+        abort_unless($this->esAcademias(), 404);
+        $this->resetErrorBag();
+
+        $errores = array_intersect_key(
+            ReglasAcademiasProyecto::errores($this->only(DatosAcademiasProyecto::campos())),
+            array_flip(ReglasAcademiasProyecto::BLOQUES[$this->bloque]['campos']),
+        );
+        if ($errores !== []) {
+            foreach ($errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        }
+
+        $this->bloque = min($this->bloque + 1, count(ReglasAcademiasProyecto::BLOQUES));
+    }
+
+    /** Sección 12: vuelve un bloque sin validar ni perder lo tecleado. */
+    public function anteriorAcademias(): void
+    {
+        abort_unless($this->esAcademias(), 404);
+        $this->resetErrorBag();
+        $this->bloque = max(1, $this->bloque - 1);
+    }
+
+    private function esAcademias(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::academias();
+    }
+
     private function esIngreso(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::ingreso();
@@ -729,6 +775,7 @@ class ProyectoEducativoSeccion extends Component
         $bloques = match (true) {
             $this->esCurriculum() => ReglasCurriculumProyecto::BLOQUES,
             $this->esIngreso() => ReglasIngresoProyecto::BLOQUES,
+            $this->esAcademias() => ReglasAcademiasProyecto::BLOQUES,
             default => ReglasEvaluacionProyecto::BLOQUES,
         };
         foreach ($bloques as $numero => $bloque) {
@@ -943,7 +990,7 @@ class ProyectoEducativoSeccion extends Component
     /** Secciones de una sola página con textos de rango de palabras: [guardar, DTO, lectura]. */
     private function esTexto(): bool
     {
-        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso(), SeccionesProyectoEducativo::perfilDocente()], true);
+        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso(), SeccionesProyectoEducativo::perfilDocente(), SeccionesProyectoEducativo::academias()], true);
     }
 
     /** @return array{object, class-string, object} */
@@ -957,6 +1004,7 @@ class ProyectoEducativoSeccion extends Component
             SeccionesProyectoEducativo::ingreso() => [app(GuardarIngresoProyecto::class), DatosIngresoProyecto::class, app(IngresoProyectoCapturada::class)],
             SeccionesProyectoEducativo::egreso() => [app(GuardarEgresoProyecto::class), DatosEgresoProyecto::class, app(EgresoProyectoCapturada::class)],
             SeccionesProyectoEducativo::perfilDocente() => [app(GuardarPerfilDocenteProyecto::class), DatosPerfilDocenteProyecto::class, app(PerfilDocenteProyectoCapturada::class)],
+            SeccionesProyectoEducativo::academias() => [app(GuardarAcademiasProyecto::class), DatosAcademiasProyecto::class, app(AcademiasProyectoCapturada::class)],
             default => abort(404),
         };
     }
@@ -973,7 +1021,7 @@ class ProyectoEducativoSeccion extends Component
             foreach ($e->errores as $campo => $mensaje) {
                 $this->addError($campo, $mensaje);
             }
-            if ($this->esEvaluacion() || $this->esCurriculum() || $this->esIngreso()) {
+            if ($this->esEvaluacion() || $this->esCurriculum() || $this->esIngreso() || $this->esAcademias()) {
                 $this->irAlPrimerBloqueConErrores(array_keys($e->errores));
             }
             $this->toastDatosInvalidos();
@@ -1057,10 +1105,11 @@ class ProyectoEducativoSeccion extends Component
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
             'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
             'ingreso' => $this->esIngreso() ? ['bloque' => $this->bloque, 'total' => count(ReglasIngresoProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasIngresoProyecto::BLOQUES), ...ReglasIngresoProyecto::BLOQUES[$this->bloque]] : null,
+            'academias' => $this->esAcademias() ? ['bloque' => $this->bloque, 'total' => count(ReglasAcademiasProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasAcademiasProyecto::BLOQUES), 'pideDescripcion' => ReglasAcademiasProyecto::requiereDescripcion($this->tipo_academia), ...ReglasAcademiasProyecto::BLOQUES[$this->bloque]] : null,
             'formacion' => $this->esFormacion() ? $this->datosPantallaFormacion() : null,
             'pasos' => ReglasPresentacionProyecto::PASOS,
             'anterior' => isset($slugs[$indice - 1]) ? ['slug' => $slugs[$indice - 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice - 1])] : null,
             'siguiente' => isset($slugs[$indice + 1]) ? ['slug' => $slugs[$indice + 1], 'nombre' => SeccionesProyectoEducativo::nombre($slugs[$indice + 1])] : null,
-        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO]);
+        ])->layoutData(['escuelaId' => $this->escuelaNivel->escuela_id, 'escuelaNivelId' => $this->escuelaNivel->id, 'seccionActual' => SeccionesProyectoEducativo::CLAVE_PASO, 'subseccionActual' => $this->seccion]);
     }
 }

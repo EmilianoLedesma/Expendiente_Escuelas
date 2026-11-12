@@ -34,6 +34,33 @@
 }
 
 @layer components {
+    /* Barra de desplazamiento discreta: 4 px, sin pista, invisible hasta pasar el cursor por el contenedor. */
+    .scroll-minimal {
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+    }
+
+    .scroll-minimal:hover {
+        scrollbar-color: rgb(0 0 0 / 0.15) transparent;
+    }
+
+    .scroll-minimal::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .scroll-minimal::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scroll-minimal::-webkit-scrollbar-thumb {
+        background: transparent;
+        border-radius: 9999px;
+    }
+
+    .scroll-minimal:hover::-webkit-scrollbar-thumb {
+        background: rgb(0 0 0 / 0.15);
+    }
+
     /* <dialog> modal: centrado en la capa superior, nunca más ancho que la ventana, con entrada/salida animada.
        La salida usa transition-behavior: allow-discrete (display/overlay); donde no existe, cierra sin animar. */
     dialog.modal {

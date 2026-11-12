@@ -122,6 +122,12 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[10];
     }
 
+    /** Slug de la sección 12 (Programa de Academias Docentes). */
+    public static function academias(): string
+    {
+        return array_keys(self::todas())[11];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

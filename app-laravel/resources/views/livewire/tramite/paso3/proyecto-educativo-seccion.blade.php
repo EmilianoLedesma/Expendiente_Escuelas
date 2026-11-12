@@ -434,6 +434,48 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($academias)
+        {{-- Sección 12: dos bloques. 1: tipo de academia (radio) y, solo con Mixta u Otros, su descripción. 2: justificación. Siguiente valida el bloque y no escribe; Guardar (último) valida todo y guarda todo o nada. --}}
+        <form novalidate wire:submit="{{ $academias['ultimo'] ? 'guardar' : 'siguienteAcademias' }}">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Bloques de la sección">
+                @foreach (\App\Application\ProyectoEducativo\ReglasAcademiasProyecto::BLOQUES as $n => $b)
+                    <li @if ($n === $academias['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $academias['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Bloque {{ $academias['bloque'] }} de {{ $academias['total'] }}</p>
+
+            <div wire:key="academias-{{ $academias['bloque'] }}">
+                <x-ui.section :title="$academias['titulo']">
+                    @if ($academias['bloque'] === 1)
+                        <x-ui.radio-group id="tipo_academia" legend="Marque la opción que trabajará en su proyecto educativo" wire:model.live="tipo_academia" :opciones="\App\Application\ProyectoEducativo\ReglasAcademiasProyecto::TIPOS" />
+                        @if ($academias['pideDescripcion'])
+                            @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasAcademiasProyecto::PALABRAS_DESCRIPCION; @endphp
+                            <x-ui.textarea-palabras id="descripcion_academia" :label="'Descripción ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" placeholder="Describa el tipo de academia seleccionada..." />
+                        @endif
+                    @else
+                        @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasAcademiasProyecto::PALABRAS_JUSTIFICACION; @endphp
+                        <x-ui.textarea-palabras id="justificacion_academia" :label="'Justificación de la composición de la(s) academia(s) docente(s) ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" :rows="10" placeholder="Explique las razones por las cuales se conforman las academias de esta manera..." />
+                    @endif
+                </x-ui.section>
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($academias['bloque'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorAcademias">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $academias['ultimo'] ? 'Guardar' : 'Siguiente' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
     @elseif ($ingreso)
         {{-- Sección 8: dos bloques de dos campos. Siguiente valida los campos del bloque y no escribe; Guardar (último bloque) valida todo y guarda todo o nada. --}}
         @php

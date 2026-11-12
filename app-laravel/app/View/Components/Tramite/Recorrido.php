@@ -2,6 +2,8 @@
 
 namespace App\View\Components\Tramite;
 
+use App\Application\ProyectoEducativo\EstadoSeccionesProyecto;
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\DTO\ResumenTramiteDTO;
 use App\Application\Tramite\ResumenTramite;
 use Illuminate\Contracts\View\View;
@@ -19,14 +21,27 @@ class Recorrido extends Component
 {
     public readonly ResumenTramiteDTO $resumen;
 
+    /** @var array<int, array<string, bool>> escuela_nivel_id => (slug de sección del proyecto educativo => completa), solo niveles que lo llevan. */
+    public readonly array $proyecto;
+
     public function __construct(
         ?ResumenTramiteDTO $resumen = null,
         ?int $escuelaId = null,
         public readonly ?int $escuelaNivelId = null,
         public readonly ?string $seccionActual = null,
+        public readonly ?string $subseccionActual = null,
     ) {
         $this->resumen = $resumen
             ?? app(ResumenTramite::class)->paraEscuela($escuelaId ?? throw new InvalidArgumentException('Recorrido requiere resumen o escuelaId.'), auth()->id());
+
+        $estado = app(EstadoSeccionesProyecto::class);
+        $proyecto = [];
+        foreach ($this->resumen->niveles as $nivel) {
+            if (SeccionesProyectoEducativo::aplicaA($nivel->clave)) {
+                $proyecto[$nivel->escuelaNivelId] = $estado->completas($nivel->escuelaNivelId);
+            }
+        }
+        $this->proyecto = $proyecto;
     }
 
     public function render(): View
