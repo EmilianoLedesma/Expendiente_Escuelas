@@ -74,6 +74,18 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[2];
     }
 
+    /** Slug de la sección 4 (Enfoque Pedagógico). */
+    public static function enfoque(): string
+    {
+        return array_keys(self::todas())[3];
+    }
+
+    /** Slug de la sección 5 (Modelo de Evaluación). */
+    public static function evaluacion(): string
+    {
+        return array_keys(self::todas())[4];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());
