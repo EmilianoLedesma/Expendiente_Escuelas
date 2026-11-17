@@ -188,7 +188,7 @@ class Paso3FormacionContinuaProyectoTest extends TestCase
             ->set('planeacion_continua', $this->archivoPdf(1, 'planeacion.pdf'))->call('siguienteFormacion')
             ->set('acciones_continua', [$this->accion(), $this->accion(['nombre' => 'Otra'])]);
 
-        $c->call('guardar')->assertHasNoErrors()->assertDispatched('toast', tipo: 'success', titulo: 'Bloque guardado')
+        $c->call('guardar')->assertHasNoErrors()->assertDispatched('toast', tipo: 'success', titulo: 'Paso guardado')
             ->assertSet('planeacion_continua', null)->assertSet('formacionGuardado.planeacion_nombre', 'planeacion.pdf');
 
         $this->assertSame(2, DB::table('proyecto_educativo_formacion_acciones')->where('tipo', 'continua')->count());

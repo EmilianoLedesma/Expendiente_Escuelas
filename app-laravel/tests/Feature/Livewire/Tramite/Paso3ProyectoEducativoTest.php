@@ -58,11 +58,11 @@ class Paso3ProyectoEducativoTest extends TestCase
     {
         $escuelaNivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
         $this->actingAs($escuelaNivel->escuela->solicitante->user);
-        $slug = array_keys(SeccionesProyectoEducativo::todas())[12]; // las secciones 1 a 12 ya son formularios
+        $slug = array_keys(SeccionesProyectoEducativo::todas())[13]; // las secciones 1 a 13 ya son formularios
 
         $this->get(route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]))
             ->assertOk()
-            ->assertSee('Criterios de Acreditación, Promoción y Certificación')
+            ->assertSee('Plan de Estudios')
             ->assertSee('Contenido por definir');
     }
 

@@ -192,7 +192,7 @@ class Paso3FormacionInicialProyectoTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('pantalla', 4)
             ->assertSee('Formación Docente Continua')
-            ->assertDispatched('toast', tipo: 'success', titulo: 'Bloque guardado');
+            ->assertDispatched('toast', tipo: 'success', titulo: 'Paso guardado');
 
         $this->assertSame(1, DB::table('proyecto_educativo_formacion_politica')->where('escuela_nivel_id', $nivel->id)->count());
         $this->assertSame(2, DB::table('proyecto_educativo_formacion_acciones')->where('escuela_nivel_id', $nivel->id)->count());

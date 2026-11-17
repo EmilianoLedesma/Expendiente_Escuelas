@@ -128,6 +128,12 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[11];
     }
 
+    /** Slug de la sección 13 (Criterios de Acreditación, Promoción y Certificación). */
+    public static function criterios(): string
+    {
+        return array_keys(self::todas())[12];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

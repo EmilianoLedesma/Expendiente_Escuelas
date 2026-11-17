@@ -125,7 +125,7 @@
                     </li>
                 @endforeach
             </ol>
-            <p class="mb-md text-body-sm text-muted">Campo {{ $enfoque['numero'] }} de {{ $enfoque['total'] }}</p>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $enfoque['numero'] }} de {{ $enfoque['total'] }}</p>
 
             <div wire:key="enfoque-{{ $enfoque['clave'] }}">
                 @if ($enfoque['clave'] === 'propuesta_global')
@@ -217,14 +217,14 @@
         <form novalidate wire:submit="{{ $evaluacion['ultimo'] ? 'guardar' : 'siguienteEvaluacion' }}">
             <x-ui.error-summary />
 
-            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Bloques de la sección">
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasEvaluacionProyecto::BLOQUES as $n => $b)
                     <li @if ($n === $evaluacion['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $evaluacion['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
                         <span class="tabular-nums">{{ $n }}.</span> {{ \Illuminate\Support\Str::before($b['titulo'], ' (') }}
                     </li>
                 @endforeach
             </ol>
-            <p class="mb-md text-body-sm text-muted">Bloque {{ $evaluacion['bloque'] }} de {{ $evaluacion['total'] }}</p>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $evaluacion['bloque'] }} de {{ $evaluacion['total'] }}</p>
 
             <div wire:key="evaluacion-{{ $evaluacion['bloque'] }}">
                 <x-ui.section :title="$evaluacion['titulo']">
@@ -271,7 +271,7 @@
                     </li>
                 @endforeach
             </ol>
-            <p class="mb-md text-body-sm text-muted">Ámbito {{ $curriculum['bloque'] }} de {{ $curriculum['total'] }} · Recursos Socioemocionales: indique si lo trabajan y justifique ({{ $min }} a {{ $max }} palabras).</p>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $curriculum['bloque'] }} de {{ $curriculum['total'] }} · Recursos Socioemocionales: indique si lo trabajan y justifique ({{ $min }} a {{ $max }} palabras).</p>
 
             <div wire:key="curriculum-{{ $curriculum['bloque'] }}">
                 <x-ui.section :title="$curriculum['titulo']">
@@ -323,7 +323,7 @@
             <x-ui.error-summary />
 
             <p class="mb-xs text-body-md font-semibold text-ink">{{ $esContinua ? 'Formación Docente Continua' : 'Formación Docente Inicial' }}</p>
-            <p class="mb-md text-body-sm text-muted">Pantalla {{ $formacion['pantalla'] }} de {{ $formacion['total'] }} · {{ $lugar }}</p>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $formacion['pantalla'] }} de {{ $formacion['total'] }} · {{ $lugar }}</p>
 
             <div wire:key="formacion-{{ $formacion['pantalla'] }}">
                 @if ($formacion['tipo'] === 'politica')
@@ -439,14 +439,14 @@
         <form novalidate wire:submit="{{ $academias['ultimo'] ? 'guardar' : 'siguienteAcademias' }}">
             <x-ui.error-summary />
 
-            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Bloques de la sección">
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasAcademiasProyecto::BLOQUES as $n => $b)
                     <li @if ($n === $academias['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $academias['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
                         <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
                     </li>
                 @endforeach
             </ol>
-            <p class="mb-md text-body-sm text-muted">Bloque {{ $academias['bloque'] }} de {{ $academias['total'] }}</p>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $academias['bloque'] }} de {{ $academias['total'] }}</p>
 
             <div wire:key="academias-{{ $academias['bloque'] }}">
                 <x-ui.section :title="$academias['titulo']">
@@ -476,6 +476,51 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($criterios)
+        {{-- Sección 13: dos bloques que se guardan por separado. El botón guarda el bloque actual (todo o nada dentro del bloque); el primero continúa al segundo y el último guarda y termina. Anterior vuelve sin validar. --}}
+        @php
+            $camposCriterios = [
+                'criterios_acreditacion' => ['Criterios de acreditación de asignaturas', 'Describa los criterios que debe cumplir un estudiante para acreditar cada asignatura...'],
+                'opciones_acreditacion' => ['Opciones para acreditar asignaturas', 'Indique las opciones disponibles para que un estudiante acredite asignaturas (ordinario, extraordinario, etc.)...'],
+                'criterios_promocion' => ['Criterios para la promoción de grado', 'Describa los requisitos para que un estudiante sea promovido al siguiente grado...'],
+                'criterios_titulacion' => ['Criterios para la titulación', 'Describa los requisitos que el estudiante debe cumplir para obtener su título...'],
+                'servicios_control_escolar' => ['Servicios de control escolar', 'Describa los servicios de control escolar que ofrece la institución...'],
+            ];
+        @endphp
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
+                @foreach (\App\Application\ProyectoEducativo\ReglasCriteriosProyecto::BLOQUES as $n => $b)
+                    <li @if ($n === $criterios['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $criterios['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $criterios['bloque'] }} de {{ $criterios['total'] }}</p>
+
+            <div wire:key="criterios-{{ $criterios['bloque'] }}">
+                <x-ui.section :title="$criterios['titulo']">
+                    @foreach ($criterios['campos'] as $campo)
+                        @php [$min, $max] = \App\Application\ProyectoEducativo\ReglasCriteriosProyecto::RANGOS[$campo]; @endphp
+                        <x-ui.textarea-palabras :id="$campo" :label="$camposCriterios[$campo][0].' ('.$min.' a '.$max.' palabras)'" :min="$min" :max="$max" :rows="8" :placeholder="$camposCriterios[$campo][1]" />
+                    @endforeach
+                </x-ui.section>
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($criterios['bloque'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorCriterios">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $criterios['ultimo'] ? 'Guardar' : 'Guardar y continuar' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
     @elseif ($ingreso)
         {{-- Sección 8: dos bloques de dos campos. Siguiente valida los campos del bloque y no escribe; Guardar (último bloque) valida todo y guarda todo o nada. --}}
         @php
@@ -489,14 +534,14 @@
         <form novalidate wire:submit="{{ $ingreso['ultimo'] ? 'guardar' : 'siguienteIngreso' }}">
             <x-ui.error-summary />
 
-            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Bloques de la sección">
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasIngresoProyecto::BLOQUES as $n => $b)
                     <li @if ($n === $ingreso['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $ingreso['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
                         <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
                     </li>
                 @endforeach
             </ol>
-            <p class="mb-md text-body-sm text-muted">Bloque {{ $ingreso['bloque'] }} de {{ $ingreso['total'] }}</p>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $ingreso['bloque'] }} de {{ $ingreso['total'] }}</p>
 
             <div wire:key="ingreso-{{ $ingreso['bloque'] }}">
                 <x-ui.section :title="$ingreso['titulo']">

@@ -136,7 +136,7 @@ class GuardarEvaluacionProyectoTest extends TestCase
     }
 
     #[DataProvider('rangos')]
-    public function test_cada_requerido_vacio_o_de_espacios_se_rechaza(string $campo): void
+    public function test_cada_requerido_vacio_o_de_espacios_se_rechaza(string $campo, int ...$rango): void
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
