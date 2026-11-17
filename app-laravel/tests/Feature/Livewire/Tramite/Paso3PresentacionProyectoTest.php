@@ -134,18 +134,6 @@ class Paso3PresentacionProyectoTest extends TestCase
             ->assertSee('Síntesis de los Resultados del Estudio de Factibilidad');
     }
 
-    public function test_las_otras_secciones_siguen_con_el_marcador(): void
-    {
-        $nivel = $this->nivel();
-        $otras = array_slice(array_keys(SeccionesProyectoEducativo::todas()), 19); // 1 a 19 son formularios
-        $this->assertCount(1, $otras);
-
-        foreach ([$otras[0]] as $slug) {
-            $this->get(route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $nivel->id, 'seccion' => $slug]))
-                ->assertOk()->assertSee('Contenido por definir')->assertDontSee('Datos Generales');
-        }
-    }
-
     public function test_siguiente_bloquea_por_los_campos_del_paso_actual_y_no_por_los_de_otros(): void
     {
         $nivel = $this->nivel();

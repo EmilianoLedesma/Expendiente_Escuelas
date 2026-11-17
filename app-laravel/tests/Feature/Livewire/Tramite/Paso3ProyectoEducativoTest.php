@@ -54,16 +54,17 @@ class Paso3ProyectoEducativoTest extends TestCase
         $this->get(route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]))->assertNotFound();
     }
 
-    public function test_seccion_muestra_el_placeholder(): void
+    public function test_ninguna_de_las_veinte_secciones_muestra_el_marcador_de_contenido_por_definir(): void
     {
         $escuelaNivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
         $this->actingAs($escuelaNivel->escuela->solicitante->user);
-        $slug = array_keys(SeccionesProyectoEducativo::todas())[19]; // las secciones 1 a 19 ya son formularios
 
-        $this->get(route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]))
-            ->assertOk()
-            ->assertSee('Bibliografía del Proyecto')
-            ->assertSee('Contenido por definir');
+        foreach (SeccionesProyectoEducativo::todas() as $slug => $nombre) {
+            $this->get(route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]))
+                ->assertOk()
+                ->assertSee($nombre)
+                ->assertDontSee('Contenido por definir');
+        }
     }
 
     public function test_seccion_desconocida_da_404(): void

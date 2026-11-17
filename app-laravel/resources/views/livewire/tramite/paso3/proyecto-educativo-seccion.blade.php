@@ -165,6 +165,70 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($esBibliografia)
+        {{-- Sección 20: lista de 1 a 50 referencias en formato APA. "Agregar referencia" suma una en blanco y "Quitar" la saca (siempre queda una). Guardar valida todo y guarda todo o nada, en orden alfabético por autor. La vista previa arma el formato APA con FormatoReferenciaApa (el título en cursiva). --}}
+        @php
+            $lista = \App\Application\ProyectoEducativo\ReglasBibliografiaProyecto::normalizar($referencias) ?: [\App\Application\ProyectoEducativo\ReglasBibliografiaProyecto::referenciaVacia()];
+            $maxReferencias = \App\Application\ProyectoEducativo\ReglasBibliografiaProyecto::MAX;
+        @endphp
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <x-ui.section :title="$nombre">
+                <p class="mb-md text-body-sm text-muted">Liste las referencias bibliográficas utilizadas para la elaboración del proyecto educativo, en formato APA (7.ª edición). Se guardan en orden alfabético por autor. Puede agregar hasta {{ $maxReferencias }}.</p>
+                @error('referencias') <p class="mb-md text-body-sm font-semibold text-danger" role="alert">{{ $message }}</p> @enderror
+
+                @foreach ($lista as $i => $r)
+                    @php
+                        $p = 'referencias.'.$i.'.';
+                        $hayTexto = $r['autores'] !== '' || $r['titulo'] !== '' || $r['fuente'] !== '';
+                        [$antes, $titulo, $despues] = \App\Application\ProyectoEducativo\FormatoReferenciaApa::partes($r);
+                    @endphp
+                    <fieldset wire:key="referencia-{{ $i }}" class="mb-md rounded-md border border-hairline p-md">
+                        <legend class="px-xs text-body-md font-semibold text-ink">Referencia {{ $i + 1 }}</legend>
+
+                        <x-ui.field :id="$p.'autores'" label="Autor(es)">
+                            <x-ui.input wire:model.blur="{{ $p }}autores" maxlength="300" placeholder="Pérez, J., & Gómez, L." />
+                        </x-ui.field>
+
+                        <div class="grid gap-md sm:grid-cols-3">
+                            <x-ui.field :id="$p.'anio'" label="Año">
+                                <x-ui.input type="number" min="1000" max="{{ (int) date('Y') + 1 }}" step="1" inputmode="numeric" wire:model.blur="{{ $p }}anio" placeholder="{{ date('Y') }}" />
+                            </x-ui.field>
+                            <div class="sm:col-span-2">
+                                <x-ui.field :id="$p.'fuente'" label="Fuente (editorial, revista o sitio)">
+                                    <x-ui.input wire:model.blur="{{ $p }}fuente" maxlength="200" placeholder="Editorial Trillas" />
+                                </x-ui.field>
+                            </div>
+                        </div>
+
+                        <x-ui.field :id="$p.'titulo'" label="Título">
+                            <x-ui.input wire:model.blur="{{ $p }}titulo" maxlength="300" placeholder="Título de la obra, artículo o página" />
+                        </x-ui.field>
+
+                        <x-ui.field :id="$p.'url'" label="URL o DOI" :optional="true">
+                            <x-ui.input type="url" wire:model.blur="{{ $p }}url" maxlength="500" placeholder="https://doi.org/..." />
+                        </x-ui.field>
+
+                        @if ($hayTexto)
+                            <p class="mt-sm text-body-sm text-ink"><span class="font-semibold">Vista previa APA:</span> {{ $antes }}<em>{{ $titulo }}</em>{{ $despues }}</p>
+                        @endif
+
+                        @if (count($lista) > 1)
+                            <div class="mt-sm">
+                                <x-ui.button-secondary type="button" wire:click="quitarReferencia({{ $i }})">Quitar esta referencia</x-ui.button-secondary>
+                            </div>
+                        @endif
+                    </fieldset>
+                @endforeach
+
+                @if (count($lista) < $maxReferencias)
+                    <x-ui.button-secondary type="button" wire:click="agregarReferencia">Agregar referencia</x-ui.button-secondary>
+                @endif
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
     @elseif ($biblioteca)
         {{-- Sección 19: dos pasos que se guardan por separado. El botón guarda el paso actual (todo o nada dentro del paso); el primero continúa al segundo y el último guarda y termina. Anterior vuelve sin validar. El tipo de biblioteca virtual, el perfil del encargado y el texto del programa de lectura solo aparecen (y se piden) cuando aplican. --}}
         <form novalidate wire:submit="guardar">

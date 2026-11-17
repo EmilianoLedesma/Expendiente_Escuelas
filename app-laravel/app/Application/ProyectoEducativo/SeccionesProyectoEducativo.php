@@ -170,6 +170,12 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[18];
     }
 
+    /** Slug de la sección 20 (Bibliografía del Proyecto). */
+    public static function bibliografia(): string
+    {
+        return array_keys(self::todas())[19];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

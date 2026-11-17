@@ -30,6 +30,7 @@ final class EstadoSeccionesProyecto
         private readonly PlaneacionAcademicaProyectoCapturada $planeacionAcademica,
         private readonly CalendarioAcademicoProyectoCapturada $calendarioAcademico,
         private readonly BibliotecaProyectoCapturada $biblioteca,
+        private readonly BibliografiaProyectoCapturada $bibliografia,
     ) {}
 
     /** @return array<string, bool> slug => completa, en el orden del índice (las 20 secciones). */
@@ -58,6 +59,7 @@ final class EstadoSeccionesProyecto
             SeccionesProyectoEducativo::calendarioAcademico() => $this->calendarioAcademico->completa($escuelaNivelId),
             // La sección 19 son dos bloques que se guardan por separado: solo está completa con los dos guardados y válidos.
             SeccionesProyectoEducativo::biblioteca() => $this->biblioteca->completa($escuelaNivelId),
+            SeccionesProyectoEducativo::bibliografia() => $this->bibliografia->completa($escuelaNivelId),
         ];
 
         $completas = [];

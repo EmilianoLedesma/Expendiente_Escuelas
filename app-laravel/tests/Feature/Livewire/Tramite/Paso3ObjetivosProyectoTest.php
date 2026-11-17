@@ -4,7 +4,6 @@ namespace Tests\Feature\Livewire\Tramite;
 
 use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
 use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
-use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Livewire\Tramite\Paso3\ProyectoEducativoSeccion;
 use App\Models\EscuelaNivel;
 use App\Models\Solicitante;
@@ -122,17 +121,6 @@ class Paso3ObjetivosProyectoTest extends TestCase
             ->assertDispatched('toast', tipo: 'error', titulo: 'No se guardó', descripcion: 'El trámite ya se envió a revisión y no puede modificarse.');
 
         $this->assertSame(0, DB::table('proyecto_educativo_objetivos')->count());
-    }
-
-    public function test_las_otras_secciones_siguen_con_el_marcador(): void
-    {
-        $nivel = $this->nivel();
-        $slugs = array_keys(SeccionesProyectoEducativo::todas());
-        $this->assertCount(1, array_slice($slugs, 19));
-
-        foreach ([$slugs[19]] as $slug) {
-            $this->get($this->ruta($nivel, $slug))->assertOk()->assertSee('Contenido por definir')->assertDontSee('Objetivo General (50 a 100 palabras)');
-        }
     }
 
     public function test_otro_solicitante_recibe_403_y_primaria_404(): void

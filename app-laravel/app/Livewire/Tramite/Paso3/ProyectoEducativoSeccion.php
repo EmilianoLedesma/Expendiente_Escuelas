@@ -5,11 +5,13 @@ namespace App\Livewire\Tramite\Paso3;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ProyectoEducativo\AcademiasProyectoCapturada;
+use App\Application\ProyectoEducativo\BibliografiaProyectoCapturada;
 use App\Application\ProyectoEducativo\BibliotecaProyectoCapturada;
 use App\Application\ProyectoEducativo\CalendarioAcademicoProyectoCapturada;
 use App\Application\ProyectoEducativo\CriteriosProyectoCapturada;
 use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
 use App\Application\ProyectoEducativo\DTO\DatosAcademiasProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosBibliografiaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosBibliotecaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosCalendarioAcademicoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosCriteriosProyecto;
@@ -37,6 +39,7 @@ use App\Application\ProyectoEducativo\FormacionContinuaProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionInicialProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionLaboralProyectoCapturada;
 use App\Application\ProyectoEducativo\GuardarAcademiasProyecto;
+use App\Application\ProyectoEducativo\GuardarBibliografiaProyecto;
 use App\Application\ProyectoEducativo\GuardarBibliotecaProyecto;
 use App\Application\ProyectoEducativo\GuardarCalendarioAcademicoProyecto;
 use App\Application\ProyectoEducativo\GuardarCriteriosProyecto;
@@ -65,6 +68,7 @@ use App\Application\ProyectoEducativo\PlaneacionAcademicaProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ProgramasEstudiosProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasAcademiasProyecto;
+use App\Application\ProyectoEducativo\ReglasBibliografiaProyecto;
 use App\Application\ProyectoEducativo\ReglasBibliotecaProyecto;
 use App\Application\ProyectoEducativo\ReglasCriteriosProyecto;
 use App\Application\ProyectoEducativo\ReglasCurriculumProyecto;
@@ -335,6 +339,10 @@ class ProyectoEducativoSeccion extends Component
 
     public string $acervo_titulos_lectura = '';
 
+    // Sección 20 (Bibliografía del Proyecto): lista de 1 a 50 referencias (autores, anio, titulo, fuente, url). Llega del navegador: ReglasBibliografiaProyecto::normalizar() la corrige.
+    /** @var array<array-key, mixed> */
+    public array $referencias = [];
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -371,6 +379,8 @@ class ProyectoEducativoSeccion extends Component
             $this->cargarCalendario();
         } elseif ($this->esBiblioteca()) {
             $this->cargarBiblioteca();
+        } elseif ($this->esBibliografia()) {
+            $this->cargarBibliografia();
         }
     }
 
@@ -1019,6 +1029,82 @@ class ProyectoEducativoSeccion extends Component
         $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
     }
 
+    private function esBibliografia(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::bibliografia();
+    }
+
+    private function cargarBibliografia(): void
+    {
+        $guardadas = app(BibliografiaProyectoCapturada::class)->referencias($this->escuelaNivel->id);
+        $this->referencias = $guardadas === [] ? [ReglasBibliografiaProyecto::referenciaVacia()] : $guardadas;
+    }
+
+    /**
+     * Las referencias como lista de textos, siempre con al menos una (la lista llega del navegador y puede venir manipulada).
+     *
+     * @return list<array{autores: string, anio: string, titulo: string, fuente: string, url: string}>
+     */
+    private function listaDeReferencias(): array
+    {
+        return ReglasBibliografiaProyecto::normalizar($this->referencias) ?: [ReglasBibliografiaProyecto::referenciaVacia()];
+    }
+
+    /** Sección 20: suma una referencia en blanco (hasta el máximo). */
+    public function agregarReferencia(): void
+    {
+        abort_unless($this->esBibliografia(), 404);
+        $lista = $this->listaDeReferencias();
+        if (count($lista) >= ReglasBibliografiaProyecto::MAX) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        $this->referencias = [...$lista, ReglasBibliografiaProyecto::referenciaVacia()];
+    }
+
+    /** Sección 20: quita la referencia de ese lugar (la lista conserva al menos una). */
+    public function quitarReferencia(int $indice): void
+    {
+        abort_unless($this->esBibliografia(), 404);
+        $lista = $this->listaDeReferencias();
+        if (count($lista) <= ReglasBibliografiaProyecto::MIN || ! isset($lista[$indice])) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        unset($lista[$indice]);
+        $this->referencias = array_values($lista);
+    }
+
+    /** "Guardar" de la sección 20: todo o nada; con errores no escribe y los marca por referencia. */
+    private function guardarBibliografia(): void
+    {
+        $this->resetErrorBag();
+
+        try {
+            app(GuardarBibliografiaProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosBibliografiaProyecto($this->referencias));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->cargarBibliografia();
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
+    }
+
     private function esBiblioteca(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::biblioteca();
@@ -1383,6 +1469,12 @@ class ProyectoEducativoSeccion extends Component
             return;
         }
 
+        if ($this->esBibliografia()) {
+            $this->guardarBibliografia();
+
+            return;
+        }
+
         if ($this->esFormacion()) {
             $this->guardarFormacion();
 
@@ -1569,6 +1661,7 @@ class ProyectoEducativoSeccion extends Component
             'esProgramas' => $this->esProgramasEstudios(),
             'esPlanAcademica' => $this->esPlaneacionAcademica(),
             'esCalendario' => $this->esCalendarioAcademico(),
+            'esBibliografia' => $this->esBibliografia(),
             'biblioteca' => $this->esBiblioteca() ? ['bloque' => $this->bloque, 'total' => count(ReglasBibliotecaProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasBibliotecaProyecto::BLOQUES), ...ReglasBibliotecaProyecto::BLOQUES[$this->bloque]] : null,
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
             'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
