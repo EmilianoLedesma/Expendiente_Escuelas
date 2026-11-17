@@ -15,8 +15,11 @@ final class RolesSedeq
 
     public const REVISOR = 'revisor';
 
+    /** Revisa solo el proyecto educativo (media superior); el revisor y el supervisor no lo deciden. */
+    public const EVALUADOR_PROYECTO = 'evaluador_proyecto';
+
     /** Cuentas que no pueden eliminarse a sí mismas. */
-    public const TODOS = [self::ADMIN, self::SUPERVISOR, self::REVISOR];
+    public const TODOS = [self::ADMIN, self::SUPERVISOR, self::REVISOR, self::EVALUADOR_PROYECTO];
 
     /** Cuenta que no se borra sola: tiene un rol de SEDEQ o es un revisor ya revocado (su fila en `revisores` la protege). */
     public static function cuentaProtegida(User $usuario): bool
@@ -26,7 +29,7 @@ final class RolesSedeq
 
     public static function esSedeqOperativo(User $usuario): bool
     {
-        return $usuario->hasAnyRole([self::SUPERVISOR, self::REVISOR]);
+        return $usuario->hasAnyRole([self::SUPERVISOR, self::REVISOR, self::EVALUADOR_PROYECTO]);
     }
 
     /** @throws PrecondicionIncumplida */

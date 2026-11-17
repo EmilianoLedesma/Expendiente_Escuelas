@@ -2,6 +2,7 @@
 
 namespace App\Application\Revision;
 
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\TramiteEditable;
 use App\Models\AsignacionRevision;
 use App\Models\EscuelaNivel;
@@ -42,6 +43,38 @@ final class AccesoSedeq
     {
         return ($this->nivelesVisibles($usuario)?->where('escuela_id', $escuelaId)->orderBy('id')->pluck('id') ?? collect())
             ->map(fn ($id) => (int) $id)->values()->all();
+    }
+
+    /**
+     * Lectura del proyecto educativo de un nivel (solo media superior, fuera de captura): el evaluador, que lo decide,
+     * y el supervisor, solo para supervisar. El revisor nunca, aunque tenga el nivel asignado. Aparte de puedeVerNivel
+     * a propósito: el evaluador no ve los pasos del revisor.
+     */
+    public function puedeVerProyecto(User $usuario, int $escuelaNivelId): bool
+    {
+        return $this->proyectosVisibles($usuario)?->whereKey($escuelaNivelId)->exists() ?? false;
+    }
+
+    /**
+     * Cola automática del evaluador: todos los niveles de media superior fuera de captura, sin asignación.
+     *
+     * @return list<int>
+     */
+    public function nivelesConProyecto(User $usuario): array
+    {
+        return ($this->proyectosVisibles($usuario)?->orderBy('id')->pluck('id') ?? collect())->map(fn ($id) => (int) $id)->values()->all();
+    }
+
+    /** @return Builder<EscuelaNivel>|null null = el usuario no es evaluador ni supervisor. */
+    private function proyectosVisibles(User $usuario): ?Builder
+    {
+        if (! $usuario->hasAnyRole([RolesSedeq::EVALUADOR_PROYECTO, RolesSedeq::SUPERVISOR])) {
+            return null;
+        }
+
+        return EscuelaNivel::query()
+            ->whereNotIn('estado_id', DB::table('estados_expediente')->where('clave', TramiteEditable::EN_CAPTURA)->select('id'))
+            ->whereIn('nivel_educativo_id', DB::table('niveles_educativos')->where('clave', SeccionesProyectoEducativo::NIVEL)->select('id'));
     }
 
     /** @return Builder<EscuelaNivel>|null null = el usuario no tiene rol SEDEQ operativo. */

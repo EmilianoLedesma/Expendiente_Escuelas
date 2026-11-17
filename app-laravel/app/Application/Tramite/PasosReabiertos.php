@@ -2,6 +2,7 @@
 
 namespace App\Application\Tramite;
 
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Revision\PasosRevision;
 use Illuminate\Support\Facades\DB;
 
@@ -92,7 +93,13 @@ final class PasosReabiertos
             ->orderBy('decisiones_revision.escuela_nivel_id')
             ->orderBy('decisiones_revision.paso_clave')
             ->get(['decisiones_revision.paso_clave', 'decisiones_revision.escuela_nivel_id'])
-            ->map(fn ($f) => ['paso' => (string) $f->paso_clave, 'escuelaNivelId' => (int) $f->escuela_nivel_id])
+            // Las secciones del proyecto educativo (pe_NN) reabren un solo paso del nivel: proyecto_educativo.
+            ->map(fn ($f) => [
+                'paso' => SeccionesProyectoEducativo::slugDeRevision((string) $f->paso_clave) === null ? (string) $f->paso_clave : SeccionesProyectoEducativo::CLAVE_PASO,
+                'escuelaNivelId' => (int) $f->escuela_nivel_id,
+            ])
+            ->unique(fn (array $r) => $r['escuelaNivelId'].'|'.$r['paso'])
+            ->values()
             ->all();
     }
 }

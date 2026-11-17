@@ -51,7 +51,7 @@ class UsuarioResource extends Resource
             TextInput::make('nombre')->label('Nombre')->required()->maxLength(255),
             TextInput::make('correo')->label('Correo')->email()->required()->maxLength(255),
             Select::make('rol')->label('Rol')->required()
-                ->options([RolesSedeq::ADMIN => 'admin', RolesSedeq::SUPERVISOR => 'supervisor']),
+                ->options([RolesSedeq::ADMIN => 'admin', RolesSedeq::SUPERVISOR => 'supervisor', RolesSedeq::EVALUADOR_PROYECTO => 'evaluador de proyecto educativo']),
         ]);
     }
 

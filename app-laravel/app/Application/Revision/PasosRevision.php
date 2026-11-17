@@ -2,6 +2,7 @@
 
 namespace App\Application\Revision;
 
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\ResumenTramite;
 
 /** Catálogo de pasos que el revisor decide, en el orden de revisión. Títulos: los de ResumenTramite. */
@@ -30,6 +31,9 @@ final class PasosRevision
 
     public static function titulo(string $clave): string
     {
-        return ResumenTramite::tituloSeccion($clave);
+        // pe_NN: una sección del proyecto educativo, que decide el evaluador (no es un paso del revisor).
+        $slug = SeccionesProyectoEducativo::slugDeRevision($clave);
+
+        return $slug === null ? ResumenTramite::tituloSeccion($clave) : 'Proyecto educativo · '.SeccionesProyectoEducativo::nombre($slug);
     }
 }

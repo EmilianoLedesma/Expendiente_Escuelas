@@ -7,7 +7,7 @@ namespace App\Application\ProyectoEducativo;
  * Las usan el índice de secciones y el recorrido lateral; las secciones sin
  * formulario todavía salen en false.
  */
-final class EstadoSeccionesProyecto
+class EstadoSeccionesProyecto
 {
     public function __construct(
         private readonly PresentacionProyectoCapturada $presentacion,

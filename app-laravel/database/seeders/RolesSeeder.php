@@ -14,5 +14,6 @@ class RolesSeeder extends Seeder
         Role::firstOrCreate(['name' => 'responsable_nivel', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => RolesSedeq::SUPERVISOR, 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => RolesSedeq::REVISOR, 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => RolesSedeq::EVALUADOR_PROYECTO, 'guard_name' => 'web']);
     }
 }

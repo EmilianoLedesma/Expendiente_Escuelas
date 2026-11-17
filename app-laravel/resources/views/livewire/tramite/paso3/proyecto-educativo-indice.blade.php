@@ -1,7 +1,7 @@
 <div class="max-w-3xl">
     <x-ui.page-header :eyebrow="$encabezado" title="Presentación del Proyecto Educativo" :back-href="route('tramite.resumen', ['escuela' => $escuelaNivel->escuela_id])">
         <x-slot:intro>
-            Estas son las secciones que integran el proyecto educativo del plantel. Algunas secciones aún no están disponibles. Tu trámite podrá enviarse cuando puedas completarlas todas.
+            Estas son las secciones que integran el proyecto educativo del plantel. Tu trámite podrá enviarse cuando completes las 20 secciones y confirmes el proyecto educativo.
         </x-slot:intro>
     </x-ui.page-header>
 
@@ -11,13 +11,30 @@
                 <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $slug]) }}" class="flex min-h-11 items-center gap-md px-lg py-xs text-body-md text-body hover:bg-surface-soft">
                     <span class="w-6 text-right tabular-nums text-muted">{{ $loop->iteration }}.</span>
                     <span class="min-w-0 flex-1 font-semibold text-primary">{{ $nombre }}</span>
-                    @if ($completas[$slug] ?? false)
+                    @if (isset($rechazadas[$slug]))
+                        <x-ui.status-tag estado="con_observaciones" />
+                    @elseif ($completas[$slug] ?? false)
                         <x-ui.status-tag estado="completado" texto="Completa" />
                     @else
                         <x-ui.status-tag estado="pendiente" />
                     @endif
                 </a>
+                @if (isset($rechazadas[$slug]))
+                    <p class="px-lg pb-xs pl-14 text-body-sm text-error-ink">{{ $rechazadas[$slug] }}</p>
+                @endif
             </li>
         @endforeach
     </ol>
+
+    @if ($confirmado)
+        <p class="mt-lg flex items-center gap-sm text-body-md text-body">
+            <x-ui.status-tag estado="completado" texto="Confirmado" />
+            Confirmaste el proyecto educativo. Puedes volver a abrir cualquier sección hasta enviar el trámite.
+        </p>
+    @elseif ($puedeConfirmar)
+        <div class="mt-lg">
+            <p class="mb-sm text-body-md text-body">Ya completaste las 20 secciones. Confirma el proyecto educativo para poder enviar el trámite.</p>
+            <x-ui.button-primary type="button" wire:click="confirmar" wire:loading.attr="disabled">Confirmar proyecto educativo</x-ui.button-primary>
+        </div>
+    @endif
 </div>

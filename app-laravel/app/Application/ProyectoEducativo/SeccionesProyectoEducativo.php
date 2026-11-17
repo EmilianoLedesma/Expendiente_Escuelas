@@ -176,6 +176,34 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[19];
     }
 
+    /**
+     * Claves con las que el evaluador decide cada sección (decisiones_revision.paso_clave): pe_01 a pe_20 en el orden del
+     * índice. Cortas a propósito: los slugs no caben en VARCHAR(30). No se reordenan las secciones sin migrar los datos.
+     *
+     * @return list<string>
+     */
+    public static function clavesRevision(): array
+    {
+        return array_map(fn (int $n) => sprintf('pe_%02d', $n), range(1, count(self::NOMBRES)));
+    }
+
+    public static function claveRevision(string $slug): string
+    {
+        $indice = array_search($slug, array_keys(self::todas()), true);
+
+        return $indice === false
+            ? throw new InvalidArgumentException("Sección de proyecto educativo desconocida: {$slug}")
+            : sprintf('pe_%02d', $indice + 1);
+    }
+
+    /** null si la clave no es de una sección (p. ej. un paso del revisor o pe_21). */
+    public static function slugDeRevision(string $clave): ?string
+    {
+        $indice = array_search($clave, self::clavesRevision(), true);
+
+        return $indice === false ? null : array_keys(self::todas())[$indice];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

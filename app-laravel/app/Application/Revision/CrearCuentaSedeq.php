@@ -44,7 +44,7 @@ class CrearCuentaSedeq
             [
                 'nombre' => ReglasCaptura::nombreVisible(),
                 'correo' => ['required', 'email', 'max:255'],
-                'rol' => ['required', Rule::in([RolesSedeq::ADMIN, RolesSedeq::SUPERVISOR])],
+                'rol' => ['required', Rule::in([RolesSedeq::ADMIN, RolesSedeq::SUPERVISOR, RolesSedeq::EVALUADOR_PROYECTO])],
             ],
             [
                 'nombre.required' => 'Indica el nombre de la cuenta.',

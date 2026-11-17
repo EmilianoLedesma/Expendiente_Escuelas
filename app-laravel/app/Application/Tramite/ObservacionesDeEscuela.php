@@ -2,10 +2,13 @@
 
 namespace App\Application\Tramite;
 
+use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Revision\PasosRevision;
 use App\Models\Escuela;
+use App\Models\EscuelaNivel;
 use App\Models\ResponsableNivel;
 use App\Models\Solicitante;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -74,11 +77,54 @@ final class ObservacionesDeEscuela
                 'nivel' => $nombres->get($r['escuelaNivelId']),
                 'escuelaNivelId' => $r['escuelaNivelId'],
                 // Sin fila: documentos_nivel derivado de un responsable reabierto (PasosReabiertos::reabiertos).
-                'motivo' => $fila === null ? self::MOTIVO_FORMATO : (string) $fila->motivo,
+                // proyecto_educativo: el paso junta los motivos de sus secciones rechazadas (pe_NN).
+                'motivo' => $r['paso'] === SeccionesProyectoEducativo::CLAVE_PASO
+                    ? $this->motivoProyecto($filas, $r['escuelaNivelId'])
+                    : ($fila === null ? self::MOTIVO_FORMATO : (string) $fila->motivo),
             ];
         }
 
         return $salida;
+    }
+
+    /**
+     * Secciones del proyecto educativo que el evaluador rechazó en este nivel (slug => motivo), para marcarlas en el
+     * índice del solicitante. Vacío si el paso no está reabierto (ronda abierta, nivel aprobado o sin rechazos).
+     *
+     * @return array<string, string>
+     */
+    public function seccionesRechazadas(int $escuelaNivelId): array
+    {
+        $escuelaId = EscuelaNivel::whereKey($escuelaNivelId)->value('escuela_id');
+        if ($escuelaId === null || ! $this->pasosReabiertos->estaReabierto((int) $escuelaId, SeccionesProyectoEducativo::CLAVE_PASO, $escuelaNivelId)) {
+            return [];
+        }
+
+        $motivos = DB::table('decisiones_revision')->where('escuela_nivel_id', $escuelaNivelId)->where('estado', 'rechazado')
+            ->whereIn('paso_clave', SeccionesProyectoEducativo::clavesRevision())->pluck('motivo', 'paso_clave');
+
+        $salida = [];
+        foreach (SeccionesProyectoEducativo::clavesRevision() as $clave) {
+            if ($motivos->has($clave)) {
+                $salida[(string) SeccionesProyectoEducativo::slugDeRevision($clave)] = (string) $motivos->get($clave);
+            }
+        }
+
+        return $salida;
+    }
+
+    /** @param Collection<string, \stdClass> $filas decisiones rechazadas, por "nivel|clave" */
+    private function motivoProyecto(Collection $filas, int $escuelaNivelId): string
+    {
+        $partes = [];
+        foreach (SeccionesProyectoEducativo::clavesRevision() as $clave) {
+            $fila = $filas->get($escuelaNivelId.'|'.$clave);
+            if ($fila !== null) {
+                $partes[] = SeccionesProyectoEducativo::nombre((string) SeccionesProyectoEducativo::slugDeRevision($clave)).': '.$fila->motivo;
+            }
+        }
+
+        return implode(' ', $partes);
     }
 
     /**

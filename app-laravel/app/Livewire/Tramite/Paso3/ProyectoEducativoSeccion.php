@@ -80,6 +80,7 @@ use App\Application\ProyectoEducativo\ReglasPresentacionProyecto;
 use App\Application\ProyectoEducativo\RevisarPdfProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Application\Tramite\EstadoPaso3;
+use App\Application\Tramite\ObservacionesDeEscuela;
 use App\Application\Tramite\ResumenTramite;
 use App\Application\Tramite\TramiteEditable;
 use App\Livewire\Concerns\NotificaToast;
@@ -1652,6 +1653,8 @@ class ProyectoEducativoSeccion extends Component
         return view('livewire.tramite.paso3.proyecto-educativo-seccion', [
             'encabezado' => ResumenTramite::encabezado(SeccionesProyectoEducativo::CLAVE_PASO, $this->escuelaNivel->nivelEducativo),
             'numero' => $indice + 1,
+            // Tras una devolución: el motivo con el que el evaluador rechazó esta sección, si lo hizo.
+            'observacion' => app(ObservacionesDeEscuela::class)->seccionesRechazadas($this->escuelaNivel->id)[$this->seccion] ?? null,
             'nombre' => SeccionesProyectoEducativo::nombre($this->seccion),
             'esPresentacion' => $this->esPresentacion(),
             'esTexto' => $this->esTexto(),

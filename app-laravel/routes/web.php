@@ -1,6 +1,7 @@
 <?php
 
 use App\Application\Revision\RutaInicio;
+use App\Http\Controllers\Sedeq\DescargarArchivoProyectoController;
 use App\Http\Controllers\Tramite\AnexoInstalacionesPdfController;
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
 use App\Http\Controllers\Tramite\DescargarDocumentoNivelController;
@@ -12,8 +13,10 @@ use App\Http\Controllers\Tramite\MisTramitesController;
 use App\Http\Controllers\Tramite\ReenviarCorreccionesController;
 use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
+use App\Livewire\Sedeq\ColaProyecto;
 use App\Livewire\Sedeq\ColaRevisor;
 use App\Livewire\Sedeq\RevisionNivel;
+use App\Livewire\Sedeq\RevisionProyecto;
 use App\Livewire\Sedeq\Revisores;
 use App\Livewire\Sedeq\TableroSupervisor;
 use App\Livewire\Sedeq\TramiteLectura;
@@ -45,6 +48,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/sedeq/cola', ColaRevisor::class)->middleware('rol:revisor')->name('sedeq.cola');
 
     Route::get('/sedeq/revisores', Revisores::class)->middleware('rol:supervisor')->name('sedeq.revisores');
+
+    // Cola del evaluador del proyecto educativo (solo media superior): una sola pista de revisión, aparte del revisor.
+    Route::get('/sedeq/proyecto', ColaProyecto::class)->middleware('rol:evaluador_proyecto')->name('sedeq.proyecto-cola');
+
+    // Revisión por sección; el supervisor entra en solo lectura. El acceso por nivel lo imponen los casos de uso (403).
+    Route::get('/sedeq/proyecto/{escuelaNivel}', RevisionProyecto::class)
+        ->middleware('rol:evaluador_proyecto|supervisor')
+        ->name('sedeq.proyecto-revision');
+
+    // PDF del proyecto educativo para revisión; el revisor no llega aquí (rol) y el caso de uso revalida por nivel (403).
+    Route::get('/sedeq/proyecto/{escuelaNivel}/archivo/{clave}', DescargarArchivoProyectoController::class)
+        ->middleware('rol:evaluador_proyecto|supervisor')
+        ->name('sedeq.proyecto-archivo');
 
     // Solo lectura: `view` admite a SEDEQ (AccesoSedeq) y ConsultarTramiteSedeq lo revalida.
     Route::get('/sedeq/tramite/{escuela}', TramiteLectura::class)

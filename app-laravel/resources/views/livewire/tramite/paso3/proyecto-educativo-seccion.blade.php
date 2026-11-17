@@ -1,6 +1,10 @@
 <div class="max-w-3xl">
     <x-ui.page-header :eyebrow="$encabezado" :title="$numero . '. ' . $nombre" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Presentación del Proyecto Educativo" />
 
+    @if ($observacion)
+        <x-ui.alert tipo="error" titulo="Observación del evaluador" class="mb-lg">{{ $observacion }}</x-ui.alert>
+    @endif
+
     <nav aria-label="Secciones del proyecto educativo" class="mb-lg flex flex-wrap items-center justify-between gap-md">
         @if ($anterior)
             <a href="{{ route('tramite.paso3-proyecto-educativo-seccion', ['escuelaNivel' => $escuelaNivel->id, 'seccion' => $anterior['slug']]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary">
