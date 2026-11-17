@@ -158,6 +158,18 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[16];
     }
 
+    /** Slug de la sección 18 (Calendario Académico). */
+    public static function calendarioAcademico(): string
+    {
+        return array_keys(self::todas())[17];
+    }
+
+    /** Slug de la sección 19 (Servicios de Biblioteca y Acervo Bibliográfico). */
+    public static function biblioteca(): string
+    {
+        return array_keys(self::todas())[18];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

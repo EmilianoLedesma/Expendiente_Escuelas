@@ -59,14 +59,15 @@ class ResumenEliminacionNivel
         return [
             'datos' => array_filter($fila, fn ($valor) => $valor !== null) !== [] ? 1 : 0,
             // Incluye los PDF del PAEC (sección 6), el de planeación de la formación continua (sección 11), el mapa
-            // curricular (sección 15), los programas adaptados (sección 16) y la planeación académica (sección 17): también
-            // son archivos que se borran con el nivel.
+            // curricular (sección 15), los programas adaptados (sección 16), la planeación académica (sección 17) y el
+            // calendario académico (sección 18): también son archivos que se borran con el nivel.
             'documentos' => $contar('documentos_escuela_nivel') + (int) DB::table('proyecto_educativo_paec')->where('escuela_nivel_id', $escuelaNivelId)
                 ->selectRaw('(hoja_ruta_path IS NOT NULL)::int + (planeacion_path IS NOT NULL)::int AS n')->value('n')
                 + DB::table('proyecto_educativo_formacion_politica')->where('escuela_nivel_id', $escuelaNivelId)->whereNotNull('planeacion_path')->count()
                 + DB::table('proyecto_educativo_mapa_curricular')->where('escuela_nivel_id', $escuelaNivelId)->whereNotNull('archivo_path')->count()
                 + DB::table('proyecto_educativo_programas_estudios')->where('escuela_nivel_id', $escuelaNivelId)->whereNotNull('archivo_path')->count()
-                + DB::table('proyecto_educativo_planeacion_academica')->where('escuela_nivel_id', $escuelaNivelId)->count(),
+                + DB::table('proyecto_educativo_planeacion_academica')->where('escuela_nivel_id', $escuelaNivelId)->count()
+                + DB::table('proyecto_educativo_calendario_academico')->where('escuela_nivel_id', $escuelaNivelId)->whereNotNull('archivo_path')->count(),
             'recibos' => DB::table('recibos_pago_derechos')
                 ->join('documentos_escuela_nivel', 'documentos_escuela_nivel.id', '=', 'recibos_pago_derechos.documento_escuela_nivel_id')
                 ->where('documentos_escuela_nivel.escuela_nivel_id', $escuelaNivelId)

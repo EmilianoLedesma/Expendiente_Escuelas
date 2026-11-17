@@ -189,6 +189,23 @@ class PurgarTest extends TestCase
         Storage::disk('documentos')->assertMissing($ruta);
     }
 
+    public function test_purgar_borra_tambien_el_pdf_del_calendario_academico(): void
+    {
+        $admin = $this->admin();
+        $escuela = $this->tramiteArchivado($admin);
+        $nivelId = EscuelaNivel::withoutGlobalScope(NivelDeEscuelaNoArchivada::class)->where('escuela_id', $escuela->id)->value('id');
+        $ruta = "proyecto_educativo/{$nivelId}/calendario_academico-x.pdf";
+        Storage::disk('documentos')->put($ruta, '%PDF');
+        DB::table('proyecto_educativo_calendario_academico')->insert([
+            'escuela_nivel_id' => $nivelId, 'archivo_path' => $ruta, 'archivo_nombre' => 'calendario.pdf', 'archivo_paginas' => 1,
+        ]);
+
+        app(PurgarTramite::class)->ejecutar($admin->id, $escuela->id, 'Solicitud de baja', Purga::CONFIRMACION);
+
+        $this->assertSame(0, DB::table('proyecto_educativo_calendario_academico')->count());
+        Storage::disk('documentos')->assertMissing($ruta);
+    }
+
     public function test_purgar_borra_tambien_el_pdf_de_planeacion_de_la_formacion_continua(): void
     {
         $admin = $this->admin();

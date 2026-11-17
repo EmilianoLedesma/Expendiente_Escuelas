@@ -12,6 +12,7 @@ use App\Models\DocumentoEscuelaNivel;
 use App\Models\Escuela;
 use App\Models\EscuelaNivel;
 use App\Models\EvaluacionValidacion;
+use App\Models\ProyectoEducativoCalendarioAcademico;
 use App\Models\ProyectoEducativoFormacionPolitica;
 use App\Models\ProyectoEducativoMapaCurricular;
 use App\Models\ProyectoEducativoPaec;
@@ -77,6 +78,7 @@ class PurgarTramite
             ...ProyectoEducativoMapaCurricular::rutasDe($niveles),
             ...ProyectoEducativoProgramasEstudios::rutasDe($niveles),
             ...ProyectoEducativoPlaneacionAcademica::rutasDe($niveles),
+            ...ProyectoEducativoCalendarioAcademico::rutasDe($niveles),
         ];
         $reportes = EvaluacionValidacion::where('escuela_id', $escuelaId)->pluck('archivo_path')->all();
 

@@ -11,6 +11,7 @@ use App\Infrastructure\Documentos\AlmacenDocumentos;
 use App\Models\DocumentoEscuelaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
+use App\Models\ProyectoEducativoCalendarioAcademico;
 use App\Models\ProyectoEducativoFormacionPolitica;
 use App\Models\ProyectoEducativoMapaCurricular;
 use App\Models\ProyectoEducativoPaec;
@@ -159,6 +160,7 @@ class RegistrarNivelesSeleccionados
             ...ProyectoEducativoMapaCurricular::rutasDe($ids),
             ...ProyectoEducativoProgramasEstudios::rutasDe($ids),
             ...ProyectoEducativoPlaneacionAcademica::rutasDe($ids),
+            ...ProyectoEducativoCalendarioAcademico::rutasDe($ids),
         ];
 
         // Serializa con una invitación o revocación concurrente del mismo usuario (RevocarResponsableNivel).

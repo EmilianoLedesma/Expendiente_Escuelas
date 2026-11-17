@@ -165,6 +165,94 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($biblioteca)
+        {{-- Sección 19: dos pasos que se guardan por separado. El botón guarda el paso actual (todo o nada dentro del paso); el primero continúa al segundo y el último guarda y termina. Anterior vuelve sin validar. El tipo de biblioteca virtual, el perfil del encargado y el texto del programa de lectura solo aparecen (y se piden) cuando aplican. --}}
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
+                @foreach (\App\Application\ProyectoEducativo\ReglasBibliotecaProyecto::BLOQUES as $n => $b)
+                    <li @if ($n === $biblioteca['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $biblioteca['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    </li>
+                @endforeach
+            </ol>
+            <p class="mb-md text-body-sm text-muted">Paso {{ $biblioteca['bloque'] }} de {{ $biblioteca['total'] }}</p>
+
+            <div wire:key="biblioteca-{{ $biblioteca['bloque'] }}">
+                @if ($biblioteca['bloque'] === 1)
+                    <x-ui.section title="Datos generales de la biblioteca escolar">
+                        <x-ui.radio-group id="biblioteca_tipo" legend="Su biblioteca es..." wire:model.live="biblioteca_tipo" :opciones="\App\Application\ProyectoEducativo\ReglasBibliotecaProyecto::TIPOS" />
+                        @if (in_array($biblioteca_tipo, ['virtual', 'mixta'], true))
+                            <x-ui.radio-group id="biblioteca_virtual_tipo" legend="La biblioteca virtual es..." wire:model.live="biblioteca_virtual_tipo" :opciones="\App\Application\ProyectoEducativo\ReglasBibliotecaProyecto::TIPOS_VIRTUAL" />
+                        @endif
+                    </x-ui.section>
+
+                    <x-ui.section title="Perfiles y mecanismos de la biblioteca escolar (80 a 250 palabras por rubro)">
+                        <x-ui.radio-group id="biblioteca_tiene_encargado" legend="¿Cuenta con personal encargado de biblioteca?" wire:model.live="biblioteca_tiene_encargado" :opciones="\App\Application\ProyectoEducativo\ReglasBibliotecaProyecto::SI_NO" />
+                        @if ($biblioteca_tiene_encargado === 'si')
+                            <x-ui.textarea-palabras id="biblioteca_perfil_encargado" label="Perfil de la persona encargada (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa el perfil profesional de la persona encargada de la biblioteca..." />
+                        @endif
+                        <x-ui.textarea-palabras id="biblioteca_prestamo" label="Mecanismos y tipos de préstamo de materiales (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa los mecanismos de préstamo disponibles..." />
+                    </x-ui.section>
+                @else
+                    <x-ui.section title="Otros servicios y programas de la biblioteca escolar (80 a 250 palabras por rubro)">
+                        <x-ui.radio-group id="biblioteca_tiene_programa_lectura" legend="¿Cuenta con programa de lectura?" wire:model.live="biblioteca_tiene_programa_lectura" :opciones="\App\Application\ProyectoEducativo\ReglasBibliotecaProyecto::SI_NO" />
+                        @if ($biblioteca_tiene_programa_lectura === 'si')
+                            <x-ui.textarea-palabras id="biblioteca_programa_lectura" label="Propósitos, implementación, promoción y justificación del programa de lectura (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa el programa de lectura de la institución..." />
+                        @endif
+                        <x-ui.textarea-palabras id="biblioteca_otros_programas" label="Otros programas o servicios (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa otros programas o servicios que ofrece la biblioteca..." />
+                    </x-ui.section>
+
+                    <x-ui.section title="Acervo bibliográfico (80 a 250 palabras por rubro)">
+                        <x-ui.textarea-palabras id="acervo_clasificacion" label="Clasificación (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa el sistema de clasificación del acervo bibliográfico..." />
+                        <x-ui.textarea-palabras id="acervo_titulos_basicos" label="Existencia de títulos básicos (programas y planeaciones) (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa la disponibilidad de títulos básicos para los programas de estudio..." />
+                        <x-ui.textarea-palabras id="acervo_titulos_lectura" label="Existencia de títulos para la lectura recreativa (80 a 250 palabras)" :min="80" :max="250" :rows="8" placeholder="Describa la disponibilidad de títulos para fomento a la lectura..." />
+                    </x-ui.section>
+                @endif
+            </div>
+
+            <div class="mt-xl flex flex-col-reverse gap-md border-t border-hairline bg-canvas py-md sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:items-center sm:justify-between sm:bg-canvas/95 sm:backdrop-blur">
+                @if ($biblioteca['bloque'] > 1)
+                    <x-ui.button-secondary type="button" wire:click="anteriorBiblioteca">Anterior</x-ui.button-secondary>
+                @else
+                    <a href="{{ route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id]) }}" class="inline-flex min-h-11 items-center justify-center text-body-md font-semibold text-primary">Volver al índice</a>
+                @endif
+
+                <x-ui.button-primary type="submit" wire:loading.attr="disabled">
+                    <span wire:loading.remove>{{ $biblioteca['ultimo'] ? 'Guardar' : 'Guardar y continuar' }}</span>
+                    <span wire:loading>Guardando…</span>
+                </x-ui.button-primary>
+            </div>
+        </form>
+    @elseif ($esCalendario)
+        {{-- Sección 18: un solo bloque. El calendario es un PDF (no se acepta ningún otro tipo de archivo); la descripción es opcional. Guardar valida todo y guarda todo o nada; sin archivo nuevo se conserva el ya guardado. --}}
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <x-ui.section :title="$nombre">
+                <x-ui.field id="archivo_calendario" label="Calendario académico (PDF, máximo 10 MB)">
+                    <p class="mb-xs text-body-sm text-muted">Anexe el calendario académico de su institución en formato PDF. No se aceptan imágenes ni otro tipo de archivo.</p>
+                    <input
+                        type="file"
+                        id="archivo_calendario"
+                        wire:model="archivo_calendario"
+                        accept="application/pdf"
+                        @error('archivo_calendario') aria-invalid="true" aria-describedby="archivo_calendario-error" @enderror
+                        class="block w-full text-body-md text-body file:mr-sm file:min-h-11 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-primary file:bg-canvas file:px-md file:font-semibold file:text-primary"
+                    >
+                    <p wire:loading wire:target="archivo_calendario" class="mt-xxs text-body-sm text-muted">Subiendo…</p>
+                    @if ($calendarioGuardado['archivo_nombre'] ?? null)
+                        @php $paginas = (int) $calendarioGuardado['archivo_paginas']; @endphp
+                        <p class="mt-xs text-body-sm text-ink">Archivo guardado: <strong>{{ $calendarioGuardado['archivo_nombre'] }}</strong> ({{ $paginas }} {{ $paginas === 1 ? 'página' : 'páginas' }}). Sube otro solo si quieres reemplazarlo.</p>
+                    @endif
+                </x-ui.field>
+
+                <x-ui.textarea-palabras id="descripcion_calendario" label="Descripción del calendario académico (50 a 250 palabras)" :min="50" :max="250" :rows="8" :optional="true" placeholder="Puede describir aquí las fechas clave del calendario académico..." />
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
     @elseif ($esPlanAcademica)
         {{-- Sección 17: un solo bloque. Un PDF con los tres ejemplos de planeación (no se acepta otro tipo de archivo) y su descripción, ambos requeridos. Guardar valida todo y guarda todo o nada; sin archivo nuevo se conserva el ya guardado. --}}
         <form novalidate wire:submit="guardar">

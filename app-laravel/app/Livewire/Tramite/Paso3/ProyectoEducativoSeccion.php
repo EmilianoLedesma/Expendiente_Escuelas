@@ -5,9 +5,13 @@ namespace App\Livewire\Tramite\Paso3;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\ProyectoEducativo\AcademiasProyectoCapturada;
+use App\Application\ProyectoEducativo\BibliotecaProyectoCapturada;
+use App\Application\ProyectoEducativo\CalendarioAcademicoProyectoCapturada;
 use App\Application\ProyectoEducativo\CriteriosProyectoCapturada;
 use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
 use App\Application\ProyectoEducativo\DTO\DatosAcademiasProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosBibliotecaProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosCalendarioAcademicoProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosCriteriosProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosCurriculumProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosEgresoProyecto;
@@ -33,6 +37,8 @@ use App\Application\ProyectoEducativo\FormacionContinuaProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionInicialProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionLaboralProyectoCapturada;
 use App\Application\ProyectoEducativo\GuardarAcademiasProyecto;
+use App\Application\ProyectoEducativo\GuardarBibliotecaProyecto;
+use App\Application\ProyectoEducativo\GuardarCalendarioAcademicoProyecto;
 use App\Application\ProyectoEducativo\GuardarCriteriosProyecto;
 use App\Application\ProyectoEducativo\GuardarCurriculumProyecto;
 use App\Application\ProyectoEducativo\GuardarEgresoProyecto;
@@ -59,6 +65,7 @@ use App\Application\ProyectoEducativo\PlaneacionAcademicaProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ProgramasEstudiosProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasAcademiasProyecto;
+use App\Application\ProyectoEducativo\ReglasBibliotecaProyecto;
 use App\Application\ProyectoEducativo\ReglasCriteriosProyecto;
 use App\Application\ProyectoEducativo\ReglasCurriculumProyecto;
 use App\Application\ProyectoEducativo\ReglasEnfoqueProyecto;
@@ -297,6 +304,37 @@ class ProyectoEducativoSeccion extends Component
     /** @var array<string, string|int|null> nombre y páginas del PDF ya guardado (nunca la ruta de disco) */
     public array $planeacionAcademicaGuardada = [];
 
+    // Sección 18 (Calendario Académico): un PDF (subida temporal de Livewire; null = conservar el guardado) y una descripción opcional.
+    public mixed $archivo_calendario = null;
+
+    public string $descripcion_calendario = '';
+
+    /** @var array<string, string|int|null> nombre y páginas del PDF ya guardado (nunca la ruta de disco) */
+    public array $calendarioGuardado = [];
+
+    // Sección 19 (Servicios de Biblioteca y Acervo Bibliográfico): dos pasos que se guardan por separado (`bloque`). Las respuestas Sí/No son 'si' o 'no'.
+    public string $biblioteca_tipo = '';
+
+    public string $biblioteca_virtual_tipo = '';
+
+    public string $biblioteca_tiene_encargado = '';
+
+    public string $biblioteca_perfil_encargado = '';
+
+    public string $biblioteca_prestamo = '';
+
+    public string $biblioteca_tiene_programa_lectura = '';
+
+    public string $biblioteca_programa_lectura = '';
+
+    public string $biblioteca_otros_programas = '';
+
+    public string $acervo_clasificacion = '';
+
+    public string $acervo_titulos_basicos = '';
+
+    public string $acervo_titulos_lectura = '';
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -329,6 +367,10 @@ class ProyectoEducativoSeccion extends Component
             $this->cargarProgramas();
         } elseif ($this->esPlaneacionAcademica()) {
             $this->cargarPlaneacionAcademica();
+        } elseif ($this->esCalendarioAcademico()) {
+            $this->cargarCalendario();
+        } elseif ($this->esBiblioteca()) {
+            $this->cargarBiblioteca();
         }
     }
 
@@ -977,6 +1019,115 @@ class ProyectoEducativoSeccion extends Component
         $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
     }
 
+    private function esBiblioteca(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::biblioteca();
+    }
+
+    /**
+     * Pinta lo guardado. Con `$campos` solo repone esos (tras guardar un paso, lo tecleado del otro no se pierde).
+     *
+     * @param  list<string>|null  $campos
+     */
+    private function cargarBiblioteca(?array $campos = null): void
+    {
+        foreach (app(BibliotecaProyectoCapturada::class)->datos($this->escuelaNivel->id) as $campo => $valor) {
+            if ($campos === null || in_array($campo, $campos, true)) {
+                $this->{$campo} = (string) $valor;
+            }
+        }
+    }
+
+    /** Sección 19: guarda el paso actual (todo o nada dentro del paso) y, si era el primero, pasa al siguiente. */
+    private function guardarBiblioteca(): void
+    {
+        $this->resetErrorBag();
+
+        try {
+            app(GuardarBibliotecaProyecto::class)->ejecutar($this->escuelaNivel->id, $this->bloque, new DatosBibliotecaProyecto(...$this->only(DatosBibliotecaProyecto::campos())));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->cargarBiblioteca(ReglasBibliotecaProyecto::BLOQUES[$this->bloque]['campos']);
+
+        if ($this->bloque < count(ReglasBibliotecaProyecto::BLOQUES)) {
+            $this->bloque++;
+            $this->toast('Paso guardado', 'Continúa con el siguiente paso.');
+
+            return;
+        }
+
+        if (app(BibliotecaProyectoCapturada::class)->completa($this->escuelaNivel->id)) {
+            $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
+        } else {
+            $this->toast('Paso guardado', 'Falta guardar el otro paso para completar la sección.');
+        }
+    }
+
+    /** Sección 19: vuelve un paso sin validar ni perder lo tecleado. */
+    public function anteriorBiblioteca(): void
+    {
+        abort_unless($this->esBiblioteca(), 404);
+        $this->resetErrorBag();
+        $this->bloque = max(1, $this->bloque - 1);
+    }
+
+    private function esCalendarioAcademico(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::calendarioAcademico();
+    }
+
+    private function cargarCalendario(): void
+    {
+        $guardado = app(CalendarioAcademicoProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        $this->descripcion_calendario = (string) $guardado['descripcion_calendario'];
+        unset($guardado['descripcion_calendario']);
+        $this->calendarioGuardado = $guardado;
+    }
+
+    /** "Guardar" de la sección 18: todo o nada; sin archivo nuevo se conserva el guardado. Un valor que no sea una subida cuenta como "sin archivo". */
+    private function guardarCalendario(): void
+    {
+        $this->resetErrorBag();
+
+        try {
+            app(GuardarCalendarioAcademicoProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosCalendarioAcademicoProyecto($this->archivo_calendario instanceof UploadedFile ? $this->archivo_calendario : null, $this->descripcion_calendario));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->archivo_calendario = null;
+        $this->cargarCalendario();
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
+    }
+
     private function esPlaneacionAcademica(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::planeacionAcademica();
@@ -1220,6 +1371,18 @@ class ProyectoEducativoSeccion extends Component
             return;
         }
 
+        if ($this->esCalendarioAcademico()) {
+            $this->guardarCalendario();
+
+            return;
+        }
+
+        if ($this->esBiblioteca()) {
+            $this->guardarBiblioteca();
+
+            return;
+        }
+
         if ($this->esFormacion()) {
             $this->guardarFormacion();
 
@@ -1405,6 +1568,8 @@ class ProyectoEducativoSeccion extends Component
             'esMapa' => $this->esMapaCurricular(),
             'esProgramas' => $this->esProgramasEstudios(),
             'esPlanAcademica' => $this->esPlaneacionAcademica(),
+            'esCalendario' => $this->esCalendarioAcademico(),
+            'biblioteca' => $this->esBiblioteca() ? ['bloque' => $this->bloque, 'total' => count(ReglasBibliotecaProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasBibliotecaProyecto::BLOQUES), ...ReglasBibliotecaProyecto::BLOQUES[$this->bloque]] : null,
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
             'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
             'ingreso' => $this->esIngreso() ? ['bloque' => $this->bloque, 'total' => count(ReglasIngresoProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasIngresoProyecto::BLOQUES), ...ReglasIngresoProyecto::BLOQUES[$this->bloque]] : null,
