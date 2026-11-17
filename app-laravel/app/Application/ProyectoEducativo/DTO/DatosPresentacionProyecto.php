@@ -13,7 +13,6 @@ final readonly class DatosPresentacionProyecto
         public ?string $fecha_entrega = null,
         public ?string $nombre_institucion = null,
         public ?string $fecha_apertura = null,
-        public ?string $domicilio_completo = null,
         public ?string $representante_legal = null,
         public ?string $correo = null,
         public ?string $telefono = null,

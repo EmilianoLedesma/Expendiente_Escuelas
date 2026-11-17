@@ -9,6 +9,7 @@ use App\Application\ProyectoEducativo\BibliotecaProyectoCapturada;
 use App\Application\ProyectoEducativo\CalendarioAcademicoProyectoCapturada;
 use App\Application\ProyectoEducativo\CriteriosProyectoCapturada;
 use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
+use App\Application\ProyectoEducativo\DomicilioPlantelDelNivel;
 use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
 use App\Application\ProyectoEducativo\EnfoqueProyectoCapturada;
 use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
@@ -56,7 +57,8 @@ final class ContenidoSeccionProyecto
             throw new DatosInvalidos(['seccion' => 'Esa sección no existe.']);
         }
 
-        $filas = [];
+        // La Presentación no guarda domicilio: lo lee del plantel, y el evaluador lo ve igual que el solicitante.
+        $filas = $slug === SeccionesProyectoEducativo::presentacion() ? app(DomicilioPlantelDelNivel::class)->ejecutar($escuelaNivelId) : [];
         $listas = [];
         foreach ($this->datos($slug, $escuelaNivelId) as $campo => $valor) {
             if (is_array($valor)) {

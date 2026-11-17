@@ -50,6 +50,17 @@ class RevisionProyectoEducativoTest extends TestCase
         return app(ContenidoSeccionProyecto::class)->ejecutar($actor->id, $nivel->id, $slug);
     }
 
+    public function test_la_presentacion_muestra_al_evaluador_el_domicilio_del_plantel(): void
+    {
+        $nivel = $this->media();
+        $nivel->escuela->plantel->update(['calle' => 'Av. Universidad', 'codigo_postal' => '76000']);
+
+        $filas = $this->contenido($this->evaluador, $nivel, SeccionesProyectoEducativo::presentacion())['filas'];
+
+        $this->assertContains(['Calle', 'Av. Universidad'], $filas);
+        $this->assertContains(['Código postal', '76000'], $filas);
+    }
+
     // --- ConsultarRevisionProyecto
 
     public function test_lista_las_veinte_secciones_en_orden_con_su_clave_y_pendientes(): void

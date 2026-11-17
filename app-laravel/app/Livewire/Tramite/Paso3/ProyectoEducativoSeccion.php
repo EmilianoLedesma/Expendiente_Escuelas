@@ -10,6 +10,7 @@ use App\Application\ProyectoEducativo\BibliotecaProyectoCapturada;
 use App\Application\ProyectoEducativo\CalendarioAcademicoProyectoCapturada;
 use App\Application\ProyectoEducativo\CriteriosProyectoCapturada;
 use App\Application\ProyectoEducativo\CurriculumProyectoCapturada;
+use App\Application\ProyectoEducativo\DomicilioPlantelDelNivel;
 use App\Application\ProyectoEducativo\DTO\DatosAcademiasProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosBibliografiaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosBibliotecaProyecto;
@@ -120,8 +121,6 @@ class ProyectoEducativoSeccion extends Component
     public string $nombre_institucion = '';
 
     public string $fecha_apertura = '';
-
-    public string $domicilio_completo = '';
 
     public string $representante_legal = '';
 
@@ -1657,6 +1656,8 @@ class ProyectoEducativoSeccion extends Component
             'observacion' => app(ObservacionesDeEscuela::class)->seccionesRechazadas($this->escuelaNivel->id)[$this->seccion] ?? null,
             'nombre' => SeccionesProyectoEducativo::nombre($this->seccion),
             'esPresentacion' => $this->esPresentacion(),
+            // Datos generales muestra el domicilio del plantel, sin capturarlo otra vez (3FN).
+            'domicilioPlantel' => $this->esPresentacion() ? app(DomicilioPlantelDelNivel::class)->ejecutar($this->escuelaNivel->id) : [],
             'esTexto' => $this->esTexto(),
             'enfoque' => $this->esEnfoque() ? $this->datosPantallaEnfoque() : null,
             'esPaec' => $this->esPaec(),

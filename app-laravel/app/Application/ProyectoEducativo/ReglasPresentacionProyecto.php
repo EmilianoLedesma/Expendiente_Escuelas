@@ -17,7 +17,7 @@ final class ReglasPresentacionProyecto
 
     /** Pasos del formulario (nombre y campos de cada uno); los nombres son los del dueño. */
     public const PASOS = [
-        1 => ['nombre' => 'Datos Generales', 'campos' => ['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono', 'celular', 'pagina_web']],
+        1 => ['nombre' => 'Datos Generales', 'campos' => ['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'representante_legal', 'correo', 'telefono', 'celular', 'pagina_web']],
         2 => ['nombre' => 'Modalidad, Ciclo Escolar y Duración', 'campos' => ['modalidad', 'ciclo_escolar', 'ciclo_escolar_otro', 'duracion', 'duracion_otro']],
         3 => ['nombre' => 'Síntesis de los Resultados del Estudio de Factibilidad', 'campos' => ['sintesis_factibilidad']],
     ];
@@ -35,7 +35,6 @@ final class ReglasPresentacionProyecto
             'fecha_entrega' => [$req, 'date_format:Y-m-d', 'after_or_equal:1900-01-01'],
             'nombre_institucion' => [$req, 'string', 'max:255'],
             'fecha_apertura' => [$req, 'date_format:Y-m-d', 'after_or_equal:1900-01-01', 'before_or_equal:today'],
-            'domicilio_completo' => [$req, 'string', 'max:500'],
             'representante_legal' => [$req, 'string', 'max:255'],
             'correo' => [$req, 'email', 'max:255'],
             'telefono' => [$req, 'digits:10'],

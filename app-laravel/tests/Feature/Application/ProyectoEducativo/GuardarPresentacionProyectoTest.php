@@ -34,7 +34,6 @@ class GuardarPresentacionProyectoTest extends TestCase
             'fecha_entrega' => '2026-11-10',
             'nombre_institucion' => 'Instituto Ejemplo',
             'fecha_apertura' => '2020-08-01',
-            'domicilio_completo' => 'Calle 1, 10, Centro, Querétaro, Querétaro, 76000',
             'representante_legal' => 'Ana Pérez',
             'correo' => 'ana@ejemplo.com',
             'telefono' => '(442) 123-4567',
@@ -122,7 +121,7 @@ class GuardarPresentacionProyectoTest extends TestCase
     {
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
-        foreach (['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono', 'modalidad', 'ciclo_escolar', 'duracion', 'sintesis_factibilidad'] as $campo) {
+        foreach (['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'representante_legal', 'correo', 'telefono', 'modalidad', 'ciclo_escolar', 'duracion', 'sintesis_factibilidad'] as $campo) {
             $this->guardar($nivel->id, $this->datos([$campo => null]));
             $this->assertFalse(app(PresentacionProyectoCapturada::class)->completa($nivel->id), $campo);
         }
@@ -133,7 +132,6 @@ class GuardarPresentacionProyectoTest extends TestCase
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
         $this->assertArrayHasKey('nombre_institucion', $this->errores($nivel->id, $this->datos(['nombre_institucion' => str_repeat('a', 256)])));
-        $this->assertArrayHasKey('domicilio_completo', $this->errores($nivel->id, $this->datos(['domicilio_completo' => str_repeat('a', 501)])));
         $this->assertArrayHasKey('representante_legal', $this->errores($nivel->id, $this->datos(['representante_legal' => str_repeat('a', 256)])));
         $this->assertArrayHasKey('correo', $this->errores($nivel->id, $this->datos(['correo' => 'no-es-correo'])));
         $this->assertArrayHasKey('correo', $this->errores($nivel->id, $this->datos(['correo' => str_repeat('a', 251).'@b.mx'])));
@@ -181,7 +179,8 @@ class GuardarPresentacionProyectoTest extends TestCase
     public function test_los_campos_del_dto_salen_del_constructor(): void
     {
         $this->assertSame(array_keys((new DatosPresentacionProyecto)->aArray()), DatosPresentacionProyecto::campos());
-        $this->assertCount(15, DatosPresentacionProyecto::campos());
+        $this->assertCount(14, DatosPresentacionProyecto::campos());
+        $this->assertNotContains('domicilio_completo', DatosPresentacionProyecto::campos());
     }
 
     public function test_con_paso_solo_se_exigen_los_requeridos_de_ese_paso(): void
@@ -189,7 +188,7 @@ class GuardarPresentacionProyectoTest extends TestCase
         $nivel = $this->nivelListoPara('media_superior', 'proyecto_educativo');
 
         $errores = $this->erroresPaso($nivel->id, new DatosPresentacionProyecto(modalidad: 'mixta'), 1);
-        $this->assertEqualsCanonicalizing(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono'], array_keys($errores));
+        $this->assertEqualsCanonicalizing(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'representante_legal', 'correo', 'telefono'], array_keys($errores));
 
         // Paso 2 completo con los pasos 1 y 3 vacíos: se guarda.
         $this->assertSame([], $this->erroresPaso($nivel->id, new DatosPresentacionProyecto(modalidad: 'mixta', ciclo_escolar: 'otro', ciclo_escolar_otro: 'X', duracion: '2_anios'), 2));
@@ -206,7 +205,7 @@ class GuardarPresentacionProyectoTest extends TestCase
 
         $errores = $this->erroresPaso($nivel->id, new DatosPresentacionProyecto(sintesis_factibilidad: $this->palabras(500)), 3);
 
-        $this->assertEqualsCanonicalizing(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono', 'modalidad', 'ciclo_escolar', 'duracion'], array_keys($errores));
+        $this->assertEqualsCanonicalizing(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'representante_legal', 'correo', 'telefono', 'modalidad', 'ciclo_escolar', 'duracion'], array_keys($errores));
         $this->assertSame(0, DB::table('proyecto_educativo_presentacion')->count());
         $this->assertSame([], $this->erroresPaso($nivel->id, $this->datos(), 3));
     }

@@ -27,6 +27,19 @@ class Paso3PresentacionProyectoTest extends TestCase
         $this->assertSame(self::SLUG, SeccionesProyectoEducativo::presentacion());
     }
 
+    public function test_datos_generales_muestra_el_domicilio_del_plantel_sin_campo_de_captura(): void
+    {
+        $nivel = $this->nivel();
+        $nivel->escuela->plantel->update(['calle' => 'Av. Universidad', 'colonia' => 'Centro Histórico', 'codigo_postal' => '76000']);
+
+        $this->componente($nivel)
+            ->assertSee('Domicilio')
+            ->assertSee('Av. Universidad')
+            ->assertSee('Centro Histórico')
+            ->assertSee('76000')
+            ->assertDontSeeHtml('id="domicilio_completo"');
+    }
+
     /** @return array<string, string> */
     private function completo(): array
     {
@@ -34,7 +47,6 @@ class Paso3PresentacionProyectoTest extends TestCase
             'fecha_entrega' => '2026-11-10',
             'nombre_institucion' => 'Instituto Ejemplo',
             'fecha_apertura' => '2020-08-01',
-            'domicilio_completo' => 'Calle 1, 10, Centro, Querétaro',
             'representante_legal' => 'Ana Pérez',
             'correo' => 'ana@ejemplo.com',
             'telefono' => '(442) 123-4567',
@@ -101,7 +113,7 @@ class Paso3PresentacionProyectoTest extends TestCase
             ->assertSee('Datos Generales')
             ->assertSee('Fecha de entrega')
             ->assertSee('Nombre completo de la institución educativa')
-            ->assertSee('Calle, número, colonia, municipio, estado, C.P.')
+            ->assertSee('Es el domicilio registrado del plantel')
             ->assertSee('Nombre completo del representante')
             ->assertSee('correo@ejemplo.com')
             ->assertSee('(442) 000-0000')
@@ -140,7 +152,7 @@ class Paso3PresentacionProyectoTest extends TestCase
 
         $this->componente($nivel)->call('siguiente')
             ->assertSet('paso', 1)
-            ->assertHasErrors(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'domicilio_completo', 'representante_legal', 'correo', 'telefono'])
+            ->assertHasErrors(['fecha_entrega', 'nombre_institucion', 'fecha_apertura', 'representante_legal', 'correo', 'telefono'])
             ->assertHasNoErrors(['modalidad', 'ciclo_escolar', 'duracion', 'sintesis_factibilidad'])
             ->assertDispatched('toast', tipo: 'error');
 
@@ -224,7 +236,6 @@ class Paso3PresentacionProyectoTest extends TestCase
 
         foreach ([
             'id="nombre_institucion"' => ['maxlength="255"', 'required', 'autocomplete="organization"'],
-            'id="domicilio_completo"' => ['maxlength="500"', 'required', 'autocomplete="street-address"'],
             'id="representante_legal"' => ['maxlength="255"', 'required', 'autocomplete="name"'],
             'id="correo"' => ['type="email"', 'maxlength="255"', 'required', 'autocomplete="email"'],
             'id="telefono"' => ['type="tel"', 'inputmode="tel"', 'maxlength="20"', 'required', 'autocomplete="tel-national"'],

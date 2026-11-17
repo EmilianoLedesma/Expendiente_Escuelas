@@ -47,9 +47,11 @@
                 <x-ui.field id="fecha_apertura" label="Fecha de apertura">
                     <x-ui.input type="date" wire:model.blur="fecha_apertura" min="1900-01-01" max="{{ now()->toDateString() }}" required />
                 </x-ui.field>
-                <x-ui.field id="domicilio_completo" label="Domicilio completo">
-                    <x-ui.input wire:model.blur="domicilio_completo" maxlength="500" required autocomplete="street-address" placeholder="Calle, número, colonia, municipio, estado, C.P." />
-                </x-ui.field>
+                <div class="space-y-xs">
+                    <h3 class="text-body-md font-semibold text-ink">Domicilio</h3>
+                    <x-ui.summary-list :filas="collect($domicilioPlantel)->pluck(1, 0)->all()" />
+                    <p class="text-body-sm text-muted">Es el domicilio registrado del plantel; no se captura de nuevo aquí.</p>
+                </div>
                 <x-ui.field id="representante_legal" label="Representante legal">
                     <x-ui.input wire:model.blur="representante_legal" maxlength="255" required autocomplete="name" placeholder="Nombre completo del representante" />
                 </x-ui.field>

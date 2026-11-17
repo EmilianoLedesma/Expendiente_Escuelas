@@ -26,9 +26,9 @@ class RolesSedeqTest extends TestCase
         RolesSedeq::exigir($otro, RolesSedeq::SUPERVISOR);
     }
 
-    public function test_todos_contiene_exactamente_los_tres_nombres(): void
+    public function test_todos_contiene_exactamente_los_cuatro_nombres(): void
     {
-        $this->assertEqualsCanonicalizing([RolesSedeq::ADMIN, 'supervisor', 'revisor'], RolesSedeq::TODOS);
+        $this->assertEqualsCanonicalizing([RolesSedeq::ADMIN, 'supervisor', 'revisor', 'evaluador_proyecto'], RolesSedeq::TODOS);
         $this->assertSame('admin', RolesSedeq::ADMIN);
     }
 

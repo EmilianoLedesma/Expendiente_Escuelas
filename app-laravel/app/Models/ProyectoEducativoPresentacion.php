@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $fecha_entrega
  * @property string|null $nombre_institucion
  * @property string|null $fecha_apertura
- * @property string|null $domicilio_completo
  * @property string|null $representante_legal
  * @property string|null $correo
  * @property string|null $telefono
