@@ -22,6 +22,7 @@ use App\Application\ProyectoEducativo\DTO\DatosMapaCurricularProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPaecProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPerfilDocenteProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosPlaneacionAcademicaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosProgramasEstudiosProyecto;
 use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
@@ -46,6 +47,7 @@ use App\Application\ProyectoEducativo\GuardarMapaCurricularProyecto;
 use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
 use App\Application\ProyectoEducativo\GuardarPaecProyecto;
 use App\Application\ProyectoEducativo\GuardarPerfilDocenteProyecto;
+use App\Application\ProyectoEducativo\GuardarPlaneacionAcademicaProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
 use App\Application\ProyectoEducativo\GuardarProgramasEstudiosProyecto;
 use App\Application\ProyectoEducativo\IngresoProyectoCapturada;
@@ -53,6 +55,7 @@ use App\Application\ProyectoEducativo\MapaCurricularProyectoCapturada;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
 use App\Application\ProyectoEducativo\PaecProyectoCapturada;
 use App\Application\ProyectoEducativo\PerfilDocenteProyectoCapturada;
+use App\Application\ProyectoEducativo\PlaneacionAcademicaProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ProgramasEstudiosProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasAcademiasProyecto;
@@ -286,6 +289,14 @@ class ProyectoEducativoSeccion extends Component
     /** @var array<string, string|int|null> nombre y páginas del PDF ya guardado (nunca la ruta de disco) */
     public array $programasGuardado = [];
 
+    // Sección 17 (Planeación Académica): un PDF con los tres ejemplos (subida temporal de Livewire; null = conservar el guardado) y su descripción.
+    public mixed $archivo_planeacion = null;
+
+    public string $descripcion_planeacion = '';
+
+    /** @var array<string, string|int|null> nombre y páginas del PDF ya guardado (nunca la ruta de disco) */
+    public array $planeacionAcademicaGuardada = [];
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -316,6 +327,8 @@ class ProyectoEducativoSeccion extends Component
             $this->cargarMapa();
         } elseif ($this->esProgramasEstudios()) {
             $this->cargarProgramas();
+        } elseif ($this->esPlaneacionAcademica()) {
+            $this->cargarPlaneacionAcademica();
         }
     }
 
@@ -964,6 +977,48 @@ class ProyectoEducativoSeccion extends Component
         $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
     }
 
+    private function esPlaneacionAcademica(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::planeacionAcademica();
+    }
+
+    private function cargarPlaneacionAcademica(): void
+    {
+        $guardado = app(PlaneacionAcademicaProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        $this->descripcion_planeacion = (string) $guardado['descripcion_planeacion'];
+        unset($guardado['descripcion_planeacion']);
+        $this->planeacionAcademicaGuardada = $guardado;
+    }
+
+    /** "Guardar" de la sección 17: todo o nada; sin archivo nuevo se conserva el guardado. Un valor que no sea una subida cuenta como "sin archivo". */
+    private function guardarPlaneacionAcademica(): void
+    {
+        $this->resetErrorBag();
+
+        try {
+            app(GuardarPlaneacionAcademicaProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosPlaneacionAcademicaProyecto($this->archivo_planeacion instanceof UploadedFile ? $this->archivo_planeacion : null, $this->descripcion_planeacion));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->archivo_planeacion = null;
+        $this->cargarPlaneacionAcademica();
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
+    }
+
     private function esProgramasEstudios(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::programasEstudios();
@@ -1159,6 +1214,12 @@ class ProyectoEducativoSeccion extends Component
             return;
         }
 
+        if ($this->esPlaneacionAcademica()) {
+            $this->guardarPlaneacionAcademica();
+
+            return;
+        }
+
         if ($this->esFormacion()) {
             $this->guardarFormacion();
 
@@ -1343,6 +1404,7 @@ class ProyectoEducativoSeccion extends Component
             'esPaec' => $this->esPaec(),
             'esMapa' => $this->esMapaCurricular(),
             'esProgramas' => $this->esProgramasEstudios(),
+            'esPlanAcademica' => $this->esPlaneacionAcademica(),
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
             'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
             'ingreso' => $this->esIngreso() ? ['bloque' => $this->bloque, 'total' => count(ReglasIngresoProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasIngresoProyecto::BLOQUES), ...ReglasIngresoProyecto::BLOQUES[$this->bloque]] : null,

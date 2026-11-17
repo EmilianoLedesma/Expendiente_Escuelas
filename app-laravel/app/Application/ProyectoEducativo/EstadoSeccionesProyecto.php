@@ -27,6 +27,7 @@ final class EstadoSeccionesProyecto
         private readonly FormacionLaboralProyectoCapturada $formacionLaboral,
         private readonly MapaCurricularProyectoCapturada $mapaCurricular,
         private readonly ProgramasEstudiosProyectoCapturada $programasEstudios,
+        private readonly PlaneacionAcademicaProyectoCapturada $planeacionAcademica,
     ) {}
 
     /** @return array<string, bool> slug => completa, en el orden del índice (las 20 secciones). */
@@ -51,6 +52,7 @@ final class EstadoSeccionesProyecto
             SeccionesProyectoEducativo::planEstudios() => $this->formacionLaboral->completa($escuelaNivelId),
             SeccionesProyectoEducativo::mapaCurricular() => $this->mapaCurricular->completa($escuelaNivelId),
             SeccionesProyectoEducativo::programasEstudios() => $this->programasEstudios->completa($escuelaNivelId),
+            SeccionesProyectoEducativo::planeacionAcademica() => $this->planeacionAcademica->completa($escuelaNivelId),
         ];
 
         $completas = [];

@@ -165,6 +165,34 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($esPlanAcademica)
+        {{-- Sección 17: un solo bloque. Un PDF con los tres ejemplos de planeación (no se acepta otro tipo de archivo) y su descripción, ambos requeridos. Guardar valida todo y guarda todo o nada; sin archivo nuevo se conserva el ya guardado. --}}
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <x-ui.section :title="$nombre">
+                <x-ui.field id="archivo_planeacion" label="Ejemplos de planeación académica (PDF, máximo 10 MB)">
+                    <p class="mb-xs text-body-sm text-muted">Presente tres ejemplos de planeación académica de diferente campo disciplinar y semestre, reunidos en un solo archivo PDF. No se aceptan imágenes ni otro tipo de archivo.</p>
+                    <input
+                        type="file"
+                        id="archivo_planeacion"
+                        wire:model="archivo_planeacion"
+                        accept="application/pdf"
+                        @error('archivo_planeacion') aria-invalid="true" aria-describedby="archivo_planeacion-error" @enderror
+                        class="block w-full text-body-md text-body file:mr-sm file:min-h-11 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-primary file:bg-canvas file:px-md file:font-semibold file:text-primary"
+                    >
+                    <p wire:loading wire:target="archivo_planeacion" class="mt-xxs text-body-sm text-muted">Subiendo…</p>
+                    @if ($planeacionAcademicaGuardada['archivo_nombre'] ?? null)
+                        @php $paginas = (int) $planeacionAcademicaGuardada['archivo_paginas']; @endphp
+                        <p class="mt-xs text-body-sm text-ink">Archivo guardado: <strong>{{ $planeacionAcademicaGuardada['archivo_nombre'] }}</strong> ({{ $paginas }} {{ $paginas === 1 ? 'página' : 'páginas' }}). Sube otro solo si quieres reemplazarlo.</p>
+                    @endif
+                </x-ui.field>
+
+                <x-ui.textarea-palabras id="descripcion_planeacion" label="Descripción de los ejemplos de planeación (50 a 250 palabras)" :min="50" :max="250" :rows="8" placeholder="Indique los campos disciplinares y semestres de los tres ejemplos presentados..." />
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
     @elseif ($esProgramas)
         {{-- Sección 16: un solo bloque. Periodicidad (con texto si es "Otra"), modalidad y si retoma los programas de la DGB completos; solo con "No" se piden la justificación y el PDF de los programas adaptados (no se acepta otro tipo de archivo). Guardar valida todo y guarda todo o nada. --}}
         <form novalidate wire:submit="guardar">

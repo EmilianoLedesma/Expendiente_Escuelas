@@ -152,6 +152,12 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[15];
     }
 
+    /** Slug de la sección 17 (Planeación Académica). */
+    public static function planeacionAcademica(): string
+    {
+        return array_keys(self::todas())[16];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

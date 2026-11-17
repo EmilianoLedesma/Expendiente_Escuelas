@@ -14,6 +14,7 @@ use App\Models\NivelEducativo;
 use App\Models\ProyectoEducativoFormacionPolitica;
 use App\Models\ProyectoEducativoMapaCurricular;
 use App\Models\ProyectoEducativoPaec;
+use App\Models\ProyectoEducativoPlaneacionAcademica;
 use App\Models\ProyectoEducativoProgramasEstudios;
 use App\Models\ResponsableNivel;
 use App\Models\User;
@@ -157,6 +158,7 @@ class RegistrarNivelesSeleccionados
             ...ProyectoEducativoFormacionPolitica::rutasDe($ids),
             ...ProyectoEducativoMapaCurricular::rutasDe($ids),
             ...ProyectoEducativoProgramasEstudios::rutasDe($ids),
+            ...ProyectoEducativoPlaneacionAcademica::rutasDe($ids),
         ];
 
         // Serializa con una invitación o revocación concurrente del mismo usuario (RevocarResponsableNivel).

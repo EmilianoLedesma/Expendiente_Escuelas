@@ -15,6 +15,7 @@ use App\Models\EvaluacionValidacion;
 use App\Models\ProyectoEducativoFormacionPolitica;
 use App\Models\ProyectoEducativoMapaCurricular;
 use App\Models\ProyectoEducativoPaec;
+use App\Models\ProyectoEducativoPlaneacionAcademica;
 use App\Models\ProyectoEducativoProgramasEstudios;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Scopes\NivelDeEscuelaNoArchivada;
@@ -75,6 +76,7 @@ class PurgarTramite
             ...ProyectoEducativoFormacionPolitica::rutasDe($niveles),
             ...ProyectoEducativoMapaCurricular::rutasDe($niveles),
             ...ProyectoEducativoProgramasEstudios::rutasDe($niveles),
+            ...ProyectoEducativoPlaneacionAcademica::rutasDe($niveles),
         ];
         $reportes = EvaluacionValidacion::where('escuela_id', $escuelaId)->pluck('archivo_path')->all();
 
