@@ -165,6 +165,75 @@
                 </x-ui.button-primary>
             </div>
         </form>
+    @elseif ($esProgramas)
+        {{-- Sección 16: un solo bloque. Periodicidad (con texto si es "Otra"), modalidad y si retoma los programas de la DGB completos; solo con "No" se piden la justificación y el PDF de los programas adaptados (no se acepta otro tipo de archivo). Guardar valida todo y guarda todo o nada. --}}
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <x-ui.section :title="$nombre">
+                <x-ui.radio-group id="periodicidad_ciclo" legend="Periodicidad del ciclo" wire:model.live="periodicidad_ciclo" :opciones="\App\Application\ProyectoEducativo\ReglasProgramasEstudiosProyecto::PERIODICIDADES" />
+                @if ($periodicidad_ciclo === 'otra')
+                    <x-ui.field id="periodicidad_otra" label="Especifique la periodicidad (máximo 60 caracteres)" class="mt-sm">
+                        <x-ui.input wire:model.blur="periodicidad_otra" maxlength="60" required />
+                    </x-ui.field>
+                @endif
+
+                <x-ui.radio-group id="modalidad_programas" legend="Modalidad" wire:model.live="modalidad_programas" :opciones="\App\Application\ProyectoEducativo\ReglasProgramasEstudiosProyecto::MODALIDADES" />
+
+                <x-ui.radio-group id="retoma_dgb" legend="¿Retoma los programas de la DGB completos?" wire:model.live="retoma_dgb" :opciones="\App\Application\ProyectoEducativo\ReglasProgramasEstudiosProyecto::RETOMA" />
+
+                @if ($retoma_dgb === 'no')
+                    <x-ui.textarea-palabras id="justificacion_adaptacion" label="Justificación y criterios de adaptación (200 a 500 palabras)" :min="200" :max="500" :rows="10" placeholder="Justifique los criterios utilizados para adaptar los programas de estudio..." />
+
+                    <x-ui.field id="archivo_programas" label="Programas adaptados (PDF, máximo 10 MB)">
+                        <p class="mb-xs text-body-sm text-muted">Anexe los programas adaptados en formato PDF. No se aceptan imágenes ni otro tipo de archivo.</p>
+                        <input
+                            type="file"
+                            id="archivo_programas"
+                            wire:model="archivo_programas"
+                            accept="application/pdf"
+                            @error('archivo_programas') aria-invalid="true" aria-describedby="archivo_programas-error" @enderror
+                            class="block w-full text-body-md text-body file:mr-sm file:min-h-11 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-primary file:bg-canvas file:px-md file:font-semibold file:text-primary"
+                        >
+                        <p wire:loading wire:target="archivo_programas" class="mt-xxs text-body-sm text-muted">Subiendo…</p>
+                        @if ($programasGuardado['archivo_nombre'] ?? null)
+                            @php $paginas = (int) $programasGuardado['archivo_paginas']; @endphp
+                            <p class="mt-xs text-body-sm text-ink">Archivo guardado: <strong>{{ $programasGuardado['archivo_nombre'] }}</strong> ({{ $paginas }} {{ $paginas === 1 ? 'página' : 'páginas' }}). Sube otro solo si quieres reemplazarlo.</p>
+                        @endif
+                    </x-ui.field>
+                @endif
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
+    @elseif ($esMapa)
+        {{-- Sección 15: un solo bloque. El mapa es un PDF (no se acepta ningún otro tipo de archivo); la descripción es opcional. Guardar valida todo y guarda todo o nada; sin archivo nuevo se conserva el ya guardado. --}}
+        <form novalidate wire:submit="guardar">
+            <x-ui.error-summary />
+
+            <x-ui.section :title="$nombre">
+                <x-ui.field id="archivo_mapa" label="Mapa curricular (PDF, máximo 10 MB)">
+                    <p class="mb-xs text-body-sm text-muted">Anexe el mapa curricular de su institución en formato PDF. No se aceptan imágenes ni otro tipo de archivo.</p>
+                    <input
+                        type="file"
+                        id="archivo_mapa"
+                        wire:model="archivo_mapa"
+                        accept="application/pdf"
+                        @error('archivo_mapa') aria-invalid="true" aria-describedby="archivo_mapa-error" @enderror
+                        class="block w-full text-body-md text-body file:mr-sm file:min-h-11 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-primary file:bg-canvas file:px-md file:font-semibold file:text-primary"
+                    >
+                    <p wire:loading wire:target="archivo_mapa" class="mt-xxs text-body-sm text-muted">Subiendo…</p>
+                    @if ($mapaGuardado['archivo_nombre'] ?? null)
+                        @php $paginas = (int) $mapaGuardado['archivo_paginas']; @endphp
+                        <p class="mt-xs text-body-sm text-ink">Archivo guardado: <strong>{{ $mapaGuardado['archivo_nombre'] }}</strong> ({{ $paginas }} {{ $paginas === 1 ? 'página' : 'páginas' }}). Sube otro solo si quieres reemplazarlo.</p>
+                    @endif
+                </x-ui.field>
+
+                <x-ui.textarea-palabras id="descripcion_mapa" label="Descripción del mapa curricular (50 a 250 palabras)" :min="50" :max="250" :rows="8" :optional="true" placeholder="Puede describir aquí la estructura general del mapa curricular..." />
+            </x-ui.section>
+
+            <x-ui.action-bar accion="guardar" label="Guardar" :back-href="route('tramite.paso3-proyecto-educativo', ['escuelaNivel' => $escuelaNivel->id])" back-label="Volver al índice" />
+        </form>
     @elseif ($esPaec)
         {{-- Sección 6: un solo bloque (diagnóstico y dos PDF). Guardar valida todo y guarda todo o nada; sin archivo nuevo se conserva el ya guardado. --}}
         @php
@@ -578,6 +647,12 @@
             @elseif ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::egreso())
                 <x-ui.section :title="$nombre">
                     <x-ui.textarea-palabras id="perfil_egreso" label="Perfil de Egreso (100 a 400 palabras)" :min="100" :max="400" :rows="12" placeholder="Describa las competencias, habilidades y conocimientos que el egresado habrá desarrollado al concluir el programa educativo..." />
+                </x-ui.section>
+            @elseif ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::planEstudios())
+                <x-ui.section title="Componente y Enfoque de Formación Laboral">
+                    <x-ui.textarea-palabras id="formacion_laboral_1" label="Formación 1 (100 a 250 palabras)" :min="100" :max="250" :rows="8" placeholder="Describa la primera formación laboral ofrecida..." />
+                    <x-ui.textarea-palabras id="formacion_laboral_2" label="Formación 2 (100 a 250 palabras)" :min="100" :max="250" :rows="8" placeholder="Describa la segunda formación laboral ofrecida..." />
+                    <x-ui.textarea-palabras id="otras_formaciones" label="Otras formaciones (100 a 250 palabras)" :min="100" :max="250" :rows="8" :optional="true" placeholder="Describa cualquier otra formación incluida en el plan de estudios..." />
                 </x-ui.section>
             @elseif ($seccion === \App\Application\ProyectoEducativo\SeccionesProyectoEducativo::perfilDocente())
                 <x-ui.section :title="$nombre">

@@ -16,17 +16,21 @@ use App\Application\ProyectoEducativo\DTO\DatosEvaluacionProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosFilosofiaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosFormacionContinuaProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosFormacionInicialProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosFormacionLaboralProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosIngresoProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosMapaCurricularProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosObjetivosProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPaecProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPerfilDocenteProyecto;
 use App\Application\ProyectoEducativo\DTO\DatosPresentacionProyecto;
+use App\Application\ProyectoEducativo\DTO\DatosProgramasEstudiosProyecto;
 use App\Application\ProyectoEducativo\EgresoProyectoCapturada;
 use App\Application\ProyectoEducativo\EnfoqueProyectoCapturada;
 use App\Application\ProyectoEducativo\EvaluacionProyectoCapturada;
 use App\Application\ProyectoEducativo\FilosofiaProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionContinuaProyectoCapturada;
 use App\Application\ProyectoEducativo\FormacionInicialProyectoCapturada;
+use App\Application\ProyectoEducativo\FormacionLaboralProyectoCapturada;
 use App\Application\ProyectoEducativo\GuardarAcademiasProyecto;
 use App\Application\ProyectoEducativo\GuardarCriteriosProyecto;
 use App\Application\ProyectoEducativo\GuardarCurriculumProyecto;
@@ -36,16 +40,21 @@ use App\Application\ProyectoEducativo\GuardarEvaluacionProyecto;
 use App\Application\ProyectoEducativo\GuardarFilosofiaProyecto;
 use App\Application\ProyectoEducativo\GuardarFormacionContinuaProyecto;
 use App\Application\ProyectoEducativo\GuardarFormacionInicialProyecto;
+use App\Application\ProyectoEducativo\GuardarFormacionLaboralProyecto;
 use App\Application\ProyectoEducativo\GuardarIngresoProyecto;
+use App\Application\ProyectoEducativo\GuardarMapaCurricularProyecto;
 use App\Application\ProyectoEducativo\GuardarObjetivosProyecto;
 use App\Application\ProyectoEducativo\GuardarPaecProyecto;
 use App\Application\ProyectoEducativo\GuardarPerfilDocenteProyecto;
 use App\Application\ProyectoEducativo\GuardarPresentacionProyecto;
+use App\Application\ProyectoEducativo\GuardarProgramasEstudiosProyecto;
 use App\Application\ProyectoEducativo\IngresoProyectoCapturada;
+use App\Application\ProyectoEducativo\MapaCurricularProyectoCapturada;
 use App\Application\ProyectoEducativo\ObjetivosProyectoCapturada;
 use App\Application\ProyectoEducativo\PaecProyectoCapturada;
 use App\Application\ProyectoEducativo\PerfilDocenteProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
+use App\Application\ProyectoEducativo\ProgramasEstudiosProyectoCapturada;
 use App\Application\ProyectoEducativo\ReglasAcademiasProyecto;
 use App\Application\ProyectoEducativo\ReglasCriteriosProyecto;
 use App\Application\ProyectoEducativo\ReglasCurriculumProyecto;
@@ -246,6 +255,37 @@ class ProyectoEducativoSeccion extends Component
 
     public string $servicios_control_escolar = '';
 
+    // Sección 14 (Plan de Estudios, Formación Laboral): una sola página; "otras_formaciones" es opcional.
+    public string $formacion_laboral_1 = '';
+
+    public string $formacion_laboral_2 = '';
+
+    public string $otras_formaciones = '';
+
+    // Sección 15 (Mapa Curricular): un PDF (subida temporal de Livewire; null = conservar el guardado) y una descripción opcional.
+    public mixed $archivo_mapa = null;
+
+    public string $descripcion_mapa = '';
+
+    /** @var array<string, string|int|null> nombre y páginas del PDF ya guardado (nunca la ruta de disco) */
+    public array $mapaGuardado = [];
+
+    // Sección 16 (Programas de Estudios): tres respuestas y, solo si NO retoma los programas de la DGB ('no'), justificación y PDF.
+    public string $periodicidad_ciclo = '';
+
+    public string $periodicidad_otra = '';
+
+    public string $modalidad_programas = '';
+
+    public string $retoma_dgb = '';
+
+    public string $justificacion_adaptacion = '';
+
+    public mixed $archivo_programas = null;
+
+    /** @var array<string, string|int|null> nombre y páginas del PDF ya guardado (nunca la ruta de disco) */
+    public array $programasGuardado = [];
+
     public function mount(EscuelaNivel $escuelaNivel, string $seccion): void
     {
         $this->escuelaNivel = $escuelaNivel;
@@ -272,6 +312,10 @@ class ProyectoEducativoSeccion extends Component
             $this->cargarFormacion();
         } elseif ($this->esCriterios()) {
             $this->cargarCriterios();
+        } elseif ($this->esMapaCurricular()) {
+            $this->cargarMapa();
+        } elseif ($this->esProgramasEstudios()) {
+            $this->cargarProgramas();
         }
     }
 
@@ -920,6 +964,98 @@ class ProyectoEducativoSeccion extends Component
         $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
     }
 
+    private function esProgramasEstudios(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::programasEstudios();
+    }
+
+    private function cargarProgramas(): void
+    {
+        $guardado = app(ProgramasEstudiosProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        foreach (['periodicidad_ciclo', 'periodicidad_otra', 'modalidad_programas', 'retoma_dgb', 'justificacion_adaptacion'] as $campo) {
+            $this->{$campo} = (string) $guardado[$campo];
+        }
+        $this->programasGuardado = ['archivo_nombre' => $guardado['archivo_nombre'], 'archivo_paginas' => $guardado['archivo_paginas']];
+    }
+
+    /** "Guardar" de la sección 16: todo o nada; sin archivo nuevo se conserva el guardado. Un valor que no sea una subida cuenta como "sin archivo". */
+    private function guardarProgramas(): void
+    {
+        $this->resetErrorBag();
+
+        try {
+            app(GuardarProgramasEstudiosProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosProgramasEstudiosProyecto(
+                $this->periodicidad_ciclo,
+                $this->periodicidad_otra,
+                $this->modalidad_programas,
+                $this->retoma_dgb,
+                $this->justificacion_adaptacion,
+                $this->archivo_programas instanceof UploadedFile ? $this->archivo_programas : null,
+            ));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->archivo_programas = null;
+        $this->cargarProgramas();
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
+    }
+
+    private function esMapaCurricular(): bool
+    {
+        return $this->seccion === SeccionesProyectoEducativo::mapaCurricular();
+    }
+
+    private function cargarMapa(): void
+    {
+        $guardado = app(MapaCurricularProyectoCapturada::class)->datos($this->escuelaNivel->id);
+        $this->descripcion_mapa = (string) $guardado['descripcion_mapa'];
+        unset($guardado['descripcion_mapa']);
+        $this->mapaGuardado = $guardado;
+    }
+
+    /** "Guardar" de la sección 15: todo o nada; sin archivo nuevo se conserva el guardado. Un valor que no sea una subida cuenta como "sin archivo". */
+    private function guardarMapa(): void
+    {
+        $this->resetErrorBag();
+
+        try {
+            app(GuardarMapaCurricularProyecto::class)->ejecutar($this->escuelaNivel->id, new DatosMapaCurricularProyecto($this->archivo_mapa instanceof UploadedFile ? $this->archivo_mapa : null, $this->descripcion_mapa));
+        } catch (DatosInvalidos $e) {
+            foreach ($e->errores as $campo => $mensaje) {
+                $this->addError($campo, $mensaje);
+            }
+            $this->toastDatosInvalidos();
+
+            return;
+        } catch (PrecondicionIncumplida $e) {
+            if ($e->etapaFaltante === TramiteEditable::ENVIADO) {
+                $this->toast('No se guardó', $e->getMessage(), 'error');
+            } else {
+                $this->redirigirSiNoAlcanzable($this->escuelaNivel, SeccionesProyectoEducativo::CLAVE_PASO);
+            }
+
+            return;
+        }
+
+        $this->archivo_mapa = null;
+        $this->cargarMapa();
+        $this->toast('Sección completa', 'Puedes seguir con la siguiente sección.');
+    }
+
     private function esEnfoque(): bool
     {
         return $this->seccion === SeccionesProyectoEducativo::enfoque();
@@ -1011,6 +1147,18 @@ class ProyectoEducativoSeccion extends Component
             return;
         }
 
+        if ($this->esMapaCurricular()) {
+            $this->guardarMapa();
+
+            return;
+        }
+
+        if ($this->esProgramasEstudios()) {
+            $this->guardarProgramas();
+
+            return;
+        }
+
         if ($this->esFormacion()) {
             $this->guardarFormacion();
 
@@ -1080,7 +1228,7 @@ class ProyectoEducativoSeccion extends Component
     /** Secciones de una sola página con textos de rango de palabras: [guardar, DTO, lectura]. */
     private function esTexto(): bool
     {
-        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso(), SeccionesProyectoEducativo::perfilDocente(), SeccionesProyectoEducativo::academias()], true);
+        return in_array($this->seccion, [SeccionesProyectoEducativo::filosofia(), SeccionesProyectoEducativo::objetivos(), SeccionesProyectoEducativo::evaluacion(), SeccionesProyectoEducativo::curriculum(), SeccionesProyectoEducativo::ingreso(), SeccionesProyectoEducativo::egreso(), SeccionesProyectoEducativo::perfilDocente(), SeccionesProyectoEducativo::academias(), SeccionesProyectoEducativo::planEstudios()], true);
     }
 
     /** @return array{object, class-string, object} */
@@ -1095,6 +1243,7 @@ class ProyectoEducativoSeccion extends Component
             SeccionesProyectoEducativo::egreso() => [app(GuardarEgresoProyecto::class), DatosEgresoProyecto::class, app(EgresoProyectoCapturada::class)],
             SeccionesProyectoEducativo::perfilDocente() => [app(GuardarPerfilDocenteProyecto::class), DatosPerfilDocenteProyecto::class, app(PerfilDocenteProyectoCapturada::class)],
             SeccionesProyectoEducativo::academias() => [app(GuardarAcademiasProyecto::class), DatosAcademiasProyecto::class, app(AcademiasProyectoCapturada::class)],
+            SeccionesProyectoEducativo::planEstudios() => [app(GuardarFormacionLaboralProyecto::class), DatosFormacionLaboralProyecto::class, app(FormacionLaboralProyectoCapturada::class)],
             default => abort(404),
         };
     }
@@ -1192,6 +1341,8 @@ class ProyectoEducativoSeccion extends Component
             'esTexto' => $this->esTexto(),
             'enfoque' => $this->esEnfoque() ? $this->datosPantallaEnfoque() : null,
             'esPaec' => $this->esPaec(),
+            'esMapa' => $this->esMapaCurricular(),
+            'esProgramas' => $this->esProgramasEstudios(),
             'evaluacion' => $this->esEvaluacion() ? ['bloque' => $this->bloque, 'total' => count(ReglasEvaluacionProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasEvaluacionProyecto::BLOQUES), ...ReglasEvaluacionProyecto::BLOQUES[$this->bloque]] : null,
             'curriculum' => $this->esCurriculum() ? ['bloque' => $this->bloque, 'total' => count(ReglasCurriculumProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasCurriculumProyecto::BLOQUES), ...ReglasCurriculumProyecto::BLOQUES[$this->bloque]] : null,
             'ingreso' => $this->esIngreso() ? ['bloque' => $this->bloque, 'total' => count(ReglasIngresoProyecto::BLOQUES), 'ultimo' => $this->bloque >= count(ReglasIngresoProyecto::BLOQUES), ...ReglasIngresoProyecto::BLOQUES[$this->bloque]] : null,

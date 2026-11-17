@@ -237,6 +237,47 @@ class RegistrarNivelesSeleccionadosTest extends TestCase
         Storage::disk('documentos')->assertMissing($ruta);
     }
 
+    public function test_quitar_un_nivel_borra_el_pdf_del_mapa_curricular_y_el_resumen_lo_cuenta_como_documento(): void
+    {
+        $escuela = $this->crearEscuela();
+        $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar'), $this->id('primaria')]);
+        $nivelId = EscuelaNivel::where('escuela_id', $escuela->id)->where('nivel_educativo_id', $this->id('preescolar'))->value('id');
+        $ruta = "proyecto_educativo/{$nivelId}/mapa_curricular-x.pdf";
+        Storage::disk('documentos')->put($ruta, '%PDF');
+        DB::table('proyecto_educativo_mapa_curricular')->insert([
+            'escuela_nivel_id' => $nivelId, 'archivo_path' => $ruta, 'archivo_nombre' => 'mapa.pdf', 'archivo_paginas' => 1,
+        ]);
+        $confirmado = app(ResumenEliminacionNivel::class)->ejecutar($escuela->id, [$this->id('preescolar')]);
+
+        $this->assertSame(1, $confirmado[$this->id('preescolar')]['documentos']);
+
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')], confirmado: $confirmado);
+
+        $this->assertDatabaseCount('proyecto_educativo_mapa_curricular', 0);
+        Storage::disk('documentos')->assertMissing($ruta);
+    }
+
+    public function test_quitar_un_nivel_borra_el_pdf_de_los_programas_adaptados_y_el_resumen_lo_cuenta_como_documento(): void
+    {
+        $escuela = $this->crearEscuela();
+        $this->registrar()->ejecutar($escuela->id, agregar: [$this->id('preescolar'), $this->id('primaria')]);
+        $nivelId = EscuelaNivel::where('escuela_id', $escuela->id)->where('nivel_educativo_id', $this->id('preescolar'))->value('id');
+        $ruta = "proyecto_educativo/{$nivelId}/programas_adaptados-x.pdf";
+        Storage::disk('documentos')->put($ruta, '%PDF');
+        DB::table('proyecto_educativo_programas_estudios')->insert([
+            'escuela_nivel_id' => $nivelId, 'periodicidad' => 'semestral', 'modalidad' => 'virtual', 'retoma_dgb' => false,
+            'justificacion' => 'texto', 'archivo_path' => $ruta, 'archivo_nombre' => 'programas.pdf', 'archivo_paginas' => 1,
+        ]);
+        $confirmado = app(ResumenEliminacionNivel::class)->ejecutar($escuela->id, [$this->id('preescolar')]);
+
+        $this->assertSame(1, $confirmado[$this->id('preescolar')]['documentos']);
+
+        $this->registrar()->ejecutar($escuela->id, agregar: [], quitar: [$this->id('preescolar')], confirmado: $confirmado);
+
+        $this->assertDatabaseCount('proyecto_educativo_programas_estudios', 0);
+        Storage::disk('documentos')->assertMissing($ruta);
+    }
+
     public function test_un_pdf_del_paec_subido_despues_de_confirmar_invalida_la_confirmacion(): void
     {
         $escuela = $this->crearEscuela();

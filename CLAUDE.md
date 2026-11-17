@@ -70,6 +70,17 @@ GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push/PR and indepen
 
 **CI is the full-suite check; never run the whole suite locally** (owner rule, 2026-11-03). The full suite crashes when run at once ("Premature end of PHP process"), needs ~40 chunked commands, and burns usage limits for no signal CI doesn't give for free. Locally, per task and per plan, run only focused tests: the task's own tests plus the directories that exercise the code it changed (for a shared change like a global scope, a model, or a guard such as `TramiteEditable`, also the directories that use it), plus Pint and PHPStan (both are cheap). Then push and read the CI result as the full-suite verdict; this refines the sentence above, it does not waive Pint/PHPStan or focused tests. Subagent plans: the final whole-branch review is a code read, not a suite run; do not dispatch a "run every test directory" agent. If a push is not wanted yet, say the full suite is unverified instead of running it locally.
 
+### CI Execution Policy
+
+- Never use `gh run watch` in the foreground.
+- After pushing, capture the GitHub Actions run ID (`gh run list --branch master --workflow CI --limit 1 --json databaseId,status,conclusion,headSha`).
+- Never continuously monitor CI progress in the conversation.
+- Let CI execute independently while continuing other work. A silent background wait is allowed and preferred: run `until c=$(gh run view <id> --json conclusion --jq .conclusion) && [ -n "$c" ]; do sleep 60; done; gh run view <id> --json status,conclusion` with `run_in_background`; it prints only the final JSON and wakes the session when CI finishes.
+- Otherwise check status only when validation is required, with `gh run view <id> --json status,conclusion`.
+- If CI fails, retrieve only failed job logs using `gh run view <id> --log-failed` (on Windows use `gh run view <id> --job <jobId> --log` only if `--log-failed` is truncated).
+- Never retrieve complete logs unless explicitly necessary.
+- Before declaring a task complete, verify the final CI conclusion.
+
 ### Data safety is a hard line, not a judgment call
 Never insert/mutate/upload data against a live database — dev included — without asking first, even for a known, pre-existing test fixture, even for an idempotent operation. Reading data (SELECTs, navigating pages) is free; anything that writes is not. Same bar for DDL/schema changes.
 

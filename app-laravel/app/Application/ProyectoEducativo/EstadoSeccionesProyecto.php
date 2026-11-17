@@ -24,6 +24,9 @@ final class EstadoSeccionesProyecto
         private readonly FormacionContinuaProyectoCapturada $formacionContinua,
         private readonly AcademiasProyectoCapturada $academias,
         private readonly CriteriosProyectoCapturada $criterios,
+        private readonly FormacionLaboralProyectoCapturada $formacionLaboral,
+        private readonly MapaCurricularProyectoCapturada $mapaCurricular,
+        private readonly ProgramasEstudiosProyectoCapturada $programasEstudios,
     ) {}
 
     /** @return array<string, bool> slug => completa, en el orden del índice (las 20 secciones). */
@@ -45,6 +48,9 @@ final class EstadoSeccionesProyecto
             SeccionesProyectoEducativo::academias() => $this->academias->completa($escuelaNivelId),
             // La sección 13 son dos bloques que se guardan por separado: solo está completa con los cinco campos guardados.
             SeccionesProyectoEducativo::criterios() => $this->criterios->completa($escuelaNivelId),
+            SeccionesProyectoEducativo::planEstudios() => $this->formacionLaboral->completa($escuelaNivelId),
+            SeccionesProyectoEducativo::mapaCurricular() => $this->mapaCurricular->completa($escuelaNivelId),
+            SeccionesProyectoEducativo::programasEstudios() => $this->programasEstudios->completa($escuelaNivelId),
         ];
 
         $completas = [];

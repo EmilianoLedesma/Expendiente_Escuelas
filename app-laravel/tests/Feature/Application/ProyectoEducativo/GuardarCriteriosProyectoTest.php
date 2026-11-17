@@ -245,7 +245,7 @@ class GuardarCriteriosProyectoTest extends TestCase
 
         foreach ([...self::BLOQUE_1, ...self::BLOQUE_2] as $campo) {
             try {
-                DB::table('proyecto_educativo_criterios')->insert(['escuela_nivel_id' => $nivel->id, $campo => '  ']);
+                DB::transaction(fn () => DB::table('proyecto_educativo_criterios')->insert(['escuela_nivel_id' => $nivel->id, $campo => '  '])); // savepoint: un insert fallido no aborta la transacción de la prueba
                 $this->fail("La base debió rechazar {$campo} en blanco.");
             } catch (QueryException) {
                 $this->addToAssertionCount(1);

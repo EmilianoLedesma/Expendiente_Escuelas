@@ -134,6 +134,24 @@ final class SeccionesProyectoEducativo
         return array_keys(self::todas())[12];
     }
 
+    /** Slug de la sección 14 (Plan de Estudios). */
+    public static function planEstudios(): string
+    {
+        return array_keys(self::todas())[13];
+    }
+
+    /** Slug de la sección 15 (Mapa Curricular). */
+    public static function mapaCurricular(): string
+    {
+        return array_keys(self::todas())[14];
+    }
+
+    /** Slug de la sección 16 (Programas de Estudios). */
+    public static function programasEstudios(): string
+    {
+        return array_keys(self::todas())[15];
+    }
+
     public static function existe(string $slug): bool
     {
         return array_key_exists($slug, self::todas());

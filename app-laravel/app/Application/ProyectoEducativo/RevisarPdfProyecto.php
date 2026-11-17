@@ -15,11 +15,12 @@ class RevisarPdfProyecto
     public function __construct(private readonly ContadorPaginasPdf $contador) {}
 
     /**
+     * @param  array{int, int}|null  $paginasPermitidas  [mínimo, máximo] de páginas (por defecto las del PAEC); null = sin tope de páginas
      * @return int páginas del PDF
      *
      * @throws RuntimeException con el mensaje para el solicitante
      */
-    public function revisar(UploadedFile $archivo): int
+    public function revisar(UploadedFile $archivo, ?array $paginasPermitidas = ReglasPaecProyecto::PAGINAS): int
     {
         if ((int) $archivo->getSize() > ReglasPaecProyecto::MAX_MB * 1024 * 1024) {
             throw new RuntimeException('El archivo no debe pesar más de '.ReglasPaecProyecto::MAX_MB.' MB.');
@@ -37,9 +38,11 @@ class RevisarPdfProyecto
             throw new RuntimeException('No se pudo leer el PDF. Verifica que no esté dañado ni protegido con contraseña.');
         }
 
-        [$min, $max] = ReglasPaecProyecto::PAGINAS;
-        if ($paginas < $min || $paginas > $max) {
-            throw new RuntimeException("El PDF debe tener entre {$min} y {$max} páginas (tiene {$paginas}).");
+        if ($paginasPermitidas !== null) {
+            [$min, $max] = $paginasPermitidas;
+            if ($paginas < $min || $paginas > $max) {
+                throw new RuntimeException("El PDF debe tener entre {$min} y {$max} páginas (tiene {$paginas}).");
+            }
         }
 
         return $paginas;

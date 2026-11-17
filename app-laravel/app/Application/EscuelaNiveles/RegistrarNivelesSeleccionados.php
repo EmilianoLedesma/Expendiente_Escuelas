@@ -12,7 +12,9 @@ use App\Models\DocumentoEscuelaNivel;
 use App\Models\EscuelaNivel;
 use App\Models\NivelEducativo;
 use App\Models\ProyectoEducativoFormacionPolitica;
+use App\Models\ProyectoEducativoMapaCurricular;
 use App\Models\ProyectoEducativoPaec;
+use App\Models\ProyectoEducativoProgramasEstudios;
 use App\Models\ResponsableNivel;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -153,6 +155,8 @@ class RegistrarNivelesSeleccionados
             ...DocumentoEscuelaNivel::whereIn('escuela_nivel_id', $ids)->whereNotNull('archivo_path')->lockForUpdate()->pluck('archivo_path')->all(),
             ...ProyectoEducativoPaec::rutasDe($ids),
             ...ProyectoEducativoFormacionPolitica::rutasDe($ids),
+            ...ProyectoEducativoMapaCurricular::rutasDe($ids),
+            ...ProyectoEducativoProgramasEstudios::rutasDe($ids),
         ];
 
         // Serializa con una invitación o revocación concurrente del mismo usuario (RevocarResponsableNivel).
