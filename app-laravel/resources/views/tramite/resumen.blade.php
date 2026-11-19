@@ -4,6 +4,8 @@
             <x-slot:intro><span class="break-words">{{ $resumen->domicilio }}</span></x-slot:intro>
         </x-ui.page-header>
 
+        <x-tramite.aviso-sin-acuerdo class="mb-lg" />
+
         @php($siguiente = $resumen->siguiente())
         @if ($resumen->conObservaciones)
             <x-ui.alert tipo="warning" :titulo="$resumen->puedeReenviar ? 'Tu trámite tiene observaciones: corrige solo los pasos marcados y vuelve a enviar.' : 'Tu trámite tiene observaciones. El titular del trámite corregirá y reenviará; abajo ves las que corresponden a tu nivel.'" class="mb-lg">
@@ -34,8 +36,18 @@
                     </dialog>
                 @endif
             </x-ui.alert>
+        @elseif ($resumen->aprobado)
+            <x-ui.alert tipo="success" titulo="Revisión documental aprobada" class="mb-lg">
+                SEDEQ revisó y aprobó tu documentación. El siguiente paso es la visita de inspección: SEDEQ te notificará la fecha. El trámite ya no puede modificarse.
+                @if ($puedeDescargarReporte && $resumen->reporteEnviadoId !== null)
+                    <a href="{{ route('tramite.validacion.reporte', ['escuela' => $resumen->escuelaId, 'evaluacion' => $resumen->reporteEnviadoId]) }}" target="_blank" class="font-semibold">Descargar el reporte de validación enviado</a>
+                @endif
+            </x-ui.alert>
         @elseif ($resumen->enviado)
             <x-ui.alert tipo="info" :titulo="'Enviado el '.$resumen->fechaEnvio?->format('d/m/Y').' — en revisión'" class="mb-lg">
+                @if ($resumen->nivelesAprobados !== [])
+                    Revisión documental aprobada en: {{ implode(', ', $resumen->nivelesAprobados) }}.
+                @endif
                 El trámite ya no puede modificarse.
                 @if ($puedeDescargarReporte && $resumen->reporteEnviadoId !== null)
                     <a href="{{ route('tramite.validacion.reporte', ['escuela' => $resumen->escuelaId, 'evaluacion' => $resumen->reporteEnviadoId]) }}" target="_blank" class="font-semibold">Descargar el reporte de validación enviado</a>

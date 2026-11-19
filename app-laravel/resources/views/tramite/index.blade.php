@@ -18,6 +18,7 @@
             <p>Tu avance se guarda al terminar cada sección: puedes salir y continuar después desde esta página.</p>
         </div>
     @else
+        <x-tramite.aviso-sin-acuerdo class="mb-lg" />
         <div class="overflow-hidden rounded-lg border border-hairline">
             <table class="w-full text-left text-body-sm">
                 <caption class="sr-only">Trámites iniciados</caption>
@@ -70,7 +71,7 @@
                             <td class="mt-sm block md:mt-0 md:table-cell md:px-lg md:py-md">
                                 <x-ui.status-tag
                                     :estado="$tramite->conObservaciones ? 'con_observaciones' : ($tramite->enviado || $tramite->completo ? 'completado' : 'en_curso')"
-                                    :texto="$tramite->conObservaciones ? 'Con observaciones' : ($tramite->enviado ? 'En revisión' : ($tramite->completo ? 'Captura inicial completa' : 'En captura'))"
+                                    :texto="$tramite->conObservaciones ? 'Con observaciones' : ($tramite->aprobado ? 'Revisión documental aprobada' : ($tramite->enviado ? 'En revisión' : ($tramite->completo ? 'Captura inicial completa' : 'En captura')))"
                                 />
                             </td>
                             <td class="mt-sm block whitespace-nowrap md:mt-0 md:table-cell md:px-lg md:py-md md:text-right">

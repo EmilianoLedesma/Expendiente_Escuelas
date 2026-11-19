@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Sedeq;
 
+use App\Application\Auditoria\ConsultarHistorialTramite;
 use App\Application\Revision\ConsultarTramiteSedeq;
 use App\Application\Revision\PasosRevision;
 use App\Application\Revision\ResultadosCambiados;
+use App\Application\Revision\RolesSedeq;
 use App\Application\Revision\RutaInicio;
 use App\Models\Escuela;
 use Livewire\Attributes\Layout;
@@ -34,6 +36,10 @@ class TramiteLectura extends Component
             'tramite' => $tramite,
             'cambiados' => $this->cambiadosPorNivel($tramite['niveles']),
             'volver' => RutaInicio::para(auth()->user()),
+            // Solo el supervisor: la línea de tiempo trae asignaciones y decisiones de otros revisores.
+            'historial' => auth()->user()->hasRole(RolesSedeq::SUPERVISOR)
+                ? app(ConsultarHistorialTramite::class)->ejecutar($this->escuelaId, incluirAcciones: false)
+                : null,
         ]);
     }
 

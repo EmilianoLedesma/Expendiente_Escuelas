@@ -73,6 +73,48 @@ class TramiteLecturaTest extends TestCase
             ->assertSee(route('tramite.paso2-documentos.descargar', ['escuela' => $this->nivelA->escuela_id, 'clave' => 'ine']), false);
     }
 
+    public function test_la_pagina_se_organiza_en_pestanas_en_vez_de_un_solo_scroll(): void
+    {
+        $html = $this->abrir($this->supervisor())->assertOk()->getContent();
+
+        $this->assertStringContainsString('role="tablist"', $html);
+        foreach (['Plantel y responsable', 'Documentos', 'Primaria', 'Secundaria', 'Validación', 'Historial'] as $pestana) {
+            $this->assertMatchesRegularExpression('#role="tab"[^>]*>\s*'.preg_quote($pestana, '#').'#', $html, "pestaña {$pestana}");
+        }
+        // Un panel por pestaña, cada uno enlazado a su botón; todos siguen en el DOM (se muestran con Alpine).
+        $this->assertSame(6, substr_count($html, 'role="tabpanel"'));
+        $this->assertStringContainsString('aria-labelledby="pestana-plantel"', $html);
+        $this->assertStringContainsString('aria-controls="panel-plantel"', $html);
+    }
+
+    public function test_el_encabezado_resume_el_estado_de_cada_nivel(): void
+    {
+        $this->abrir($this->supervisor())->assertOk()
+            ->assertSee('Primaria: En revisión', false)
+            ->assertSee('Secundaria: En revisión', false);
+    }
+
+    public function test_el_revisor_no_tiene_la_pestana_historial(): void
+    {
+        $html = $this->abrir($this->revisorDe($this->nivelA))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('id="pestana-historial"', $html);
+        $this->assertSame(4, substr_count($html, 'role="tabpanel"')); // plantel, documentos, su nivel, validación
+    }
+
+    public function test_el_supervisor_ve_el_historial_y_el_revisor_no(): void
+    {
+        $supervisor = $this->supervisor();
+        DB::table('historial_estados_expediente')->insert([
+            'escuela_nivel_id' => $this->nivelA->id,
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id'),
+            'comentario' => 'Comentario de prueba', 'usuario_sedeq_id' => $supervisor->id, 'fecha' => now()->subHour(),
+        ]);
+
+        $this->abrir($supervisor)->assertOk()->assertSee('Historial')->assertSee('Estado: En revisión')->assertSee('Comentario de prueba');
+        $this->abrir($this->revisorDe($this->nivelA))->assertOk()->assertDontSee('Historial')->assertDontSee('Comentario de prueba');
+    }
+
     public function test_supervisor_y_revisor_ven_cada_documento_como_vista_previa_con_su_url(): void
     {
         $escuelaId = $this->nivelA->escuela_id;

@@ -62,6 +62,12 @@
                        class="{{ $pestana.($enInicio ? $activa : $inactiva) }}">
                         {{ $inicio }}
                     </a>
+                    @if ($rolSedeq === 'Supervisor')
+                        <a href="{{ route('sedeq.expedientes') }}" @if (request()->routeIs('sedeq.expedientes')) aria-current="page" @endif
+                           class="{{ $pestana.(request()->routeIs('sedeq.expedientes') ? $activa : $inactiva) }}">
+                            Expedientes
+                        </a>
+                    @endif
                     <span class="h-6 w-px bg-hairline" aria-hidden="true"></span>
                     {{-- Alpine llega con Livewire donde lo hay (perfil); sin él, el nombre queda como texto estático. --}}
                     <a href="{{ route('profile') }}" title="Mi perfil" @if ($enPerfil) aria-current="page" @endif

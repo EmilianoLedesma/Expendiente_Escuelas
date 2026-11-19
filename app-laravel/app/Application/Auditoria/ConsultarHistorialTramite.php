@@ -22,8 +22,11 @@ class ConsultarHistorialTramite
         'desasignar_revocacion' => 'Desasignó por revocación a',
     ];
 
-    /** @return list<array<string, mixed>> */
-    public function ejecutar(int $escuelaId): array
+    /**
+     * @param  bool  $incluirAcciones  false deja fuera la bitácora de acciones del admin (archivar, restaurar…): el supervisor ve solo la revisión.
+     * @return list<array<string, mixed>>
+     */
+    public function ejecutar(int $escuelaId, bool $incluirAcciones = true): array
     {
         $niveles = DB::table('escuela_niveles')
             ->join('niveles_educativos', 'niveles_educativos.id', '=', 'escuela_niveles.nivel_educativo_id')
@@ -32,7 +35,7 @@ class ConsultarHistorialTramite
         $ids = $niveles->keys();
 
         $eventos = collect()
-            ->concat($this->acciones($escuelaId))
+            ->concat($incluirAcciones ? $this->acciones($escuelaId) : collect())
             ->concat($this->estados($ids, $niveles))
             ->concat($this->decisiones($ids, $niveles))
             ->concat($this->asignaciones($ids, $niveles));

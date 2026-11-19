@@ -88,4 +88,18 @@ class ConsultarHistorialTramiteTest extends TestCase
     {
         $this->assertSame([], $this->historial());
     }
+
+    public function test_sin_acciones_del_admin_deja_solo_la_revision(): void
+    {
+        DB::table('historial_estados_expediente')->insert([
+            'escuela_nivel_id' => $this->nivelId,
+            'estado_id' => DB::table('estados_expediente')->where('clave', 'en_revision')->value('id'),
+            'usuario_sedeq_id' => $this->admin->id, 'fecha' => now()->subHour(),
+        ]);
+        app(ArchivarTramite::class)->ejecutar($this->escuela->id, $this->admin->id, 'Motivo interno del admin');
+
+        $que = array_column(app(ConsultarHistorialTramite::class)->ejecutar($this->escuela->id, incluirAcciones: false), 'que');
+
+        $this->assertSame(['Estado: En revisión'], $que);
+    }
 }

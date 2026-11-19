@@ -169,6 +169,10 @@ class ObservacionesEnTramiteTest extends TestCase
             $html = (string) $n->toMail($dueno->user)->render();
 
             return str_contains($html, 'sin observaciones')
+                && str_contains($html, 'revisión documental')
+                && str_contains($html, 'visita de inspección')
+                && str_contains($html, 'acuerdo de incorporación')
+                && str_contains($n->toMail($dueno->user)->subject, 'aprobada')
                 && str_contains($html, route('tramite.resumen', ['escuela' => $primaria->escuela_id]))
                 && ! str_contains($html, 'SEDEQ');
         });

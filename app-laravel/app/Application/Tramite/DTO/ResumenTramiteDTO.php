@@ -36,6 +36,10 @@ final class ResumenTramiteDTO
         /** Motivos visibles para quien mira (ObservacionesDeEscuela); vacío con la ronda abierta.
          * @var list<array{paso: string, titulo: string, nivel: ?string, escuelaNivelId: ?int, motivo: string}> */
         public readonly array $observaciones = [],
+        /** Todos los niveles que mira ya pasaron la revisión documental (estado aprobado); no es la incorporación (falta la visita y el acuerdo). */
+        public readonly bool $aprobado = false,
+        /** @var list<string> nombres de los niveles con la revisión documental aprobada (de los que mira). */
+        public readonly array $nivelesAprobados = [],
     ) {}
 
     /** Número visible del trámite (id de la escuela a 4 dígitos). No es folio_expediente: ese es por nivel y lo asigna SEDEQ. */
