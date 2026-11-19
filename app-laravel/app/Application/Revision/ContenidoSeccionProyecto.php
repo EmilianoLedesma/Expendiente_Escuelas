@@ -25,6 +25,7 @@ use App\Application\ProyectoEducativo\PerfilDocenteProyectoCapturada;
 use App\Application\ProyectoEducativo\PlaneacionAcademicaProyectoCapturada;
 use App\Application\ProyectoEducativo\PresentacionProyectoCapturada;
 use App\Application\ProyectoEducativo\ProgramasEstudiosProyectoCapturada;
+use App\Application\ProyectoEducativo\ReglasFormacionProyecto;
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -146,6 +147,8 @@ final class ContenidoSeccionProyecto
         return match (true) {
             $valor === null || $valor === '' => self::SIN_CAPTURA,
             is_bool($valor) => $valor ? 'Sí' : 'No',
+            // Listas de texto dentro de una acción (los días): «Lunes, Miércoles».
+            is_array($valor) => $valor === [] ? self::SIN_CAPTURA : implode(', ', array_map(fn ($v) => ReglasFormacionProyecto::DIAS_ETIQUETAS[$v] ?? (string) $v, $valor)),
             default => (string) $valor,
         };
     }

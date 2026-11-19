@@ -39,6 +39,9 @@ final class ReglasFormacionProyecto
 
     public const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
+    /** Etiqueta en español de cada día guardado (solo lectura: el formulario del solicitante usa las mismas). */
+    public const DIAS_ETIQUETAS = ['lunes' => 'Lunes', 'martes' => 'Martes', 'miercoles' => 'Miércoles', 'jueves' => 'Jueves', 'viernes' => 'Viernes', 'sabado' => 'Sábado', 'domingo' => 'Domingo'];
+
     public const CAMPOS_ACCION = [
         'nombre', 'proposito', 'participantes', 'formato', 'formato_otro', 'duracion_horas', 'dias', 'hora_inicio', 'hora_fin',
         'fecha_inicio', 'fecha_fin', 'temario', 'evaluacion', 'recursos', 'perfil_ponente', 'reconocimiento', 'otros',
