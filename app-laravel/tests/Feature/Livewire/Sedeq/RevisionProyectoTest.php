@@ -90,6 +90,18 @@ class RevisionProyectoTest extends TestCase
             ->assertSee('Formar bachilleres críticos.');
     }
 
+    public function test_el_texto_largo_se_lee_en_bloque_con_saltos_y_escapado(): void
+    {
+        $nivel = $this->media();
+        DB::table('proyecto_educativo_objetivos')->insert(['escuela_nivel_id' => $nivel->id, 'objetivo_general' => 'Uno. Dos <script>alert(1)</script>', 'objetivos_especificos' => 'Tres.']);
+
+        $this->revision($nivel)->call('abrir', SeccionesProyectoEducativo::objetivos())
+            ->assertSeeHtml('whitespace-pre-line')
+            ->assertSeeHtml('max-w-prose')
+            ->assertDontSeeHtml('<script>alert(1)</script>')
+            ->assertSee('Dos');
+    }
+
     public function test_abrir_una_clave_ajena_se_ignora(): void
     {
         $nivel = $this->media();

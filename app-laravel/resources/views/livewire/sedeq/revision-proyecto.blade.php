@@ -30,15 +30,15 @@
 
             <x-ui.section :title="$seccion['numero'].'. '.$contenido['titulo']" class="!mt-0">
                 @if ($contenido['filas'] !== [])
-                    <x-ui.summary-list :filas="collect($contenido['filas'])->pluck(1, 0)->all()" />
+                    @include('livewire.sedeq.partials.proyecto-campos', ['filas' => $contenido['filas']])
                 @endif
 
                 @foreach ($contenido['listas'] as $lista)
-                    <div class="space-y-sm">
+                    <div class="space-y-md">
                         <h3 class="text-body-md font-semibold text-ink">{{ $lista['titulo'] }}</h3>
                         @forelse ($lista['filas'] as $fila)
-                            <div class="rounded-md border border-hairline p-sm">
-                                <x-ui.summary-list :filas="collect($fila)->pluck(1, 0)->all()" />
+                            <div class="rounded-md border border-hairline px-md">
+                                @include('livewire.sedeq.partials.proyecto-campos', ['filas' => $fila])
                             </div>
                         @empty
                             <p class="text-body-md text-muted">Sin captura.</p>
@@ -61,7 +61,7 @@
             </x-ui.section>
 
             @if ($seccion['estado'] !== 'pendiente')
-                <p class="mt-md text-body-md text-muted">
+                <p class="mt-md max-w-prose whitespace-pre-line break-words text-body-md leading-relaxed text-muted">
                     Decisión vigente: {{ $seccion['estado'] === 'aceptado' ? 'aceptada' : 'rechazada' }} por {{ $seccion['por'] }} el {{ $seccion['cuando'] }}.
                     @if (filled($seccion['motivo']))
                         Motivo: {{ $seccion['motivo'] }}
