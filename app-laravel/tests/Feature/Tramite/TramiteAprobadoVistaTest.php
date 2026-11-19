@@ -53,6 +53,39 @@ class TramiteAprobadoVistaTest extends TestCase
             ->assertSee('Revisión documental aprobada en: Primaria');
     }
 
+    public function test_el_hub_y_mis_tramites_enlazan_a_la_visita_solo_en_los_estados_de_visita(): void
+    {
+        (new PasosCapturaSeeder)->run();
+        $dueno = Solicitante::factory()->create();
+        $programada = $this->nivelDe($dueno, 'primaria', 'visita_programada');
+        $subsanacion = $this->nivelEn($programada->escuela, 'secundaria', 'en_subsanacion');
+        $aprobada = $this->nivelEn($programada->escuela, 'preescolar', 'visita_aprobada');
+        $documental = $this->nivelEn($programada->escuela, 'inicial', 'aprobado');
+
+        foreach ([route('tramite.resumen', ['escuela' => $programada->escuela_id]), route('tramite.index')] as $url) {
+            $this->actingAs($dueno->user)->get($url)->assertOk()
+                ->assertSee(route('tramite.visita', ['escuelaNivel' => $programada->id]), false)
+                ->assertSee(route('tramite.visita', ['escuelaNivel' => $subsanacion->id]), false)
+                ->assertSee(route('tramite.visita', ['escuelaNivel' => $aprobada->id]), false)
+                ->assertDontSee(route('tramite.visita', ['escuelaNivel' => $documental->id]), false);
+        }
+        $this->actingAs($dueno->user)->get(route('tramite.resumen', ['escuela' => $programada->escuela_id]))
+            ->assertSee('Responder observaciones');
+    }
+
+    public function test_el_responsable_ve_el_enlace_de_visita_solo_de_su_nivel(): void
+    {
+        (new PasosCapturaSeeder)->run();
+        $dueno = Solicitante::factory()->create();
+        $propio = $this->nivelDe($dueno, 'primaria', 'visita_programada');
+        $ajeno = $this->nivelEn($propio->escuela, 'secundaria', 'visita_programada');
+        $responsable = $this->responsableDe($propio);
+
+        $this->actingAs($responsable)->get(route('tramite.resumen', ['escuela' => $propio->escuela_id]))->assertOk()
+            ->assertSee(route('tramite.visita', ['escuelaNivel' => $propio->id]), false)
+            ->assertDontSee(route('tramite.visita', ['escuelaNivel' => $ajeno->id]), false);
+    }
+
     public function test_el_aviso_de_que_aun_no_hay_acuerdo_aparece_en_mis_tramites_y_en_el_hub(): void
     {
         (new PasosCapturaSeeder)->run();

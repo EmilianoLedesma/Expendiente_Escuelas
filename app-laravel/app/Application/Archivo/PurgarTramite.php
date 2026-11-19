@@ -18,9 +18,12 @@ use App\Models\ProyectoEducativoMapaCurricular;
 use App\Models\ProyectoEducativoPaec;
 use App\Models\ProyectoEducativoPlaneacionAcademica;
 use App\Models\ProyectoEducativoProgramasEstudios;
+use App\Models\RespuestaVisita;
+use App\Models\RespuestaVisitaArchivo;
 use App\Models\Scopes\EscuelaNoArchivada;
 use App\Models\Scopes\NivelDeEscuelaNoArchivada;
 use App\Models\User;
+use App\Models\VisitaInspeccion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -79,6 +82,9 @@ class PurgarTramite
             ...ProyectoEducativoProgramasEstudios::rutasDe($niveles),
             ...ProyectoEducativoPlaneacionAcademica::rutasDe($niveles),
             ...ProyectoEducativoCalendarioAcademico::rutasDe($niveles),
+            ...VisitaInspeccion::whereIn('escuela_nivel_id', $niveles)->whereNotNull('acta_path')->pluck('acta_path'),
+            ...RespuestaVisitaArchivo::whereIn('respuesta_id', RespuestaVisita::select('id')
+                ->whereIn('visita_id', VisitaInspeccion::select('id')->whereIn('escuela_nivel_id', $niveles)))->pluck('archivo_path'),
         ];
         $reportes = EvaluacionValidacion::where('escuela_id', $escuelaId)->pluck('archivo_path')->all();
 

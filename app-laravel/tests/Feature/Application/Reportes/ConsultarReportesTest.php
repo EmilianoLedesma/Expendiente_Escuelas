@@ -67,6 +67,18 @@ class ConsultarReportesTest extends TestCase
         $this->assertSame(0, $por['Rechazado']);
     }
 
+    public function test_los_estados_de_la_visita_aparecen_como_filas_propias(): void
+    {
+        $this->tramite('visita_programada');
+        $this->tramite('aprobado');
+
+        $por = $this->mapa('por_estado');
+
+        $this->assertSame(1, $por['Visita programada']);
+        $this->assertSame(1, $por['Aprobado']);
+        $this->assertSame(0, $por['Rechazado']);
+    }
+
     public function test_los_archivados_no_cuentan_en_estado_pero_si_en_activos_y_archivados(): void
     {
         $this->tramite('en_revision');

@@ -97,7 +97,8 @@ class ListarExpedientesTest extends TestCase
     {
         (new PasosCapturaSeeder)->run();
         $sup = $this->supervisor();
-        foreach (['aprobado', 'en_revision', 'con_observaciones', 'rechazado'] as $estado) {
+        $esperados = ['aprobado', 'visita_programada', 'en_subsanacion', 'visita_aprobada', 'en_revision', 'con_observaciones', 'rechazado'];
+        foreach ($esperados as $estado) {
             $this->nombrar($this->nivelEnRevision($estado), 'Colegio '.$estado);
         }
 
@@ -105,7 +106,10 @@ class ListarExpedientesTest extends TestCase
             $filas = app(ListarExpedientes::class)->ejecutar($sup->id, estado: $estado);
             $this->assertSame(['Colegio '.$estado], array_map(fn ($f) => $f->escuela, $filas), $estado);
         }
-        $this->assertSame(['aprobado', 'en_revision', 'con_observaciones', 'rechazado'], array_keys(ListarExpedientes::ESTADOS));
+        $this->assertSame($esperados, array_keys(ListarExpedientes::ESTADOS));
+        $this->assertSame('Visita programada', ListarExpedientes::ESTADOS['visita_programada']);
+        $this->assertSame('En subsanación', ListarExpedientes::ESTADOS['en_subsanacion']);
+        $this->assertSame('Visita aprobada', ListarExpedientes::ESTADOS['visita_aprobada']);
     }
 
     public function test_el_solicitante_no_puede_listar(): void

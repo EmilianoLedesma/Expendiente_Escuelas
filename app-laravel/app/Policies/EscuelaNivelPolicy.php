@@ -6,6 +6,7 @@ use App\Application\Escuelas\VerificarAccesoResponsable;
 use App\Application\Escuelas\VerificarPropietarioEscuelaNivel;
 use App\Application\Revision\AccesoSedeq;
 use App\Application\Revision\PasosRevision;
+use App\Application\Revision\RolesSedeq;
 use App\Application\Tramite\TramiteEditable;
 use App\Models\EscuelaNivel;
 use App\Models\User;
@@ -42,6 +43,20 @@ class EscuelaNivelPolicy
     public function descargarAnexo(User $user, EscuelaNivel $escuelaNivel): bool
     {
         return $this->esDueno($user, $escuelaNivel) || $this->esResponsable($user, $escuelaNivel);
+    }
+
+    /** Ver la visita de inspección del nivel: supervisor, dueño o responsable de ESTE nivel (no el revisor). */
+    public function verVisita(User $user, EscuelaNivel $escuelaNivel): bool
+    {
+        return ($user->hasRole(RolesSedeq::SUPERVISOR) && $this->accesoSedeq->puedeVerNivel($user, $escuelaNivel->getKey()))
+            || $this->esDueno($user, $escuelaNivel)
+            || $this->esResponsable($user, $escuelaNivel);
+    }
+
+    /** Responder las observaciones de una visita: solo el dueño de la escuela. */
+    public function responderVisita(User $user, EscuelaNivel $escuelaNivel): bool
+    {
+        return $this->esDueno($user, $escuelaNivel);
     }
 
     public function update(User $user, EscuelaNivel $escuelaNivel): bool

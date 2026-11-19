@@ -1,6 +1,7 @@
 <?php
 
 use App\Application\Revision\RutaInicio;
+use App\Http\Controllers\DescargarArchivoVisita;
 use App\Http\Controllers\Sedeq\DescargarArchivoProyectoController;
 use App\Http\Controllers\Tramite\AnexoInstalacionesPdfController;
 use App\Http\Controllers\Tramite\DescargarDocumentoController;
@@ -21,6 +22,8 @@ use App\Livewire\Sedeq\RevisionProyecto;
 use App\Livewire\Sedeq\Revisores;
 use App\Livewire\Sedeq\TableroSupervisor;
 use App\Livewire\Sedeq\TramiteLectura;
+use App\Livewire\Sedeq\VisitaNivel;
+use App\Livewire\Sedeq\VisitasRealizadas;
 use App\Livewire\Tramite\DatosPlantel;
 use App\Livewire\Tramite\Paso1Preregistro;
 use App\Livewire\Tramite\Paso24DocumentosNivel;
@@ -36,6 +39,7 @@ use App\Livewire\Tramite\Paso3\ProyectoEducativoIndice;
 use App\Livewire\Tramite\Paso3\ProyectoEducativoSeccion;
 use App\Livewire\Tramite\ResponsablesNivel;
 use App\Livewire\Tramite\ValidacionFinal;
+use App\Livewire\Tramite\VisitaSolicitante;
 use App\Models\EscuelaNivel;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +59,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Expediente: niveles con la revisión documental aprobada (hoy solo ese estado); cada fila abre sedeq.tramite.
     Route::get('/sedeq/expedientes', Expedientes::class)->middleware('rol:supervisor')->name('sedeq.expedientes');
+
+    // Registro de visitas realizadas de todas las escuelas (supervisor, solo lectura).
+    Route::get('/sedeq/visitas', VisitasRealizadas::class)->middleware('rol:supervisor')->name('sedeq.visitas');
+
+    // Visita de inspección de un nivel (supervisor); los casos de uso revalidan el rol y `verVisita` (403).
+    Route::get('/sedeq/visita/{escuelaNivel}', VisitaNivel::class)->middleware('rol:supervisor')->name('sedeq.visita');
+
+    // Acta y archivos de respuesta de una visita: solo el supervisor o el dueño de la escuela (no el responsable ni el revisor).
+    Route::get('/visitas/{escuelaNivel}/{visita}/acta', [DescargarArchivoVisita::class, 'acta'])->name('visita.acta');
+    Route::get('/visitas/{escuelaNivel}/{visita}/respuestas/{archivo}', [DescargarArchivoVisita::class, 'respuesta'])->name('visita.respuesta-archivo');
 
     // Cola del evaluador del proyecto educativo (solo media superior): una sola pista de revisión, aparte del revisor.
     Route::get('/sedeq/proyecto', ColaProyecto::class)->middleware('rol:evaluador_proyecto')->name('sedeq.proyecto-cola');
@@ -89,6 +103,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tramite/preregistro', Paso1Preregistro::class)->middleware('solicitante')->name('tramite.preregistro');
 
     Route::get('/tramite/responsables', ResponsablesNivel::class)->middleware('solicitante')->name('tramite.responsables');
+
+    // Visita de inspección de un nivel para el solicitante: el dueño responde, el responsable de ese nivel solo mira (`verVisita`, 403).
+    Route::get('/tramite/visita/{escuelaNivel}', VisitaSolicitante::class)->name('tramite.visita');
 
     Route::get('/tramite/{escuela}', ResumenTramiteController::class)
         ->middleware('can:verResumen,escuela')

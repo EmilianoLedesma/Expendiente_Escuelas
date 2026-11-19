@@ -30,6 +30,9 @@ class CatalogoMinimoSeeder extends Seeder
             ['clave' => 'con_observaciones', 'nombre' => 'Con observaciones', 'orden' => 4],
             ['clave' => 'aprobado', 'nombre' => 'Aprobado', 'orden' => 5],
             ['clave' => 'rechazado', 'nombre' => 'Rechazado', 'orden' => 6],
+            ['clave' => 'visita_programada', 'nombre' => 'Visita programada', 'orden' => 7],
+            ['clave' => 'en_subsanacion', 'nombre' => 'En subsanación', 'orden' => 8],
+            ['clave' => 'visita_aprobada', 'nombre' => 'Visita aprobada', 'orden' => 9],
         ]);
 
         $this->insertarFaltantes('salas', [

@@ -17,6 +17,9 @@ final class ListarExpedientes
     /** @var array<string, string> clave de estado => etiqueta; el orden es el del filtro. */
     public const ESTADOS = [
         'aprobado' => 'Revisión documental aprobada',
+        'visita_programada' => 'Visita programada',
+        'en_subsanacion' => 'En subsanación',
+        'visita_aprobada' => 'Visita aprobada',
         'en_revision' => 'En revisión',
         'con_observaciones' => 'Con observaciones',
         'rechazado' => 'Rechazado',
@@ -46,7 +49,11 @@ final class ListarExpedientes
             ->when($buscar !== '', fn ($q) => $q->where(fn ($w) => $w->whereRaw("{$nombre} ILIKE ?", [$patron])->orWhere('ne.nombre', 'ilike', $patron)))
             ->selectRaw(
                 "en.id, e.id as escuela_id, {$nombre} as escuela, ne.nombre as nivel, u.name as revisor_nombre,
-                (SELECT MAX(h.fecha) FROM historial_estados_expediente h WHERE h.escuela_nivel_id = en.id AND h.estado_id = ?) as desde",
+                (SELECT MAX(h.fecha) FROM historial_estados_expediente h WHERE h.escuela_nivel_id = en.id AND h.estado_id = ?) as desde,
+                EXISTS (SELECT 1 FROM respuestas_visita rv JOIN visitas_inspeccion vi ON vi.id = rv.visita_id
+                    WHERE vi.escuela_nivel_id = en.id
+                    AND vi.numero = (SELECT MAX(v2.numero) FROM visitas_inspeccion v2 WHERE v2.escuela_nivel_id = en.id)
+                    AND rv.created_at > COALESCE((SELECT MAX(h2.fecha) FROM historial_estados_expediente h2 WHERE h2.escuela_nivel_id = en.id), '-infinity'::timestamp)) as respuesta_pendiente",
                 [$estadoId]
             )
             ->orderByRaw('desde DESC NULLS LAST')
@@ -59,6 +66,8 @@ final class ListarExpedientes
                 nivel: $r->nivel,
                 desde: $r->desde === null ? null : Carbon::parse($r->desde),
                 revisorNombre: $r->revisor_nombre,
+                estado: $estado,
+                respuestaPendiente: (bool) $r->respuesta_pendiente,
             ))->all();
     }
 }

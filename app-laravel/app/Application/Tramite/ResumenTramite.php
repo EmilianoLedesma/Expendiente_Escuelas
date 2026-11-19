@@ -89,7 +89,8 @@ class ResumenTramite
 
     private ?int $conObservacionesId = null;
 
-    private ?int $aprobadoId = null;
+    /** @var array<int, string>|null id => clave de EstadosPosteriores::DESDE_APROBADO */
+    private ?array $posteriores = null;
 
     /** WS-7a: el trámite que se está resumiendo ya se envió; se fija al inicio de cada paraEscuela() y seccion() lo lee. */
     private bool $enviado = false;
@@ -143,12 +144,19 @@ class ResumenTramite
         if ($soloNivelIds !== null) {
             $escuelaNiveles = $escuelaNiveles->whereIn('id', $soloNivelIds)->values();
         }
+        // Un borrador no puede estar aprobado: evita consultar los estados posteriores en cada trámite de «Mis trámites».
+        $hayEnviados = $escuelaNiveles->contains(fn (EscuelaNivel $n) => (int) $n->estado_id !== $enCapturaId);
+        $posteriores = $hayEnviados ? $this->clavesPosteriores() : [];
+        $textos = $this->textosDeEstado($escuelaNiveles, $posteriores);
         $niveles = $escuelaNiveles
             ->map(fn (EscuelaNivel $escuelaNivel) => new NivelDelTramite(
                 escuelaNivelId: $escuelaNivel->id,
                 clave: $escuelaNivel->nivelEducativo->clave,
                 nombre: $escuelaNivel->nivelEducativo->nombre,
                 secciones: $this->seccionesDeNivel($escuelaNivel, $etapaFaltante),
+                estadoTexto: $textos[$escuelaNivel->id] ?? null,
+                estadoClave: $posteriores[(int) $escuelaNivel->estado_id] ?? null,
+                puedeResponderVisita: $soloNivelIds === null && ($posteriores[(int) $escuelaNivel->estado_id] ?? null) === 'en_subsanacion',
             ))
             ->all();
 
@@ -161,6 +169,7 @@ class ResumenTramite
         $ternasNombres = $escuela->ternasNombres;
 
         $reporte = $this->enviado ? $this->ultimaValidacion->idEnviada($escuela->id) : null;
+        $pasoRevision = fn (EscuelaNivel $n) => isset($posteriores[(int) $n->estado_id]);
 
         return new ResumenTramiteDTO(
             escuelaId: $escuela->id,
@@ -183,8 +192,8 @@ class ResumenTramite
             )),
             puedeReenviar: $rondaCerrada && $soloNivelIds === null,
             observaciones: $observaciones,
-            aprobado: $niveles !== [] && $escuelaNiveles->every(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado()),
-            nivelesAprobados: $escuelaNiveles->filter(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado())
+            aprobado: $niveles !== [] && $hayEnviados && $escuelaNiveles->every($pasoRevision),
+            nivelesAprobados: ! $hayEnviados ? [] : $escuelaNiveles->filter($pasoRevision)
                 ->map(fn (EscuelaNivel $n) => $n->nivelEducativo->nombre)->values()->all(),
         );
     }
@@ -223,9 +232,46 @@ class ResumenTramite
         return array_map(fn (array $m) => implode(' ', $m), $motivos);
     }
 
-    private function idAprobado(): int
+    /** @return array<int, string> id => clave de los estados desde «aprobado» (EstadosPosteriores); una consulta por instancia. */
+    private function clavesPosteriores(): array
     {
-        return $this->aprobadoId ??= (int) DB::table('estados_expediente')->where('clave', 'aprobado')->value('id');
+        return $this->posteriores ??= DB::table('estados_expediente')->whereIn('clave', EstadosPosteriores::DESDE_APROBADO)->pluck('clave', 'id')->all();
+    }
+
+    /**
+     * Texto de estado por nivel (hub y «Mis trámites») para los niveles que ya pasaron la revisión documental.
+     * La visita se consulta una sola vez y solo si algún nivel está con visita programada o en subsanación.
+     *
+     * @param  Collection<int, EscuelaNivel>  $niveles
+     * @param  array<int, string>  $posteriores
+     * @return array<int, string> escuela_nivel_id => texto
+     */
+    private function textosDeEstado(Collection $niveles, array $posteriores): array
+    {
+        $claves = [];
+        foreach ($niveles as $n) {
+            if (isset($posteriores[(int) $n->estado_id])) {
+                $claves[$n->id] = $posteriores[(int) $n->estado_id];
+            }
+        }
+        $conVisita = array_keys(array_filter($claves, fn (string $c) => in_array($c, ['visita_programada', 'en_subsanacion'], true)));
+        $visitas = $conVisita === [] ? collect() : DB::table('visitas_inspeccion')->whereIn('escuela_nivel_id', $conVisita)
+            ->orderByDesc('numero')->get(['escuela_nivel_id', 'programada_para', 'subsanar_hasta'])->unique('escuela_nivel_id')->keyBy('escuela_nivel_id');
+
+        $textos = [];
+        foreach ($claves as $id => $clave) {
+            $visita = $visitas->get($id);
+            $textos[$id] = match (true) {
+                $clave === 'visita_programada' && $visita !== null => 'Visita programada para el '.Carbon::parse($visita->programada_para)->format('d/m/Y'),
+                $clave === 'visita_programada' => 'Visita programada',
+                $clave === 'en_subsanacion' && $visita?->subsanar_hasta !== null => 'En subsanación: responde antes de '.Carbon::parse($visita->subsanar_hasta)->format('d/m/Y').' (aprox.)',
+                $clave === 'en_subsanacion' => 'En subsanación',
+                $clave === 'visita_aprobada' => 'Visita aprobada',
+                default => 'Revisión documental aprobada',
+            };
+        }
+
+        return $textos;
     }
 
     private function idConObservaciones(): int

@@ -3,6 +3,7 @@
 namespace App\Application\Revision;
 
 use App\Application\ProyectoEducativo\SeccionesProyectoEducativo;
+use App\Application\Tramite\EstadosPosteriores;
 use App\Application\Tramite\PasosReabiertos;
 use App\Application\Validaciones\EjecutarValidacionFinal;
 use App\Models\EscuelaNivel;
@@ -55,7 +56,7 @@ class CierreRevisionNivel
             ->where('escuela_niveles.escuela_id', $escuelaId)
             ->pluck('estados_expediente.clave');
 
-        return $claves->isNotEmpty() && $claves->every(fn ($clave) => $clave === self::APROBADO);
+        return $claves->isNotEmpty() && $claves->every(fn ($clave) => in_array($clave, EstadosPosteriores::DESDE_APROBADO, true));
     }
 
     /** La línea base del G6 nunca bloquea ni revierte la decisión del revisor. */

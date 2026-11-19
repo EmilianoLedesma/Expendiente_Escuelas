@@ -24,7 +24,7 @@ class CatalogoMinimoSeederTest extends TestCase
     {
         (new CatalogoMinimoSeeder)->run();
 
-        $this->assertDatabaseCount('estados_expediente', 6);
+        $this->assertDatabaseCount('estados_expediente', 9);
         $this->assertDatabaseHas('estados_expediente', ['clave' => 'preregistro', 'orden' => 1]);
         $this->assertDatabaseHas('estados_expediente', ['clave' => 'rechazado', 'orden' => 6]);
     }
@@ -71,7 +71,7 @@ class CatalogoMinimoSeederTest extends TestCase
         (new CatalogoMinimoSeeder)->run();
 
         $this->assertDatabaseCount('niveles_educativos', 7);
-        $this->assertDatabaseCount('estados_expediente', 6);
+        $this->assertDatabaseCount('estados_expediente', 9);
         $this->assertDatabaseCount('salas', 5);
         $this->assertDatabaseCount('tipos_material_biblioteca', 9);
     }

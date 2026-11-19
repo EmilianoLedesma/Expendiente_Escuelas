@@ -71,7 +71,7 @@
                             <td class="mt-sm block md:mt-0 md:table-cell md:px-lg md:py-md">
                                 <x-ui.status-tag
                                     :estado="$tramite->conObservaciones ? 'con_observaciones' : ($tramite->enviado || $tramite->completo ? 'completado' : 'en_curso')"
-                                    :texto="$tramite->conObservaciones ? 'Con observaciones' : ($tramite->aprobado ? 'Revisión documental aprobada' : ($tramite->enviado ? 'En revisión' : ($tramite->completo ? 'Captura inicial completa' : 'En captura')))"
+                                    :texto="$tramite->conObservaciones ? 'Con observaciones' : ($tramite->aprobado ? (collect($tramite->niveles)->pluck('estadoTexto')->filter()->unique()->implode(' · ') ?: 'Revisión documental aprobada') :($tramite->enviado ? 'En revisión' : ($tramite->completo ? 'Captura inicial completa' : 'En captura')))"
                                 />
                             </td>
                             <td class="mt-sm block whitespace-nowrap md:mt-0 md:table-cell md:px-lg md:py-md md:text-right">
@@ -84,6 +84,13 @@
                                         Continuar<span class="sr-only">: {{ $nombre }}, Nº {{ $tramite->numero() }}</span>
                                     </x-ui.button-primary>
                                 @endif
+                                @foreach ($tramite->niveles as $nivel)
+                                    @if (in_array($nivel->estadoClave, ['visita_programada', 'en_subsanacion', 'visita_aprobada'], true))
+                                        <x-ui.button-secondary :href="route('tramite.visita', ['escuelaNivel' => $nivel->escuelaNivelId])" class="mt-sm whitespace-nowrap">
+                                            {{ $nivel->puedeResponderVisita ? 'Responder observaciones' : 'Ver visita' }}<span class="sr-only">: {{ $nivel->nombre }}, {{ $nombre }}</span>
+                                        </x-ui.button-secondary>
+                                    @endif
+                                @endforeach
                                 @if ($tramite->puedeEliminar)
                                     <x-tramite.eliminar :tramite="$tramite" class="mt-sm" />
                                 @endif

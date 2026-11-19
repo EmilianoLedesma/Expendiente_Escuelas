@@ -67,6 +67,10 @@
                            class="{{ $pestana.(request()->routeIs('sedeq.expedientes') ? $activa : $inactiva) }}">
                             Expedientes
                         </a>
+                        <a href="{{ route('sedeq.visitas') }}" @if (request()->routeIs('sedeq.visitas')) aria-current="page" @endif
+                           class="{{ $pestana.(request()->routeIs('sedeq.visitas') ? $activa : $inactiva) }}">
+                            Visitas
+                        </a>
                     @endif
                     <span class="h-6 w-px bg-hairline" aria-hidden="true"></span>
                     {{-- Alpine llega con Livewire donde lo hay (perfil); sin él, el nombre queda como texto estático. --}}

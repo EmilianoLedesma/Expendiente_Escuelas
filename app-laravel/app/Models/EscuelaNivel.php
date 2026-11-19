@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Scopes\NivelDeEscuelaNoArchivada;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -55,5 +56,10 @@ class EscuelaNivel extends Model
     public function nivelEducativo(): BelongsTo
     {
         return $this->belongsTo(NivelEducativo::class);
+    }
+
+    public function visitas(): HasMany
+    {
+        return $this->hasMany(VisitaInspeccion::class)->orderBy('numero');
     }
 }

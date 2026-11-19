@@ -48,6 +48,22 @@
                                     <span class="tabular-nums">{{ $fila->desde?->format('d/m/Y') ?? 'Sin fecha' }}</span>
                                     · {{ $fila->revisorNombre ?? 'Sin asignar' }}
                                 </span>
+                                @php($enlaceVisita = match ($fila->estado) {
+                                    'aprobado' => 'Programar visita',
+                                    'visita_programada' => 'Registrar acta',
+                                    'en_subsanacion', 'visita_aprobada' => 'Ver visita',
+                                    default => null,
+                                })
+                                @if ($enlaceVisita)
+                                    <span class="flex w-full flex-wrap items-center gap-x-sm gap-y-xxs">
+                                        <a href="{{ route('sedeq.visita', ['escuelaNivel' => $fila->escuelaNivelId]) }}" class="inline-flex min-h-11 items-center font-semibold text-primary underline">
+                                            {{ $enlaceVisita }}<span class="sr-only">: {{ $fila->nivel }}</span>
+                                        </a>
+                                        @if ($fila->respuestaPendiente)
+                                            <span class="rounded-full bg-warning-soft px-sm py-xxs text-caption font-semibold text-warning-ink">Respuesta recibida</span>
+                                        @endif
+                                    </span>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

@@ -38,7 +38,7 @@
             </x-ui.alert>
         @elseif ($resumen->aprobado)
             <x-ui.alert tipo="success" titulo="Revisión documental aprobada" class="mb-lg">
-                SEDEQ revisó y aprobó tu documentación. El siguiente paso es la visita de inspección: SEDEQ te notificará la fecha. El trámite ya no puede modificarse.
+                La autoridad educativa revisó y aprobó tu documentación. El siguiente paso es la visita de inspección; el estado de cada nivel aparece abajo. El trámite ya no puede modificarse.
                 @if ($puedeDescargarReporte && $resumen->reporteEnviadoId !== null)
                     <a href="{{ route('tramite.validacion.reporte', ['escuela' => $resumen->escuelaId, 'evaluacion' => $resumen->reporteEnviadoId]) }}" target="_blank" class="font-semibold">Descargar el reporte de validación enviado</a>
                 @endif
@@ -95,6 +95,14 @@
 
         @foreach ($resumen->niveles as $nivel)
             <x-ui.section :title="$nivel->nombre">
+                @if ($nivel->estadoTexto !== null)
+                    <p class="mb-sm text-body-md font-semibold text-ink">{{ $nivel->estadoTexto }}</p>
+                @endif
+                @if (in_array($nivel->estadoClave, ['visita_programada', 'en_subsanacion', 'visita_aprobada'], true))
+                    <x-ui.button-secondary :href="route('tramite.visita', ['escuelaNivel' => $nivel->escuelaNivelId])" class="mb-sm">
+                        {{ $nivel->puedeResponderVisita ? 'Responder observaciones' : 'Ver visita' }}<span class="sr-only">: {{ $nivel->nombre }}</span>
+                    </x-ui.button-secondary>
+                @endif
                 <x-tramite.nivel :clave="$nivel->clave" como="franja">
                     <ol class="divide-y divide-hairline">
                         @foreach ($nivel->secciones as $seccion)

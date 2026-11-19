@@ -7,6 +7,7 @@ use App\Application\Archivo\ArchivarTramite;
 use App\Application\Archivo\Purga;
 use App\Application\Archivo\PurgarCuenta;
 use App\Application\Archivo\PurgarTramite;
+use App\Application\Archivo\RestaurarTramite;
 use App\Application\Excepciones\DatosInvalidos;
 use App\Application\Excepciones\PrecondicionIncumplida;
 use App\Application\Revision\RolesSedeq;
@@ -222,6 +223,88 @@ class PurgarTest extends TestCase
 
         $this->assertSame(0, DB::table('proyecto_educativo_formacion_politica')->count());
         Storage::disk('documentos')->assertMissing($ruta);
+    }
+
+    /**
+     * Visita realizada con acta y una respuesta con 2 PDF sobre el primer nivel del trámite.
+     *
+     * @return list<string> las tres rutas en disco
+     */
+    private function conVisita(Escuela $escuela): array
+    {
+        $nivelId = EscuelaNivel::withoutGlobalScope(NivelDeEscuelaNoArchivada::class)->where('escuela_id', $escuela->id)->value('id');
+        $rutas = ["visitas/{$escuela->id}/acta-x.pdf", "visitas/{$escuela->id}/resp-a.pdf", "visitas/{$escuela->id}/resp-b.pdf"];
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->put($ruta, '%PDF');
+        }
+        $usuario = User::factory()->create();
+        $visitaId = DB::table('visitas_inspeccion')->insertGetId([
+            'escuela_nivel_id' => $nivelId, 'numero' => 1, 'programada_para' => now(), 'inspector' => 'Inspector',
+            'estado' => 'realizada', 'resultado' => 'con_observaciones', 'realizada_el' => now()->toDateString(),
+            'subsanar_hasta' => now()->addDays(10)->toDateString(), 'acta_path' => $rutas[0], 'acta_nombre' => 'acta.pdf',
+            'programada_por' => $usuario->id, 'registrada_por' => $usuario->id,
+        ]);
+        DB::table('observaciones_visita')->insert(['visita_id' => $visitaId, 'orden' => 1, 'texto' => 'Falta extintor']);
+        $respuestaId = DB::table('respuestas_visita')->insertGetId(['visita_id' => $visitaId, 'nota' => 'Corregido', 'creada_por' => $usuario->id]);
+        DB::table('respuestas_visita_archivos')->insert([
+            ['respuesta_id' => $respuestaId, 'archivo_path' => $rutas[1], 'archivo_nombre' => 'a.pdf'],
+            ['respuesta_id' => $respuestaId, 'archivo_path' => $rutas[2], 'archivo_nombre' => 'b.pdf'],
+        ]);
+
+        return $rutas;
+    }
+
+    private const TABLAS_DE_VISITA = ['visitas_inspeccion', 'observaciones_visita', 'respuestas_visita', 'respuestas_visita_archivos'];
+
+    public function test_purgar_borra_la_visita_y_sus_archivos_sin_tocar_los_de_otra_escuela(): void
+    {
+        $admin = $this->admin();
+        $escuela = $this->tramiteArchivado($admin);
+        $rutas = $this->conVisita($escuela);
+        $ajeno = "visitas/{$escuela->id}999/acta-ajena.pdf";
+        Storage::disk('documentos')->put($ajeno, '%PDF');
+
+        app(PurgarTramite::class)->ejecutar($admin->id, $escuela->id, 'Solicitud de baja', Purga::CONFIRMACION);
+
+        foreach (self::TABLAS_DE_VISITA as $tabla) {
+            $this->assertSame(0, DB::table($tabla)->count(), "{$tabla} debió vaciarse");
+        }
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->assertMissing($ruta);
+        }
+        Storage::disk('documentos')->assertExists($ajeno);
+    }
+
+    public function test_purgar_tolera_un_archivo_de_visita_ya_ausente(): void
+    {
+        $admin = $this->admin();
+        $escuela = $this->tramiteArchivado($admin);
+        $rutas = $this->conVisita($escuela);
+        Storage::disk('documentos')->delete($rutas[1]);
+
+        app(PurgarTramite::class)->ejecutar($admin->id, $escuela->id, 'Solicitud de baja', Purga::CONFIRMACION);
+
+        $this->assertNull($this->escuela($escuela->id));
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->assertMissing($ruta);
+        }
+    }
+
+    public function test_archivar_y_restaurar_conserva_filas_y_archivos_de_la_visita(): void
+    {
+        $admin = $this->admin();
+        $escuela = $this->tramiteArchivado($admin);
+        $rutas = $this->conVisita($escuela);
+
+        app(RestaurarTramite::class)->ejecutar($admin->id, $escuela->id);
+        app(ArchivarTramite::class)->ejecutar($escuela->id, $admin->id, 'Otra vez');
+        app(RestaurarTramite::class)->ejecutar($admin->id, $escuela->id);
+
+        $this->assertSame(1, DB::table('visitas_inspeccion')->count());
+        $this->assertSame(2, DB::table('respuestas_visita_archivos')->count());
+        foreach ($rutas as $ruta) {
+            Storage::disk('documentos')->assertExists($ruta);
+        }
     }
 
     public function test_un_tramite_no_archivado_no_se_purga(): void
