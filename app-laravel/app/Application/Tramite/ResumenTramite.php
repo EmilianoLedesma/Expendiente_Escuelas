@@ -161,6 +161,8 @@ class ResumenTramite
         $ternasNombres = $escuela->ternasNombres;
 
         $reporte = $this->enviado ? $this->ultimaValidacion->idEnviada($escuela->id) : null;
+        // Un borrador no puede estar aprobado: evita consultar el id de «aprobado» en cada trámite de «Mis trámites».
+        $hayEnviados = $escuelaNiveles->contains(fn (EscuelaNivel $n) => (int) $n->estado_id !== $enCapturaId);
 
         return new ResumenTramiteDTO(
             escuelaId: $escuela->id,
@@ -183,8 +185,8 @@ class ResumenTramite
             )),
             puedeReenviar: $rondaCerrada && $soloNivelIds === null,
             observaciones: $observaciones,
-            aprobado: $niveles !== [] && $escuelaNiveles->every(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado()),
-            nivelesAprobados: $escuelaNiveles->filter(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado())
+            aprobado: $niveles !== [] && $hayEnviados && $escuelaNiveles->every(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado()),
+            nivelesAprobados: ! $hayEnviados ? [] : $escuelaNiveles->filter(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado())
                 ->map(fn (EscuelaNivel $n) => $n->nivelEducativo->nombre)->values()->all(),
         );
     }
