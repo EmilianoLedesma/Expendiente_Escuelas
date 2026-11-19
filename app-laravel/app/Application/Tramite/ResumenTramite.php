@@ -89,6 +89,8 @@ class ResumenTramite
 
     private ?int $conObservacionesId = null;
 
+    private ?int $aprobadoId = null;
+
     /** WS-7a: el trámite que se está resumiendo ya se envió; se fija al inicio de cada paraEscuela() y seccion() lo lee. */
     private bool $enviado = false;
 
@@ -181,6 +183,9 @@ class ResumenTramite
             )),
             puedeReenviar: $rondaCerrada && $soloNivelIds === null,
             observaciones: $observaciones,
+            aprobado: $niveles !== [] && $escuelaNiveles->every(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado()),
+            nivelesAprobados: $escuelaNiveles->filter(fn (EscuelaNivel $n) => (int) $n->estado_id === $this->idAprobado())
+                ->map(fn (EscuelaNivel $n) => $n->nivelEducativo->nombre)->values()->all(),
         );
     }
 
@@ -216,6 +221,11 @@ class ResumenTramite
         }
 
         return array_map(fn (array $m) => implode(' ', $m), $motivos);
+    }
+
+    private function idAprobado(): int
+    {
+        return $this->aprobadoId ??= (int) DB::table('estados_expediente')->where('clave', 'aprobado')->value('id');
     }
 
     private function idConObservaciones(): int

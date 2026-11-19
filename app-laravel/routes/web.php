@@ -15,6 +15,7 @@ use App\Http\Controllers\Tramite\ResumenTramiteController;
 use App\Livewire\Cuenta\Perfil;
 use App\Livewire\Sedeq\ColaProyecto;
 use App\Livewire\Sedeq\ColaRevisor;
+use App\Livewire\Sedeq\Expedientes;
 use App\Livewire\Sedeq\RevisionNivel;
 use App\Livewire\Sedeq\RevisionProyecto;
 use App\Livewire\Sedeq\Revisores;
@@ -40,6 +41,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
+// Pública: leyes, acuerdos y procedimientos del trámite, sin iniciar sesión (contenido en config/marco_legal.php).
+Route::view('/marco-legal', 'marco-legal')->name('marco-legal');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', Perfil::class)->name('profile');
 
@@ -48,6 +52,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/sedeq/cola', ColaRevisor::class)->middleware('rol:revisor')->name('sedeq.cola');
 
     Route::get('/sedeq/revisores', Revisores::class)->middleware('rol:supervisor')->name('sedeq.revisores');
+
+    // Expediente: niveles con la revisión documental aprobada (hoy solo ese estado); cada fila abre sedeq.tramite.
+    Route::get('/sedeq/expedientes', Expedientes::class)->middleware('rol:supervisor')->name('sedeq.expedientes');
 
     // Cola del evaluador del proyecto educativo (solo media superior): una sola pista de revisión, aparte del revisor.
     Route::get('/sedeq/proyecto', ColaProyecto::class)->middleware('rol:evaluador_proyecto')->name('sedeq.proyecto-cola');

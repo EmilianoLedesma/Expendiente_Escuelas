@@ -5,10 +5,37 @@
     $etiquetas = ['cumple' => 'Correcto', 'advertencia' => 'Alerta', 'no_cumple' => 'No cumple', 'no_evaluable' => 'No verificado', 'no_verificable' => 'No verificable por el sistema'];
     $tags = ['cumple' => 'completado', 'advertencia' => 'en_curso', 'no_cumple' => 'error', 'no_evaluable' => 'pendiente', 'no_verificable' => 'no_disponible'];
     $estadosPaso = ['completado' => 'completado', 'en_progreso' => 'en_curso'];
+    // Una pestaña por bloque del expediente: se ve uno a la vez en vez de una sola página larga (todos quedan en el DOM).
+    $pestanas = [
+        ['id' => 'plantel', 'texto' => 'Plantel y responsable'],
+        ['id' => 'documentos', 'texto' => 'Documentos ('.count($tramite['documentos']).')'],
+        ...array_map(fn ($n) => ['id' => 'nivel-'.$n['escuelaNivelId'], 'texto' => $n['nombre']], $tramite['niveles']),
+        ['id' => 'validacion', 'texto' => 'Validación'],
+        ...($historial !== null ? [['id' => 'historial', 'texto' => 'Historial']] : []),
+    ];
 @endphp
-<div>
+<div x-data="{ tab: 'plantel', ids: @js(array_column($pestanas, 'id')), mover(d) { const i = (this.ids.indexOf(this.tab) + d + this.ids.length) % this.ids.length; this.tab = this.ids[i]; this.$nextTick(() => document.getElementById('pestana-' + this.tab)?.focus()); } }">
     <x-ui.page-header :title="$tramite['nombre'] ?? 'Plantel sin nombre'" eyebrow="Trámite · solo lectura" :back-href="$volver" back-label="Volver" />
 
+    <ul aria-label="Estado de cada nivel" class="mb-md flex flex-wrap gap-xs">
+        @foreach ($tramite['niveles'] as $nivel)
+            <li class="rounded-pill bg-surface-card px-md py-xxs text-body-sm font-semibold text-ink">{{ $nivel['nombre'] }}: {{ $nivel['estado'] }}</li>
+        @endforeach
+    </ul>
+
+    <div role="tablist" aria-label="Secciones del expediente" class="mb-lg flex flex-wrap gap-xs border-b border-hairline pb-sm"
+         x-on:keydown.right.prevent="mover(1)" x-on:keydown.left.prevent="mover(-1)">
+        @foreach ($pestanas as $p)
+            <button type="button" role="tab" id="pestana-{{ $p['id'] }}" aria-controls="panel-{{ $p['id'] }}"
+                    x-on:click="tab = '{{ $p['id'] }}'" x-bind:aria-selected="tab === '{{ $p['id'] }}'" x-bind:tabindex="tab === '{{ $p['id'] }}' ? 0 : -1"
+                    x-bind:class="tab === '{{ $p['id'] }}' ? 'border-primary bg-primary text-on-primary' : 'border-hairline bg-canvas text-primary hover:bg-surface-soft'"
+                    class="inline-flex min-h-11 items-center rounded-md border px-md text-body-sm font-semibold transition-colors duration-150">
+                {{ $p['texto'] }}
+            </button>
+        @endforeach
+    </div>
+
+    <div role="tabpanel" id="panel-plantel" aria-labelledby="pestana-plantel" x-show="tab === 'plantel'" x-cloak>
     <x-ui.section title="Datos del plantel">
         <x-ui.summary-list :filas="$tramite['plantel']" />
     </x-ui.section>
@@ -24,6 +51,9 @@
         @endif
     </x-ui.section>
 
+    </div>
+
+    <div role="tabpanel" id="panel-documentos" aria-labelledby="pestana-documentos" x-show="tab === 'documentos'" x-cloak>
     <x-ui.section title="Documentos">
         @forelse ($tramite['documentos'] as $doc)
             <div class="border-b border-hairline py-xs">
@@ -38,7 +68,10 @@
         @endforelse
     </x-ui.section>
 
+    </div>
+
     @foreach ($tramite['niveles'] as $nivel)
+        <div role="tabpanel" id="panel-nivel-{{ $nivel['escuelaNivelId'] }}" aria-labelledby="pestana-nivel-{{ $nivel['escuelaNivelId'] }}" x-show="tab === 'nivel-{{ $nivel['escuelaNivelId'] }}'" x-cloak>
         <x-ui.section :title="$nivel['nombre']">
             <x-ui.summary-list :filas="['Estado' => $nivel['estado'], 'Folio de expediente' => $nivel['folio'], ...$nivel['datos']]" />
 
@@ -71,8 +104,10 @@
                 <p class="text-body-md text-muted">Sin documentos del nivel.</p>
             @endforelse
         </x-ui.section>
+        </div>
     @endforeach
 
+    <div role="tabpanel" id="panel-validacion" aria-labelledby="pestana-validacion" x-show="tab === 'validacion'" x-cloak>
     <x-ui.section title="Resultado de validación almacenado al envío">
         @if ($tramite['validacion'] === null)
             <p class="text-body-md text-muted">No hay un resultado de validación guardado con el envío.</p>
@@ -104,4 +139,29 @@
             @endforeach
         @endif
     </x-ui.section>
+    </div>
+
+    {{-- Solo el supervisor (el componente pasa null a los demás): línea de tiempo de la revisión, más reciente primero. --}}
+    @if ($historial !== null)
+        <div role="tabpanel" id="panel-historial" aria-labelledby="pestana-historial" x-show="tab === 'historial'" x-cloak>
+        <x-ui.section title="Historial">
+            @forelse ($historial as $evento)
+                <div class="border-b border-hairline py-xs">
+                    <div class="flex flex-wrap items-baseline gap-x-sm">
+                        <span class="text-body-md font-semibold text-ink">{{ $evento['que'] }}</span>
+                        @if ($evento['nivel'])
+                            <span class="text-caption text-muted">{{ $evento['nivel'] }}</span>
+                        @endif
+                    </div>
+                    <p class="text-caption tabular-nums text-muted">{{ $evento['cuando']->format('d/m/Y H:i') }}@if ($evento['quien']) · {{ $evento['quien'] }}@endif</p>
+                    @if ($evento['detalle'])
+                        <p class="mt-xxs text-body-sm text-body">{{ $evento['detalle'] }}</p>
+                    @endif
+                </div>
+            @empty
+                <p class="text-body-md text-muted">Este trámite aún no tiene eventos registrados.</p>
+            @endforelse
+        </x-ui.section>
+        </div>
+    @endif
 </div>

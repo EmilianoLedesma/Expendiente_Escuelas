@@ -23,7 +23,7 @@ class RevisionSinObservaciones extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('La revisión de tu trámite terminó sin observaciones')
+            ->subject('La revisión documental de tu trámite fue aprobada')
             ->markdown('correo.revision-sin-observaciones', [
                 'nombre' => $notifiable->name,
                 'escuela' => $this->nombreEscuela,

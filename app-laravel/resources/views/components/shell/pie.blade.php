@@ -50,6 +50,9 @@
                         Aviso de privacidad<span class="sr-only"> (abre en una pestaña nueva)</span>
                     </a>
                 </p>
+                <p>
+                    <a href="{{ route('marco-legal') }}" class="-mx-xs inline-flex min-h-11 items-center px-xs text-white">Marco legal</a>
+                </p>
                 <p>PODER EJECUTIVO DEL ESTADO DE QUERÉTARO Copyright © {{ date('Y') }} Derechos Reservados.</p>
                 <p class="mt-xs text-body-sm text-white/80">Sistema de Incorporación · versión MVP</p>
             </div>
