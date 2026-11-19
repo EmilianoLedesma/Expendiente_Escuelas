@@ -27,8 +27,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach ($pasos as $n => $p)
-                    <li @if ($n === $paso) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $paso ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $p['nombre'] }}
+                    <li>
+                        <button type="button" wire:click="irAPaso({{ $n }})" @if ($n === $paso) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $paso ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $p['nombre'] }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -126,8 +128,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Grupos de la sección">
                 @foreach ($grupos as $n => $titulo)
-                    <li @if ($n === $enfoque['grupo']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $enfoque['grupo'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $titulo }}
+                    <li>
+                        <button type="button" wire:click="irAGrupo({{ $n }})" @if ($n === $enfoque['grupo']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $enfoque['grupo'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $titulo }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -242,8 +246,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasBibliotecaProyecto::BLOQUES as $n => $b)
-                    <li @if ($n === $biblioteca['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $biblioteca['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    <li>
+                        <button type="button" wire:click="irABloque({{ $n }})" @if ($n === $biblioteca['bloque']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $biblioteca['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -474,8 +480,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasEvaluacionProyecto::BLOQUES as $n => $b)
-                    <li @if ($n === $evaluacion['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $evaluacion['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ \Illuminate\Support\Str::before($b['titulo'], ' (') }}
+                    <li>
+                        <button type="button" wire:click="irABloque({{ $n }})" @if ($n === $evaluacion['bloque']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $evaluacion['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ \Illuminate\Support\Str::before($b['titulo'], ' (') }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -521,8 +529,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Ámbitos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasCurriculumProyecto::BLOQUES as $n => $b)
-                    <li @if ($n === $curriculum['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $curriculum['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    <li>
+                        <button type="button" wire:click="irABloque({{ $n }})" @if ($n === $curriculum['bloque']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $curriculum['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -696,8 +706,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasAcademiasProyecto::BLOQUES as $n => $b)
-                    <li @if ($n === $academias['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $academias['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    <li>
+                        <button type="button" wire:click="irABloque({{ $n }})" @if ($n === $academias['bloque']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $academias['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -747,8 +759,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasCriteriosProyecto::BLOQUES as $n => $b)
-                    <li @if ($n === $criterios['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $criterios['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    <li>
+                        <button type="button" wire:click="irABloque({{ $n }})" @if ($n === $criterios['bloque']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $criterios['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                        </button>
                     </li>
                 @endforeach
             </ol>
@@ -791,8 +805,10 @@
 
             <ol class="mb-sm flex flex-wrap gap-sm" aria-label="Pasos de la sección">
                 @foreach (\App\Application\ProyectoEducativo\ReglasIngresoProyecto::BLOQUES as $n => $b)
-                    <li @if ($n === $ingreso['bloque']) aria-current="step" @endif class="flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $ingreso['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
-                        <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                    <li>
+                        <button type="button" wire:click="irABloque({{ $n }})" @if ($n === $ingreso['bloque']) aria-current="step" @endif class="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex min-h-11 items-center gap-xs rounded-md border px-sm text-body-sm {{ $n === $ingreso['bloque'] ? 'border-primary bg-surface-soft font-semibold text-ink' : 'border-hairline text-muted' }}">
+                            <span class="tabular-nums">{{ $n }}.</span> {{ $b['titulo'] }}
+                        </button>
                     </li>
                 @endforeach
             </ol>

@@ -857,6 +857,38 @@ class ProyectoEducativoSeccion extends Component
         $this->bloque = max(1, $this->bloque - 1);
     }
 
+    /** Demo: salta a cualquier bloque de la sección actual desde las pastillas, sin validar ni guardar (guardar sigue validando el bloque donde estás). */
+    public function irABloque(int $n): void
+    {
+        $total = match (true) {
+            $this->esEvaluacion() => count(ReglasEvaluacionProyecto::BLOQUES),
+            $this->esCurriculum() => count(ReglasCurriculumProyecto::BLOQUES),
+            $this->esIngreso() => count(ReglasIngresoProyecto::BLOQUES),
+            $this->esAcademias() => count(ReglasAcademiasProyecto::BLOQUES),
+            $this->esCriterios() => count(ReglasCriteriosProyecto::BLOQUES),
+            $this->esBiblioteca() => count(ReglasBibliotecaProyecto::BLOQUES),
+            default => abort(404),
+        };
+        $this->resetErrorBag();
+        $this->bloque = min(max($n, 1), $total);
+    }
+
+    /** Demo, sección 4: salta al primera pantalla del grupo N (grupo N empieza en la pantalla N), sin validar ni guardar. */
+    public function irAGrupo(int $n): void
+    {
+        abort_unless($this->esEnfoque(), 404);
+        $this->resetErrorBag();
+        $this->pantalla = min(max($n, 1), count($this->pantallas()));
+    }
+
+    /** Demo, sección 1: salta a un paso, sin validar ni guardar. */
+    public function irAPaso(int $n): void
+    {
+        abort_unless($this->esPresentacion(), 404);
+        $this->resetErrorBag();
+        $this->paso = min(max($n, 1), $this->totalPasos());
+    }
+
     /** Sección 7: valida solo la respuesta y la justificación del ámbito actual (nada se escribe) y avanza; con error se queda. */
     public function siguienteCurriculum(): void
     {
