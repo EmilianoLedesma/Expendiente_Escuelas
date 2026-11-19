@@ -50,18 +50,23 @@ class RevisionProyecto extends Component
         }
     }
 
-    public function aceptar(): void
+    /** $slug: la sección del panel desde donde se decide (todas están en el DOM); sin él, la abierta en el servidor. */
+    public function aceptar(?string $slug = null): void
     {
-        $this->decidir('aceptado', 'Sección aceptada');
+        $this->decidir('aceptado', 'Sección aceptada', $slug);
     }
 
-    public function rechazar(): void
+    public function rechazar(?string $slug = null): void
     {
-        $this->decidir('rechazado', 'Sección rechazada');
+        $this->decidir('rechazado', 'Sección rechazada', $slug);
     }
 
-    private function decidir(string $decision, string $aviso): void
+    private function decidir(string $decision, string $aviso, ?string $slug): void
     {
+        if ($slug !== null && SeccionesProyectoEducativo::existe($slug)) {
+            $this->seccionAbierta = $slug;
+        }
+
         try {
             app(DecidirSeccionProyecto::class)->ejecutar(
                 (int) auth()->id(),
@@ -98,10 +103,16 @@ class RevisionProyecto extends Component
     {
         $revision = $this->revision();
 
+        // Las 20 secciones van en el DOM (la pestaña activa se cambia en el cliente, sin viajes al servidor).
+        $contenidos = [];
+        foreach ($revision['secciones'] as $s) {
+            $contenidos[$s['slug']] = app(ContenidoSeccionProyecto::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId, $s['slug']);
+        }
+
         return view('livewire.sedeq.revision-proyecto', [
             'revision' => $revision,
-            'seccion' => collect($revision['secciones'])->firstWhere('slug', $this->seccionAbierta),
-            'contenido' => app(ContenidoSeccionProyecto::class)->ejecutar((int) auth()->id(), $this->escuelaNivelId, $this->seccionAbierta),
+            'contenidos' => $contenidos,
+            'inicial' => (collect($revision['secciones'])->firstWhere('slug', $this->seccionAbierta) ?? $revision['secciones'][0])['numero'],
             'volver' => RutaInicio::para(auth()->user()),
         ]);
     }

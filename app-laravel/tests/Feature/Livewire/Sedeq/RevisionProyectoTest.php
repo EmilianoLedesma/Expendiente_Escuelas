@@ -93,13 +93,79 @@ class RevisionProyectoTest extends TestCase
     public function test_el_texto_largo_se_lee_en_bloque_con_saltos_y_escapado(): void
     {
         $nivel = $this->media();
-        DB::table('proyecto_educativo_objetivos')->insert(['escuela_nivel_id' => $nivel->id, 'objetivo_general' => 'Uno. Dos <script>alert(1)</script>', 'objetivos_especificos' => 'Tres.']);
+        DB::table('proyecto_educativo_objetivos')->insert(['escuela_nivel_id' => $nivel->id, 'objetivo_general' => "Uno. Dos <script>alert(1)</script>\nLínea nueva", 'objetivos_especificos' => 'Tres.']);
 
         $this->revision($nivel)->call('abrir', SeccionesProyectoEducativo::objetivos())
             ->assertSeeHtml('whitespace-pre-line')
-            ->assertSeeHtml('max-w-prose')
+            ->assertSeeHtml('xl:columns-2')
+            ->assertSeeHtml('data-campos="largos"')
+            ->assertSeeHtml('data-campos="cortos"')
             ->assertDontSeeHtml('<script>alert(1)</script>')
             ->assertSee('Dos');
+    }
+
+    public function test_los_campos_cortos_van_en_rejilla_y_la_decision_en_el_aside_de_cada_panel(): void
+    {
+        $nivel = $this->media();
+        DB::table('proyecto_educativo_objetivos')->insert(['escuela_nivel_id' => $nivel->id, 'objetivo_general' => 'Corto', 'objetivos_especificos' => 'Tres.']);
+
+        $html = $this->revision($nivel)->html();
+
+        $this->assertStringContainsString('sm:grid-cols-2 xl:grid-cols-3', $html);
+        $this->assertSame(20, substr_count($html, '<aside'));
+        $this->assertSame(20, preg_match_all('/<aside[^>]*>(?:(?!<\/aside>).)*Aceptar sección(?:(?!<\/aside>).)*Rechazar sección/s', $html));
+    }
+
+    public function test_la_barra_tiene_veinte_pestanas_y_veinte_paneles_en_el_dom(): void
+    {
+        $c = $this->revision($this->media());
+
+        for ($n = 1; $n <= 20; $n++) {
+            $c->assertSeeHtml('id="pestana-seccion-'.$n.'"')->assertSeeHtml('id="panel-seccion-'.$n.'"')
+                ->assertSeeHtml('x-show="n === '.$n.'"')->assertSeeHtml('aria-controls="panel-seccion-'.$n.'"');
+        }
+        $c->assertSeeHtml('role="tablist"')->assertSeeHtml('aria-orientation="vertical"')->assertSeeHtml('keydown.down.prevent')->assertSeeHtml('aria-controls="secciones-lista"')->assertSeeHtml('lg:hidden')->assertSeeHtml('data-inicial="1"')->assertSeeHtml('data-total="20"')->assertSeeHtml('title="Pendiente"')->assertSeeHtml('leading-snug')->assertDontSeeHtml('max-w-40 truncate');
+    }
+
+    public function test_cada_panel_trae_sus_controles_de_decision_y_la_navegacion(): void
+    {
+        $html = $this->revision($this->media())->html();
+
+        $this->assertSame(20, substr_count($html, 'Aceptar sección'));
+        $this->assertSame(20, substr_count($html, 'Rechazar sección'));
+        $this->assertSame(19, substr_count($html, '>Siguiente<'));
+        $this->assertSame(19, substr_count($html, '>Anterior<'));
+    }
+
+    public function test_la_pestana_inicial_es_la_primera_pendiente(): void
+    {
+        $nivel = $this->media();
+        app(DecidirSeccionProyecto::class)->ejecutar($this->evaluador->id, $nivel->id, 'pe_01', 'aceptado');
+
+        $this->revision($nivel)->assertSeeHtml('data-inicial="2"');
+    }
+
+    public function test_solo_el_texto_largo_lleva_el_pliegue_y_conserva_el_texto_completo_escapado(): void
+    {
+        $nivel = $this->media();
+        $largo = str_repeat('a', 1600).'<script>alert(1)</script>';
+        DB::table('proyecto_educativo_objetivos')->insert(['escuela_nivel_id' => $nivel->id, 'objetivo_general' => $largo, 'objetivos_especificos' => 'Corto.']);
+
+        $this->revision($this->media())->assertDontSeeHtml('Ver menos');
+        $this->revision($nivel)->assertSeeHtml('abierto: false')->assertSeeHtml('aria-expanded')->assertSee('Ver más')
+            ->assertSeeHtml(str_repeat('a', 1600).'&lt;script&gt;alert(1)&lt;/script&gt;')
+            ->assertDontSeeHtml('<script>alert(1)</script>');
+    }
+
+    public function test_decidir_desde_un_panel_registra_esa_seccion_y_vuelve_a_renderizar(): void
+    {
+        $nivel = $this->media();
+
+        $this->revision($nivel)->call('aceptar', SeccionesProyectoEducativo::objetivos())
+            ->assertHasNoErrors()->assertSeeHtml('id="panel-seccion-20"')->assertSee('Avance: 1 de 20');
+
+        $this->assertSame(1, DB::table('decisiones_revision')->where('escuela_nivel_id', $nivel->id)->count());
+        $this->assertSame('aceptado', DB::table('decisiones_revision')->where('escuela_nivel_id', $nivel->id)->where('paso_clave', SeccionesProyectoEducativo::claveRevision(SeccionesProyectoEducativo::objetivos()))->value('estado'));
     }
 
     public function test_abrir_una_clave_ajena_se_ignora(): void
